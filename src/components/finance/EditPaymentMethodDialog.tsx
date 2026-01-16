@@ -1,174 +1,320 @@
-import { useEffect, useState } from 'react';
-import { PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
+import { useState } from 'react';
+import { PaymentMethod } from '@/hooks/useFinanceData';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { useFinanceData } from '@/hooks/useFinanceData';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
-const PRESET_COLORS = [
-  { value: '#64748b', label: 'Slate' },
-  { value: '#0d9488', label: 'Teal' },
-  { value: '#4f46e5', label: 'Indigo' },
-  { value: '#e11d48', label: 'Rose' },
-  { value: '#f59e0b', label: 'Amber' },
-  { value: '#8b5cf6', label: 'Violet' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#10b981', label: 'Emerald' },
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#ec4899', label: 'Pink' },
+const PAYMENT_METHOD_TYPES = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'debit', label: 'Débito' },
+  { value: 'credit', label: 'Crédito' },
+  { value: 'savings', label: 'Ahorros' },
+  { value: 'investment', label: 'Inversión' },
+];
+
+const COLORS = [
+  '#3b82f6', // blue
+  '#ef4444', // red
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f97316', // orange
 ];
 
 interface EditPaymentMethodDialogProps {
-  paymentMethod: PaymentMethod | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  paymentMethod: PaymentMethod | null;
+  onSave?: (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => Promise<any>;
 }
 
-export function EditPaymentMethodDialog({ paymentMethod, open, onOpenChange }: EditPaymentMethodDialogProps) {
-  const { updatePaymentMethod } = useFinanceData();
-  const [form, setForm] = useState({
-    name: '',
-    type: 'debit' as PaymentMethodType,
-    balance: 0,
-    credit_limit: null as number | null,
-    is_savings_account: false,
-    savings_goal: null as number | null,
-    estimated_yield: null as number | null,
-    closing_date: null as number | null,
-    payment_day: null as number | null,
-    color: '#4f46e5',
+export function EditPaymentMethodDialog({
+  open,
+  onOpenChange,
+  paymentMethod,
+  onSave,
+}: EditPaymentMethodDialogProps) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Don't render if paymentMethod is null
+  if (!paymentMethod) {
+    return null;
+  }
+
+  const [formData, setFormData] = useState({
+    name: paymentMethod.name,
+    type: paymentMethod.type,
+    balance: paymentMethod.balance.toString(),
+    creditLimit: paymentMethod.credit_limit?.toString() || '',
+    closingDate: paymentMethod.closing_date?.toString() || '',
+    paymentDay: paymentMethod.payment_day?.toString() || '',
+    color: paymentMethod.color || '#3b82f6',
+    isSavingsAccount: paymentMethod.is_savings_account || false,
+    savingsGoal: paymentMethod.savings_goal?.toString() || '',
+    estimatedYield: paymentMethod.estimated_yield?.toString() || '',
   });
-  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (paymentMethod && open) {
-      setForm({
-        name: paymentMethod.name,
-        type: paymentMethod.type,
-        balance: paymentMethod.balance,
-        credit_limit: paymentMethod.credit_limit || null,
-        is_savings_account: paymentMethod.is_savings_account || false,
-        savings_goal: paymentMethod.savings_goal || null,
-        estimated_yield: paymentMethod.estimated_yield || null,
-        closing_date: paymentMethod.closing_date || null,
-        payment_day: paymentMethod.payment_day || null,
-        color: paymentMethod.color || '#4f46e5',
-      });
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+
+      // Validate required fields
+      if (!formData.name.trim()) {
+        toast({
+          title: 'Error',
+          description: 'El nombre es requerido',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const updates: Partial<Omit<PaymentMethod, 'id'>> = {
+        name: formData.name,
+        type: formData.type as any,
+        balance: parseFloat(formData.balance) || 0,
+        color: formData.color,
+      };
+
+      if (formData.type === 'credit' && formData.creditLimit) {
+        updates.credit_limit = parseFloat(formData.creditLimit);
+      }
+
+      if (formData.isSavingsAccount) {
+        updates.is_savings_account = true;
+        if (formData.savingsGoal) {
+          updates.savings_goal = parseFloat(formData.savingsGoal);
+        }
+        if (formData.estimatedYield) {
+          updates.estimated_yield = parseFloat(formData.estimatedYield);
+        }
+      }
+
+      if (formData.closingDate) {
+        updates.closing_date = parseInt(formData.closingDate);
+      }
+
+      if (formData.paymentDay) {
+        updates.payment_day = parseInt(formData.paymentDay);
+      }
+
+      if (onSave) {
+        await onSave(paymentMethod.id, updates);
+      }
+      onOpenChange(false);
+    } finally {
+      setIsLoading(false);
     }
-  }, [paymentMethod, open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paymentMethod) return;
-    setSubmitting(true);
-    await updatePaymentMethod(paymentMethod.id, form);
-    setSubmitting(false);
-    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar método de pago</DialogTitle>
+          <DialogDescription>
+            Actualiza los detalles de tu método de pago
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+
+        <div className="space-y-4">
+          {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="pm-name">Nombre</Label>
+            <Label htmlFor="name">Nombre</Label>
             <Input
-              id="pm-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
+              id="name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              placeholder="Ej: Mi tarjeta de crédito"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {form.type === 'credit' ? (
-              <div className="space-y-2">
-                <Label htmlFor="pm-limit">Límite de crédito</Label>
-                <Input
-                  id="pm-limit"
-                  type="number"
-                  value={form.credit_limit || 0}
-                  onChange={(e) => setForm({ ...form, credit_limit: parseFloat(e.target.value) })}
-                  step="0.01"
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="pm-balance">Saldo actual</Label>
-                <Input
-                  id="pm-balance"
-                  type="number"
-                  value={form.balance}
-                  onChange={(e) => setForm({ ...form, balance: parseFloat(e.target.value) })}
-                  step="0.01"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="grid grid-cols-5 gap-2">
-                {PRESET_COLORS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, color: preset.value })}
-                    className="relative group"
-                    title={preset.label}
-                  >
-                    <div
-                      className="w-full h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md"
-                      style={{
-                        backgroundColor: preset.value,
-                        borderColor: form.color === preset.value ? '#fff' : 'transparent',
-                        borderWidth: form.color === preset.value ? '2px' : '1px',
-                      }}
-                    />
-                  </button>
+          {/* Type */}
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(value) =>
+                setFormData({ ...formData, type: value as any })
+              }
+            >
+              <SelectTrigger id="type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHOD_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
                 ))}
-              </div>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
-          {(form.is_savings_account || form.type === 'debit') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="pm-goal">Meta de ahorro ($)</Label>
-                <Input
-                  id="pm-goal"
-                  type="number"
-                  value={form.savings_goal || ''}
-                  onChange={(e) => setForm({ ...form, savings_goal: parseFloat(e.target.value) || null })}
-                  step="0.01"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pm-yield">Rentabilidad Estimada (%)</Label>
-                <Input
-                  id="pm-yield"
-                  type="number"
-                  value={form.estimated_yield || 0}
-                  onChange={(e) => setForm({ ...form, estimated_yield: parseFloat(e.target.value) })}
-                  step="0.01"
-                />
-              </div>
+          {/* Balance */}
+          <div className="space-y-2">
+            <Label htmlFor="balance">Saldo</Label>
+            <Input
+              id="balance"
+              type="number"
+              step="0.01"
+              value={formData.balance}
+              onChange={(e) =>
+                setFormData({ ...formData, balance: e.target.value })
+              }
+              placeholder="0.00"
+            />
+          </div>
+
+          {/* Credit Limit (for credit cards) */}
+          {formData.type === 'credit' && (
+            <div className="space-y-2">
+              <Label htmlFor="creditLimit">Límite de crédito</Label>
+              <Input
+                id="creditLimit"
+                type="number"
+                step="0.01"
+                value={formData.creditLimit}
+                onChange={(e) =>
+                  setFormData({ ...formData, creditLimit: e.target.value })
+                }
+                placeholder="0.00"
+              />
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? 'Guardando...' : 'Guardar cambios'}
-          </Button>
-        </form>
+          {/* Closing/Payment Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="closingDate">Día de cierre</Label>
+              <Input
+                id="closingDate"
+                type="number"
+                min="1"
+                max="31"
+                value={formData.closingDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, closingDate: e.target.value })
+                }
+                placeholder="1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentDay">Día de pago</Label>
+              <Input
+                id="paymentDay"
+                type="number"
+                min="1"
+                max="31"
+                value={formData.paymentDay}
+                onChange={(e) =>
+                  setFormData({ ...formData, paymentDay: e.target.value })
+                }
+                placeholder="1"
+              />
+            </div>
+          </div>
+
+          {/* Savings Account */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                id="isSavingsAccount"
+                type="checkbox"
+                checked={formData.isSavingsAccount}
+                onChange={(e) =>
+                  setFormData({ ...formData, isSavingsAccount: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="isSavingsAccount">Es una cuenta de ahorro</Label>
+            </div>
+          </div>
+
+          {/* Savings Goal and Estimated Yield (for savings accounts) */}
+          {formData.isSavingsAccount && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="savingsGoal">Meta de ahorro</Label>
+                <Input
+                  id="savingsGoal"
+                  type="number"
+                  step="0.01"
+                  value={formData.savingsGoal}
+                  onChange={(e) =>
+                    setFormData({ ...formData, savingsGoal: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estimatedYield">Rentabilidad estimada (%)</Label>
+                <Input
+                  id="estimatedYield"
+                  type="number"
+                  step="0.01"
+                  value={formData.estimatedYield}
+                  onChange={(e) =>
+                    setFormData({ ...formData, estimatedYield: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Color */}
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <div className="grid grid-cols-8 gap-2">
+              {COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setFormData({ ...formData, color })}
+                  className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                    formData.color === color
+                      ? 'border-foreground'
+                      : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={isLoading}>
+              {isLoading ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -215,12 +215,41 @@ export default function ConfiguracionPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Verificar si venía del onboarding ANTES de agregar
+        const wasOnboardingIncomplete = !currency || paymentMethods.length === 0 || categories.length === 0;
+        
         if (editingCategory) {
             await updateCategory(editingCategory.id, formData);
         } else {
             await addCategory(formData);
         }
         setIsDialogOpen(false);
+        
+        // Solo verificar y redirigir si venía del onboarding
+        if (wasOnboardingIncomplete) {
+            checkOnboardingAndRedirect();
+        }
+    };
+
+    const checkOnboardingAndRedirect = () => {
+        // Siempre redirigir de vuelta al WelcomePanel/Dashboard
+        // El Index.tsx decidirá si mostrar WelcomePanel o Dashboard basado en isEmptyState
+        setTimeout(() => navigate('/'), 500);
+    };
+
+    const handleAddPaymentMethod = async (pm: Omit<PaymentMethod, 'id'>) => {
+        // Verificar si venía del onboarding ANTES de agregar
+        const wasOnboardingIncomplete = !currency || paymentMethods.length === 0 || categories.length === 0;
+        
+        const result = await addPaymentMethod(pm);
+        
+        // Si se agregó exitosamente y venía del onboarding, volver al panel principal
+        if (!result.error && wasOnboardingIncomplete) {
+            checkOnboardingAndRedirect();
+        }
+        
+        return result;
     };
 
     const initiateDeleteCategory = (category: CategoryItem) => {
@@ -671,7 +700,7 @@ export default function ConfiguracionPage() {
             />
 
             <AddPaymentMethodDialog
-                onAdd={addPaymentMethod}
+                onAdd={handleAddPaymentMethod}
                 open={isAddPMOpen}
                 onOpenChange={setIsAddPMOpen}
             />

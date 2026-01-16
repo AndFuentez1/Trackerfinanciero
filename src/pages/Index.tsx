@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
 import { AddBudgetDialog } from '@/components/finance/AddBudgetDialog';
@@ -17,8 +17,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { WelcomePanel } from '@/components/WelcomePanel';
+import { OnboardingDecisionPanel } from '@/components/OnboardingDecisionPanel';
 
 export default function Index() {
+  // ✅ TODOS los hooks primero, antes de cualquier return condicional
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const {
@@ -42,11 +45,22 @@ export default function Index() {
     lastUpdated: financeLastUpdated,
     updateCategoryGoal,
     updateTransaction,
+    updateProfile,
+    onboardingDecision,
+    hasPendingImport,
+    importProgress,
+    pendingImportData,
+    setOnboardingDecision,
+    confirmPendingImport,
+    startImport,
+    cancelImport,
+    confirmImportData,
     loading: financeLoading
   } = useFinanceData();
 
   const { lastModification: budgetLastUpdated, loading: budgetsLoading } = useBudgetsData();
 
+  // ✅ Todos los useMemo hooks
   const lastUpdated = useMemo(() => {
     if (!financeLastUpdated && !budgetLastUpdated) return null;
     if (!financeLastUpdated) return budgetLastUpdated;
@@ -54,8 +68,44 @@ export default function Index() {
     return financeLastUpdated > budgetLastUpdated ? financeLastUpdated : budgetLastUpdated;
   }, [financeLastUpdated, budgetLastUpdated]);
 
-  const isLoading = authLoading || financeLoading || budgetsLoading;
+  const isLoading = useMemo(() => 
+    authLoading || financeLoading || budgetsLoading,
+    [authLoading, financeLoading, budgetsLoading]
+  );
 
+  const isEmptyState = useMemo(() => 
+    !summary.currency || paymentMethods.length === 0 || categories.length === 0,
+    [summary.currency, paymentMethods.length, categories.length]
+  );
+  
+  const showDecisionPanel = useMemo(() => 
+    !isEmptyState && (!onboardingDecision || onboardingDecision === 'pending'),
+    [isEmptyState, onboardingDecision]
+  );
+  
+  const showCompletionCard = useMemo(() => 
+    hasPendingImport && importProgress.status === 'completed',
+    [hasPendingImport, importProgress.status]
+  );
+
+  // ✅ Todos los useEffect hooks
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎯 PANEL STATE:', {
+        isEmptyState,
+        showDecisionPanel,
+        showCompletionCard,
+        onboardingDecision,
+        hasPendingImport,
+        importStatus: importProgress.status,
+        currency: summary.currency,
+        paymentMethods: paymentMethods.length,
+        categories: categories.length,
+      });
+    }
+  }, [isEmptyState, showDecisionPanel, showCompletionCard, onboardingDecision, hasPendingImport, importProgress.status, summary.currency, paymentMethods.length, categories.length]);
+
+  // AHORA vienen los returns condicionales
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -65,6 +115,55 @@ export default function Index() {
   }
 
   if (!user) return null;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (isEmptyState) {
+    return (
+      <WelcomePanel
+        onConfigureCurrency={async (currencyCode) => {
+          await updateProfile({ currency: currencyCode });
+        }}
+        onAddPaymentMethod={() => navigate('/configuracion')}
+        onAddCategory={() => navigate('/configuracion')}
+        currencyConfigured={Boolean(summary.currency)}
+        hasPaymentMethods={paymentMethods.length > 0}
+        hasCategories={categories.length > 0}
+        currentCurrency={summary.currency}
+      />
+    );
+  }
+
+  if (showDecisionPanel) {
+    return (
+      <OnboardingDecisionPanel
+        onStartFromScratch={async () => {
+          await setOnboardingDecision('from_scratch');
+        }}
+        onImportData={() => {
+          // Abrir selector de archivo
+        }}
+        hasPendingImport={hasPendingImport}
+        onConfirmImport={async () => {
+          await confirmImportData();
+        }}
+        pendingImportCount={pendingImportData.length}
+        importProgress={importProgress}
+        onCancelImport={cancelImport}
+        paymentMethods={paymentMethods}
+        onImportComplete={(data) => {
+          startImport(data);
+        }}
+        showCompletionCard={showCompletionCard}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -60,7 +60,7 @@ export function SummaryTab({
   dateFilter,
   updateFilter
 }: SummaryTabProps) {
-  const { addPaymentMethod } = useFinanceData();
+  const { addPaymentMethod, updatePaymentMethod } = useFinanceData();
   const [isAddPMOpen, setIsAddPMOpen] = useState(false);
   const [editingPM, setEditingPM] = useState<PaymentMethod | null>(null);
   const [isEditPMOpen, setIsEditPMOpen] = useState(false);
@@ -345,6 +345,7 @@ export function SummaryTab({
             setIsEditPMOpen(o);
             if (!o) setEditingPM(null);
           }}
+          onSave={updatePaymentMethod}
         />
 
         <AddPaymentMethodDialog

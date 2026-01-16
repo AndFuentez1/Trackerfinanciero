@@ -16,7 +16,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { PendingInvoicesPanel } from '@/components/finance/PendingInvoicesPanel';
-import { useState, useMemo } from 'react';
+import { ImportStatusBar } from '@/components/finance/ImportStatusBar';
+import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
 
 export default function HistoryPage() {
@@ -40,6 +41,12 @@ export default function HistoryPage() {
         updateFilter,
         loadMore,
         hasMore,
+        importProgress,
+        hasPendingImport,
+        startImport,
+        cancelImport,
+        confirmImportData,
+        pendingImportData,
     } = useFinanceData();
 
     // useState hooks - MUST be before any conditionals
@@ -194,6 +201,25 @@ export default function HistoryPage() {
                     </div>
                 ) : (
                     <div className="space-y-6">
+                        {/* Barra de estado: Mostrar siempre que haya datos cargados */}
+                        <ImportStatusBar
+                            uiState={
+                                // La fuente de verdad UX es pendingImportData.length
+                                pendingImportData.length > 0
+                                    ? importProgress.status === 'loading'
+                                        ? 'applying'
+                                        : 'pending-approval'
+                                    : 'none'
+                            }
+                            recordCount={pendingImportData.length}
+                            onReviewAndApprove={async () => {
+                                await confirmImportData();
+                            }}
+                            onDiscard={async () => {
+                                await cancelImport();
+                            }}
+                        />
+
                         {/* Reclassification Zone Card */}
                         {reclassifyTxs.length > 0 && (
                             <div className="border-2 border-amber-400 bg-amber-50/40 rounded-xl p-6 mb-2 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
@@ -215,6 +241,12 @@ export default function HistoryPage() {
                                         const filteredCategories = getFilteredCategories(draft.type);
                                         const isSaving = savingId === tx.id;
                                         
+                                        // Detectar qué campos ya tienen datos válidos (deben bloquearse)
+                                        const hasValidDate = tx.date && tx.date.trim() !== '';
+                                        const hasValidDescription = tx.description && tx.description.trim() !== '';
+                                        const hasValidType = tx.type && tx.type !== '';
+                                        const hasValidAmount = tx.amount !== null && tx.amount !== undefined && tx.amount !== 0;
+                                        
                                         return (
                                             <div key={tx.id} className="bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm" style={{ fontStyle: 'normal' }}>
                                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
@@ -226,6 +258,7 @@ export default function HistoryPage() {
                                                             value={draft.date?.slice(0, 10) || ''}
                                                             onChange={e => handleReclassifyChange(tx.id, 'date', e.target.value)}
                                                             className="h-9 text-sm"
+                                                            disabled={hasValidDate}
                                                         />
                                                     </div>
 
@@ -237,6 +270,7 @@ export default function HistoryPage() {
                                                             onChange={e => handleReclassifyChange(tx.id, 'description', e.target.value)}
                                                             placeholder="Descripción"
                                                             className="h-9 text-sm"
+                                                            disabled={hasValidDescription}
                                                         />
                                                     </div>
 
@@ -250,8 +284,9 @@ export default function HistoryPage() {
                                                                 // Clear category when type changes
                                                                 handleReclassifyChange(tx.id, 'category_id', '');
                                                             }}
+                                                            disabled={hasValidType}
                                                         >
-                                                            <SelectTrigger className="h-9 text-sm">
+                                                            <SelectTrigger className="h-9 text-sm" disabled={hasValidType}>
                                                                 <SelectValue placeholder="Tipo..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -316,6 +351,7 @@ export default function HistoryPage() {
                                                             onChange={e => handleReclassifyChange(tx.id, 'amount', e.target.value)}
                                                             placeholder="0.00"
                                                             className="h-9 text-sm"
+                                                            disabled={hasValidAmount}
                                                         />
                                                     </div>
                                                 </div>
@@ -337,6 +373,15 @@ export default function HistoryPage() {
                                                         ) : (
                                                             'Guardar'
                                                         )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="whitespace-nowrap h-9"
+                                                        onClick={() => deleteTransaction(tx.id)}
+                                                        disabled={isSaving}
+                                                    >
+                                                        Descartar
                                                     </Button>
                                                 </div>
                                             </div>

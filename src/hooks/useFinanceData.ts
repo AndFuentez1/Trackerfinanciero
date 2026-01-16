@@ -157,6 +157,20 @@ export function useFinanceDataLogic() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
+  const [hasPendingImport, setHasPendingImport] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    status: 'idle' | 'loading' | 'completed' | 'failed' | 'cancelled';
+    progress: number;
+    message: string;
+    recordsProcessed?: number;
+    error?: string;
+  }>({
+    status: 'idle',
+    progress: 0,
+    message: '',
+  });
+  const [pendingImportData, setPendingImportData] = useState<Omit<Transaction, 'id'>[]>([]);
   const [dateFilter, setDateFilter] = useState<{
     from: string | null;
     to: string | null;
@@ -195,13 +209,37 @@ export function useFinanceDataLogic() {
         }
       }
 
+      // Reset currency and onboarding state in profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          currency: null,
+          onboarding_decision: null,
+          has_pending_import: false
+        })
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.warn('Error resetting profile:', profileError);
+      }
+
+      // Clear local states
+      setCurrency('');
+      setOnboardingDecision(null);
+      setHasPendingImport(false);
+      setImportProgress({
+        status: 'idle',
+        progress: 0,
+        message: '',
+      });
+      setPendingImportData([]);
+
       toast({ title: 'Éxito', description: 'Todos tus datos han sido eliminados.' });
 
-      // Clear cache and reload
+      // Clear cache and navigate to index
       queryClient.clear();
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Reload page to reset all state properly
+      window.location.href = '/';
 
       return { error: null };
     } catch (err) {
@@ -395,15 +433,35 @@ export function useFinanceDataLogic() {
       })));
     }
 
-    // Fetch Profile/Currency
-    const { data: profile } = await supabase
+    // Fetch Profile/Currency using 'id' as the user identifier
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('currency')
-      .eq('user_id', user.id)
-      .single();
+      .select('currency, onboarding_decision, has_pending_import')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      }
 
     if (profile?.currency) {
       setCurrency(profile.currency);
+    } else {
+    // Usuario nuevo sin moneda configurada
+    setCurrency('');
+    }
+    // Set onboarding decision state
+    setOnboardingDecision(profile?.onboarding_decision || null);
+    const hasPending = profile?.has_pending_import || false;
+    setHasPendingImport(hasPending);
+    
+    // If there's a pending import, restore the import progress state to 'completed'
+    if (hasPending) {
+      setImportProgress({
+        status: 'completed',
+        progress: 100,
+        message: 'Datos preparados para confirmar',
+      });
     }
 
     if (categoriesRes.error) {
@@ -782,6 +840,15 @@ export function useFinanceDataLogic() {
   const addTransactionsBulk = async (transactions: Omit<Transaction, 'id'>[]) => {
     if (!user) return { error: 'No autenticado', count: 0 };
 
+    // Actualizar estado de progreso: iniciando importación
+    setImportProgress({
+      status: 'loading',
+      progress: 0,
+      message: 'Iniciando importación...',
+      recordsProcessed: 0,
+    });
+    setHasPendingImport(true);
+
     const toInsert = transactions.map(t => ({
       user_id: user.id,
       type: (t.type === 'transfer_out' || t.type === 'transfer_in') ? 'transfer' : t.type,
@@ -792,15 +859,38 @@ export function useFinanceDataLogic() {
       payment_method_id: t.payment_method_id || null,
     }));
 
+    // Actualizar progreso: insertando transacciones
+    setImportProgress({
+      status: 'loading',
+      progress: 30,
+      message: 'Insertando transacciones...',
+      recordsProcessed: 0,
+    });
+
     const { data, error } = await supabase
       .from('transactions')
       .insert(toInsert)
       .select();
 
     if (error) {
+      setImportProgress({
+        status: 'failed',
+        progress: 0,
+        message: 'Error al importar transacciones',
+        error: error.message,
+      });
+      setHasPendingImport(false);
       toast({ title: 'Error', description: 'No se pudieron importar las transacciones. Por favor, intenta de nuevo.', variant: 'destructive' });
       return { error, count: 0 };
     }
+
+    // Actualizar progreso: recalculando balances
+    setImportProgress({
+      status: 'loading',
+      progress: 60,
+      message: 'Recalculando balances...',
+      recordsProcessed: data.length,
+    });
 
     // Recalculate payment method balances
     const balanceUpdates: Record<string, number> = {};
@@ -831,8 +921,24 @@ export function useFinanceDataLogic() {
       }
     }
 
+    // Actualizar progreso: finalizando
+    setImportProgress({
+      status: 'loading',
+      progress: 90,
+      message: 'Finalizando importación...',
+      recordsProcessed: data.length,
+    });
+
     // Refresh data after bulk import
     await fetchData();
+
+    // Completado y aplicado - resetear todo porque los datos ya están en la BD
+    setImportProgress({
+      status: 'idle',
+      progress: 0,
+      message: '',
+    });
+    setHasPendingImport(false);
 
     toast({ title: 'Éxito', description: `${data.length} transacciones importadas` });
     return { error: null, count: data.length };
@@ -1139,18 +1245,272 @@ export function useFinanceDataLogic() {
   const updateProfile = async (updates: { currency?: string; display_name?: string }) => {
     if (!user) return { error: 'No autenticado' };
 
-    const { error } = await supabase
+    // Primero verificar si existe el perfil usando 'id' como identificador
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('user_id', user.id);
+      .select('id, currency')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    let result;
+    if (existingProfile) {
+      // Si existe, hacer UPDATE usando 'id'
+      result = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select();
+    } else {
+      // Si no existe, hacer INSERT con 'id' como user identifier
+      result = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          type: 'personal',
+          profile_type: 'Personal',
+          onboarding_decision: null,
+          has_pending_import: false,
+          ...updates
+        })
+        .select();
+    }
+
+    const { data, error } = result;
 
     if (error) {
-      toast({ title: 'Error', description: 'No se pudo actualizar el perfil', variant: 'destructive' });
+      console.error('Error actualizando perfil:', error.message);
+      toast({ title: 'Error', description: `No se pudo actualizar el perfil: ${error.message}`, variant: 'destructive' });
       return { error };
     }
 
     if (updates.currency) setCurrency(updates.currency);
     toast({ title: 'Éxito', description: 'Perfil actualizado' });
+    
+    // Refrescar datos después de actualizar
+    await fetchData();
+    
+    return { error: null };
+  };
+
+  const setOnboardingDecisionFn = async (decision: 'from_scratch' | 'imported') => {
+    if (!user) return { error: 'No autenticado' };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ onboarding_decision: decision })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Error setting onboarding decision:', error.message);
+      toast({ title: 'Error', description: 'No se pudo guardar tu decisión', variant: 'destructive' });
+      return { error };
+    }
+
+    setOnboardingDecision(decision);
+    
+    // Si elige empezar desde cero, limpiar pending import
+    if (decision === 'from_scratch') {
+      setHasPendingImport(false);
+    }
+    
+    // Refrescar datos después de actualizar
+    await fetchData();
+    
+    return { error: null };
+  };
+
+  const confirmPendingImport = async () => {
+    if (!user) return { error: 'No autenticado' };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        has_pending_import: false,
+        onboarding_decision: 'imported'
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Error confirming import:', error.message);
+      toast({ title: 'Error', description: 'No se pudo confirmar la importación', variant: 'destructive' });
+      return { error };
+    }
+
+    setHasPendingImport(false);
+    setOnboardingDecision('imported');
+    
+    // Refrescar datos después de confirmar
+    await fetchData();
+    
+    return { error: null };
+  };
+
+  const startImport = (data: Omit<Transaction, 'id'>[]) => {
+    // Guardar datos pendientes sin aplicar
+    setPendingImportData(data);
+    setHasPendingImport(true);
+    setImportProgress({
+      status: 'completed',
+      progress: 100,
+      message: 'Datos cargados, pendientes de confirmación',
+    });
+    
+    // Marcar como pending en DB
+    if (user) {
+      supabase
+        .from('profiles')
+        .update({ has_pending_import: true })
+        .eq('id', user.id)
+        .catch(err => console.error('Error marking pending import:', err));
+    }
+  };
+
+  const cancelImport = async () => {
+    const recordCount = pendingImportData.length;
+    
+    // Mostrar toast con el conteo de registros
+    if (recordCount > 0) {
+      toast({ 
+        title: 'Importación cancelada', 
+        description: `Se descartaron ${recordCount} registr${recordCount !== 1 ? 'os' : 'o'}`,
+        variant: 'default'
+      });
+    }
+    
+    setPendingImportData([]);
+    setHasPendingImport(false);
+    setImportProgress({
+      status: 'cancelled',
+      progress: 0,
+      message: 'Importación cancelada',
+    });
+    
+    // Establecer onboarding como completado (from_scratch) para desaparecer el onboarding
+    await supabase
+      .from('profiles')
+      .update({ 
+        has_pending_import: false,
+        onboarding_decision: 'from_scratch'
+      })
+      .eq('id', user?.id);
+    
+    setOnboardingDecision('from_scratch');
+    
+    // Refrescar datos para volver al Dashboard
+    await fetchData();
+  };
+
+  const confirmImportData = async () => {
+    if (pendingImportData.length === 0) return { error: 'No hay datos para confirmar' };
+    if (!user) return { error: 'No autenticado' };
+
+    try {
+      const totalRecords = pendingImportData.length;
+      
+      setImportProgress({
+        status: 'loading',
+        progress: 30,
+        message: 'Aplicando datos importados...',
+        recordsProcessed: 0,
+      });
+
+      // Insertar todas las transacciones en lotes para mejor UX
+      const batchSize = 50;
+      let processedCount = 0;
+
+      for (let i = 0; i < pendingImportData.length; i += batchSize) {
+        const batch = pendingImportData.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('transactions')
+          .insert(batch.map(t => ({
+            ...t,
+            user_id: user.id,
+          })));
+
+        if (error) throw error;
+
+        processedCount += batch.length;
+        const progressPercent = 30 + Math.floor((processedCount / totalRecords) * 40);
+        
+        setImportProgress({
+          status: 'loading',
+          progress: progressPercent,
+          message: 'Aplicando datos importados...',
+          recordsProcessed: processedCount,
+        });
+      }
+
+      setImportProgress({
+        status: 'loading',
+        progress: 70,
+        message: 'Recalculando saldos...',
+        recordsProcessed: totalRecords,
+      });
+
+      // Recalcular saldos basado en transacciones
+      await recalculatePaymentMethodBalances();
+
+      setImportProgress({
+        status: 'completed',
+        progress: 100,
+        message: 'Datos confirmados exitosamente',
+        recordsProcessed: totalRecords,
+      });
+
+      // Limpiar estado
+      setPendingImportData([]);
+      setHasPendingImport(false);
+
+      // Actualizar DB
+      await supabase
+        .from('profiles')
+        .update({ 
+          has_pending_import: false,
+          onboarding_decision: 'imported'
+        })
+        .eq('id', user.id);
+
+      // Refrescar datos
+      await fetchData();
+
+      // Resetear progreso después de refrescar
+      setImportProgress({
+        status: 'idle',
+        progress: 0,
+        message: '',
+      });
+
+      toast({ 
+        title: 'Éxito', 
+        description: 'Datos importados y confirmados correctamente',
+        variant: 'default'
+      });
+
+      return { error: null };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : 'Error desconocido';
+      setImportProgress({
+        status: 'failed',
+        progress: 0,
+        message: 'Error al confirmar datos',
+        error,
+      });
+      toast({ 
+        title: 'Error', 
+        description: error,
+        variant: 'destructive'
+      });
+      return { error };
+    }
+  };
+
+  const recalculatePaymentMethodBalances = async () => {
+    // Esta función recalcula los saldos de métodos de pago basado en transacciones importadas
+    // por ahora es un placeholder - la lógica depende de cómo manejes transacciones de importación
+    await fetchData();
+
+    toast({ title: 'Éxito', description: 'Datos aplicados correctamente' });
     return { error: null };
   };
 
@@ -1596,8 +1956,9 @@ export function useFinanceDataLogic() {
       totalSavings,
       totalInvestments,
       netWorth: totalIncome - totalExpenses,
+      currency, // Include currency from state
     };
-  }, [rangeTransactions]);
+  }, [rangeTransactions, currency]);
 
   const expensesByCategory = useMemo(() => {
     const expenses = rangeTransactions.filter(t => t.type === 'expense');
@@ -1751,6 +2112,10 @@ export function useFinanceDataLogic() {
     insights,
     yieldStatistics,
     currency,
+    onboardingDecision,
+    hasPendingImport,
+    importProgress,
+    pendingImportData,
     addTransaction,
     addTransactionsBulk,
     deleteTransaction,
@@ -1760,6 +2125,11 @@ export function useFinanceDataLogic() {
     addTransfer,
     updateProfile,
     convertCurrency,
+    setOnboardingDecision: setOnboardingDecisionFn,
+    confirmPendingImport,
+    startImport,
+    cancelImport,
+    confirmImportData,
     addBudget,
     deleteBudget,
     refreshData: fetchData, // Consistent name for global refresh
@@ -1784,5 +2154,5 @@ export function useFinanceDataLogic() {
 
 // Global hook to be used by components
 export function useFinanceData() {
-  return useFinance();
+  return useFinanceDataLogic();
 }

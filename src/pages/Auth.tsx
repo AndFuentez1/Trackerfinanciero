@@ -169,7 +169,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
       const { error } = await supabase.auth.signUp({
         email,
         password,

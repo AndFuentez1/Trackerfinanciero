@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -25,6 +26,11 @@ import * as XLSX from 'xlsx';
 interface ImportExcelDialogProps {
   paymentMethods: PaymentMethod[];
   onImport: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error: any; count: number }>;
+  onImportBackground?: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error: any; count: number }>; // Para correr en segundo plano
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTriggerButton?: boolean; // Si false, no muestra el botón DialogTrigger
+  onboarding?: boolean; // Si true, no inserta directamente, deja que onImport maneje
 }
 
 interface ParsedRow {
@@ -144,10 +150,28 @@ const parseDate = (value: unknown): string | null => {
   return null;
 };
 
-export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialogProps) {
+export function ImportExcelDialog({ 
+  paymentMethods, 
+  onImport,
+  onImportBackground,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
+  showTriggerButton = true,
+  onboarding = false
+}: ImportExcelDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Usar estado externo si se proporciona, sino usar estado interno
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (newOpen: boolean) => {
+    if (externalOnOpenChange) {
+      externalOnOpenChange(newOpen);
+    } else {
+      setInternalOpen(newOpen);
+    }
+  };
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [isImporting, setIsImporting] = useState(false);
@@ -206,7 +230,7 @@ export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialo
     reader.readAsArrayBuffer(file);
   };
 
-  const handleImport = async () => {
+  const handleImport = async (closeDialogOnSuccess: boolean = true) => {
     if (!user) {
       alert("No autenticado");
       return;
@@ -397,6 +421,20 @@ export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialo
         return;
       }
 
+      // En modo onboarding: pasar transacciones a onImport sin insertar en BD
+      if (onboarding) {
+        console.log(`Procesadas ${transactionsToImport.length} transacciones en modo onboarding`);
+        await onImport(transactionsToImport);
+        setParsedRows([]);
+        setFileName('');
+        if (closeDialogOnSuccess) {
+          setOpen(false);
+        }
+        setIsImporting(false);
+        return;
+      }
+
+      // Flujo normal: insertar directamente en BD
       console.log(`Intentando importar ${transactionsToImport.length} transacciones una a una...`);
       let successCount = 0;
       let failCount = 0;
@@ -438,7 +476,9 @@ export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialo
         toast({ title: 'Importación completada', description: `Se importaron ${successCount} transacciones.` });
         setParsedRows([]);
         setFileName('');
-        setOpen(false);
+        if (closeDialogOnSuccess) {
+          setOpen(false);
+        }
       }
 
       // We still call onImport with empty array or just to trigger a refresh in the parent if possible
@@ -459,15 +499,20 @@ export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialo
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Upload className="h-4 w-4" />
-          Importar Excel
-        </Button>
-      </DialogTrigger>
+      {showTriggerButton && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Excel
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar desde Excel</DialogTitle>
+          <DialogDescription>
+            Carga un archivo Excel con tus transacciones. Las columnas esperadas son: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
@@ -584,13 +629,26 @@ export function ImportExcelDialog({ paymentMethods, onImport }: ImportExcelDialo
                   <p className="text-xs text-center text-muted-foreground">Procesando... {progress}%</p>
                 </div>
               ) : (
-                <Button
-                  onClick={handleImport}
-                  className="w-full"
-                  disabled={validCount === 0}
-                >
-                  Importar {validCount} transacciones
-                </Button>
+                <div className="flex gap-2">
+                  {/* Botón Correr en segundo plano (secondary) - no cierra diálogo después */}
+                  <Button
+                    onClick={() => handleImport(false)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={validCount === 0}
+                  >
+                    Correr en segundo plano
+                  </Button>
+
+                  {/* Botón Importar ahora (primary) - sí cierra diálogo */}
+                  <Button
+                    onClick={() => handleImport(true)}
+                    className="flex-1"
+                    disabled={validCount === 0}
+                  >
+                    Importar ahora
+                  </Button>
+                </div>
               )}
             </>
           )}

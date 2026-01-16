@@ -91,12 +91,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <CreditCard className="h-4 w-4" />
-          Método de pago
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nuevo método de pago</DialogTitle>

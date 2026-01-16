@@ -32,12 +32,13 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
             <Route path="/auth" element={<Auth />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
-          <Toaster />
-          <Sonner />
         </BrowserRouter>
       </FinanceProvider>
     </TooltipProvider>
+    <Toaster />
+    <Sonner />
   </QueryClientProvider>
 );
 
