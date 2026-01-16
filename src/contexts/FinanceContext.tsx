@@ -1,0 +1,21 @@
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useFinanceDataLogic } from '../hooks/useFinanceData';
+
+const FinanceContext = createContext<ReturnType<typeof useFinanceDataLogic> | undefined>(undefined);
+
+export function FinanceProvider({ children }: { children: ReactNode }) {
+    const financeData = useFinanceDataLogic();
+    return (
+        <FinanceContext.Provider value={financeData}>
+            {children}
+        </FinanceContext.Provider>
+    );
+}
+
+export function useFinance() {
+    const context = useContext(FinanceContext);
+    if (context === undefined) {
+        throw new Error('useFinance must be used within a FinanceProvider');
+    }
+    return context;
+}
