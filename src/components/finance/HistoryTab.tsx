@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter, Calendar, X, Tag, Plus } from 'lucide-react';
+import { Search, Filter, Calendar, X, Tag, Plus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -38,17 +38,19 @@ export function HistoryTab({
   highlightOrphaned = false
 }: HistoryTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState<string | undefined>(undefined);
+  const [yearFilter, setYearFilter] = useState<string | undefined>(undefined);
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
   const handleClearAll = () => {
     setSearchTerm('');
-    setMonthFilter('all');
-    setYearFilter('');
-    setTypeFilter('all');
-    setCategoryFilter('all');
+    setMonthFilter(undefined);
+    setYearFilter(undefined);
+    setTypeFilter(undefined);
+    setCategoryFilter(undefined);
+    setStatusFilter(undefined);
   };
 
   const handleThisMonth = () => {
@@ -60,7 +62,7 @@ export function HistoryTab({
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       // 1. Type Filter
-      if (typeFilter !== 'all') {
+      if (typeFilter !== undefined) {
         if (typeFilter === 'transfer') {
           if (t.category !== 'Transferencia') return false;
         } else if (typeFilter === 'savings_investment') {
@@ -71,7 +73,7 @@ export function HistoryTab({
       }
 
       // 2. Category Filter
-      if (categoryFilter !== 'all') {
+      if (categoryFilter !== undefined) {
         if (t.category_id !== categoryFilter && t.category !== categoryFilter) return false;
       }
 
@@ -79,7 +81,7 @@ export function HistoryTab({
       const date = new Date(t.date);
 
       // 4. Month Filter
-      if (monthFilter !== 'all') {
+      if (monthFilter !== undefined) {
         if (monthFilter === 'thisMonth') {
           const now = new Date();
           if (date.getMonth() + 1 !== now.getMonth() + 1 || date.getFullYear() !== now.getFullYear()) return false;
@@ -88,8 +90,8 @@ export function HistoryTab({
         }
       }
 
-      // 5. Year Filter (skip if thisMonth is selected, as it handles its own year)
-      if (monthFilter !== 'thisMonth' && yearFilter && /^\d{4}$/.test(yearFilter)) {
+      // 5. Year Filter
+      if (yearFilter !== undefined && /^\d{4}$/.test(yearFilter)) {
         if (date.getFullYear().toString() !== yearFilter) return false;
       }
 
@@ -99,69 +101,62 @@ export function HistoryTab({
         if (!t.description.toLowerCase().includes(term)) return false;
       }
 
+      // 7. Status Filter
+      if (statusFilter !== undefined) {
+        const isOrphan = !t.category && !t.category_id || !t.payment_method_id;
+        if (statusFilter === 'attention' && !isOrphan) return false;
+        if (statusFilter === 'ok' && isOrphan) return false;
+      }
+
       return true;
     });
-  }, [transactions, searchTerm, monthFilter, yearFilter, typeFilter, categoryFilter]);
+  }, [transactions, searchTerm, monthFilter, yearFilter, typeFilter, categoryFilter, statusFilter]);
 
-  const YEARS = ['Todos','2026','2025','2024','2023','2022','2021','2020'];
+  const visibleTransactions = filteredTransactions.slice(0, 20);
+
+  const YEARS = [
+    { label: 'Todos', value: 'all' },
+    { label: '2026', value: '2026' },
+    { label: '2025', value: '2025' },
+    { label: '2024', value: '2024' },
+    { label: '2023', value: '2023' },
+    { label: '2022', value: '2022' },
+    { label: '2021', value: '2021' },
+    { label: '2020', value: '2020' }
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-card/30 p-4 rounded-xl border border-border/50">
-        {/* Description */}
-        <div className="md:col-span-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Filtros en línea horizontal */}
+      <div className="flex gap-1 overflow-x-auto pb-2">
+        {/* Descripción */}
+        <div className="flex-1 min-w-[200px]">
           <Input
-            placeholder="Descripción..."
+            placeholder="Buscar descripción"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 bg-background/50 border-gray-100"
+            className="h-10 bg-background/50 border-gray-100"
           />
         </div>
 
-        {/* Month */}
-        <div className="md:col-span-2">
-          <Select value={monthFilter} onValueChange={(value) => {
-            if (value === 'thisMonth') {
-              handleThisMonth();
-            } else {
-              setMonthFilter(value);
-            }
-          }}>
+        {/* Tipo */}
+        <div className="flex-1 min-w-[120px]">
+          <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
             <SelectTrigger className="h-10 bg-background/50 border-gray-100">
-              <SelectValue placeholder="Mes" />
+              <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todo el año</SelectItem>
-              {MONTHS.map((m, idx) => (
-                <SelectItem key={m} value={(idx + 1).toString()}>{m}</SelectItem>
-              ))}
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="income">Ingreso</SelectItem>
+              <SelectItem value="expense">Gasto</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Year (Dropdown with 'Todos') */}
-        <div className="md:col-span-2">
-          <Select
-            value={yearFilter || 'Todos'}
-            onValueChange={(v) => setYearFilter(v === 'Todos' ? '' : v)}
-          >
+        {/* Categoría */}
+        <div className="flex-1 min-w-[150px]">
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
             <SelectTrigger className="h-10 bg-background/50 border-gray-100">
-              <SelectValue placeholder="Año" />
-            </SelectTrigger>
-            <SelectContent>
-              {YEARS.map(y => (
-                <SelectItem key={y} value={y}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Categories */}
-        <div className="md:col-span-2 relative">
-          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground z-10" />
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="pl-9 h-10 bg-background/50 border-gray-100">
               <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
@@ -173,49 +168,62 @@ export function HistoryTab({
           </Select>
         </div>
 
-        {/* Types */}
-        <div className="md:col-span-2 relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground z-10" />
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="pl-9 h-10 bg-background/50 border-gray-100">
-              <SelectValue placeholder="Tipo" />
+        {/* Mes */}
+        <div className="flex-1 min-w-[120px]">
+          <Select value={monthFilter} onValueChange={(value) => {
+            if (value === 'thisMonth') {
+              handleThisMonth();
+            } else {
+              setMonthFilter(value === 'all' ? undefined : value);
+            }
+          }}>
+            <SelectTrigger className="h-10 bg-background/50 border-gray-100">
+              <SelectValue placeholder="Mes" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="expense">Gasto</SelectItem>
-              <SelectItem value="income">Ingreso</SelectItem>
-              <SelectItem value="savings_investment">Ahorro / Inversión</SelectItem>
-              <SelectItem value="transfer">Transferencia</SelectItem>
+              {MONTHS.map((m, idx) => (
+                <SelectItem key={m} value={(idx + 1).toString()}>{m}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Buttons Row */}
-        <div className="md:col-span-12 flex items-center justify-end mt-1 pt-3 border-t border-border/40">
-          <div className="flex items-center gap-2">
-            {(searchTerm || monthFilter !== 'all' || yearFilter || typeFilter !== 'all' || categoryFilter !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAll}
-                className="h-8 gap-2 text-xs text-muted-foreground hover:text-destructive"
-              >
-                <X className="h-3.5 w-3.5" />
-                Limpiar Filtros
-              </Button>
-            )}
-          </div>
+        {/* Año */}
+        <div className="flex-1 min-w-[100px]">
+          <Select
+            value={yearFilter}
+            onValueChange={(value) => setYearFilter(value === 'all' ? undefined : value)}
+          >
+            <SelectTrigger className="h-10 bg-background/50 border-gray-100">
+              <SelectValue placeholder="Año" />
+            </SelectTrigger>
+            <SelectContent>
+              {YEARS.map(y => (
+                <SelectItem key={y.value} value={y.value}>
+                  {y.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
+      {/* Label de registros */}
+      <div className="text-sm text-muted-foreground">
+        Mostrando {visibleTransactions.length}/{filteredTransactions.length} registros
+      </div>
+
       <TransactionList
-        transactions={filteredTransactions}
+        transactions={visibleTransactions}
         onDelete={onDeleteTransaction}
         onUpdate={onUpdateTransaction}
         onEdit={onEditTransaction}
         paymentMethods={paymentMethods}
         categories={categories}
         highlightOrphaned={highlightOrphaned}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
       />
     </div>
   );

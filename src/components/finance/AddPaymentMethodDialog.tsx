@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,11 @@ import { CreditCard, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddPaymentMethodDialogProps {
-  onAdd: (pm: Omit<PaymentMethod, 'id'>) => Promise<{ error: unknown }>;
+  onAdd: (pm: Omit<PaymentMethod, 'id'>) => Promise<{ error: unknown; data?: PaymentMethod }>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  initialName?: string;
+  onSuccess?: (pm: PaymentMethod) => void;
 }
 
 const typeOptions: { value: PaymentMethodType; label: string }[] = [
@@ -40,12 +42,12 @@ const PRESET_COLORS = [
   { value: '#ec4899', label: 'Pink' },
 ];
 
-export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange }: AddPaymentMethodDialogProps) {
+export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess }: AddPaymentMethodDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? onOpenChange! : setInternalOpen;
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [type, setType] = useState<PaymentMethodType | 'savings'>('debit');
   const [balance, setBalance] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
@@ -56,12 +58,16 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const [color, setColor] = useState('#4f46e5');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setName(initialName);
+  }, [initialName]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
 
     setIsSubmitting(true);
-    const { error } = await onAdd({
+    const result = await onAdd({
       name,
       type,
       balance: parseFloat(balance || '0'),
@@ -75,18 +81,21 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
     setIsSubmitting(false);
 
-    if (!error) {
-      setName('');
-      setType('debit');
-      setBalance('');
-      setCreditLimit('');
-      setIsSavingsAccount(false);
-      setSavingsGoal('');
-      setEstimatedYield('');
-      setClosingDate('');
-      setColor('#4f46e5');
-      setOpen(false);
+    if (!result.error && result.data) {
+      onSuccess?.(result.data);
     }
+
+    // Always reset form and close dialog
+    setName('');
+    setType('debit');
+    setBalance('');
+    setCreditLimit('');
+    setIsSavingsAccount(false);
+    setSavingsGoal('');
+    setEstimatedYield('');
+    setClosingDate('');
+    setColor('#4f46e5');
+    setOpen(false);
   };
 
   return (

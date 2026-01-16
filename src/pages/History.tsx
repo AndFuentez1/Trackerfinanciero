@@ -2,10 +2,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
+import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/components/finance/ImportExcelDialog';
 import { ExportExcelButton } from '@/components/finance/ExportExcelButton';
 import { HistoryTab } from '@/components/finance/HistoryTab';
-import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle } from 'lucide-react';
+import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,6 +48,8 @@ export default function HistoryPage() {
         cancelImport,
         confirmImportData,
         pendingImportData,
+        addCategory,
+        addPaymentMethod,
     } = useFinanceData();
 
     // useState hooks - MUST be before any conditionals
@@ -54,6 +57,8 @@ export default function HistoryPage() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [reclassifyDrafts, setReclassifyDrafts] = useState({});
     const [savingId, setSavingId] = useState<string | null>(null);
+    const [creatingPMFor, setCreatingPMFor] = useState<string | null>(null);
+    const [pendingTx, setPendingTx] = useState<Transaction | null>(null);
 
     // Computed values (not hooks, safe to compute here)
     const isLoading = authLoading || dataLoading;
@@ -111,19 +116,44 @@ export default function HistoryPage() {
 
     const handleReclassifySave = async (tx: Transaction) => {
         const draft = reclassifyDrafts[tx.id];
-        if (!draft || !draft.category_id || !draft.type) return;
+        if (!draft || !draft.category_name || !draft.type) return;
         
         setSavingId(tx.id);
         
         try {
+            // Find or create category
+            let categoryId = null;
+            const existingCategory = categories.find(c => c.name === draft.category_name);
+            if (existingCategory) {
+                categoryId = existingCategory.id;
+            } else if (draft.category_name) {
+                // Create category
+                const newCategory = await addCategory({ name: draft.category_name, type: draft.type });
+                categoryId = newCategory.id;
+            }
+            
+            // Find or create payment method
+            let paymentMethodId = null;
+            if (draft.payment_method_name) {
+                const existingPaymentMethod = paymentMethods.find(pm => pm.name === draft.payment_method_name);
+                if (existingPaymentMethod) {
+                    paymentMethodId = existingPaymentMethod.id;
+                } else {
+                    // Instead of creating directly, open dialog
+                    setPendingTx(tx);
+                    setCreatingPMFor(tx.id);
+                    return;
+                }
+            }
+            
             // Update with all necessary fields - setting category_id removes from reclassification zone
             await updateTransaction(tx.id, {
-                category_id: draft.category_id,
+                category_id: categoryId,
                 type: draft.type,
                 description: draft.description,
                 amount: Number(draft.amount),
                 date: draft.date,
-                payment_method_id: draft.payment_method_id,
+                payment_method_id: paymentMethodId,
             });
             
             // Remove from local drafts
@@ -194,6 +224,20 @@ export default function HistoryPage() {
                 }}
             />
 
+            <AddPaymentMethodDialog
+                open={!!creatingPMFor}
+                onOpenChange={(open) => { if (!open) { setCreatingPMFor(null); setPendingTx(null); } }}
+                initialName={creatingPMFor ? reclassifyDrafts[creatingPMFor]?.payment_method_name || '' : ''}
+                onAdd={addPaymentMethod}
+                onSuccess={() => {
+                    setCreatingPMFor(null);
+                    if (pendingTx) {
+                        handleReclassifySave(pendingTx);
+                        setPendingTx(null);
+                    }
+                }}
+            />
+
             <main className="container max-w-6xl mx-auto px-4 py-8">
                 {isLoading && !transactions.length ? (
                     <div className="flex items-center justify-center py-20">
@@ -229,22 +273,22 @@ export default function HistoryPage() {
                                 </h2>
                                 <div className="space-y-4">
                                     {reclassifyTxs.map(tx => {
-                                        const draft = reclassifyDrafts[tx.id] || {
+                                        const initialDraft = {
                                             description: tx.description || '',
                                             amount: tx.amount ?? '',
                                             date: tx.date || '',
-                                            category_id: tx.category_id || '',
+                                            category_name: tx.category || '',
                                             type: tx.type || 'expense',
-                                            payment_method_id: tx.payment_method_id || '',
+                                            payment_method_name: tx.payment_method || '',
                                         };
+                                        const draft = reclassifyDrafts[tx.id] ? { ...initialDraft, ...reclassifyDrafts[tx.id] } : initialDraft;
                                         
-                                        const filteredCategories = getFilteredCategories(draft.type);
                                         const isSaving = savingId === tx.id;
                                         
                                         // Detectar qué campos ya tienen datos válidos (deben bloquearse)
                                         const hasValidDate = tx.date && tx.date.trim() !== '';
                                         const hasValidDescription = tx.description && tx.description.trim() !== '';
-                                        const hasValidType = tx.type && tx.type !== '';
+                                        const hasValidType = false; // Permitir editar type siempre
                                         const hasValidAmount = tx.amount !== null && tx.amount !== undefined && tx.amount !== 0;
                                         
                                         return (
@@ -281,8 +325,6 @@ export default function HistoryPage() {
                                                             value={draft.type} 
                                                             onValueChange={(value) => {
                                                                 handleReclassifyChange(tx.id, 'type', value);
-                                                                // Clear category when type changes
-                                                                handleReclassifyChange(tx.id, 'category_id', '');
                                                             }}
                                                             disabled={hasValidType}
                                                         >
@@ -303,42 +345,23 @@ export default function HistoryPage() {
                                                     {/* Categoría (Category) - 4th */}
                                                     <div className="space-y-1">
                                                         <label className="text-xs font-medium text-muted-foreground block text-left" style={{ fontStyle: 'normal' }}>Categoría</label>
-                                                        <Select 
-                                                            value={draft.category_id} 
-                                                            onValueChange={(value) => handleReclassifyChange(tx.id, 'category_id', value)}
-                                                            disabled={!draft.type}
-                                                        >
-                                                            <SelectTrigger className="h-9 text-sm" disabled={!draft.type}>
-                                                                <SelectValue placeholder={draft.type ? "Seleccionar categoría..." : "Selecciona tipo primero"} />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {filteredCategories.length > 0 ? (
-                                                                    filteredCategories.map(cat => (
-                                                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                                                    ))
-                                                                ) : (
-                                                                    <SelectItem value="new" disabled>+ Nueva categoría</SelectItem>
-                                                                )}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <Input
+                                                            value={draft.category_name}
+                                                            onChange={e => handleReclassifyChange(tx.id, 'category_name', e.target.value)}
+                                                            placeholder="Nombre de la categoría"
+                                                            className="h-9 text-sm"
+                                                        />
                                                     </div>
 
                                                     {/* Método de Pago (Payment Method) - 5th */}
                                                     <div className="space-y-1">
                                                         <label className="text-xs font-medium text-muted-foreground block text-left" style={{ fontStyle: 'normal' }}>Método de Pago</label>
-                                                        <Select 
-                                                            value={draft.payment_method_id}
-                                                            onValueChange={(value) => handleReclassifyChange(tx.id, 'payment_method_id', value)}
-                                                        >
-                                                            <SelectTrigger className="h-9 text-sm">
-                                                                <SelectValue placeholder="Seleccionar método..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {paymentMethods.map(pm => (
-                                                                    <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <Input
+                                                            value={draft.payment_method_name}
+                                                            onChange={e => handleReclassifyChange(tx.id, 'payment_method_name', e.target.value)}
+                                                            placeholder="Nombre del método de pago"
+                                                            className="h-9 text-sm"
+                                                        />
                                                     </div>
 
                                                     {/* Monto (Amount) - 6th */}
@@ -363,7 +386,7 @@ export default function HistoryPage() {
                                                         size="sm"
                                                         className="bg-amber-400/90 text-amber-900 font-bold hover:bg-amber-500 whitespace-nowrap h-9"
                                                         onClick={() => handleReclassifySave(tx)}
-                                                        disabled={!draft.category_id || !draft.type || isSaving}
+                                                        disabled={!draft.category_name || !draft.type || isSaving}
                                                     >
                                                         {isSaving ? (
                                                             <div className="flex items-center gap-2">

@@ -14,8 +14,9 @@ import { Plus, Tag, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddCategoryDialogProps {
-    onAdd: (category: Omit<CategoryItem, 'id'>) => Promise<{ error: any }>;
+    onAdd: (category: Omit<CategoryItem, 'id'>) => Promise<{ error: any; data?: CategoryItem }>;
     type?: TransactionType;
+    onSuccess?: (category: CategoryItem) => void;
 }
 
 const typeOptions: { value: TransactionType; label: string }[] = [
@@ -25,7 +26,7 @@ const typeOptions: { value: TransactionType; label: string }[] = [
     { value: 'investment', label: 'Inversión' },
 ];
 
-export function AddCategoryDialog({ onAdd, type: initialType = 'expense' }: AddCategoryDialogProps) {
+export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSuccess }: AddCategoryDialogProps) {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
     const [type, setType] = useState<TransactionType>(initialType);
@@ -53,7 +54,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense' }: AddC
         if (!name) return;
 
         setIsSubmitting(true);
-        const { error } = await onAdd({
+        const result = await onAdd({
             name,
             type,
             color: selectedColor,
@@ -61,7 +62,8 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense' }: AddC
 
         setIsSubmitting(false);
 
-        if (!error) {
+        if (!result.error && result.data) {
+            onSuccess?.(result.data);
             setName('');
             setOpen(false);
         }

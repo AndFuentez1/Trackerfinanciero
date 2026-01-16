@@ -35,6 +35,8 @@ interface TransactionListProps {
   categories: CategoryItem[];
   showOnlyRecent?: boolean;
   highlightOrphaned?: boolean;
+  statusFilter?: 'attention' | 'ok';
+  setStatusFilter: (value: 'attention' | 'ok' | undefined) => void;
 }
 
 const typeLabels = {
@@ -67,7 +69,9 @@ export function TransactionList({
   paymentMethods,
   categories,
   showOnlyRecent = false,
-  highlightOrphaned = false
+  highlightOrphaned = false,
+  statusFilter,
+  setStatusFilter
 }: TransactionListProps) {
   const [sortConfig, setSortConfig] = useState<{
     key: 'date' | 'category' | 'amount' | null;
@@ -132,7 +136,7 @@ export function TransactionList({
     }
   };
 
-  const handleSort = (key: 'date' | 'category' | 'amount') => {
+  const handleSort = (key: 'date' | 'category' | 'amount' | 'status') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -140,7 +144,7 @@ export function TransactionList({
     setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: 'date' | 'category' | 'amount') => {
+  const getSortIcon = (key: 'date' | 'category' | 'amount' | 'status') => {
     if (sortConfig.key !== key) return <ArrowUpDown className="ml-1 h-3 w-3" />;
     return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
@@ -191,6 +195,11 @@ export function TransactionList({
         const bCat = categories.find(c => c.id === b.category_id)?.name || b.category || '';
         aValue = aCat.toLowerCase();
         bValue = bCat.toLowerCase();
+      } else if (sortConfig.key === 'status') {
+        const aIsOrphan = !a.category && !a.category_id || !a.payment_method_id;
+        const bIsOrphan = !b.category && !b.category_id || !b.payment_method_id;
+        aValue = aIsOrphan ? 1 : 0; // Atención first
+        bValue = bIsOrphan ? 1 : 0;
       }
 
       if (sortConfig.key) {
@@ -264,6 +273,23 @@ export function TransactionList({
               >
                 <div className="flex items-center justify-end">
                   Monto {getSortIcon('amount')}
+                </div>
+              </th>
+              <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <div className="flex items-center justify-center gap-1">
+                  <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
+                    <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="attention">Atención</SelectItem>
+                      <SelectItem value="ok">OK</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button onClick={() => handleSort('status')} className="hover:text-primary transition-colors p-0 border-none bg-transparent">
+                    {getSortIcon('status')}
+                  </button>
                 </div>
               </th>
               <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
@@ -454,6 +480,16 @@ export function TransactionList({
                         {formatCurrency(transaction.amount)}
                       </span>
                     )}
+                  </td>
+
+                  {/* Status */}
+                  <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                    <span className={cn(
+                      'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                      isOrphan ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'
+                    )} style={{ fontStyle: 'normal' }}>
+                      {isOrphan ? 'Atención' : 'OK'}
+                    </span>
                   </td>
 
                   {/* Actions */}

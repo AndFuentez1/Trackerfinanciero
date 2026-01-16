@@ -137,6 +137,11 @@ export type Database = {
           pin_hash: string | null
           updated_at: string
           user_id: string
+          onboarding_decision: string | null
+          has_pending_import: boolean | null
+          email: string | null
+          type: string | null
+          profile_type: string | null
         }
         Insert: {
           created_at?: string
@@ -146,6 +151,11 @@ export type Database = {
           pin_hash?: string | null
           updated_at?: string
           user_id: string
+          onboarding_decision?: string | null
+          has_pending_import?: boolean | null
+          email?: string | null
+          type?: string | null
+          profile_type?: string | null
         }
         Update: {
           created_at?: string
@@ -155,6 +165,11 @@ export type Database = {
           pin_hash?: string | null
           updated_at?: string
           user_id?: string
+          onboarding_decision?: string | null
+          has_pending_import?: boolean | null
+          email?: string | null
+          type?: string | null
+          profile_type?: string | null
         }
         Relationships: []
       }

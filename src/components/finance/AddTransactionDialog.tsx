@@ -409,7 +409,14 @@ export function AddTransactionDialog({
                               </SelectItem>
                             ))}
                             <div className="border-t border-border/50 px-2 py-2 mt-1">
-                              <AddCategoryDialog type={currentType} onAdd={addCategory} />
+                              <AddCategoryDialog 
+                                type={currentType} 
+                                onAdd={addCategory}
+                                onSuccess={(cat) => {
+                                  setValue('category_id', cat.id);
+                                  setValue('category', cat.name);
+                                }}
+                              />
                             </div>
                           </SelectContent>
                         </Select>

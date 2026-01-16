@@ -212,7 +212,7 @@ export function useFinanceDataLogic() {
       // Reset currency and onboarding state in profiles table
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           currency: null,
           onboarding_decision: null,
           has_pending_import: false
@@ -442,19 +442,19 @@ export function useFinanceDataLogic() {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
-      }
+    }
 
     if (profile?.currency) {
       setCurrency(profile.currency);
     } else {
-    // Usuario nuevo sin moneda configurada
-    setCurrency('');
+      // Usuario nuevo sin moneda configurada
+      setCurrency('');
     }
     // Set onboarding decision state
-    setOnboardingDecision(profile?.onboarding_decision || null);
+    setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
     const hasPending = profile?.has_pending_import || false;
     setHasPendingImport(hasPending);
-    
+
     // If there's a pending import, restore the import progress state to 'completed'
     if (hasPending) {
       setImportProgress({
@@ -1143,7 +1143,7 @@ export function useFinanceDataLogic() {
 
     const createdRow = data as PaymentMethodRow;
 
-    setPaymentMethods(prev => [...prev, {
+    const createdPM = {
       id: createdRow.id,
       name: createdRow.name,
       type: createdRow.type as PaymentMethodType,
@@ -1155,10 +1155,12 @@ export function useFinanceDataLogic() {
       closing_date: createdRow.closing_date || null,
       payment_day: createdRow.payment_day || null,
       color: (createdRow as any).color || null,
-    }]);
+    };
+
+    setPaymentMethods(prev => [...prev, createdPM]);
 
     toast({ title: 'Éxito', description: 'Método de pago creado' });
-    return { error: null, data };
+    return { error: null, data: createdPM };
   };
 
   const addTransfer = async (fromId: string, toId: string, amount: number, description: string, date: string) => {
@@ -1286,10 +1288,10 @@ export function useFinanceDataLogic() {
 
     if (updates.currency) setCurrency(updates.currency);
     toast({ title: 'Éxito', description: 'Perfil actualizado' });
-    
+
     // Refrescar datos después de actualizar
     await fetchData();
-    
+
     return { error: null };
   };
 
@@ -1308,15 +1310,15 @@ export function useFinanceDataLogic() {
     }
 
     setOnboardingDecision(decision);
-    
+
     // Si elige empezar desde cero, limpiar pending import
     if (decision === 'from_scratch') {
       setHasPendingImport(false);
     }
-    
+
     // Refrescar datos después de actualizar
     await fetchData();
-    
+
     return { error: null };
   };
 
@@ -1325,7 +1327,7 @@ export function useFinanceDataLogic() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         has_pending_import: false,
         onboarding_decision: 'imported'
       })
@@ -1339,10 +1341,10 @@ export function useFinanceDataLogic() {
 
     setHasPendingImport(false);
     setOnboardingDecision('imported');
-    
+
     // Refrescar datos después de confirmar
     await fetchData();
-    
+
     return { error: null };
   };
 
@@ -1355,7 +1357,7 @@ export function useFinanceDataLogic() {
       progress: 100,
       message: 'Datos cargados, pendientes de confirmación',
     });
-    
+
     // Marcar como pending en DB
     if (user) {
       supabase
@@ -1368,16 +1370,16 @@ export function useFinanceDataLogic() {
 
   const cancelImport = async () => {
     const recordCount = pendingImportData.length;
-    
+
     // Mostrar toast con el conteo de registros
     if (recordCount > 0) {
-      toast({ 
-        title: 'Importación cancelada', 
+      toast({
+        title: 'Importación cancelada',
         description: `Se descartaron ${recordCount} registr${recordCount !== 1 ? 'os' : 'o'}`,
         variant: 'default'
       });
     }
-    
+
     setPendingImportData([]);
     setHasPendingImport(false);
     setImportProgress({
@@ -1385,18 +1387,18 @@ export function useFinanceDataLogic() {
       progress: 0,
       message: 'Importación cancelada',
     });
-    
+
     // Establecer onboarding como completado (from_scratch) para desaparecer el onboarding
     await supabase
       .from('profiles')
-      .update({ 
+      .update({
         has_pending_import: false,
         onboarding_decision: 'from_scratch'
       })
       .eq('id', user?.id);
-    
+
     setOnboardingDecision('from_scratch');
-    
+
     // Refrescar datos para volver al Dashboard
     await fetchData();
   };
@@ -1407,7 +1409,7 @@ export function useFinanceDataLogic() {
 
     try {
       const totalRecords = pendingImportData.length;
-      
+
       setImportProgress({
         status: 'loading',
         progress: 30,
@@ -1432,7 +1434,7 @@ export function useFinanceDataLogic() {
 
         processedCount += batch.length;
         const progressPercent = 30 + Math.floor((processedCount / totalRecords) * 40);
-        
+
         setImportProgress({
           status: 'loading',
           progress: progressPercent,
@@ -1465,7 +1467,7 @@ export function useFinanceDataLogic() {
       // Actualizar DB
       await supabase
         .from('profiles')
-        .update({ 
+        .update({
           has_pending_import: false,
           onboarding_decision: 'imported'
         })
@@ -1481,8 +1483,8 @@ export function useFinanceDataLogic() {
         message: '',
       });
 
-      toast({ 
-        title: 'Éxito', 
+      toast({
+        title: 'Éxito',
         description: 'Datos importados y confirmados correctamente',
         variant: 'default'
       });
@@ -1496,8 +1498,8 @@ export function useFinanceDataLogic() {
         message: 'Error al confirmar datos',
         error,
       });
-      toast({ 
-        title: 'Error', 
+      toast({
+        title: 'Error',
         description: error,
         variant: 'destructive'
       });
@@ -1999,12 +2001,12 @@ export function useFinanceDataLogic() {
   // Yield Statistics
   const yieldStatistics = useMemo(() => {
     // Calculate yield from Rendimientos category (interest income)
-    const yieldTransactions = transactions.filter(t => 
+    const yieldTransactions = transactions.filter(t =>
       t.category === 'Rendimientos' && t.type === 'income'
     );
     const totalYield = yieldTransactions.reduce((sum, t) => sum + t.amount, 0);
     const averageYield = yieldTransactions.length > 0 ? totalYield / yieldTransactions.length : 0;
-    
+
     // Group by payment method
     const yieldByPaymentMethod: { [key: string]: number } = {};
     yieldTransactions.forEach(t => {
