@@ -169,23 +169,23 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg">
             {editingBudget ? 'Editar presupuesto' : 'Nuevo presupuesto'}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4">
+          <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
             <FormField
               control={control}
               name="category_id"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel>Categoría</FormLabel>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
+                  <FormLabel className="text-sm">Categoría</FormLabel>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex-1 min-w-0">
                       <Select
                         onValueChange={(val) => {
                           field.onChange(val);
@@ -199,7 +199,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
                         disabled={!!editingBudget}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9 text-sm">
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
                         </FormControl>
@@ -212,7 +212,11 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
                         </SelectContent>
                       </Select>
                     </div>
-                    {!editingBudget && <AddCategoryDialog type="expense" onAdd={addCategory} />}
+                    {!editingBudget && (
+                      <div className="flex-shrink-0">
+                        <AddCategoryDialog type="expense" onAdd={addCategory} />
+                      </div>
+                    )}
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -224,12 +228,12 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
               name="amount"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel>Monto máximo</FormLabel>
+                  <FormLabel className="text-sm">Monto máximo</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-2 text-muted-foreground text-sm">$</span>
                       <Input
-                        className="pl-7"
+                        className="pl-7 h-9 text-sm"
                         placeholder="0.00"
                         value={formatDisplayedAmount(field.value)}
                         onChange={(e) => handleAmountChange(e, field.onChange)}
@@ -242,15 +246,15 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
             />
 
             {isUpdatingExisting && (
-              <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-800">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-xs">
+              <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-800 p-2 sm:p-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                <AlertDescription className="text-xs ml-2">
                   Ya tienes un presupuesto para esta categoría. Se actualizará el monto.
                 </AlertDescription>
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full h-9 text-sm sm:text-base" disabled={isSubmitting}>
               {isSubmitting ? 'Guardando...' : (
                 isUpdatingExisting ? '¿Actualizar presupuesto existente?' :
                   (editingBudget ? 'Actualizar presupuesto' : 'Guardar presupuesto')

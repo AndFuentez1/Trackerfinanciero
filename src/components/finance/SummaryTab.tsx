@@ -167,16 +167,16 @@ export function SummaryTab({
 
       {/* SECCIÓN 1: Mis Cuentas (Prioridad Alta) */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-primary" />
-            Mis Cuentas
+        <div className="flex flex-col items-start justify-between gap-3 sm:gap-4">
+          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2 w-full">
+            <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Mis Cuentas</span>
           </h2>
           
-          {/* Date Filtering Controls */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Quick Action Buttons */}
-            <div className="flex gap-1">
+          {/* Date Filtering Controls - Responsive Wrapper */}
+          <div className="w-full space-y-2">
+            {/* Quick Action Buttons - Scroll en móvil */}
+            <div className="flex gap-1 overflow-x-auto pb-2 sm:pb-0 w-full">
               <Button
                 variant="outline"
                 size="sm"
@@ -186,9 +186,9 @@ export function SummaryTab({
                   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
                   updateFilter('custom', format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
                 }}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
               >
-                Esta Semana
+                Semana
               </Button>
               <Button
                 variant="outline"
@@ -199,9 +199,9 @@ export function SummaryTab({
                   const monthEnd = endOfMonth(now);
                   updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
                 }}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
               >
-                Este Mes
+                Mes
               </Button>
               <Button
                 variant="outline"
@@ -212,14 +212,15 @@ export function SummaryTab({
                   const yearEnd = endOfYear(now);
                   updateFilter('custom', format(yearStart, 'yyyy-MM-dd'), format(yearEnd, 'yyyy-MM-dd'));
                 }}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
               >
-                Este Año
+                Año
               </Button>
             </div>
 
-            {/* Month and Year Selectors */}
-            <div className="flex gap-1">
+            {/* Month, Year Selectors & Calendar - Grid responsivo */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              {/* Month Selector */}
               <Select
                 value={dateFilter.from ? new Date(dateFilter.from).getMonth().toString() : ''}
                 onValueChange={(month) => {
@@ -229,25 +230,26 @@ export function SummaryTab({
                   updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
                 }}
               >
-                <SelectTrigger className="w-24 h-8">
+                <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-24 text-xs">
                   <SelectValue placeholder="Mes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Enero</SelectItem>
-                  <SelectItem value="1">Febrero</SelectItem>
-                  <SelectItem value="2">Marzo</SelectItem>
-                  <SelectItem value="3">Abril</SelectItem>
-                  <SelectItem value="4">Mayo</SelectItem>
-                  <SelectItem value="5">Junio</SelectItem>
-                  <SelectItem value="6">Julio</SelectItem>
-                  <SelectItem value="7">Agosto</SelectItem>
-                  <SelectItem value="8">Septiembre</SelectItem>
-                  <SelectItem value="9">Octubre</SelectItem>
-                  <SelectItem value="10">Noviembre</SelectItem>
-                  <SelectItem value="11">Diciembre</SelectItem>
+                  <SelectItem value="0">Ene</SelectItem>
+                  <SelectItem value="1">Feb</SelectItem>
+                  <SelectItem value="2">Mar</SelectItem>
+                  <SelectItem value="3">Abr</SelectItem>
+                  <SelectItem value="4">May</SelectItem>
+                  <SelectItem value="5">Jun</SelectItem>
+                  <SelectItem value="6">Jul</SelectItem>
+                  <SelectItem value="7">Ago</SelectItem>
+                  <SelectItem value="8">Sep</SelectItem>
+                  <SelectItem value="9">Oct</SelectItem>
+                  <SelectItem value="10">Nov</SelectItem>
+                  <SelectItem value="11">Dic</SelectItem>
                 </SelectContent>
               </Select>
 
+              {/* Year Selector */}
               <Select
                 value={dateFilter.from ? new Date(dateFilter.from).getFullYear().toString() : ''}
                 onValueChange={(year) => {
@@ -257,7 +259,7 @@ export function SummaryTab({
                   updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
                 }}
               >
-                <SelectTrigger className="w-20 h-8">
+                <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-20 text-xs">
                   <SelectValue placeholder="Año" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,62 +271,64 @@ export function SummaryTab({
                   <SelectItem value="2027">2027</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
 
-            {/* Calendar Picker */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-8 px-3 text-xs gap-1.5 bg-background/50 hover:bg-background border-border/50">
-                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                  {dateFilter.from ? (
-                    <>
-                      <span className="font-medium text-primary text-xs">{format(new Date(dateFilter.from), 'dd MMM', { locale: es })}</span>
-                      {dateFilter.to && dateFilter.from !== dateFilter.to && (
+              {/* Calendar Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-8 px-2 sm:px-3 text-xs gap-1 bg-background/50 hover:bg-background border-border/50 flex-1 sm:flex-initial whitespace-nowrap overflow-hidden text-ellipsis">
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate text-xs">
+                      {dateFilter.from ? (
                         <>
-                          <span className="text-muted-foreground mx-0.5">-</span>
-                          <span className="font-medium text-primary text-xs">{format(new Date(dateFilter.to), 'dd MMM', { locale: es })}</span>
+                          {format(new Date(dateFilter.from), 'dd MMM', { locale: es })}
+                          {dateFilter.to && dateFilter.from !== dateFilter.to && (
+                            <>
+                              <span className="mx-0.5">-</span>
+                              {format(new Date(dateFilter.to), 'dd MMM', { locale: es })}
+                            </>
+                          )}
                         </>
+                      ) : (
+                        <span>Todo</span>
                       )}
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">Todo el tiempo</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateFilter.from ? new Date(dateFilter.from) : new Date()}
-                  selected={{
-                    from: dateFilter.from ? new Date(dateFilter.from) : undefined,
-                    to: dateFilter.to ? new Date(dateFilter.to) : undefined,
-                  }}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.to, 'yyyy-MM-dd'));
-                    } else if (range?.from) {
-                      updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.from, 'yyyy-MM-dd'));
-                    }
-                  }}
-                  numberOfMonths={2}
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateFilter.from ? new Date(dateFilter.from) : new Date()}
+                    selected={{
+                      from: dateFilter.from ? new Date(dateFilter.from) : undefined,
+                      to: dateFilter.to ? new Date(dateFilter.to) : undefined,
+                    }}
+                    onSelect={(range) => {
+                      if (range?.from && range?.to) {
+                        updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.to, 'yyyy-MM-dd'));
+                      } else if (range?.from) {
+                        updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.from, 'yyyy-MM-dd'));
+                      }
+                    }}
+                    numberOfMonths={1}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
 
-            {/* Clear Filter Button */}
-            {dateFilter.period !== 'all' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => updateFilter('all')}
-                className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <FilterX className="h-3 w-3" />
-                Limpiar
-              </Button>
-            )}
+              {/* Clear Filter Button */}
+              {dateFilter.period !== 'all' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateFilter('all')}
+                  className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive transition-colors flex-1 sm:flex-initial whitespace-nowrap"
+                >
+                  <FilterX className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Limpiar</span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         
@@ -356,7 +360,7 @@ export function SummaryTab({
       </div>
 
       {/* SECCIÓN 2: Disponibilidad y Ahorro */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <SummaryCard
           title="Saldo Disponible"
           amount={accumulatedData.availableBalance}
@@ -390,10 +394,10 @@ export function SummaryTab({
       {/* SECCIÓN 3: Resumen Mensual Detallado */}
       <div className="space-y-4">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4" />
-          Resumen del Mes
+          <CalendarIcon className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">Resumen del Mes</span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <SummaryCard
             title="Ingresos"
             amount={currentMonthData.monthIncome}
@@ -419,41 +423,45 @@ export function SummaryTab({
       </div>
 
       {/* Herramientas de Análisis y Detalles */}
-      <div className="space-y-12">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold border-b-2 border-primary/20 pb-1 pr-4">
+      <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2">
+            <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
+            <h2 className="text-lg font-semibold border-b-2 border-primary/20 pb-1 pr-4 whitespace-nowrap">
               Análisis Visual
             </h2>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-card rounded-xl p-6 border border-border shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm overflow-x-auto">
               <EvolutionChart transactions={allTransactions} />
             </div>
-            <div className="lg:col-span-1 bg-card rounded-xl p-6 border border-border shadow-sm">
+            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm">
               <ExpenseChart data={expensesByCategory} categories={categories} />
             </div>
           </div>
         </div>
 
         {/* Sección de Metas e Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-primary pl-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-start">
+          <div className="space-y-4 min-w-0">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-primary pl-2 truncate">
               Metas de Ahorro
             </h3>
-            <SavingsGoalsSection
-              categories={categories}
-              onUpdateGoal={onUpdateCategoryGoal}
-            />
+            <div className="overflow-x-auto">
+              <SavingsGoalsSection
+                categories={categories}
+                onUpdateGoal={onUpdateCategoryGoal}
+              />
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-amber-400 pl-2">
+          <div className="space-y-4 min-w-0">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-amber-400 pl-2 truncate">
               Insights y Alertas
             </h3>
-            <InsightsPanel insights={insights.filter(i => !i.id.startsWith('budget-'))} />
+            <div className="overflow-y-auto max-h-96">
+              <InsightsPanel insights={insights.filter(i => !i.id.startsWith('budget-'))} />
+            </div>
           </div>
         </div>
       </div>

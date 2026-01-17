@@ -1584,13 +1584,13 @@ export function useFinanceDataLogic() {
       const { error: profErr } = await supabase.from('profiles').update({ currency: newCurrency }).eq('user_id', user.id);
       if (profErr) throw profErr;
 
-      // Update local state for instant UX
+      // Update local state IMMEDIATELY for instant UX (before fetchData)
+      setCurrency(newCurrency);
       setPaymentMethods(prev => prev.map(pm => pm.balance != null ? { ...pm, balance: Math.round(pm.balance * rate * 100) / 100 } : pm));
       setTransactions(prev => prev.map(tx => ({ ...tx, amount: Math.round(tx.amount * rate * 100) / 100 })));
-      setCurrency(newCurrency);
 
-      toast({ title: 'Éxito', description: 'Conversión aplicada correctamente' });
-      fetchData();
+      // Note: fetchData removed to prevent race condition overwriting currency state
+      // The realtime subscription will handle refreshing if needed
       return { error: null };
     } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
       console.error('convertCurrency error', err);

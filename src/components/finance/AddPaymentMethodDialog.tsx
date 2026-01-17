@@ -100,25 +100,26 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nuevo método de pago</DialogTitle>
+          <DialogTitle className="text-lg">Nuevo método de pago</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre</Label>
+            <Label htmlFor="name" className="text-sm">Nombre</Label>
             <Input
               id="name"
               placeholder="Ej: Banco XYZ, Efectivo casa"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="h-9 text-sm"
             />
           </div>
 
           <div className="space-y-2">
             <Label>Tipo</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {typeOptions.map((option) => (
                 <button
                   key={option.value}
@@ -128,7 +129,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                     setIsSavingsAccount(option.value === 'savings');
                   }}
                   className={cn(
-                    'px-3 py-2 text-sm rounded-lg border transition-all',
+                    'px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-lg border transition-all whitespace-nowrap',
                     type === option.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-background hover:bg-muted border-border'
@@ -142,7 +143,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
           <div className="space-y-2">
             <Label>Color de Tarjeta</Label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {PRESET_COLORS.map((preset) => (
                 <button
                   key={preset.value}
@@ -152,7 +153,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   title={preset.label}
                 >
                   <div
-                    className="w-full h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md"
+                    className="w-full h-8 sm:h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md"
                     style={{
                       backgroundColor: preset.value,
                       borderColor: color === preset.value ? '#fff' : 'transparent',
@@ -161,11 +162,11 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   >
                     {color === preset.value && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Check className="h-4 w-4 text-white" strokeWidth={3} />
+                        <Check className="h-3 sm:h-4 w-3 sm:w-4 text-white" strokeWidth={3} />
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground text-center block mt-1 group-hover:text-foreground">
+                  <span className="text-xs text-muted-foreground text-center block mt-1 group-hover:text-foreground hidden sm:block">
                     {preset.label}
                   </span>
                 </button>
@@ -174,31 +175,35 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
           </div>
 
           {type === 'credit' ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="debt">Deuda actual</Label>
-                <Input
-                  id="debt"
-                  type="number"
-                  placeholder="0.00"
-                  value={balance}
-                  onChange={(e) => setBalance(e.target.value)}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="limit">Límite de crédito</Label>
-                <Input
-                  id="limit"
-                  type="number"
-                  placeholder="0.00"
-                  value={creditLimit}
-                  onChange={(e) => setCreditLimit(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  required
-                />
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="debt">Deuda actual</Label>
+                  <Input
+                    id="debt"
+                    type="number"
+                    placeholder="0.00"
+                    value={balance}
+                    onChange={(e) => setBalance(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="limit">Límite de crédito</Label>
+                  <Input
+                    id="limit"
+                    type="number"
+                    placeholder="0.00"
+                    value={creditLimit}
+                    onChange={(e) => setCreditLimit(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    required
+                    className="h-9 text-sm"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="closing-date">Día de corte (1-31)</Label>
@@ -211,12 +216,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   min="1"
                   max="31"
                   required
+                  className="h-9 text-sm"
                 />
               </div>
-            </>
+            </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="balance">Saldo actual</Label>
+              <Label htmlFor="balance" className="text-sm">Saldo actual</Label>
               <Input
                 id="balance"
                 type="number"
@@ -224,28 +230,29 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                 value={balance}
                 onChange={(e) => setBalance(e.target.value)}
                 step="0.01"
+                className="h-9 text-sm"
               />
             </div>
           )}
 
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/50">
-            <div className="space-y-0.5">
-              <Label htmlFor="is-savings" className="text-sm font-medium">Cuenta de ahorro / Inversión</Label>
+          <div className="flex items-start sm:items-center justify-between p-2 sm:p-3 rounded-lg border border-border bg-card/50 gap-3">
+            <div className="space-y-0.5 flex-1">
+              <Label htmlFor="is-savings" className="text-xs sm:text-sm font-medium">Cuenta de ahorro / Inversión</Label>
               <p className="text-xs text-muted-foreground">Se mostrará en el panel de ahorros con barra de progreso.</p>
             </div>
             <input
               id="is-savings"
               type="checkbox"
-              className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+              className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
               checked={isSavingsAccount}
               onChange={(e) => setIsSavingsAccount(e.target.checked)}
             />
           </div>
 
           {(type === 'savings' || isSavingsAccount) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="space-y-2">
-                <Label htmlFor="goal">Meta de ahorro ($)</Label>
+                <Label htmlFor="goal" className="text-sm">Meta de ahorro ($)</Label>
                 <Input
                   id="goal"
                   type="number"
@@ -254,10 +261,11 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   onChange={(e) => setSavingsGoal(e.target.value)}
                   min="0"
                   step="0.01"
+                  className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="yield">Rentabilidad Estimada (%)</Label>
+                <Label htmlFor="yield" className="text-sm">Rentabilidad Estimada (%)</Label>
                 <Input
                   id="yield"
                   type="number"
@@ -266,12 +274,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   onChange={(e) => setEstimatedYield(e.target.value)}
                   min="0"
                   step="0.01"
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full h-9 text-sm sm:text-base" disabled={isSubmitting}>
             {isSubmitting ? 'Creando...' : 'Crear método de pago'}
           </Button>
         </form>

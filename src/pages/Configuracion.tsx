@@ -296,7 +296,7 @@ export default function ConfiguracionPage() {
                     </CardHeader>
                     <CardContent>
                         <Select value={currency} onValueChange={handleCurrencyChange}>
-                            <SelectTrigger>
+                            <SelectTrigger id="currency-selector" name="currency">
                                 <SelectValue placeholder="Seleccionar moneda" />
                             </SelectTrigger>
                             <SelectContent>
@@ -617,10 +617,18 @@ export default function ConfiguracionPage() {
                             setIsConverting(false);
 
                             if (!res?.error) {
+                                // Cerrar todos los modales y limpiar estado
                                 setPreviewModalOpen(false);
                                 setConversionPreview(null);
+                                setConversionModalOpen(false);
                                 setPendingCurrency(null);
                                 setConversionRate('');
+                                
+                                // Mostrar mensaje de éxito - la conversión ya actualiza currency internamente
+                                toast({ 
+                                    title: '✓ Conversión completada', 
+                                    description: `La moneda se cambió a ${pendingCurrency ?? ''}` 
+                                });
                             }
                         }}>{isConverting ? 'Convirtiendo...' : 'Confirmar y convertir'}</Button>
                     </DialogFooter>
