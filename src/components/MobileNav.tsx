@@ -16,13 +16,13 @@ export function MobileNav() {
     const pathname = location.pathname;
 
     return (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border p-2 z-50 flex justify-around items-center pb-safe">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border px-2 py-2 pb-safe z-50 flex justify-around items-center">
             {items.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                     <Link key={item.name} to={item.href} className={cn(
-                        "flex flex-col items-center justify-center p-2 rounded-lg transition-colors",
-                        isActive ? "text-primary" : "text-muted-foreground"
+                        "flex flex-col items-center justify-center p-3 rounded-xl transition-colors min-w-[64px]",
+                        isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted"
                     )}>
                         <item.icon className="w-6 h-6 mb-1" />
                         <span className="text-[10px] font-medium">{item.name}</span>

@@ -113,7 +113,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="h-9 text-sm"
+              className="h-11 md:h-9 text-sm"
             />
           </div>
 
@@ -187,7 +187,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                     onChange={(e) => setBalance(e.target.value)}
                     min="0"
                     step="0.01"
-                    className="h-9 text-sm"
+                    className="h-11 md:h-9 text-sm"
+                    inputMode="decimal"
                   />
                 </div>
                 <div className="space-y-2">
@@ -201,7 +202,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                     min="0"
                     step="0.01"
                     required
-                    className="h-9 text-sm"
+                    className="h-11 md:h-9 text-sm"
+                    inputMode="decimal"
                   />
                 </div>
               </div>
@@ -216,7 +218,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   min="1"
                   max="31"
                   required
-                  className="h-9 text-sm"
+                  className="h-11 md:h-9 text-sm"
+                  inputMode="numeric"
                 />
               </div>
             </div>
@@ -230,7 +233,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                 value={balance}
                 onChange={(e) => setBalance(e.target.value)}
                 step="0.01"
-                className="h-9 text-sm"
+                className="h-11 md:h-9 text-sm"
+                inputMode="decimal"
               />
             </div>
           )}
@@ -261,7 +265,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   onChange={(e) => setSavingsGoal(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="h-9 text-sm"
+                  className="h-11 md:h-9 text-sm"
+                  inputMode="decimal"
                 />
               </div>
               <div className="space-y-2">
@@ -274,13 +279,14 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   onChange={(e) => setEstimatedYield(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="h-9 text-sm"
+                  className="h-11 md:h-9 text-sm"
+                  inputMode="decimal"
                 />
               </div>
             </div>
           )}
 
-          <Button type="submit" className="w-full h-9 text-sm sm:text-base" disabled={isSubmitting}>
+          <Button type="submit" className="w-full h-11 md:h-9 text-sm sm:text-base" disabled={isSubmitting}>
             {isSubmitting ? 'Creando...' : 'Crear método de pago'}
           </Button>
         </form>

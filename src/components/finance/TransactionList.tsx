@@ -74,7 +74,7 @@ export function TransactionList({
   setStatusFilter
 }: TransactionListProps) {
   const [sortConfig, setSortConfig] = useState<{
-    key: 'date' | 'category' | 'amount' | null;
+    key: 'date' | 'category' | 'amount' | 'status' | null;
     direction: 'asc' | 'desc';
   }>({ key: 'date', direction: 'desc' });
 
@@ -236,220 +236,200 @@ export function TransactionList({
   }
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-      <div className="w-full overflow-hidden">
-        <table className="w-full table-auto">
-          <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
-            <tr>
-              <th
-                className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                onClick={() => handleSort('date')}
-                style={{ fontStyle: 'normal' }}
-              >
-                <div className="flex items-center justify-center">
-                  {getSortIcon('date')} Fecha
-                </div>
-              </th>
-              <th className="py-3 px-3 text-left text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
-                Descripción
-              </th>
-              <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
-                Tipo
-              </th>
-              <th
-                className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                onClick={() => handleSort('category')}
-                style={{ fontStyle: 'normal' }}
-              >
-                Categoría
-              </th>
-              <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
-                Método de Pago
-              </th>
-              <th
-                className="py-3 px-3 text-right text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                onClick={() => handleSort('amount')}
-                style={{ fontStyle: 'normal' }}
-              >
-                <div className="flex items-center justify-end">
-                  Monto {getSortIcon('amount')}
-                </div>
-              </th>
-              <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
-                <div className="flex items-center justify-center gap-1">
-                  <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
-                    <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="attention">Atención</SelectItem>
-                      <SelectItem value="ok">OK</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <button onClick={() => handleSort('status')} className="hover:text-primary transition-colors p-0 border-none bg-transparent">
-                    {getSortIcon('status')}
-                  </button>
-                </div>
-              </th>
-              <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayTransactions.map((transaction, index) => {
-              const pmName = getPaymentMethodName(transaction.payment_method_id);
-              const categoryItem = categories.find(c => c.id === transaction.category_id) || categories.find(c => c.name === transaction.category);
-              const isOrphan = (!transaction.category && !transaction.category_id) || !transaction.payment_method_id;
-
-              const isEditing = editingId === transaction.id;
-              return (
-                <tr
-                  key={transaction.id}
-                  className={cn(
-                    'border-b border-border/20 transition-all duration-200 group hover:bg-muted/20',
-                    isEditing && 'bg-primary/5 hover:bg-primary/10',
-                    isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
-                    highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
-                    'animate-fade-in'
-                  )}
-                  style={{ animationDelay: `${index * 20}ms` }}
+    <>
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="w-full overflow-hidden">
+          <table className="w-full table-auto">
+            <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
+              <tr>
+                <th
+                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('date')}
+                  style={{ fontStyle: 'normal' }}
                 >
-                  {/* Date */}
-                  <td className="py-3 px-4 align-middle text-center" style={{ fontStyle: 'normal' }}>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        className="h-8 px-2 text-xs bg-background/50 border rounded-md w-[9rem]"
-                        value={toInputDate(draft?.date || transaction.date)}
-                        onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value } : d)}
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground font-medium whitespace-nowrap" style={{ fontStyle: 'normal' }}>
-                        {formatDate(transaction.date)}
-                      </span>
-                    )}
-                  </td>
+                  <div className="flex items-center justify-center">
+                    {getSortIcon('date')} Fecha
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-left text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                  Descripción
+                </th>
+                <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                  Tipo
+                </th>
+                <th
+                  className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('category')}
+                  style={{ fontStyle: 'normal' }}
+                >
+                  Categoría
+                </th>
+                <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                  Método de Pago
+                </th>
+                <th
+                  className="py-3 px-3 text-right text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('amount')}
+                  style={{ fontStyle: 'normal' }}
+                >
+                  <div className="flex items-center justify-end">
+                    Monto {getSortIcon('amount')}
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                  <div className="flex items-center justify-center gap-1">
+                    <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
+                      <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="attention">Atención</SelectItem>
+                        <SelectItem value="ok">OK</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <button onClick={() => handleSort('status')} className="hover:text-primary transition-colors p-0 border-none bg-transparent">
+                      {getSortIcon('status')}
+                    </button>
+                  </div>
+                </th>
+                <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayTransactions.map((transaction, index) => {
+                const pmName = getPaymentMethodName(transaction.payment_method_id);
+                const categoryItem = categories.find(c => c.id === transaction.category_id) || categories.find(c => c.name === transaction.category);
+                const isOrphan = (!transaction.category && !transaction.category_id) || !transaction.payment_method_id;
 
-                  {/* Description */}
-                  <td className="py-2.5 px-3 align-middle" style={{ fontStyle: 'normal' }}>
-                    {isEditing ? (
-                      <Input
-                        value={draft?.description ?? transaction.description}
-                        onChange={(e) => setDraft(d => d ? { ...d, description: e.target.value } : d)}
-                        className="h-8 text-sm"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] text-foreground font-medium line-clamp-1 leading-tight" style={{ fontStyle: 'normal' }}>
-                          {transaction.description}
+                const isEditing = editingId === transaction.id;
+                return (
+                  <tr
+                    key={transaction.id}
+                    className={cn(
+                      'border-b border-border/20 transition-all duration-200 group hover:bg-muted/20',
+                      isEditing && 'bg-primary/5 hover:bg-primary/10',
+                      isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
+                      highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
+                      'animate-fade-in'
+                    )}
+                    style={{ animationDelay: `${index * 20}ms` }}
+                  >
+                    {/* Date */}
+                    <td className="py-3 px-4 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          className="h-8 px-2 text-xs bg-background/50 border rounded-md w-[9rem]"
+                          value={toInputDate(draft?.date || transaction.date)}
+                          onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value } : d)}
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground font-medium whitespace-nowrap" style={{ fontStyle: 'normal' }}>
+                          {formatDate(transaction.date)}
                         </span>
-                        {isOrphan && (
-                          <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded whitespace-nowrap" style={{ fontStyle: 'normal' }}>
-                            <AlertCircle className="h-3 w-3" />
-                            Atención
+                      )}
+                    </td>
+
+                    {/* Description */}
+                    <td className="py-2.5 px-3 align-middle" style={{ fontStyle: 'normal' }}>
+                      {isEditing ? (
+                        <Input
+                          value={draft?.description ?? transaction.description}
+                          onChange={(e) => setDraft(d => d ? { ...d, description: e.target.value } : d)}
+                          className="h-8 text-sm"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] text-foreground font-medium line-clamp-1 leading-tight" style={{ fontStyle: 'normal' }}>
+                            {transaction.description}
                           </span>
-                        )}
-                      </div>
-                    )}
-                  </td>
+                          {isOrphan && (
+                            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded whitespace-nowrap" style={{ fontStyle: 'normal' }}>
+                              <AlertCircle className="h-3 w-3" />
+                              Atención
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
 
-                  {/* Type */}
-                  <td className="py-2.5 px-2 align-middle text-center" style={{ fontStyle: 'normal' }}>
-                    <span className={cn(
-                      'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                      typeStyles[transaction.type]
-                    )} style={{ fontStyle: 'normal' }}>
-                      {typeLabels[transaction.type]}
-                    </span>
-                  </td>
+                    {/* Type */}
+                    <td className="py-2.5 px-2 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                      <span className={cn(
+                        'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                        typeStyles[transaction.type]
+                      )} style={{ fontStyle: 'normal' }}>
+                        {typeLabels[transaction.type]}
+                      </span>
+                    </td>
 
-                  {/* Category */}
-                  <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
-                    {isEditing ? (
-                      <div className="mx-auto max-w-[160px]">
-                        <Select
-                          onValueChange={(v) => setDraft(d => d ? { ...d, category_id: v } : d)}
-                          value={draft?.category_id || ''}
-                        >
-                          <SelectTrigger className="h-8 text-[10px] uppercase font-bold bg-background/50 hover:bg-background">
-                            <SelectValue placeholder="Categoría" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.filter(c => c.type === transaction.type).map(c => (
-                              <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : onUpdate && (!transaction.category && !transaction.category_id) ? (
-                      <div className="mx-auto max-w-[140px]">
-                        <Select
-                          onValueChange={(v) => {
-                            const cat = categories.find(c => c.id === v);
-                            onUpdate(transaction.id, {
-                              category_id: v,
-                              category: cat?.name || ''
-                            });
-                          }}
-                          value=""
-                        >
-                          <SelectTrigger className="h-8 text-[10px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background">
-                            <SelectValue placeholder="Categoría" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.filter(c => c.type === transaction.type).map(c => (
-                              <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <span
-                          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                          style={{
-                            backgroundColor: (categoryItem?.color || '#3b82f6') + '20',
-                            color: categoryItem?.color || '#3b82f6',
-                            fontStyle: 'normal'
-                          }}
-                        >
-                          {categoryItem?.name || transaction.category || "Sin categoría"}
-                        </span>
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Payment Method */}
-                  <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
-                    {isEditing ? (
-                      <div className="mx-auto max-w-[160px]">
-                        <Select
-                          onValueChange={(v) => setDraft(d => d ? { ...d, payment_method_id: v } : d)}
-                          value={draft?.payment_method_id || ''}
-                        >
-                          <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background">
-                            <SelectValue placeholder="Método" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {paymentMethods.map(pm => (
-                              <SelectItem key={pm.id} value={pm.id} className="text-xs">{pm.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : pmName ? (
-                      <div className="flex items-center justify-center gap-1.5 overflow-hidden">
-                        <CreditCard className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-xs text-muted-foreground truncate" style={{ fontStyle: 'normal' }}>{pmName}</span>
-                      </div>
-                    ) : (
-                      onUpdate ? (
+                    {/* Category */}
+                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                      {isEditing ? (
+                        <div className="mx-auto max-w-[160px]">
+                          <Select
+                            onValueChange={(v) => setDraft(d => d ? { ...d, category_id: v } : d)}
+                            value={draft?.category_id || ''}
+                          >
+                            <SelectTrigger className="h-8 text-[10px] uppercase font-bold bg-background/50 hover:bg-background">
+                              <SelectValue placeholder="Categoría" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.filter(c => c.type === transaction.type).map(c => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : onUpdate && (!transaction.category && !transaction.category_id) ? (
                         <div className="mx-auto max-w-[140px]">
                           <Select
-                            onValueChange={(v) => onUpdate(transaction.id, { payment_method_id: v })}
+                            onValueChange={(v) => {
+                              const cat = categories.find(c => c.id === v);
+                              onUpdate(transaction.id, {
+                                category_id: v,
+                                category: cat?.name || ''
+                              });
+                            }}
                             value=""
                           >
-                            <SelectTrigger className="h-8 text-[10px] border-destructive/30 bg-background/50 hover:bg-background">
+                            <SelectTrigger className="h-8 text-[10px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background">
+                              <SelectValue placeholder="Categoría" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.filter(c => c.type === transaction.type).map(c => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <span
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                            style={{
+                              backgroundColor: (categoryItem?.color || '#3b82f6') + '20',
+                              color: categoryItem?.color || '#3b82f6',
+                              fontStyle: 'normal'
+                            }}
+                          >
+                            {categoryItem?.name || transaction.category || "Sin categoría"}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Payment Method */}
+                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                      {isEditing ? (
+                        <div className="mx-auto max-w-[160px]">
+                          <Select
+                            onValueChange={(v) => setDraft(d => d ? { ...d, payment_method_id: v } : d)}
+                            value={draft?.payment_method_id || ''}
+                          >
+                            <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background">
                               <SelectValue placeholder="Método" />
                             </SelectTrigger>
                             <SelectContent>
@@ -459,91 +439,191 @@ export function TransactionList({
                             </SelectContent>
                           </Select>
                         </div>
+                      ) : pmName ? (
+                        <div className="flex items-center justify-center gap-1.5 overflow-hidden">
+                          <CreditCard className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate" style={{ fontStyle: 'normal' }}>{pmName}</span>
+                        </div>
                       ) : (
-                        <span className="text-[10px] font-bold text-slate-400 uppercase" style={{ fontStyle: 'normal' }}>Sin desembolso</span>
-                      )
-                    )}
-                  </td>
+                        onUpdate ? (
+                          <div className="mx-auto max-w-[140px]">
+                            <Select
+                              onValueChange={(v) => onUpdate(transaction.id, { payment_method_id: v })}
+                              value=""
+                            >
+                              <SelectTrigger className="h-8 text-[10px] border-destructive/30 bg-background/50 hover:bg-background">
+                                <SelectValue placeholder="Método" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map(pm => (
+                                  <SelectItem key={pm.id} value={pm.id} className="text-xs">{pm.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase" style={{ fontStyle: 'normal' }}>Sin desembolso</span>
+                        )
+                      )}
+                    </td>
 
-                  {/* Amount */}
-                  <td className="py-2.5 px-3 align-middle text-right" style={{ fontStyle: 'normal' }}>
-                    {isEditing ? (
-                      <Input
-                        type="number"
-                        className="h-8 text-sm w-[8rem] ml-auto text-right"
-                        value={draft?.amount ?? transaction.amount}
-                        onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) } : d)}
-                      />
-                    ) : (
-                      <span className="text-sm font-bold text-foreground tabular-nums">
-                        {transaction.type === 'expense' ? '-' : '+'}
-                        {formatCurrency(transaction.amount)}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
-                    <span className={cn(
-                      'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                      isOrphan ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'
-                    )} style={{ fontStyle: 'normal' }}>
-                      {isOrphan ? 'Atención' : 'OK'}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-2.5 px-2 align-middle text-center">
-                    <div className="flex items-center justify-center gap-1">
+                    {/* Amount */}
+                    <td className="py-2.5 px-3 align-middle text-right" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
-                        <>
+                        <Input
+                          type="number"
+                          className="h-8 text-sm w-[8rem] ml-auto text-right"
+                          value={draft?.amount ?? transaction.amount}
+                          onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) } : d)}
+                        />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">
+                          {transaction.type === 'expense' ? '-' : '+'}
+                          {formatCurrency(transaction.amount)}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                      <span className={cn(
+                        'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                        isOrphan ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'
+                      )} style={{ fontStyle: 'normal' }}>
+                        {isOrphan ? 'Atención' : 'OK'}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-2.5 px-2 align-middle text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-primary/10 transition-colors"
+                              onClick={() => saveEdit(transaction)}
+                              title="Guardar cambios"
+                            >
+                              <Check className="h-4 w-4 text-primary" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-muted/50 transition-colors"
+                              onClick={cancelEdit}
+                              title="Cancelar edición"
+                            >
+                              <X className="h-4 w-4 text-slate-400" />
+                            </Button>
+                          </>
+                        ) : (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 hover:bg-primary/10 transition-colors"
-                            onClick={() => saveEdit(transaction)}
-                            title="Guardar cambios"
+                            onClick={() => startEdit(transaction)}
+                            title="Editar transacción"
                           >
-                            <Check className="h-4 w-4 text-primary" />
+                            <Pencil className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 hover:bg-muted/50 transition-colors"
-                            onClick={cancelEdit}
-                            title="Cancelar edición"
-                          >
-                            <X className="h-4 w-4 text-slate-400" />
-                          </Button>
-                        </>
-                      ) : (
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-primary/10 transition-colors"
-                          onClick={() => startEdit(transaction)}
-                          title="Editar transacción"
+                          className="h-8 w-8 hover:bg-destructive/10 transition-colors"
+                          onClick={() => onDelete(transaction.id)}
+                          title="Eliminar transacción"
                         >
-                          <Pencil className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                          <Trash2 className="h-4 w-4 text-slate-400 group-hover:text-destructive transition-colors" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-destructive/10 transition-colors"
-                        onClick={() => onDelete(transaction.id)}
-                        title="Eliminar transacción"
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div >
+
+      {/* Mobile Card List View */}
+      < div className="md:hidden space-y-3" >
+        {
+          displayTransactions.map((transaction) => {
+            const pmName = getPaymentMethodName(transaction.payment_method_id);
+            const categoryItem = categories.find(c => c.id === transaction.category_id) || categories.find(c => c.name === transaction.category);
+            const isOrphan = (!transaction.category && !transaction.category_id) || !transaction.payment_method_id;
+
+            return (
+              <div
+                key={transaction.id}
+                className={cn(
+                  "bg-card rounded-xl border p-4 shadow-sm",
+                  isOrphan ? "border-destructive/50 bg-destructive/5" : "border-border",
+                  transaction.type === 'expense' ? "border-l-4 border-l-rose-500" : "border-l-4 border-l-emerald-500"
+                )}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                        style={{
+                          backgroundColor: (categoryItem?.color || '#3b82f6') + '20',
+                          color: categoryItem?.color || '#3b82f6',
+                        }}
                       >
-                        <Trash2 className="h-4 w-4 text-slate-400 group-hover:text-destructive transition-colors" />
-                      </Button>
+                        {categoryItem?.name || transaction.category || "Sin categoría"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(transaction.date)}
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <h4 className="font-medium text-sm line-clamp-1">{transaction.description}</h4>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn(
+                      "block text-lg font-bold",
+                      transaction.type === 'expense' ? "text-rose-600" : "text-emerald-600"
+                    )}>
+                      {transaction.type === 'expense' ? '-' : '+'}
+                      {formatCurrency(transaction.amount)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CreditCard className="h-3 w-3" />
+                    <span>{pmName || 'Sin método'}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => startEdit(transaction)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-destructive"
+                      onClick={() => onDelete(transaction.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        }
       </div>
-    </div>
+    </>
   );
 }

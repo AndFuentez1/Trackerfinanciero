@@ -93,6 +93,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
+                            className="h-11 md:h-9"
                         />
                     </div>
 
@@ -105,7 +106,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                                     type="button"
                                     onClick={() => setType(option.value)}
                                     className={cn(
-                                        'px-2 py-2 text-xs rounded-lg border transition-all truncate',
+                                        'px-2 py-2 text-xs rounded-lg border transition-all truncate min-h-[44px] md:min-h-[36px] flex items-center justify-center',
                                         type === option.value
                                             ? 'bg-primary text-primary-foreground border-primary'
                                             : 'bg-background hover:bg-muted border-border'
@@ -129,13 +130,13 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                                         disabled={isUsed} // Prevent selecting used colors
                                         onClick={() => setSelectedColor(c)}
                                         className={cn(
-                                            'h-6 w-6 rounded-full transition-all flex items-center justify-center',
+                                            'h-8 w-8 md:h-6 md:w-6 rounded-full transition-all flex items-center justify-center',
                                             isUsed ? 'opacity-20 cursor-not-allowed' : 'hover:scale-110',
                                             selectedColor === c ? 'ring-2 ring-primary ring-offset-1 scale-110' : ''
                                         )}
                                         style={{ backgroundColor: c }}
                                     >
-                                        {selectedColor === c && <Check className="h-3 w-3 text-white" />}
+                                        {selectedColor === c && <Check className="h-4 w-4 md:h-3 md:w-3 text-white" />}
                                     </button>
                                 )
                             })}
@@ -145,7 +146,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                         </p>
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting || !selectedColor}>
+                    <Button type="submit" className="w-full h-11 md:h-9" disabled={isSubmitting || !selectedColor}>
                         {isSubmitting ? 'Guardando...' : 'Guardar Categoría'}
                     </Button>
                 </form>

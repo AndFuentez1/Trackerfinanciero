@@ -29,6 +29,17 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [userExists, setUserExists] = useState(false);
   const [userNeedsPassword, setUserNeedsPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('magic-link');
+  const [resendTimer, setResendTimer] = useState(60);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (emailSent && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [emailSent, resendTimer]);
 
   useEffect(() => {
     if (user && !loading) {
@@ -79,6 +90,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
         setError(translateError(error.message));
       } else {
         setEmailSent(true);
+        setResendTimer(60);
       }
     } finally {
       setIsSubmitting(false);
@@ -353,6 +365,15 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     Revisa tu bandeja de entrada (y spam).
                   </p>
                 </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={(e) => handleSendMagicLink(e)}
+                  disabled={resendTimer > 0 || isSubmitting}
+                >
+                  {resendTimer > 0 ? `Reenviar en ${resendTimer}s` : 'Reenviar enlace mágico'}
+                </Button>
 
                 <Button
                   variant="ghost"

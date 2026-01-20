@@ -217,7 +217,7 @@ export function AddTransactionDialog({
     // Credit Card specific validation
     if (values.payment_method_id) {
       const selectedPM = paymentMethods.find(pm => pm.id === values.payment_method_id);
-      
+
       if (selectedPM && selectedPM.type === 'credit') {
         const creditLimit = selectedPM.credit_limit ? Number(selectedPM.credit_limit) : 0;
         let currentDebt = Number(selectedPM.balance);
@@ -398,7 +398,7 @@ export function AddTransactionDialog({
                           value={field.value || ''}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-11 md:h-9">
                               <SelectValue placeholder="Seleccionar" />
                             </SelectTrigger>
                           </FormControl>
@@ -409,8 +409,8 @@ export function AddTransactionDialog({
                               </SelectItem>
                             ))}
                             <div className="border-t border-border/50 px-2 py-2 mt-1">
-                              <AddCategoryDialog 
-                                type={currentType} 
+                              <AddCategoryDialog
+                                type={currentType}
                                 onAdd={addCategory}
                                 onSuccess={(cat) => {
                                   setValue('category_id', cat.id);
@@ -437,7 +437,7 @@ export function AddTransactionDialog({
                           <Button
                             variant="outline"
                             className={cn(
-                              'w-full justify-start text-left font-normal',
+                              'w-full justify-start text-left font-normal h-11 md:h-9',
                               !field.value && 'text-muted-foreground'
                             )}
                           >
@@ -469,7 +469,7 @@ export function AddTransactionDialog({
                     <FormLabel>Método de pago</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || 'none'}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 md:h-9">
                           <SelectValue placeholder="Seleccionar (opcional)" />
                         </SelectTrigger>
                       </FormControl>
@@ -501,8 +501,9 @@ export function AddTransactionDialog({
                         <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
                         <Input
                           id="amount"
-                          className="pl-7"
+                          className="pl-7 h-11 md:h-9"
                           placeholder="Ej: 100000"
+                          inputMode="decimal"
                           value={formatDisplayedAmount(field.value)}
                           onChange={(e) => handleAmountChange(e, field.onChange)}
                         />
@@ -522,6 +523,7 @@ export function AddTransactionDialog({
                     <FormControl>
                       <Input
                         id="description"
+                        className="h-11 md:h-9"
                         placeholder="Ej: Supermercado"
                         {...field}
                       />
@@ -531,7 +533,7 @@ export function AddTransactionDialog({
                 )}
               />
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full h-11 md:h-9" disabled={isSubmitting}>
                 {isSubmitting ? 'Guardando...' : (transactionToEdit ? 'Guardar Cambios' : 'Agregar transacción')}
               </Button>
             </form>

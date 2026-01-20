@@ -199,7 +199,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
                         disabled={!!editingBudget}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-9 text-sm">
+                          <SelectTrigger className="h-11 md:h-9 text-sm">
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
                         </FormControl>
@@ -231,10 +231,11 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
                   <FormLabel className="text-sm">Monto máximo</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-2 text-muted-foreground text-sm">$</span>
+                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
                       <Input
-                        className="pl-7 h-9 text-sm"
+                        className="pl-7 h-11 md:h-9 text-sm"
                         placeholder="0.00"
+                        inputMode="decimal"
                         value={formatDisplayedAmount(field.value)}
                         onChange={(e) => handleAmountChange(e, field.onChange)}
                       />
@@ -254,7 +255,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
               </Alert>
             )}
 
-            <Button type="submit" className="w-full h-9 text-sm sm:text-base" disabled={isSubmitting}>
+            <Button type="submit" className="w-full h-11 md:h-9 text-sm sm:text-base" disabled={isSubmitting}>
               {isSubmitting ? 'Guardando...' : (
                 isUpdatingExisting ? '¿Actualizar presupuesto existente?' :
                   (editingBudget ? 'Actualizar presupuesto' : 'Guardar presupuesto')

@@ -144,4 +144,8 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
