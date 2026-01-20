@@ -40,7 +40,11 @@ export function useAuth() {
 
   const signInWithOtp = async (email: string, rememberMe: boolean = true) => {
     localStorage.setItem('sb_remember_me', rememberMe.toString());
-    const redirectUrl = `${window.location.origin}/`;
+    let redirectUrl = window.location.origin;
+    if (!redirectUrl.startsWith('http')) {
+      redirectUrl = `https://${redirectUrl}`;
+    }
+    redirectUrl = `${redirectUrl}/`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
