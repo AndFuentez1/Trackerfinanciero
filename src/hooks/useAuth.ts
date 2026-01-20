@@ -40,18 +40,24 @@ export function useAuth() {
 
   const signInWithOtp = async (email: string, rememberMe: boolean = true) => {
     localStorage.setItem('sb_remember_me', rememberMe.toString());
-    let redirectUrl = window.location.origin;
-    if (!redirectUrl.startsWith('http')) {
-      redirectUrl = `https://${redirectUrl}`;
-    }
-    redirectUrl = `${redirectUrl}/`;
+    
+    // CORRECCIÓN: Construir redirectUrl de forma explícita y robusta
+    const redirectUrl = `${window.location.origin}/#access_token=`;
+    
+    console.log('[Auth Debug] Magic Link Redirect URL:', redirectUrl);
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectUrl,
+        // emailRedirectTo DEBE ser URL completa y DEBE estar en Allowed Redirect URLs
+        emailRedirectTo: window.location.origin,
       },
     });
+    
+    if (error) {
+      console.error('[Auth Error] signInWithOtp failed:', error);
+    }
+    
     return { error };
   };
 
