@@ -522,9 +522,15 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     setError('');
                     setIsSubmitting(true);
                     try {
+                      let redirectUrl = window.location.origin;
+                      if (!redirectUrl.startsWith('http')) {
+                        redirectUrl = `https://${redirectUrl}`;
+                      }
+                      redirectUrl = `${redirectUrl}/`;
+
                       // Call resetPasswordForEmail for a secure flow that allows setting a password
                       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                        redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+                        redirectTo: `${redirectUrl}auth?mode=reset-password`,
                       });
 
                       if (error) {
