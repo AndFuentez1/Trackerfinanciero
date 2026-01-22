@@ -100,7 +100,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Nuevo método de pago</DialogTitle>
         </DialogHeader>

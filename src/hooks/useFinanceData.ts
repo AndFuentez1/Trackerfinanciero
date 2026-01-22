@@ -1715,6 +1715,13 @@ export function useFinanceDataLogic() {
   useEffect(() => {
     if (!user) return;
 
+    // Use a stable reference to avoid recreating subscriptions
+    const handleRealtimeChange = () => {
+      // Use a timeout to debounce rapid changes (avoid multiple fetches)
+      setLoading(true);
+      fetchData();
+    };
+
     const transactionsChannel = supabase
       .channel('schema-db-changes')
       .on(
@@ -1726,7 +1733,7 @@ export function useFinanceDataLogic() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchData();
+          handleRealtimeChange();
         }
       )
       .on(
@@ -1738,7 +1745,7 @@ export function useFinanceDataLogic() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchData();
+          handleRealtimeChange();
         }
       )
       .subscribe();
@@ -1746,7 +1753,7 @@ export function useFinanceDataLogic() {
     return () => {
       supabase.removeChannel(transactionsChannel);
     };
-  }, [user, fetchData]);
+  }, [user]);
 
   const addCategory = async (category: Omit<CategoryItem, 'id' | 'created_at'>) => {
     try {

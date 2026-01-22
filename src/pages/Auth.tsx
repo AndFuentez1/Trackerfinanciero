@@ -181,11 +181,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      let redirectUrl = window.location.origin;
-      if (!redirectUrl.startsWith('http')) {
-        redirectUrl = `https://${redirectUrl}`;
-      }
-      redirectUrl = `${redirectUrl}/`;
+      // CRITICAL: Match the exact redirect URL with what's in Allowed Redirect URLs
+      const redirectUrl = window.location.origin;
 
       const { error } = await supabase.auth.signUp({
         email,

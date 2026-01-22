@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
 
-    --primary: 152 60% 42%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
@@ -24,21 +24,21 @@
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 45%;
 
-    --accent: 152 60% 95%;
-    --accent-foreground: 152 60% 30%;
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 30%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 152 60% 42%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
+    --warning: 39 89% 49%;
     --warning-foreground: 0 0% 9%;
 
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 152 60% 42%;
+    --ring: 217 91% 60%;
 
     --radius: 0.75rem;
 
@@ -53,7 +53,7 @@
 
     /* Custom finance tokens */
     --income: 152 60% 42%;
-    --expense: 0 72% 51%;
+    --expense: 0 84% 60%;
     --savings: 217 91% 60%;
     --investment: 280 68% 60%;
     
@@ -73,7 +73,7 @@
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 152 60% 45%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 15%;
@@ -82,15 +82,15 @@
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 152 60% 15%;
-    --accent-foreground: 152 60% 70%;
+    --accent: 217 91% 15%;
+    --accent-foreground: 217 91% 70%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 95%;
 
     --border: 0 0% 18%;
     --input: 0 0% 18%;
-    --ring: 152 60% 45%;
+    --ring: 217 91% 60%;
 
     --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 240 4.8% 95.9%;

@@ -41,16 +41,19 @@ export function useAuth() {
   const signInWithOtp = async (email: string, rememberMe: boolean = true) => {
     localStorage.setItem('sb_remember_me', rememberMe.toString());
     
-    // CORRECCIÓN: Construir redirectUrl de forma explícita y robusta
-    const redirectUrl = `${window.location.origin}/#access_token=`;
+    // ⚠️ CRITICAL: Supabase magic link callback handler
+    // El redirect URL DEBE SER EXACTO - sin "/" final, sin "/auth", solo el origin
+    const origin = window.location.origin;
     
-    console.log('[Auth Debug] Magic Link Redirect URL:', redirectUrl);
+    console.log('[Auth] Magic Link - Origin:', origin);
+    console.log('[Auth] Magic Link - emailRedirectTo:', origin);
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // emailRedirectTo DEBE ser URL completa y DEBE estar en Allowed Redirect URLs
-        emailRedirectTo: window.location.origin,
+        // NO cambiar esta URL - debe ser EXACTA a como está en Allowed Redirect URLs
+        // Supabase agrega automáticamente los parámetros #access_token=...
+        emailRedirectTo: origin,
       },
     });
     

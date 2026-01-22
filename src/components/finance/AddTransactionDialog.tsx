@@ -339,9 +339,14 @@ export function AddTransactionDialog({
       {/* Main Transaction Dialog */}
       {/* Trigger Button only if uncontrolled */}
       {!isControlled && (
-        <Button onClick={validateBeforeOpen} className="gap-2">
+        <Button
+          onClick={validateBeforeOpen}
+          className="gap-2"
+          aria-label="Agregar"
+          title="Agregar"
+        >
           <Plus className="h-4 w-4" />
-          Agregar
+          <span className="hidden sm:inline">Agregar</span>
         </Button>
       )}
 

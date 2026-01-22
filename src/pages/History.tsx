@@ -183,29 +183,24 @@ export default function HistoryPage() {
     return (
         <div className="min-h-screen bg-background">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
                             <Wallet className="h-5 w-5 text-primary" />
                         </div>
                         <h1 className="text-xl font-semibold">Historial</h1>
                     </div>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
+                        <AddTransactionDialog
+                            onAdd={addTransaction}
+                            categories={categories}
+                            paymentMethods={paymentMethods}
+                        />
+                        <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
+                        <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+                    </div>
                 </div>
             </header>
-
-            {/* Action Bar - Toolbar with all action buttons */}
-            <div className="border-b border-border/50 bg-background/50 backdrop-blur-sm sticky top-[73px] z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-3 flex items-center justify-end gap-2">
-                    {/* Instance 1: Uncontrolled Add Transaction (shows button) */}
-                    <AddTransactionDialog
-                        onAdd={addTransaction}
-                        categories={categories}
-                        paymentMethods={paymentMethods}
-                    />
-                    <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
-                    <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-                </div>
-            </div>
 
             {/* Instance 2: Controlled Edit Transaction Dialog (hidden trigger, opens via state) */}
             <AddTransactionDialog

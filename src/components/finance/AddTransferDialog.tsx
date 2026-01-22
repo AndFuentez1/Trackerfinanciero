@@ -96,9 +96,14 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button
+                    variant="outline"
+                    className="gap-2"
+                    aria-label="Transferencia"
+                    title="Transferencia"
+                >
                     <ArrowRightLeft className="h-4 w-4" />
-                    Transferencia
+                    <span className="hidden sm:inline">Transferencia</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">

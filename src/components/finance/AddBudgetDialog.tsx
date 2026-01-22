@@ -149,6 +149,8 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
         {children || (
           <Button
             className="gap-2 shadow-lg shadow-primary/20"
+            aria-label="Nuevo Presupuesto"
+            title="Nuevo Presupuesto"
             onClick={(e) => {
               if (loading) {
                 e.preventDefault();
@@ -165,7 +167,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
             }}
           >
             <Target className="h-4 w-4" />
-            Nuevo Presupuesto
+            <span className="hidden sm:inline">Nuevo Presupuesto</span>
           </Button>
         )}
       </DialogTrigger>

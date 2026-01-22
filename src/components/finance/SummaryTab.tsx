@@ -8,7 +8,6 @@ import { PaymentMethodList } from './PaymentMethodList';
 import { EditPaymentMethodDialog } from './EditPaymentMethodDialog';
 import { AddPaymentMethodDialog } from './AddPaymentMethodDialog';
 import { useFinanceData } from '@/hooks/useFinanceData';
-import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
 import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/hooks/useFinanceData';
 import { useLoans } from '@/hooks/useLoans';
@@ -167,16 +166,16 @@ export function SummaryTab({
 
       {/* SECCIÓN 1: Mis Cuentas (Prioridad Alta) */}
       <div className="space-y-4">
-        <div className="flex flex-col items-start justify-between gap-3 sm:gap-4">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2 w-full">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
             <span className="truncate">Mis Cuentas</span>
           </h2>
           
-          {/* Date Filtering Controls - Responsive Wrapper */}
-          <div className="w-full space-y-2">
-            {/* Quick Action Buttons - Scroll en móvil */}
-            <div className="flex gap-1 overflow-x-auto pb-2 sm:pb-0 w-full">
+          {/* Date Filtering Controls - Top Right */}
+          <div className="w-full sm:w-auto space-y-2">
+            {/* Quick Action Buttons */}
+            <div className="flex gap-1 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -218,8 +217,8 @@ export function SummaryTab({
               </Button>
             </div>
 
-            {/* Month, Year Selectors & Calendar - Grid responsivo */}
-            <div className="flex flex-col sm:flex-row gap-2 w-full">
+            {/* Month, Year Selectors & Calendar */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {/* Month Selector */}
               <Select
                 value={dateFilter.from ? new Date(dateFilter.from).getMonth().toString() : ''}
@@ -393,7 +392,7 @@ export function SummaryTab({
 
       {/* SECCIÓN 3: Resumen Mensual Detallado */}
       <div className="space-y-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">Resumen del Mes</span>
         </h2>
@@ -441,27 +440,13 @@ export function SummaryTab({
           </div>
         </div>
 
-        {/* Sección de Metas e Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-start">
-          <div className="space-y-4 min-w-0">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-primary pl-2 truncate">
-              Metas de Ahorro
-            </h3>
-            <div className="overflow-x-auto">
-              <SavingsGoalsSection
-                categories={categories}
-                onUpdateGoal={onUpdateCategoryGoal}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4 min-w-0">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-2 border-amber-400 pl-2 truncate">
-              Insights y Alertas
-            </h3>
-            <div className="overflow-y-auto max-h-96">
-              <InsightsPanel insights={insights.filter(i => !i.id.startsWith('budget-'))} />
-            </div>
+        {/* Sección de Insights */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-foreground border-l-2 border-primary pl-2 truncate">
+            Insights y Alertas
+          </h3>
+          <div className="overflow-y-auto">
+            <InsightsPanel insights={insights.filter(i => !i.id.startsWith('budget-'))} />
           </div>
         </div>
       </div>

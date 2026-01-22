@@ -20,12 +20,17 @@ export function MobileNav() {
             {items.map((item) => {
                 const isActive = pathname === item.href;
                 return (
-                    <Link key={item.name} to={item.href} className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-xl transition-colors min-w-[64px]",
-                        isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted"
-                    )}>
-                        <item.icon className="w-6 h-6 mb-1" />
-                        <span className="text-[10px] font-medium">{item.name}</span>
+                    <Link
+                        key={item.name}
+                        to={item.href}
+                        aria-label={item.name}
+                        title={item.name}
+                        className={cn(
+                            "flex items-center justify-center p-3 rounded-xl transition-colors min-w-[48px]",
+                            isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted"
+                        )}
+                    >
+                        <item.icon className="w-6 h-6" />
                     </Link>
                 );
             })}

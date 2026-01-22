@@ -31,8 +31,8 @@ export default function BudgetsPage() {
     return (
         <div className="min-h-screen bg-background">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
                         <div className="p-2 rounded-lg bg-primary/10">
                             <PieChart className="h-5 w-5 text-primary" />
                         </div>

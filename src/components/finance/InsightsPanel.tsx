@@ -25,24 +25,24 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
 
   return (
     <div className="finance-card">
-      <h3 className="text-lg font-semibold mb-4">Recomendaciones</h3>
-      <div className="space-y-3">
+      <h3 className="text-xl font-bold mb-6">Recomendaciones</h3>
+      <div className="space-y-4">
         {insights.map((insight, index) => {
           const Icon = iconMap[insight.type];
           return (
             <div
               key={insight.id}
               className={cn(
-                'p-4 rounded-lg border animate-fade-in',
+                'p-5 rounded-lg border animate-fade-in',
                 styleMap[insight.type]
               )}
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="flex gap-3">
-                <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <div className="flex gap-4">
+                <Icon className="h-6 w-6 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-sm">{insight.title}</h4>
-                  <p className="text-sm mt-1 opacity-90">{insight.description}</p>
+                  <h4 className="font-semibold text-base">{insight.title}</h4>
+                  <p className="text-sm mt-2 opacity-90">{insight.description}</p>
                 </div>
               </div>
             </div>

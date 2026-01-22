@@ -471,10 +471,12 @@ export default function ConfiguracionPage() {
                         <CardContent>
                             <Button
                                 variant="destructive"
-                                className="bg-destructive hover:bg-destructive/90 text-white font-bold"
+                                className="bg-destructive hover:bg-destructive/90 text-white font-bold w-full sm:w-auto text-sm sm:text-base"
                                 onClick={() => setIsResetDialogOpen(true)}
                             >
-                                Resetear Perfil / Borrar todos los datos
+                                <span className="whitespace-normal break-words text-left">
+                                    Resetear Perfil / Borrar todos los datos
+                                </span>
                             </Button>
                         </CardContent>
                     </Card>

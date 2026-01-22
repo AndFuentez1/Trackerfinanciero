@@ -88,23 +88,6 @@ export default function Index() {
     [hasPendingImport, importProgress.status]
   );
 
-  // ✅ Todos los useEffect hooks
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🎯 PANEL STATE:', {
-        isEmptyState,
-        showDecisionPanel,
-        showCompletionCard,
-        onboardingDecision,
-        hasPendingImport,
-        importStatus: importProgress.status,
-        currency: summary.currency,
-        paymentMethods: paymentMethods.length,
-        categories: categories.length,
-      });
-    }
-  }, [isEmptyState, showDecisionPanel, showCompletionCard, onboardingDecision, hasPendingImport, importProgress.status, summary.currency, paymentMethods.length, categories.length]);
-
   // AHORA vienen los returns condicionales
   if (authLoading) {
     return (
@@ -168,14 +151,14 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Wallet className="h-5 w-5 text-primary" />
             </div>
             <h1 className="text-xl font-semibold">Resumen</h1>
           </div>
-          <div className="flex items-center gap-4 flex-wrap justify-end space-x-4">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
             <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
             <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
             <AddTransferDialog onAdd={addTransfer} />

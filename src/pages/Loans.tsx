@@ -226,19 +226,23 @@ export default function LoansPage() {
     return (
         <div className="min-h-screen bg-background">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
                             <HandCoins className="h-5 w-5 text-primary" />
                         </div>
                         <h1 className="text-xl font-semibold">Préstamos y Deudas</h1>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button className="gap-2">
+                                <Button
+                                    className="gap-2"
+                                    aria-label="Nuevo Préstamo"
+                                    title="Nuevo Préstamo"
+                                >
                                     <Plus className="h-4 w-4" />
-                                    Nuevo Préstamo
+                                    <span className="hidden sm:inline">Nuevo Préstamo</span>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>

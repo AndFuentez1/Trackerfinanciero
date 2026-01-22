@@ -311,15 +311,18 @@ export function PendingInvoicesPanel() {
                                                 </Select>
                                             </div>
                                         </div>
-                                        <div className="flex justify-end gap-2 pt-2">
+                                        <div className="flex justify-end gap-2 pt-2 flex-wrap">
                                             <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancelar</Button>
                                             <Button
                                                 size="sm"
                                                 onClick={() => handleApprove(invoice)}
                                                 disabled={!editForm.payment_method_id}
                                                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                aria-label="Aprobar"
+                                                title="Aprobar"
                                             >
-                                                {!editForm.payment_method_id ? 'Selecciona método de pago' : 'Guardar y Aprobar'}
+                                                <Check className="w-4 h-4" />
+                                                <span className="hidden sm:inline ml-1">{!editForm.payment_method_id ? 'Selecciona método de pago' : 'Guardar y Aprobar'}</span>
                                             </Button>
                                         </div>
                                     </div>
@@ -341,15 +344,30 @@ export function PendingInvoicesPanel() {
                                             </p>
                                         </div>
 
-                                        <div className="flex items-center gap-2 self-end sm:self-center">
+                                        <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
                                             <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleReject(invoice.id)}>
                                                 <X className="w-4 h-4 mr-1" />
                                             </Button>
-                                            <Button size="sm" variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50" onClick={() => handleStartEdit(invoice)}>
-                                                <Edit2 className="w-4 h-4 mr-1" /> Editar
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                                onClick={() => handleStartEdit(invoice)}
+                                                aria-label="Editar"
+                                                title="Editar"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                                <span className="hidden sm:inline ml-1">Editar</span>
                                             </Button>
-                                            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white border-none shadow-orange-200 shadow-md" onClick={() => handleApprove(invoice)}>
-                                                <Check className="w-4 h-4 mr-1" /> Aprobar
+                                            <Button
+                                                size="sm"
+                                                className="bg-orange-500 hover:bg-orange-600 text-white border-none shadow-orange-200 shadow-md"
+                                                onClick={() => handleApprove(invoice)}
+                                                aria-label="Aprobar"
+                                                title="Aprobar"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                                <span className="hidden sm:inline ml-1">Aprobar</span>
                                             </Button>
                                         </div>
                                     </div>

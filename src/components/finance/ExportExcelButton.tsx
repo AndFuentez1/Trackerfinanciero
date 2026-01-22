@@ -82,9 +82,16 @@ export function ExportExcelButton({ transactions, paymentMethods }: ExportExcelB
   };
 
   return (
-    <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-2"
+      onClick={handleExport}
+      aria-label="Exportar Excel"
+      title="Exportar Excel"
+    >
       <Download className="h-4 w-4" />
-      Exportar Excel
+      <span className="hidden sm:inline">Exportar Excel</span>
     </Button>
   );
 }

@@ -66,7 +66,7 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
       {/* Content */}
       <div className="space-y-3">
         {/* Label */}
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <p className="text-xs font-medium text-muted-foreground tracking-wide">
           {title}
         </p>
 

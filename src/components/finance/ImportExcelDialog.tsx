@@ -501,9 +501,15 @@ export function ImportExcelDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {showTriggerButton && (
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            aria-label="Importar Excel"
+            title="Importar Excel"
+          >
             <Upload className="h-4 w-4" />
-            Importar Excel
+            <span className="hidden sm:inline">Importar Excel</span>
           </Button>
         </DialogTrigger>
       )}
