@@ -2,12 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useFinanceData } from "@/hooks/useFinanceData";
-import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PieChart, LogOut, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { InsightsPanel } from "@/components/finance/InsightsPanel";
 
 import { BudgetTotalCard } from "@/components/finance/budgets/BudgetTotalCard";
@@ -19,7 +25,18 @@ import { FutureExpensesList } from "@/components/finance/budgets/FutureExpensesL
 export default function BudgetsPage() {
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
-    const { totalBudget, budgets, loading: budgetsLoading, refreshBudgets, saveBudget, lastModification } = useBudgetsData();
+    const {
+        totalBudget,
+        budgets,
+        loading: budgetsLoading,
+        refreshBudgets,
+        saveBudget,
+        lastModification,
+        budgetYear,
+        budgetMonth,
+        setBudgetPeriod,
+        availableYears,
+    } = useBudgetsData();
     const { insights } = useFinanceData();
 
     // Filter only budget-related insights
@@ -37,26 +54,24 @@ export default function BudgetsPage() {
                             <PieChart className="h-5 w-5 text-primary" />
                         </div>
                         <h1 className="text-xl font-semibold">Presupuesto Mensual</h1>
-                        {lastModification && (
-                            <p className="text-[10px] text-muted-foreground mt-1 hidden sm:block">
-                                Última modificación: {format(lastModification, "dd/MM/yyyy HH:mm:ss", { locale: es })}
-                            </p>
-                        )}
                     </div>
                     <div className="z-20">
-                        <AddBudgetDialog onAdd={saveBudget} />
+                        <AddBudgetDialog
+                            onAdd={saveBudget}
+                            monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                        />
                     </div>
                 </div>
             </header>
 
             <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
-                {/* Top Section: Total Budget & Income (Side by Side on desktop) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
+                {/* Top Section: Budget Cards (Side by Side on desktop) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                    <div className="flex h-full flex-col space-y-4">
                         <BudgetTotalCard totalBudget={totalBudget} />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="flex h-full flex-col space-y-4">
                         <IncomeCard />
                     </div>
                 </div>

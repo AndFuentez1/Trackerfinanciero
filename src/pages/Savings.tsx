@@ -3,8 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { useSavingsData } from '@/hooks/useSavingsData';
 import { SavingsPerformance } from '@/components/finance/SavingsPerformance';
+import { EditPaymentMethodDialog } from '@/components/finance/EditPaymentMethodDialog';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 export default function SavingsPage() {
     const navigate = useNavigate();
@@ -12,6 +14,8 @@ export default function SavingsPage() {
     const {
         loading: dataLoading,
         addTransfer,
+        paymentMethods,
+        updatePaymentMethod,
     } = useFinanceData();
     const {
         savingsAccounts,
@@ -28,8 +32,32 @@ export default function SavingsPage() {
         refetch
     } = useSavingsData();
 
+    const [editingAccount, setEditingAccount] = useState<string | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+    const handleEditAccount = (accountId: string) => {
+        setEditingAccount(accountId);
+        setIsEditDialogOpen(true);
+    };
+
+    const handleCloseEditDialog = (open: boolean) => {
+        setIsEditDialogOpen(open);
+        if (!open) {
+            setEditingAccount(null);
+        }
+    };
+
     const handleDeleteTransaction = async (id: string) => {
         await deleteSavingsTransaction(id);
+    };
+
+    const handleUpdatePaymentMethod = async (id: string, updates: any) => {
+        const result = await updatePaymentMethod(id, updates);
+        // Refetch savings accounts in case is_savings_account changed
+        if (!result?.error) {
+            await refetch();
+        }
+        return result;
     };
 
     const isLoading = authLoading || dataLoading || savingsLoading;
@@ -43,6 +71,8 @@ export default function SavingsPage() {
     }
 
     if (!user) return null;
+
+    const currentEditingPM = paymentMethods.find(pm => pm.id === editingAccount);
 
     return (
         <div className="min-h-screen bg-background">
@@ -63,19 +93,30 @@ export default function SavingsPage() {
                         <div className="animate-pulse text-muted-foreground">Cargando datos...</div>
                     </div>
                 ) : (
-                    <SavingsPerformance
-                        accounts={savingsAccounts}
-                        accountPerformance={accountPerformance}
-                        transactions={savingsTransactions}
-                        totalBalance={totalSavingsBalance}
-                        onAddAccount={addSavingsAccount}
-                        onDeleteAccount={deleteSavingsAccount}
-                        onAddTransaction={addSavingsTransaction}
-                        onUpdateTransactionAmount={updateSavingsTransaction}
-                        onUpdateTransactionFull={updateSavingsTransactionFull}
-                        onAddTransfer={addTransfer}
-                        onDeleteTransaction={handleDeleteTransaction}
-                    />
+                    <>
+                        <SavingsPerformance
+                            accounts={savingsAccounts}
+                            accountPerformance={accountPerformance}
+                            transactions={savingsTransactions}
+                            totalBalance={totalSavingsBalance}
+                            onAddAccount={addSavingsAccount}
+                            onDeleteAccount={deleteSavingsAccount}
+                            onEdit={handleEditAccount}
+                            onAddTransaction={addSavingsTransaction}
+                            onUpdateTransactionAmount={updateSavingsTransaction}
+                            onUpdateTransactionFull={updateSavingsTransactionFull}
+                            onAddTransfer={addTransfer}
+                            onDeleteTransaction={handleDeleteTransaction}
+                        />
+                        
+                        <EditPaymentMethodDialog
+                            paymentMethod={currentEditingPM || null}
+                            open={isEditDialogOpen}
+                            onOpenChange={handleCloseEditDialog}
+                            onSave={handleUpdatePaymentMethod}
+                            lockType={true}
+                        />
+                    </>
                 )}
             </main>
         </div>

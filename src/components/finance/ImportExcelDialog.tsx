@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { parse, isValid, format as formatDateFns } from 'date-fns';
 
 interface ImportExcelDialogProps {
   paymentMethods: PaymentMethod[];
@@ -123,28 +124,51 @@ const parseCategory = (value: string): string => {
   return categoryMap[normalized] || value || 'Otro';
 };
 
-const parseDate = (value: unknown): string | null => {
-  if (!value) return null;
-
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
+const parseDate = (value: string | number): string | null => {
+  // Excel serial number
   if (typeof value === 'number') {
-    const date = XLSX.SSF.parse_date_code(value);
-    return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+    try {
+      const dateObj = XLSX.SSF.parse_date_code(value);
+      if (dateObj && dateObj.y && dateObj.m && dateObj.d) {
+        // Validar que la fecha sea válida antes de retornar
+        const parsed = new Date(dateObj.y, dateObj.m - 1, dateObj.d);
+        if (isValid(parsed)) {
+          return formatDateFns(parsed, 'yyyy-MM-dd');
+        }
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
   }
 
-  const date = new Date(value as any);
-  if (!isNaN(date.getTime())) {
-    return date.toISOString().split('T')[0];
+  if (!value || typeof value !== 'string') return null;
+
+  // Remove time / timezone parts if present (e.g., 2026-01-05T03:00:00Z or 05/01/2026 10:00)
+  const str = value.trim().split(/[T\s]/)[0];
+
+  // Direct ISO yyyy-MM-dd - validar que sea fecha real
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const parsed = parse(str, 'yyyy-MM-dd', new Date());
+    return isValid(parsed) ? str : null;
   }
 
-  const parts = String(value).split(/[\/\-\.]/);
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    const y = year.length === 2 ? `20${year}` : year;
-    return `${y}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  const formats = [
+    'dd/MM/yyyy',
+    'd/M/yyyy',
+    'dd-MM-yyyy',
+    'd-M-yyyy',
+    'dd.MM.yyyy',
+    'd.M.yyyy',
+    'MM/dd/yyyy',
+    'M/d/yyyy',
+  ];
+
+  for (const fmt of formats) {
+    const parsed = parse(str, fmt, new Date());
+    if (isValid(parsed)) {
+      return formatDateFns(parsed, 'yyyy-MM-dd');
+    }
   }
 
   return null;
@@ -196,7 +220,8 @@ export function ImportExcelDialog({
       const rows = jsonData.slice(1).filter(row => Array.isArray(row) && row.length > 0) as unknown[][];
 
       const parsed: ParsedRow[] = rows.map((row: unknown[]) => {
-        const date = parseDate(row[0]);
+        const rawDate = row[0] as string | number | undefined;
+        const date = parseDate(rawDate as any);
         const description = String(row[1] || '').trim();
         const category = String(row[2] || '').trim();
         const rawValue = String(row[3] || '0').trim();
@@ -230,7 +255,7 @@ export function ImportExcelDialog({
     reader.readAsArrayBuffer(file);
   };
 
-  const handleImport = async (closeDialogOnSuccess: boolean = true) => {
+  const handleImport = async () => {
     if (!user) {
       alert("No autenticado");
       return;
@@ -240,6 +265,15 @@ export function ImportExcelDialog({
     if (validRows.length === 0) return;
 
     setIsImporting(true);
+    
+    // Guardar estado en localStorage para recuperar si la página se cierra
+    const importKey = `import_${user.id}_${Date.now()}`;
+    localStorage.setItem(importKey, JSON.stringify({
+      startTime: Date.now(),
+      validRows: validRows.length,
+      completed: 0,
+      state: 'in_progress'
+    }));
 
     try {
       // 1. Fetch current categories and payment methods
@@ -322,9 +356,8 @@ export function ImportExcelDialog({
         );
 
         if (pmDetails && (pmDetails.type === 'savings' || pmDetails.type === 'investment')) {
-          // For savings/investment accounts, treat deposits/withdrawals as transfers
+          // For savings/investment accounts, treat deposits/withdrawals as transfers (keep type as income/expense)
           if (normalizedType === 'income' || normalizedType === 'expense') {
-            finalType = 'transfer';
             finalCategory = 'Transferencia entre Cuentas';
             finalCategoryId = catMap.get('transferencia entre cuentas');
           }
@@ -418,6 +451,7 @@ export function ImportExcelDialog({
 
       if (transactionsToImport.length === 0) {
         setIsImporting(false);
+        localStorage.removeItem(importKey);
         return;
       }
 
@@ -427,67 +461,112 @@ export function ImportExcelDialog({
         await onImport(transactionsToImport);
         setParsedRows([]);
         setFileName('');
-        if (closeDialogOnSuccess) {
-          setOpen(false);
-        }
+        setOpen(false);
         setIsImporting(false);
+        localStorage.removeItem(importKey);
         return;
       }
 
-      // Flujo normal: insertar directamente en BD
-      console.log(`Intentando importar ${transactionsToImport.length} transacciones una a una...`);
+      // Batch insert con tracking de errores por fila
+      console.log(`Importando ${transactionsToImport.length} transacciones en batch...`);
+      const batchSize = 100;
       let successCount = 0;
       let failCount = 0;
-      const total = transactionsToImport.length;
+      const failedRows: { row: number; error: string }[] = [];
 
-      for (let i = 0; i < total; i++) {
-        const t = transactionsToImport[i];
+      for (let batch = 0; batch < transactionsToImport.length; batch += batchSize) {
+        const batchTransactions = transactionsToImport.slice(batch, batch + batchSize).map((t, idx) => ({
+          user_id: user.id,
+          type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
+          category: t.category,
+          category_id: t.category_id,
+          amount: t.amount,
+          description: t.description,
+          date: t.date,
+          payment_method_id: t.payment_method_id,
+          _originalIndex: batch + idx, // Track original row index
+        }));
+
         try {
-          const { error: insError } = await supabase
+          const { error: insError, data } = await supabase
             .from('transactions')
-            .insert({
-              user_id: user.id,
-              type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
-              category: t.category,
-              category_id: t.category_id,
-              amount: t.amount,
-              description: t.description,
-              date: t.date,
-              payment_method_id: t.payment_method_id,
-            });
+            .insert(batchTransactions.map(({ _originalIndex, ...rest }) => rest))
+            .select();
 
           if (insError) {
-            console.error("Error al insertar fila:", insError, t);
-            failCount++;
+            console.error("Error en batch insert:", insError);
+            // Registrar todas las filas del batch como fallidas
+            batchTransactions.forEach(t => {
+              failedRows.push({
+                row: t._originalIndex + 2, // +2 por header y base-1
+                error: insError.message || 'Error desconocido'
+              });
+            });
+            failCount += batchTransactions.length;
           } else {
-            successCount++;
+            successCount += (data?.length || 0);
           }
         } catch (e) {
-          console.error("Excepción al insertar fila:", e, t);
-          failCount++;
+          console.error("Excepción en batch insert:", e);
+          // Registrar todas las filas del batch como fallidas
+          batchTransactions.forEach(t => {
+            failedRows.push({
+              row: t._originalIndex + 2,
+              error: e instanceof Error ? e.message : 'Error desconocido'
+            });
+          });
+          failCount += batchTransactions.length;
         }
+
         // Update progress
-        setProgress(Math.round(((i + 1) / total) * 100));
+        const processed = Math.min(batch + batchSize, transactionsToImport.length);
+        setProgress(Math.round((processed / transactionsToImport.length) * 100));
+        
+        // Actualizar localStorage
+        localStorage.setItem(importKey, JSON.stringify({
+          startTime: Date.now(),
+          validRows: transactionsToImport.length,
+          completed: processed,
+          state: 'in_progress'
+        }));
       }
 
+      // Mostrar resultados con detalle de errores
       if (failCount > 0) {
-        alert(`Importación finalizada con problemas. Éxito: ${successCount}, Fallo: ${failCount}. Revisa la consola para más detalles.`);
-      } else {
-        toast({ title: 'Importación completada', description: `Se importaron ${successCount} transacciones.` });
+        const errorSummary = failedRows
+          .slice(0, 10)
+          .map(f => `Fila ${f.row}: ${f.error}`)
+          .join('\n');
+        
+        const moreErrors = failedRows.length > 10 ? `\n...y ${failedRows.length - 10} errores más` : '';
+        
+        toast({
+          title: 'Importación completada con errores',
+          description: `✓ ${successCount} exitosos | ✗ ${failCount} fallidos\n\n${errorSummary}${moreErrors}`,
+          variant: 'destructive',
+          duration: 10000,
+        });
+        
+        // Mantener el diálogo abierto para que el usuario vea los errores
         setParsedRows([]);
         setFileName('');
-        if (closeDialogOnSuccess) {
-          setOpen(false);
-        }
+      } else {
+        toast({ 
+          title: 'Importación completada', 
+          description: `Se importaron ${successCount} transacciones correctamente.` 
+        });
+        setParsedRows([]);
+        setFileName('');
+        setOpen(false);
       }
 
-      // We still call onImport with empty array or just to trigger a refresh in the parent if possible
-      // Actually, onImport in History.tsx/Index.tsx calls fetchData, which we need.
-      await onImport([]);
+      // Limpiar localStorage
+      localStorage.removeItem(importKey);
 
     } catch (err) {
       console.error("Excepción durante la importación:", err);
       alert("Ocurrió un error inesperado durante la importación.");
+      localStorage.removeItem(importKey);
     } finally {
       setIsImporting(false);
       setProgress(0);
@@ -513,7 +592,7 @@ export function ImportExcelDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar desde Excel</DialogTitle>
           <DialogDescription>
@@ -521,7 +600,7 @@ export function ImportExcelDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="space-y-3 sm:space-y-4 mt-4">
           <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
             <p className="font-medium">Formato esperado:</p>
             <p className="text-muted-foreground">
@@ -533,9 +612,9 @@ export function ImportExcelDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Archivo Excel</Label>
+            <Label className="text-sm">Archivo Excel</Label>
             <div
-              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <input
@@ -552,8 +631,8 @@ export function ImportExcelDialog({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
+                  <Upload className="h-6 sm:h-8 w-6 sm:w-8 mx-auto text-muted-foreground" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Haz clic o arrastra un archivo .xlsx, .xls o .csv
                   </p>
                 </div>
@@ -632,29 +711,16 @@ export function ImportExcelDialog({
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">Procesando... {progress}%</p>
+                  <p className="text-xs text-center text-muted-foreground">Importando en background... {progress}%</p>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  {/* Botón Correr en segundo plano (secondary) - no cierra diálogo después */}
-                  <Button
-                    onClick={() => handleImport(false)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={validCount === 0}
-                  >
-                    Correr en segundo plano
-                  </Button>
-
-                  {/* Botón Importar ahora (primary) - sí cierra diálogo */}
-                  <Button
-                    onClick={() => handleImport(true)}
-                    className="flex-1"
-                    disabled={validCount === 0}
-                  >
-                    Importar ahora
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => handleImport()}
+                  className="w-full h-10"
+                  disabled={validCount === 0}
+                >
+                  Importar {validCount > 0 && `(${validCount} filas)`}
+                </Button>
               )}
             </>
           )}

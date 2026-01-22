@@ -139,6 +139,7 @@ export type Database = {
           user_id: string
           onboarding_decision: string | null
           has_pending_import: boolean | null
+          welcome_completed: boolean | null
           email: string | null
           type: string | null
           profile_type: string | null
@@ -153,6 +154,7 @@ export type Database = {
           user_id: string
           onboarding_decision?: string | null
           has_pending_import?: boolean | null
+          welcome_completed?: boolean | null
           email?: string | null
           type?: string | null
           profile_type?: string | null
@@ -167,6 +169,7 @@ export type Database = {
           user_id?: string
           onboarding_decision?: string | null
           has_pending_import?: boolean | null
+          welcome_completed?: boolean | null
           email?: string | null
           type?: string | null
           profile_type?: string | null

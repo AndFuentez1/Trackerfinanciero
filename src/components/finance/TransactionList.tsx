@@ -45,9 +45,9 @@ const typeLabels = {
   savings: 'Ahorro',
   investment: 'Inversión',
   loan: 'Préstamo',
-  transfer: 'Transf.',
-  transfer_in: 'T. Recibida',
-  transfer_out: 'T. Enviada',
+  transfer: 'Otros',
+  transfer_in: 'Otros',
+  transfer_out: 'Otros',
 };
 
 const typeStyles = {
@@ -56,9 +56,9 @@ const typeStyles = {
   savings: 'text-blue-600 bg-blue-50',
   investment: 'text-purple-600 bg-purple-50',
   loan: 'text-amber-600 bg-amber-50',
-  transfer: 'text-slate-600 bg-slate-50',
-  transfer_in: 'text-emerald-500 bg-emerald-50/50',
-  transfer_out: 'text-rose-500 bg-rose-50/50',
+  transfer: 'text-slate-700 bg-slate-100',
+  transfer_in: 'text-slate-700 bg-slate-100',
+  transfer_out: 'text-slate-700 bg-slate-100',
 };
 
 export function TransactionList({
@@ -158,10 +158,13 @@ export function TransactionList({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO', {
-      day: 'numeric',
-      month: 'short',
-    });
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const month = months[d.getMonth()] || '';
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
   };
 
   const getPaymentMethodName = (pmId: string | null | undefined) => {
@@ -169,6 +172,27 @@ export function TransactionList({
     const pm = paymentMethods.find(p => p.id === pmId);
     return pm?.name || null;
   };
+
+  const getCategoryOptionsForType = (type: Transaction['type']) => {
+    if (type === 'transfer_in' || type === 'transfer_out') {
+      return categories.filter(c => c.type === 'transfer' || c.type === 'transfer_out' || c.type === 'transfer_in');
+    }
+    return categories.filter(c => c.type === type);
+  };
+
+  const getCategoryDisplay = (t: Transaction) => {
+    if (t.type === 'transfer_in' || t.type === 'transfer_out') {
+      return { name: 'Transferencia', color: '#6b7280' };
+    }
+
+    const categoryItem = categories.find(c => c.id === t.category_id) || categories.find(c => c.name === t.category);
+    return {
+      name: categoryItem?.name || t.category || 'S/C',
+      color: categoryItem?.color || '#3b82f6'
+    };
+  };
+
+  const isNegativeType = (type: Transaction['type']) => type === 'expense' || type === 'transfer_out';
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
@@ -244,40 +268,45 @@ export function TransactionList({
             <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
               <tr>
                 <th
-                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border/40"
                   onClick={() => handleSort('date')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  <div className="flex items-center justify-center">
-                    {getSortIcon('date')} Fecha
+                  <div className="flex items-center justify-center gap-1">
+                    Fecha
+                    <span>{getSortIcon('date')}</span>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-left text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border/40" style={{ fontStyle: 'normal' }}>
                   Descripción
                 </th>
-                <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40" style={{ fontStyle: 'normal' }}>
                   Tipo
                 </th>
                 <th
-                  className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-border/40"
                   onClick={() => handleSort('category')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  Categoría
+                  <div className="flex items-center justify-center gap-1">
+                    Categoría
+                    <span>{getSortIcon('category')}</span>
+                  </div>
                 </th>
-                <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40" style={{ fontStyle: 'normal' }}>
                   Método de Pago
                 </th>
                 <th
-                  className="py-3 px-3 text-right text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border/40"
                   onClick={() => handleSort('amount')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  <div className="flex items-center justify-end">
-                    Monto {getSortIcon('amount')}
+                  <div className="flex items-center justify-center gap-1">
+                    Monto
+                    <span>{getSortIcon('amount')}</span>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
                   <div className="flex items-center justify-center gap-1">
                     <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
                       <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
@@ -294,14 +323,15 @@ export function TransactionList({
                     </button>
                   </div>
                 </th>
-                <th className="py-3 px-2 text-center text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {displayTransactions.map((transaction, index) => {
                 const pmName = getPaymentMethodName(transaction.payment_method_id);
-                const categoryItem = categories.find(c => c.id === transaction.category_id) || categories.find(c => c.name === transaction.category);
-                const isOrphan = (!transaction.category && !transaction.category_id) || !transaction.payment_method_id;
+                const categoryDisplay = getCategoryDisplay(transaction);
+                const needsCategory = !(transaction.type === 'transfer_in' || transaction.type === 'transfer_out');
+                const isOrphan = (needsCategory && (!transaction.category && !transaction.category_id)) || !transaction.payment_method_id;
 
                 const isEditing = editingId === transaction.id;
                 return (
@@ -317,7 +347,7 @@ export function TransactionList({
                     style={{ animationDelay: `${index * 20}ms` }}
                   >
                     {/* Date */}
-                    <td className="py-3 px-4 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-3 px-4 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <input
                           type="date"
@@ -333,16 +363,16 @@ export function TransactionList({
                     </td>
 
                     {/* Description */}
-                    <td className="py-2.5 px-3 align-middle" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           value={draft?.description ?? transaction.description}
                           onChange={(e) => setDraft(d => d ? { ...d, description: e.target.value } : d)}
-                          className="h-8 text-sm"
+                          className="h-8 text-sm max-w-[180px] text-center"
                         />
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13px] text-foreground font-medium line-clamp-1 leading-tight" style={{ fontStyle: 'normal' }}>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-[13px] text-foreground font-medium line-clamp-2 leading-tight text-center" style={{ fontStyle: 'normal' }}>
                             {transaction.description}
                           </span>
                           {isOrphan && (
@@ -356,7 +386,7 @@ export function TransactionList({
                     </td>
 
                     {/* Type */}
-                    <td className="py-2.5 px-2 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       <span className={cn(
                         'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         typeStyles[transaction.type]
@@ -366,25 +396,25 @@ export function TransactionList({
                     </td>
 
                     {/* Category */}
-                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
-                        <div className="mx-auto max-w-[160px]">
+                        <div className="mx-auto max-w-[120px]">
                           <Select
                             onValueChange={(v) => setDraft(d => d ? { ...d, category_id: v } : d)}
                             value={draft?.category_id || ''}
                           >
-                            <SelectTrigger className="h-8 text-[10px] uppercase font-bold bg-background/50 hover:bg-background">
-                              <SelectValue placeholder="Categoría" />
+                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold bg-background/50 hover:bg-background">
+                              <SelectValue placeholder="Cat." />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.filter(c => c.type === transaction.type).map(c => (
+                              {getCategoryOptionsForType(transaction.type).map(c => (
                                 <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                       ) : onUpdate && (!transaction.category && !transaction.category_id) ? (
-                        <div className="mx-auto max-w-[140px]">
+                        <div className="mx-auto max-w-[120px]">
                           <Select
                             onValueChange={(v) => {
                               const cat = categories.find(c => c.id === v);
@@ -395,34 +425,34 @@ export function TransactionList({
                             }}
                             value=""
                           >
-                            <SelectTrigger className="h-8 text-[10px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background">
-                              <SelectValue placeholder="Categoría" />
+                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background">
+                              <SelectValue placeholder="Cat." />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.filter(c => c.type === transaction.type).map(c => (
+                              {getCategoryOptionsForType(transaction.type).map(c => (
                                 <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center max-w-[120px] mx-auto">
                           <span
-                            className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider line-clamp-2 text-center leading-tight"
                             style={{
-                              backgroundColor: (categoryItem?.color || '#3b82f6') + '20',
-                              color: categoryItem?.color || '#3b82f6',
+                              backgroundColor: (categoryDisplay.color || '#3b82f6') + '20',
+                              color: categoryDisplay.color || '#3b82f6',
                               fontStyle: 'normal'
                             }}
                           >
-                            {categoryItem?.name || transaction.category || "Sin categoría"}
+                            {categoryDisplay.name}
                           </span>
                         </div>
                       )}
                     </td>
 
                     {/* Payment Method */}
-                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-3 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <div className="mx-auto max-w-[160px]">
                           <Select
@@ -468,17 +498,17 @@ export function TransactionList({
                     </td>
 
                     {/* Amount */}
-                    <td className="py-2.5 px-3 align-middle text-right" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-border/20" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           type="number"
-                          className="h-8 text-sm w-[8rem] ml-auto text-right"
+                          className="h-8 text-sm w-[10rem] ml-auto text-right"
                           value={draft?.amount ?? transaction.amount}
                           onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) } : d)}
                         />
                       ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">
-                          {transaction.type === 'expense' ? '-' : '+'}
+                        <span className="text-sm font-bold text-foreground tabular-nums whitespace-nowrap">
+                          {isNegativeType(transaction.type) ? '-' : '+'}
                           {formatCurrency(transaction.amount)}
                         </span>
                       )}
@@ -553,8 +583,9 @@ export function TransactionList({
         {
           displayTransactions.map((transaction) => {
             const pmName = getPaymentMethodName(transaction.payment_method_id);
-            const categoryItem = categories.find(c => c.id === transaction.category_id) || categories.find(c => c.name === transaction.category);
-            const isOrphan = (!transaction.category && !transaction.category_id) || !transaction.payment_method_id;
+            const categoryDisplay = getCategoryDisplay(transaction);
+            const needsCategory = !(transaction.type === 'transfer_in' || transaction.type === 'transfer_out');
+            const isOrphan = (needsCategory && (!transaction.category && !transaction.category_id)) || !transaction.payment_method_id;
 
             return (
               <div
@@ -571,11 +602,11 @@ export function TransactionList({
                       <span
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
                         style={{
-                          backgroundColor: (categoryItem?.color || '#3b82f6') + '20',
-                          color: categoryItem?.color || '#3b82f6',
+                          backgroundColor: (categoryDisplay.color || '#3b82f6') + '20',
+                          color: categoryDisplay.color || '#3b82f6',
                         }}
                       >
-                        {categoryItem?.name || transaction.category || "Sin categoría"}
+                        {categoryDisplay.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(transaction.date)}
@@ -586,9 +617,9 @@ export function TransactionList({
                   <div className="text-right">
                     <span className={cn(
                       "block text-lg font-bold",
-                      transaction.type === 'expense' ? "text-rose-600" : "text-emerald-600"
+                      isNegativeType(transaction.type) ? "text-rose-600" : "text-emerald-600"
                     )}>
-                      {transaction.type === 'expense' ? '-' : '+'}
+                      {isNegativeType(transaction.type) ? '-' : '+'}
                       {formatCurrency(transaction.amount)}
                     </span>
                   </div>

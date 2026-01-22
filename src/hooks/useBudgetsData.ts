@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFinanceData, Transaction } from './useFinanceData';
 import { useAuth } from './useAuth';
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { startOfMonth, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Budget {
@@ -12,6 +12,7 @@ export interface Budget {
     category?: string; // Legacy or fallback name
     amount: number;
     period: 'monthly';
+    month?: string;
     created_at: string;
     updated_at: string;
 }
@@ -38,8 +39,10 @@ export interface TotalBudgetState {
 export function useBudgetsData() {
     const { user } = useAuth();
     // Use budgets from finance data instead of local state
-    const { transactions, categories, budgets: financeBudgets, lastUpdated: financeLastUpdated, refreshData, loading: financeLoading } = useFinanceData();
+    const { transactions, allTransactions, categories, budgets: financeBudgets, lastUpdated: financeLastUpdated, refreshData, loading: financeLoading } = useFinanceData();
     const [lastModification, setLastModification] = useState<Date | null>(null);
+    const [budgetYear, setBudgetYear] = useState<number | 'all'>(new Date().getFullYear());
+    const [budgetMonth, setBudgetMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
     const { toast } = useToast();
 
     // Derived last modification Date from financeLastUpdated
@@ -51,6 +54,34 @@ export function useBudgetsData() {
 
     const budgets = financeBudgets as Budget[];
     const loading = financeLoading;
+
+    // Years available from budgets (fallback to current year)
+    const availableYears = useMemo(() => {
+        const years = new Set<number>();
+        budgets.forEach(b => {
+            if (b.month) {
+                const y = Number(b.month.substring(0, 4));
+                if (!Number.isNaN(y)) years.add(y);
+            }
+        });
+        // También incluir años detectados en transacciones para que el filtro cubra todo el histórico
+        allTransactions?.forEach(t => {
+            const y = new Date(t.date).getFullYear();
+            if (!Number.isNaN(y)) years.add(y);
+        });
+        if (years.size === 0) {
+            years.add(new Date().getFullYear());
+        }
+        return Array.from(years).sort((a, b) => b - a);
+    }, [budgets, allTransactions]);
+
+    // Ensure selected year stays within available options
+    useEffect(() => {
+        if (availableYears.length === 0) return;
+        if (budgetYear !== 'all' && !availableYears.includes(budgetYear)) {
+            setBudgetYear(availableYears[0]);
+        }
+    }, [availableYears, budgetYear]);
 
     // Subscribe to changes to refresh finance data (which contains budgets)
     useEffect(() => {
@@ -80,11 +111,16 @@ export function useBudgetsData() {
     // Derived state calculation
     const budgetsStats = useMemo(() => {
         const stats: BudgetState[] = [];
-        const now = new Date();
-        const monthStart = startOfMonth(now);
-        const monthEnd = endOfMonth(now);
 
-        budgets.forEach(budget => {
+        const filteredBudgets = budgets.filter(b => {
+            const year = Number(b.month?.substring(0, 4));
+            const month = Number(b.month?.substring(5, 7));
+            if (budgetYear !== 'all' && !Number.isNaN(year) && year !== budgetYear) return false;
+            if (budgetMonth !== 'all' && !Number.isNaN(month) && month !== budgetMonth) return false;
+            return true;
+        });
+
+        filteredBudgets.forEach(budget => {
             // 1. Find category info - Robust matching
             let category = categories.find(c => c.id === budget.category_id);
             if (!category && budget.category) {
@@ -98,9 +134,12 @@ export function useBudgetsData() {
                 // Must be expense
                 if (t.type !== 'expense') return false;
 
-                // Must be in date range
+                // Must be in date range: match year and, if selected, month
                 const tDate = parseISO(t.date);
-                if (!isWithinInterval(tDate, { start: monthStart, end: monthEnd })) return false;
+                const tYear = tDate.getFullYear();
+                const tMonth = tDate.getMonth() + 1;
+                if (budgetYear !== 'all' && tYear !== budgetYear) return false;
+                if (budgetMonth !== 'all' && tMonth !== budgetMonth) return false;
 
                 // Must match category_id
                 return t.category_id === budget.category_id;
@@ -128,7 +167,7 @@ export function useBudgetsData() {
         });
 
         return stats;
-    }, [budgets, transactions, categories]);
+    }, [budgets, transactions, categories, budgetYear, budgetMonth]);
 
     const totalBudgetStats = useMemo((): TotalBudgetState => {
         const totalBudgeted = budgetsStats.reduce((sum, item) => sum + item.budget.amount, 0);
@@ -148,14 +187,17 @@ export function useBudgetsData() {
             status
         };
     }, [budgetsStats]);
-    const saveBudget = async (budgetData: { category_id: string; amount: number; category_name?: string }) => {
+    
+    const saveBudget = async (budgetData: { category_id: string; amount: number; category_name?: string; month?: string }) => {
         if (!user) return { error: 'No autenticado' };
 
         // BUSCAR EL NOMBRE DE LA CATEGORÍA SI NO VIENE
         const categoryDetails = categories.find(c => c.id === budgetData.category_id);
         const finalCategoryName = budgetData.category_name || categoryDetails?.name || '';
 
-        const currentMonth = startOfMonth(new Date()).toISOString().split('T')[0];
+        const targetMonth = budgetData.month
+            ? startOfMonth(new Date(budgetData.month)).toISOString().split('T')[0]
+            : startOfMonth(new Date()).toISOString().split('T')[0];
 
         const { data, error } = await supabase
             .from('budgets')
@@ -165,7 +207,7 @@ export function useBudgetsData() {
                 category: finalCategoryName, // Ahora sí garantizamos el nombre
                 amount: budgetData.amount,
                 period: 'monthly',
-                month: currentMonth,
+                month: targetMonth,
             }, { onConflict: 'user_id, category_id' })
             .select()
             .single();
@@ -187,6 +229,10 @@ export function useBudgetsData() {
         loading,
         refreshBudgets: refreshData,
         saveBudget,
-        lastModification
+            lastModification,
+            budgetYear,
+            budgetMonth,
+            setBudgetPeriod: (year: number | 'all', month: number | 'all') => { setBudgetYear(year); setBudgetMonth(month); },
+            availableYears
     };
 }

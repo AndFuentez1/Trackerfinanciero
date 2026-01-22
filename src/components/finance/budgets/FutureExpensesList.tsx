@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { PaymentMethod } from '@/hooks/useFinanceData';
+import { AddCategoryDialog } from '../AddCategoryDialog';
 
 interface FutureExpense {
     id: string;
@@ -26,7 +27,7 @@ interface FutureExpense {
 export function FutureExpensesList() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const { categories, paymentMethods, addTransaction } = useFinanceData();
+    const { categories, paymentMethods, addTransaction, addCategory, loading: dataLoading } = useFinanceData();
     const [expenses, setExpenses] = useState<FutureExpense[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -159,7 +160,11 @@ export function FutureExpensesList() {
     };
 
     // Filter Expense Categories
-    const expenseCategories = categories.filter(c => c.type === 'expense');
+    const expenseCategories = useMemo(() =>
+        categories
+            .filter(c => c.type === 'expense')
+            .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
+        [categories]);
 
     return (
         <div className="space-y-4">
@@ -170,13 +175,34 @@ export function FutureExpensesList() {
                 </h2>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="border-dashed">
+                        <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-dashed"
+                            onClick={(e) => {
+                                if (dataLoading) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                if (expenseCategories.length === 0) {
+                                    e.preventDefault();
+                                    toast({
+                                        title: "Configuración requerida",
+                                        description: "Primero debes configurar al menos una categoría de gasto.",
+                                        variant: "destructive"
+                                    });
+                                }
+                            }}
+                        >
                             <Plus className="h-4 w-4 mr-1" /> Agregar
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Nuevo Gasto Futuro</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Completa la información para programar un gasto futuro.
+                            </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -208,16 +234,27 @@ export function FutureExpensesList() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría</label>
-                                <Select value={newExpense.category_id} onValueChange={v => setNewExpense({ ...newExpense, category_id: v })}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {expenseCategories.map(c => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex items-center gap-2">
+                                    <Select value={newExpense.category_id} onValueChange={v => setNewExpense({ ...newExpense, category_id: v })}>
+                                        <SelectTrigger className="flex-1">
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {expenseCategories.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <div className="flex-shrink-0">
+                                        <AddCategoryDialog 
+                                            type="expense" 
+                                            onAdd={addCategory}
+                                            onSuccess={(cat) => {
+                                                setNewExpense({ ...newExpense, category_id: cat.id });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             <Button className="w-full mt-4" onClick={handleCreate}>Guardar Compromiso</Button>
                         </div>
@@ -275,9 +312,12 @@ export function FutureExpensesList() {
 
             {/* Delete Confirmation Alert */}
             <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className="sm:max-w-[400px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Eliminar Gasto Futuro</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Confirma si deseas eliminar este gasto futuro. Esta acción no se puede deshacer.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-muted-foreground">
@@ -294,9 +334,12 @@ export function FutureExpensesList() {
 
             {/* Pay Dialog */}
             <Dialog open={isPayOpen} onOpenChange={setIsPayOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Realizar Pago</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Registra el pago de este compromiso seleccionando el método de pago.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <p className="text-sm text-muted-foreground">

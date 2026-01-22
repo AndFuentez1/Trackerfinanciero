@@ -6,7 +6,7 @@ import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDia
 import { ImportExcelDialog } from '@/components/finance/ImportExcelDialog';
 import { ExportExcelButton } from '@/components/finance/ExportExcelButton';
 import { HistoryTab } from '@/components/finance/HistoryTab';
-import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus } from 'lucide-react';
+import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,6 +20,7 @@ import { PendingInvoicesPanel } from '@/components/finance/PendingInvoicesPanel'
 import { ImportStatusBar } from '@/components/finance/ImportStatusBar';
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
+import { cn } from '@/lib/utils';
 
 export default function HistoryPage() {
     // ============================================================================
@@ -50,27 +51,111 @@ export default function HistoryPage() {
         pendingImportData,
         addCategory,
         addPaymentMethod,
+        addTransfer,
+        rangeTransactions,
+        allTransactions, // Use full dataset for filter options
+        totalTransactionsCount,
     } = useFinanceData();
 
     // useState hooks - MUST be before any conditionals
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [reclassifyDrafts, setReclassifyDrafts] = useState({});
+    const [reclassifyDrafts, setReclassifyDrafts] = useState<Record<string, any>>({});
     const [savingId, setSavingId] = useState<string | null>(null);
     const [creatingPMFor, setCreatingPMFor] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+    const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+    const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | undefined>(undefined);
+    const [monthFilter, setMonthFilter] = useState<string>('all');
+    const [yearFilter, setYearFilter] = useState<string>('all');
     const [pendingTx, setPendingTx] = useState<Transaction | null>(null);
 
     // Computed values (not hooks, safe to compute here)
     const isLoading = authLoading || dataLoading;
+    
+    // Get current date values FIRST
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    const filtersApplied = useMemo(() => Boolean(
+        searchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter.period !== 'all'
+    ), [searchTerm, typeFilter, categoryFilter, paymentMethodFilter, statusFilter, dateFilter]);
+
+    const yearOptions = useMemo(() => {
+        const setYears = new Set<number>();
+        // Use allTransactions to ensure years don't disappear when filtering
+        (allTransactions || []).forEach(tx => {
+            const y = new Date(tx.date).getFullYear();
+            if (!isNaN(y)) setYears.add(y);
+        });
+        // Always include current year
+        setYears.add(currentYear);
+        return Array.from(setYears).sort((a, b) => b - a).map(String);
+    }, [allTransactions, currentYear]);
+    
+    const monthOptions = useMemo(() => {
+        const baseMonths = [
+            { value: 'all', label: 'Todo el año' },
+            { value: '1', label: 'Enero' },
+            { value: '2', label: 'Febrero' },
+            { value: '3', label: 'Marzo' },
+            { value: '4', label: 'Abril' },
+            { value: '5', label: 'Mayo' },
+            { value: '6', label: 'Junio' },
+            { value: '7', label: 'Julio' },
+            { value: '8', label: 'Agosto' },
+            { value: '9', label: 'Septiembre' },
+            { value: '10', label: 'Octubre' },
+            { value: '11', label: 'Noviembre' },
+            { value: '12', label: 'Diciembre' },
+        ];
+        
+        // If year filter is "all", show all 12 months
+        if (yearFilter === 'all') {
+            return baseMonths;
+        }
+        
+        // If current year is selected, limit to current month
+        if (yearFilter === currentYear.toString()) {
+            return baseMonths.slice(0, currentMonth + 1);
+        }
+        return baseMonths;
+    }, [yearFilter, currentYear, currentMonth]);
+
+    // Ensure monthFilter is valid when year changes
+    useEffect(() => {
+        const validValues = monthOptions.map(m => m.value);
+        if (!validValues.includes(monthFilter)) {
+            setMonthFilter('all');
+        }
+    }, [monthOptions, monthFilter]);
+
+    const toDateString = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+    const clearAllFilters = () => {
+        setSearchTerm('');
+        setTypeFilter(undefined);
+        setCategoryFilter(undefined);
+        setPaymentMethodFilter(undefined);
+        setStatusFilter(undefined);
+        setMonthFilter('all');
+        setYearFilter('all');
+        updateFilter('all');
+    };
 
     // Memoized values - transactions needing reclassification
     // CRITICAL: Exclude savings and investment types (managed in Savings tab only)
-    const reclassifyTxs = useMemo(() => 
-        transactions.filter(tx => 
-            !tx.category_id && 
-            tx.type !== 'saving' && 
-            tx.type !== 'investment'
-        ),
+    const reclassifyTxs = useMemo(() =>
+        transactions.filter(tx => {
+            const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
+            if (isTransfer) return false; // Transfers should not require reclasificación
+
+            return !tx.category_id &&
+                tx.type !== 'saving' &&
+                tx.type !== 'investment';
+        }),
         [transactions]
     );
 
@@ -78,7 +163,7 @@ export default function HistoryPage() {
     const getFilteredCategories = useMemo(() => {
         return (typeValue: string) => {
             if (!typeValue) return categories;
-            
+
             // Map transaction types to category types
             const categoryTypeMap: Record<string, string> = {
                 'expense': 'expense',
@@ -90,7 +175,7 @@ export default function HistoryPage() {
                 'transfer_in': 'transfer',
                 'transfer_out': 'transfer',
             };
-            
+
             const categoryType = categoryTypeMap[typeValue];
             return categories.filter(cat => cat.type === categoryType);
         };
@@ -117,9 +202,9 @@ export default function HistoryPage() {
     const handleReclassifySave = async (tx: Transaction) => {
         const draft = reclassifyDrafts[tx.id];
         if (!draft || !draft.category_name || !draft.type) return;
-        
+
         setSavingId(tx.id);
-        
+
         try {
             // Find or create category
             let categoryId = null;
@@ -131,7 +216,7 @@ export default function HistoryPage() {
                 const newCategory = await addCategory({ name: draft.category_name, type: draft.type });
                 categoryId = newCategory.id;
             }
-            
+
             // Find or create payment method
             let paymentMethodId = null;
             if (draft.payment_method_name) {
@@ -145,7 +230,7 @@ export default function HistoryPage() {
                     return;
                 }
             }
-            
+
             // Update with all necessary fields - setting category_id removes from reclassification zone
             await updateTransaction(tx.id, {
                 category_id: categoryId,
@@ -155,7 +240,7 @@ export default function HistoryPage() {
                 date: draft.date,
                 payment_method_id: paymentMethodId,
             });
-            
+
             // Remove from local drafts
             setReclassifyDrafts(prev => {
                 const copy = { ...prev };
@@ -193,6 +278,7 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
                         <AddTransactionDialog
                             onAdd={addTransaction}
+                            onAddTransfer={addTransfer}
                             categories={categories}
                             paymentMethods={paymentMethods}
                         />
@@ -210,6 +296,7 @@ export default function HistoryPage() {
                     setIsEditDialogOpen(open);
                     if (!open) setEditingTransaction(null);
                 }}
+                onAddTransfer={addTransfer}
                 categories={categories}
                 paymentMethods={paymentMethods}
                 onUpdateTransaction={async (id, updates) => {
@@ -277,15 +364,15 @@ export default function HistoryPage() {
                                             payment_method_name: tx.payment_method || '',
                                         };
                                         const draft = reclassifyDrafts[tx.id] ? { ...initialDraft, ...reclassifyDrafts[tx.id] } : initialDraft;
-                                        
+
                                         const isSaving = savingId === tx.id;
-                                        
+
                                         // Detectar qué campos ya tienen datos válidos (deben bloquearse)
                                         const hasValidDate = tx.date && tx.date.trim() !== '';
                                         const hasValidDescription = tx.description && tx.description.trim() !== '';
                                         const hasValidType = false; // Permitir editar type siempre
                                         const hasValidAmount = tx.amount !== null && tx.amount !== undefined && tx.amount !== 0;
-                                        
+
                                         return (
                                             <div key={tx.id} className="bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm" style={{ fontStyle: 'normal' }}>
                                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
@@ -316,8 +403,8 @@ export default function HistoryPage() {
                                                     {/* Tipo (Type) - 3rd */}
                                                     <div className="space-y-1">
                                                         <label className="text-xs font-medium text-muted-foreground block text-left" style={{ fontStyle: 'normal' }}>Tipo</label>
-                                                        <Select 
-                                                            value={draft.type} 
+                                                        <Select
+                                                            value={draft.type}
                                                             onValueChange={(value) => {
                                                                 handleReclassifyChange(tx.id, 'type', value);
                                                             }}
@@ -411,32 +498,209 @@ export default function HistoryPage() {
 
                         <PendingInvoicesPanel />
 
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card/30 p-4 rounded-xl border border-border/50">
-                            <div className="flex items-center gap-2">
+                        {/* FILTROS UNIFICADOS */}
+                        <div className={cn(
+                            "bg-card/30 p-4 rounded-xl border border-border/50",
+                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
+                        )}>
+                            <div className="flex items-center gap-2 mb-3">
                                 <BarChart3 className="h-5 w-5 text-primary" />
-                                <h2 className="text-lg font-semibold">Filtros de Tiempo</h2>
+                                <h2 className="text-lg font-semibold">Filtros</h2>
                             </div>
-                            <Select onValueChange={(v) => updateFilter(v)} value={dateFilter.period}>
-                                <SelectTrigger className="w-full sm:w-[200px] bg-background/50 border-border/50 shadow-sm">
-                                    <SelectValue placeholder="Seleccionar periodo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todo el tiempo</SelectItem>
-                                    <SelectItem value="week">Esta Semana</SelectItem>
-                                    <SelectItem value="month">Este Mes</SelectItem>
-                                    <SelectItem value="year">Este Año</SelectItem>
-                                </SelectContent>
-                            </Select>
+
+                            <div className="flex flex-col gap-3">
+                                {/* Primera fila: Búsqueda + Tipo/Categoría/Método */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+                                    {/* Búsqueda */}
+                                    <div className="flex-1">
+                                        <Input
+                                            placeholder="Buscar descripción"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="h-10 w-full bg-background/50 border-gray-100"
+                                        />
+                                    </div>
+
+                                    {/* Tipo, Categoría, Método */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                                <SelectValue placeholder="Tipo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos</SelectItem>
+                                                <SelectItem value="income">Ingreso</SelectItem>
+                                                <SelectItem value="expense">Gasto</SelectItem>
+                                                <SelectItem value="transfer_in">Transferencia (entrada)</SelectItem>
+                                                <SelectItem value="transfer_out">Transferencia (salida)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
+                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-gray-100 h-10">
+                                                <SelectValue placeholder="Categoría" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas</SelectItem>
+                                                {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select value={paymentMethodFilter} onValueChange={(value) => setPaymentMethodFilter(value === 'all' ? undefined : value)}>
+                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-gray-100 h-10">
+                                                <SelectValue placeholder="Método de pago" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos</SelectItem>
+                                                {paymentMethods.map(pm => (
+                                                    <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                {/* Segunda fila: Mes/Año + Rápidos + Limpiar */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-end">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                        <Select value={monthFilter} onValueChange={(value) => {
+                                            setMonthFilter(value);
+                                            const year = yearFilter === 'all' ? new Date().getFullYear().toString() : yearFilter;
+                                            if (value === 'all' && yearFilter === 'all') {
+                                                updateFilter('all');
+                                            } else {
+                                                const monthNum = value === 'all' ? null : Number(value);
+                                                const yearNum = Number(year);
+                                                let from: string, to: string;
+                                                if (monthNum) {
+                                                    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+                                                    from = toDateString(yearNum, monthNum, 1);
+                                                    to = toDateString(yearNum, monthNum, daysInMonth);
+                                                } else {
+                                                    from = toDateString(yearNum, 1, 1);
+                                                    to = toDateString(yearNum, 12, 31);
+                                                }
+                                                updateFilter('custom', from, to);
+                                            }
+                                        }}>
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                                <SelectValue placeholder="Mes" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {monthOptions.map(m => (
+                                                    <SelectItem key={m.value} value={m.value}>
+                                                        {m.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select value={yearFilter} onValueChange={(value) => {
+                                            setYearFilter(value);
+                                            const month = monthFilter;
+                                            if (month === 'all' && value === 'all') {
+                                                updateFilter('all');
+                                            } else {
+                                                const monthNum = month === 'all' ? null : Number(month);
+                                                const yearNum = value === 'all' ? new Date().getFullYear() : Number(value);
+                                                let from: string, to: string;
+                                                if (monthNum) {
+                                                    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+                                                    from = toDateString(yearNum, monthNum, 1);
+                                                    to = toDateString(yearNum, monthNum, daysInMonth);
+                                                } else {
+                                                    from = toDateString(yearNum, 1, 1);
+                                                    to = toDateString(yearNum, 12, 31);
+                                                }
+                                                updateFilter('custom', from, to);
+                                            }
+                                        }}>
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                                <SelectValue placeholder="Año" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos los años</SelectItem>
+                                                {yearOptions.map(y => (
+                                                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
+                                        <div className="flex gap-2 justify-end">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const now = new Date();
+                                                    const weekStart = new Date(now);
+                                                    weekStart.setDate(now.getDate() - 7);
+                                                    updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                                }}
+                                                className="h-10 px-3 text-xs whitespace-nowrap"
+                                            >
+                                                Esta semana
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const now = new Date();
+                                                    updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                                }}
+                                                className="h-10 px-3 text-xs whitespace-nowrap"
+                                            >
+                                                Este mes
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const now = new Date();
+                                                    const yearStart = toDateString(now.getFullYear(), 1, 1);
+                                                    const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                                                    updateFilter('custom', yearStart, today);
+                                                }}
+                                                className="h-10 px-3 text-xs whitespace-nowrap"
+                                            >
+                                                Este año
+                                            </Button>
+                                        </div>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-10 w-10 border border-border/60"
+                                            onClick={clearAllFilters}
+                                            title="Quitar filtros"
+                                        >
+                                            <FilterX className="h-4 w-4" />
+                                            <span className="sr-only">Quitar filtros</span>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <HistoryTab
                             transactions={transactions}
+                            allTransactions={rangeTransactions}
+                            totalCount={totalTransactionsCount}
                             paymentMethods={paymentMethods}
                             onDeleteTransaction={deleteTransaction}
                             onUpdateTransaction={updateTransaction}
                             onEditTransaction={handleEdit}
                             categories={categories}
                             highlightOrphaned={highlightOrphaned}
+                            searchTerm={searchTerm}
+                            typeFilter={typeFilter}
+                            categoryFilter={categoryFilter}
+                            statusFilter={statusFilter}
+                            paymentMethodFilter={paymentMethodFilter}
+                            setStatusFilter={setStatusFilter}
                         />
 
                         {hasMore && (

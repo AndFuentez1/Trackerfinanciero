@@ -80,7 +80,7 @@ export function EditSavingsTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar movimiento</DialogTitle>
         </DialogHeader>

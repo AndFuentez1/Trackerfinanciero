@@ -12,6 +12,7 @@ import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDia
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -327,18 +328,20 @@ export default function ConfiguracionPage() {
 
                 {/* Unified Category Management Section */}
                 <Card className="shadow-sm border-border/60 md:col-span-2">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <div className="space-y-1">
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <div className="w-2 h-6 bg-primary rounded-full" />
-                                Gestión de Categorías
-                            </CardTitle>
-                            <CardDescription>Personaliza tus categorías para clasificar mejor tus movimientos.</CardDescription>
+                    <CardHeader className="flex flex-col gap-4 pb-4">
+                        <div className="flex flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="space-y-1 flex-1">
+                                <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                                    <div className="w-2 h-6 bg-primary rounded-full" />
+                                    Gestión de Categorías
+                                </CardTitle>
+                            </div>
+                            <Button onClick={handleOpenAdd} size="sm" className="gap-2 shrink-0">
+                                <Plus className="h-4 w-4" />
+                                <span className="hidden sm:inline">Nueva</span>
+                            </Button>
                         </div>
-                        <Button onClick={handleOpenAdd} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            <span className="hidden sm:inline">Nueva Categoría</span>
-                        </Button>
+                        <CardDescription>Personaliza tus categorías para clasificar mejor tus movimientos.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="expense" className="w-full">
@@ -450,11 +453,11 @@ export default function ConfiguracionPage() {
                     <CardContent>
                         <Button
                             variant="outline"
-                            className="gap-2"
+                            className="gap-2 h-auto py-2 px-3 justify-start"
                             onClick={() => setShowPasswordDialog(true)}
                         >
-                            <Lock className="h-4 w-4" />
-                            Establecer / Cambiar Contraseña
+                            <Lock className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <span className="text-left whitespace-normal">Establecer / Cambiar Contraseña</span>
                         </Button>
                     </CardContent>
                 </Card>
@@ -484,9 +487,10 @@ export default function ConfiguracionPage() {
             </div>
 
             <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog(prev => ({ ...prev, open }))}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Pagar Tarjeta de Crédito</DialogTitle>
+                        <DialogDescription className="sr-only">Transfiere fondos desde una cuenta para pagar tu tarjeta de crédito.</DialogDescription>
                         <CardDescription>Transfiere fondos para pagar tu tarjeta.</CardDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
@@ -526,9 +530,10 @@ export default function ConfiguracionPage() {
             </Dialog>
 
             <Dialog open={conversionModalOpen} onOpenChange={setConversionModalOpen}>
-                <DialogContent className="sm:max-w-[520px]">
+                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Cambiar Moneda</DialogTitle>
+                        <DialogDescription className="sr-only">Configura la tasa y confirma el cambio de moneda de la aplicación.</DialogDescription>
                         <CardDescription>Estás cambiando la moneda de <strong>{currency}</strong> a <strong>{pendingCurrency}</strong>.</CardDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
@@ -577,9 +582,10 @@ export default function ConfiguracionPage() {
 
             {/* Preview Modal: show simple table of old/new balances */}
             <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-                <DialogContent className="sm:max-w-[720px]">
+                <DialogContent className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Vista previa: cambios por conversión</DialogTitle>
+                        <DialogDescription className="sr-only">Revisa la vista previa de saldos antes de aplicar la conversión de moneda.</DialogDescription>
                         <CardDescription>A continuación se muestran los saldos actuales y los saldos convertidos. Confirma para aplicar los cambios.</CardDescription>
                     </DialogHeader>
                     <div className="pt-2">
@@ -638,9 +644,10 @@ export default function ConfiguracionPage() {
             </Dialog>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
+                        <DialogDescription className="sr-only">Gestiona las categorías para organizar tus transacciones.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6 pt-4">
                         <div className="space-y-2">
@@ -707,6 +714,7 @@ export default function ConfiguracionPage() {
                 paymentMethod={editingPM}
                 open={isEditPMOpen}
                 onOpenChange={setIsEditPMOpen}
+                onSave={updatePaymentMethod}
             />
 
             <AddPaymentMethodDialog
@@ -805,16 +813,16 @@ function CategoryRow({
 }) {
     return (
         <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-gray-100 shadow-sm hover:shadow-md hover:bg-gray-50 transition-all group">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
                 <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0 transition-transform group-hover:scale-110"
                     style={{ backgroundColor: category.color || '#3b82f6' }}
                 >
                     <div className="w-3 h-3 rounded-full bg-white/40" />
                 </div>
-                <span className="font-semibold text-sm text-foreground/90">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
+                <span className="font-semibold text-sm text-foreground/90 flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 <Button variant="ghost" size="icon" onClick={onEdit} className="h-9 w-9 hover:bg-white shadow-sm border border-transparent hover:border-border">
                     <Pencil className="h-4 w-4 text-muted-foreground" />
                 </Button>

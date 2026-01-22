@@ -3,145 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFinance } from '@/contexts/FinanceContext';
 import type { Database } from '@/integrations/supabase/types';
+import type {
+  TransactionType, PaymentMethodType, CategoryItem, Transaction,
+  PaymentMethod, PaymentMethodRow, TransactionRow, Budget, Insight
+} from './financeTypes';
+import { DEFAULT_CATEGORIES, MASTER_PALETTE } from './financeConstants';
+import { calculateSummary, calculateExpensesByCategory, calculateInsights } from './financeUtils';
 
-export type TransactionType = 'income' | 'expense' | 'saving' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan';
-export type PaymentMethodType = 'cash' | 'debit' | 'credit' | 'savings' | 'investment';
 
-export interface CategoryItem {
-  id: string;
-  name: string;
-  type: TransactionType;
-  color?: string | null;
-  is_default?: boolean;
-  saving_goal?: number | null;
-}
-
-export interface Transaction {
-  id: string;
-  type: TransactionType;
-  category: string | null;
-  category_id?: string | null;
-  amount: number;
-  description: string;
-  date: string;
-  payment_method_id?: string | null;
-  created_at?: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  name: string;
-  type: PaymentMethodType;
-  balance: number;
-  credit_limit?: number | null;
-  is_savings_account?: boolean;
-  savings_goal?: number | null;
-  estimated_yield?: number | null; // Rentabilidad Estimada (%)
-  closing_date?: number | null;
-  payment_day?: number | null;
-  color?: string | null;
-}
-
-// Row type returned by Supabase for payment_methods table
-export type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
-export type TransactionRow = Database['public']['Tables']['transactions']['Row'];
-
-export interface Budget {
-  id: string;
-  category: string;
-  category_id?: string;
-  amount: number;
-  month: string;
-  spent?: number;
-  user_id?: string;
-  period?: 'monthly';
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Insight {
-  id: string;
-  type: 'warning' | 'tip' | 'success';
-  title: string;
-  description: string;
-}
 
 
 // Palette of distinct colors for consistent assignment
-export const MASTER_PALETTE = [
-  '#10B981', // emerald-500
-  '#F97316', // orange-500
-  '#3B82F6', // blue-500
-  '#EF4444', // red-500
-  '#A855F7', // purple-500
-  '#EC4899', // pink-500
-  '#EAB308', // yellow-500
-  '#06B6D4', // cyan-500
-  '#8B5CF6', // violet-500
-  '#14B8A6', // teal-500
-  '#F43F5E', // rose-500
-  '#6366F1', // indigo-500
-  '#84CC16', // lime-500
-  '#D946EF', // fuchsia-500
-  '#0EA5E9', // sky-500
-  '#F59E0B', // amber-500
-  '#64748B', // slate-500
-  '#78716C', // stone-500
-  '#71717A', // zinc-500
-  '#737373', // neutral-500
-  '#1E293B', // slate-800
-  '#991B1B', // red-800
-  '#065F46', // emerald-800
-  '#1E40AF', // blue-800
-  '#6B21A8', // purple-800
-  '#9F1239', // rose-800
-  '#92400E', // amber-800
-  '#155E75', // cyan-800
-  '#3730A3', // indigo-800
-  '#86198F', // fuchsia-800
-];
 
-const DEFAULT_CATEGORIES = [
-  { name: 'Salario', type: 'income', color: '#10B981' },
-  { name: 'Otros ingresos', type: 'income', color: '#34D399' },
-  { name: 'Alimentación', type: 'expense', color: '#F97316' },
-  { name: 'Arriendo y mudanzas', type: 'expense', color: '#B45309' },
-  { name: 'Aseo y limpieza', type: 'expense', color: '#38BDF8' },
-  { name: 'Cuidado personal y estética', type: 'expense', color: '#FB7185' },
-  { name: 'Teléfono', type: 'expense', color: '#60A5FA' },
-  { name: 'Restaurantes', type: 'expense', color: '#FB923C' },
-  { name: 'Mecato y bebidas', type: 'expense', color: '#EC4899' },
-  { name: 'Educación', type: 'expense', color: '#4F46E5' },
-  { name: 'Gym', type: 'expense', color: '#EF4444' },
-  { name: 'Oficina y trabajo', type: 'expense', color: '#64748B' },
-  { name: 'Salidas, hospedajes y ocio', type: 'expense', color: '#06B6D4' },
-  { name: 'Aplicativos, libros y gadgets', type: 'expense', color: '#8B5CF6' },
-  { name: 'Ropa, calzado y accesorios', type: 'expense', color: '#D946EF' },
-  { name: 'Farmacia y Salud', type: 'expense', color: '#F87171' },
-  { name: 'Salud y pensión', type: 'expense', color: '#F43F5E' },
-  { name: 'Seguro de vida', type: 'expense', color: '#DC2626' },
-  { name: 'Seguro moto', type: 'expense', color: '#2563EB' },
-  { name: 'Civica', type: 'expense', color: '#1E40AF' },
-  { name: 'Transporte', type: 'expense', color: '#3B82F6' },
-  { name: 'Gasolina', type: 'expense', color: '#EAB308' }, // Corrected from yellow-600 which is more like amber
-  { name: 'Parqueadero', type: 'expense', color: '#94A3B8' },
-  { name: 'Moto', type: 'expense', color: '#404040' },
-  { name: 'Regalos', type: 'expense', color: '#F472B6' },
-  { name: 'Utilería hogar y decoración', type: 'expense', color: '#9A3412' },
-  { name: 'Utilería oficina', type: 'expense', color: '#475569' },
-  { name: 'Documentos y papelería', type: 'expense', color: '#A1A1AA' },
-  { name: 'Grandes activos', type: 'expense', color: '#312E81' },
-  { name: 'Reparaciones', type: 'expense', color: '#7C2D12' },
-  { name: 'Préstamos', type: 'expense', color: '#B91C1C' },
-  { name: 'Impuestos y multas', type: 'expense', color: '#57534E' },
-  { name: 'Ahorro', type: 'saving', color: '#059669' },
-  { name: 'CDT', type: 'saving', color: '#7C3AED' },
-  { name: 'Acciones', type: 'investment', color: '#6366F1' },
-  { name: 'Transferencia', type: 'transfer_out', color: '#6B7280' },
-  { name: 'Otros', type: 'other', color: '#9CA3AF' },
-];
 
 // Internal hook for logic, not to be used directly by components
 export function useFinanceDataLogic() {
@@ -150,7 +24,6 @@ export function useFinanceDataLogic() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // All transactions (no filters) for aggregate stats
   const [rangeTransactions, setRangeTransactions] = useState<Transaction[]>([]);
-  const [totalTransactionsCount, setTotalTransactionsCount] = useState<number>(0); // Total count for current filter
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -161,7 +34,6 @@ export function useFinanceDataLogic() {
   const [hasMore, setHasMore] = useState(true);
   const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
   const [hasPendingImport, setHasPendingImport] = useState(false);
-  const [welcomeCompleted, setWelcomeCompleted] = useState(false);
   const [importProgress, setImportProgress] = useState<{
     status: 'idle' | 'loading' | 'completed' | 'failed' | 'cancelled';
     progress: number;
@@ -219,8 +91,7 @@ export function useFinanceDataLogic() {
         .update({
           currency: null,
           onboarding_decision: null,
-          has_pending_import: false,
-          welcome_completed: false
+          has_pending_import: false
         })
         .eq('id', user.id);
 
@@ -238,7 +109,6 @@ export function useFinanceDataLogic() {
         message: '',
       });
       setPendingImportData([]);
-      setWelcomeCompleted(false);
 
       toast({ title: 'Éxito', description: 'Todos tus datos han sido eliminados.' });
 
@@ -262,20 +132,33 @@ export function useFinanceDataLogic() {
     let from: Date | null = null;
     let to: Date | null = new Date();
 
+    const formatDate = (date: Date | null) => {
+      if (!date) return null;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     switch (period) {
       case 'week': {
         const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
-        from = new Date(now.setDate(diff));
+        // now.getDay() returns 0 for Sunday. We want Monday (1) as start.
+        // If Sunday (0), we go back 6 days. Otherwise, go back (day - 1) days.
+        const diff = now.getDate() - (day === 0 ? 6 : day - 1);
+        from = new Date(now.getFullYear(), now.getMonth(), diff);
         break;
       }
       case 'month':
+        // First day of current month
         from = new Date(now.getFullYear(), now.getMonth(), 1);
-        // Set 'to' to end of current month (last day of month)
+        // Last day of current month
         to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
       case 'year':
+        // First day of current year
         from = new Date(now.getFullYear(), 0, 1);
+        // Last day of current year
         to = new Date(now.getFullYear(), 11, 31);
         break;
       case 'all':
@@ -285,8 +168,8 @@ export function useFinanceDataLogic() {
     }
 
     return {
-      from: from ? from.toISOString().split('T')[0] : null,
-      to: to ? to.toISOString().split('T')[0] : null
+      from: formatDate(from),
+      to: formatDate(to)
     };
   }, []);
 
@@ -296,7 +179,23 @@ export function useFinanceDataLogic() {
     const from_idx = isLoadMore ? transactions.length : 0;
     const to_idx = from_idx + PAGE_SIZE - 1;
 
-    // 1. Fetch paginated slice for the list
+    // 1. Fetch paginated slice for the list (Respects global filter if we keep it, but for History page we might want independence too. 
+    //    For now, let's keep paginatedQuery respecting dateFilter for the "Load More" list unless History page overrides it. 
+    //    Actually, user wants History INDEPENDENT. `transactions` state is used by History. 
+    //    So `transactions` should probably NOT be filtered by `dateFilter` here if `dateFilter` is for Dashboard.
+    //    However, `useFinanceLogic` is used ONCE. `dateFilter` is currently "Global Finance Filter".
+    //    If we want History to have its own filter, History should manage it. 
+    //    But `transactions` is the state. 
+    //    Let's make `transactions` (the list) respect `dateFilter` BUT we will rename `dateFilter` to `globalFilter`?
+    //    No, simpler: `rangeTransactions` will now ALWAYS be "All recent transactions" (no filter).
+    //    `transactions` (paginated) will still respect `dateFilter`? 
+    //    If dashboard changes `dateFilter`, `transactions` list changes.
+    //    User wants History Independent. 
+    //    Solution: `useFinanceData` should just return `allTransactions` (rangeTransactions) and History page slices/filters it client side.
+    //    The `transactions` (paginated) state is legacy from when we fetched only pages.
+    //    With 5-10k limit, we can just use `rangeTransactions` for everything.
+    //    Let's effectively make `rangeTransactions` the source of truth and stop filtering it server-side.
+
     let paginatedQuery = supabase
       .from('transactions')
       .select('*', { count: 'exact' })
@@ -307,7 +206,7 @@ export function useFinanceDataLogic() {
     if (dateFilter.from) paginatedQuery = paginatedQuery.gte('date', dateFilter.from);
     if (dateFilter.to) paginatedQuery = paginatedQuery.lte('date', dateFilter.to);
 
-    // 2. Fetch records for the range to power charts/summaries (NO date filter - need all historical data for charts)
+    // 2. Fetch ALL records for charts/summaries/history (Limit 10000, NO DATE FILTER)
     let rangeQuery = null;
     if (!isLoadMore) {
       rangeQuery = supabase
@@ -315,8 +214,11 @@ export function useFinanceDataLogic() {
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .order('date', { ascending: false })
-        .limit(50000); // Increased to 50000 to ensure we get all historical data for charts
-      // NOTE: Intentionally NOT applying dateFilter here - charts need all years
+        .limit(10000); // Fetch all for client-side filtering
+
+      // REMOVED: server-side filtering for rangeQuery
+      // if (dateFilter.from) rangeQuery = rangeQuery.gte('date', dateFilter.from);
+      // if (dateFilter.to) rangeQuery = rangeQuery.lte('date', dateFilter.to);
     }
 
     const [paginatedRes, rangeRes] = await Promise.all([
@@ -348,9 +250,7 @@ export function useFinanceDataLogic() {
     if (isLoadMore) {
       setTransactions(prev => [...prev, ...mappedPaginated]);
     } else {
-      setTransactions(mappedPaginated);
-      // Save total count from paginated query for display
-      setTotalTransactionsCount(paginatedRes.count || 0);
+      setTransactions(mappedPaginated); // This is still filtered by `dateFilter` but we might stop using it in History
       if (rangeRes.data) {
         const mappedRange = (rangeRes.data || []).map(t => ({
           id: t.id,
@@ -395,44 +295,17 @@ export function useFinanceDataLogic() {
     setLastUpdated(new Date());
 
     // Fetch transactions with filters AND fetch ALL transactions (no date filter) for aggregate stats
-    const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes] = await Promise.all([
+    const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes, allTxnsRes] = await Promise.all([
       fetchTransactions(false), // Fetch transactions with current date filter
       supabase.from('budgets').select('*').eq('user_id', user.id), // Fetch budgets
       supabase.from('payment_methods').select('*').eq('user_id', user.id), // Fetch payment methods
       supabase.from('categories').select('*').eq('user_id', user.id), // Fetch categories
+      supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(10000) // Fetch ALL transactions (up to 10k) for aggregate stats
     ]);
 
-    // Fetch ALL transactions for aggregate stats - paginate to get all records
-    const allTxnsData: any[] = [];
-    let allTxnsRes = null;
-    let hasMore = true;
-    let offset = 0;
-    const PAGE_SIZE_ALL = 1000;
-
-    while (hasMore) {
-      const res = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false })
-        .range(offset, offset + PAGE_SIZE_ALL - 1);
-      
-      if (res.error) {
-        allTxnsRes = res;
-        hasMore = false;
-      } else if (res.data) {
-        allTxnsData.push(...res.data);
-        if (res.data.length < PAGE_SIZE_ALL) {
-          hasMore = false;
-        } else {
-          offset += PAGE_SIZE_ALL;
-        }
-      }
-    }
-
     // Map all transactions for summary calculations
-    if (allTxnsData.length > 0) {
-      const mappedAllTxns = allTxnsData.map(t => ({
+    if (!allTxnsRes.error && allTxnsRes.data) {
+      const mappedAllTxns = (allTxnsRes.data || []).map(t => ({
         id: t.id,
         type: t.type === 'transfer'
           ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
@@ -446,8 +319,6 @@ export function useFinanceDataLogic() {
         created_at: t.created_at,
       }));
       setAllTransactions(mappedAllTxns);
-    } else if (allTxnsRes?.error) {
-      toast({ title: 'Error', description: 'No se pudieron cargar todos los registros históricos.', variant: 'destructive' });
     }
 
     // Transaction logic is handled inside fetchTransactions now
@@ -486,26 +357,14 @@ export function useFinanceDataLogic() {
     }
 
     // Fetch Profile/Currency using 'id' as the user identifier
-    let profile: Database['public']['Tables']['profiles']['Row'] | null = null;
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('currency, onboarding_decision, has_pending_import, welcome_completed')
-        .eq('id', user.id)
-        .maybeSingle();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('currency, onboarding_decision, has_pending_import')
+      .eq('id', user.id)
+      .maybeSingle();
 
-      if (error) {
-        // If the column doesn't exist yet (migration pending), continue gracefully
-        if (error.code === '42703') {
-          console.warn('welcome_completed column missing; apply latest migration');
-        } else {
-          console.error('Error fetching profile:', error);
-        }
-      } else {
-        profile = data;
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
     }
 
     if (profile?.currency) {
@@ -518,7 +377,6 @@ export function useFinanceDataLogic() {
     setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
     const hasPending = profile?.has_pending_import || false;
     setHasPendingImport(hasPending);
-    setWelcomeCompleted(Boolean(profile?.welcome_completed));
 
     // If there's a pending import, restore the import progress state to 'completed'
     if (hasPending) {
@@ -590,27 +448,6 @@ export function useFinanceDataLogic() {
     // This fetches everything including transactions for the current dateFilter
     fetchData();
   }, [user, dateFilter, fetchData]);
-
-  // Persist welcome completion once the user has configured currency, categories, and payment methods
-  useEffect(() => {
-    if (!user) return;
-
-    const completed = Boolean(currency && paymentMethods.length > 0 && categories.length > 0);
-    if (completed && !welcomeCompleted) {
-      setWelcomeCompleted(true);
-      const persistWelcome = async () => {
-        try {
-          await supabase
-            .from('profiles')
-            .update({ welcome_completed: true })
-            .eq('id', user.id);
-        } catch (_) {
-          // best-effort; ignore if column is still missing or request fails
-        }
-      };
-      void persistWelcome();
-    }
-  }, [user, currency, paymentMethods.length, categories.length, welcomeCompleted]);
 
   // Removed the redundant useEffect that called fetchTransactions when loading became false
 
@@ -1717,7 +1554,7 @@ export function useFinanceDataLogic() {
     // Update local state immediately for optimistic UI
     setPaymentMethods(prev => prev.map(pm => pm.id === id ? { ...pm, ...updates } : pm));
     setLastUpdated(new Date());
-    
+
     toast({ title: 'Éxito', description: 'Método de pago actualizado' });
     return { error: null };
   };
@@ -1922,10 +1759,10 @@ export function useFinanceDataLogic() {
 
         // Add to local state if not already present
         setCategories(prev => {
-            if (prev.find(c => c.id === existingCategory.id)) {
+          if (prev.find(c => c.id === existingCategory.id)) {
             return prev;
           }
-            return [...prev, existingCategory];
+          return [...prev, existingCategory];
         });
 
         toast({
@@ -2087,86 +1924,16 @@ export function useFinanceDataLogic() {
 
   // Summary calculations - using ALL transactions for aggregate stats (no date filter)
   const summary = useMemo(() => {
-    // Filter out undisbursed loans (they shouldn't affect balance until disbursed)
-    const validTransactions = allTransactions.filter(t =>
-      !((t.category === 'Préstamos' || t.category === 'Loans') && !t.payment_method_id)
-    );
-
-    const totalIncome = validTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = validTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalSavings = validTransactions
-      .filter(t => t.type === 'saving')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalInvestments = validTransactions
-      .filter(t => t.type === 'investment')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalIncome,
-      totalExpenses,
-      totalSavings,
-      totalInvestments,
-      netWorth: totalIncome - totalExpenses,
-      currency, // Include currency from state
-    };
+    return calculateSummary(allTransactions, currency);
   }, [allTransactions, currency]);
 
   // Filtered summary - respects date filters for dashboard display
   const filteredSummary = useMemo(() => {
-    const validTransactions = rangeTransactions.filter(t =>
-      !((t.category === 'Préstamos' || t.category === 'Loans') && !t.payment_method_id)
-    );
-
-    const totalIncome = validTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = validTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalSavings = validTransactions
-      .filter(t => t.type === 'saving')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalInvestments = validTransactions
-      .filter(t => t.type === 'investment')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalIncome,
-      totalExpenses,
-      totalSavings,
-      totalInvestments,
-      netWorth: totalIncome - totalExpenses,
-      currency,
-    };
+    return calculateSummary(rangeTransactions, currency);
   }, [rangeTransactions, currency]);
 
   const expensesByCategory = useMemo(() => {
-    const expenses = rangeTransactions.filter(t => t.type === 'expense');
-    const grouped: Record<string, { name: string, amount: number, id: string | null }> = {};
-
-    expenses.forEach(expense => {
-      const catId = expense.category_id || "none";
-      const catName = expense.category || "Sin categoría";
-
-      if (!grouped[catId]) {
-        grouped[catId] = { name: catName, amount: 0, id: expense.category_id || null };
-      }
-      grouped[catId].amount += expense.amount;
-    });
-
-    return Object.values(grouped)
-      .map(item => ({ category: item.name as string, category_id: item.id, amount: item.amount }))
-      .sort((a, b) => b.amount - a.amount);
+    return calculateExpensesByCategory(rangeTransactions);
   }, [rangeTransactions]);
 
   // Budgets with spending
@@ -2186,7 +1953,7 @@ export function useFinanceDataLogic() {
       });
   }, [budgets, rangeTransactions]);
 
-  // Yield Statistics
+  // Yield Statistics - Keep inline as it's specific
   const yieldStatistics = useMemo(() => {
     // Calculate yield from Rendimientos category (interest income)
     const yieldTransactions = transactions.filter(t =>
@@ -2214,75 +1981,14 @@ export function useFinanceDataLogic() {
 
   // Insights
   const insights: Insight[] = useMemo(() => {
-    const insights: Insight[] = [];
-    const savingsRate = summary.totalIncome > 0
-      ? ((summary.totalSavings + summary.totalInvestments) / summary.totalIncome) * 100
-      : 0;
-
-    if (savingsRate < 20 && summary.totalIncome > 0) {
-      insights.push({
-        id: '1',
-        type: 'warning',
-        title: 'Ahorro bajo',
-        description: `Estás ahorrando solo el ${savingsRate.toFixed(0)}% de tus ingresos. Intenta llegar al 20%.`,
-      });
-    } else if (summary.totalIncome > 0) {
-      insights.push({
-        id: '1',
-        type: 'success',
-        title: '¡Buen ahorro!',
-        description: `Estás ahorrando el ${savingsRate.toFixed(0)}% de tus ingresos. ¡Excelente!`,
-      });
-    }
-
-    // Check budget overruns
-    budgetsWithSpending.forEach(budget => {
-      if (budget.spent && budget.spent > budget.amount) {
-        insights.push({
-          id: `budget-${budget.id}`,
-          type: 'warning',
-          title: `Presupuesto excedido`,
-          description: `Has gastado más de lo presupuestado en ${budget.category}.`,
-        });
-      }
-    });
-
-    // Check credit card limits
-    paymentMethods.forEach(pm => {
-      if (pm.type === 'credit' && pm.credit_limit) {
-        const usage = (pm.balance / pm.credit_limit) * 100;
-        if (usage > 80) {
-          insights.push({
-            id: `credit-${pm.id}`,
-            type: 'warning',
-            title: `Alto uso de ${pm.name}`,
-            description: `Has usado el ${usage.toFixed(0)}% de tu límite de crédito.`,
-          });
-        }
-      }
-    });
-
-    const foodExpenses = expensesByCategory.find(e => e.category === 'food');
-    if (foodExpenses && summary.totalIncome > 0 && foodExpenses.amount > summary.totalIncome * 0.15) {
-      insights.push({
-        id: '2',
-        type: 'tip',
-        title: 'Revisa gastos en comida',
-        description: 'Tus gastos en comida superan el 15% de tus ingresos. Considera cocinar más en casa.',
-      });
-    }
-
-    if (summary.totalInvestments < summary.totalSavings * 0.5 && summary.totalSavings > 0) {
-      insights.push({
-        id: '3',
-        type: 'tip',
-        title: 'Considera invertir más',
-        description: 'Tus inversiones son menores que tu ahorro. Invierte para hacer crecer tu dinero.',
-      });
-    }
-
-    return insights;
-  }, [summary, expensesByCategory, budgetsWithSpending, paymentMethods]);
+    return calculateInsights(
+      summary,
+      expensesByCategory,
+      paymentMethods,
+      budgets,
+      rangeTransactions
+    );
+  }, [summary, expensesByCategory, budgetsWithSpending, paymentMethods, rangeTransactions]);
 
   const orphanedTransactions = useMemo(() => {
     return transactions.filter(t =>
@@ -2306,7 +2012,6 @@ export function useFinanceDataLogic() {
     currency,
     onboardingDecision,
     hasPendingImport,
-    welcomeCompleted,
     importProgress,
     pendingImportData,
     addTransaction,
@@ -2337,7 +2042,6 @@ export function useFinanceDataLogic() {
     updateFilter,
     hasMore,
     rangeTransactions,
-    totalTransactionsCount, // Total count respecting current filter
     totalBudget: budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
     totalSpentCurrentMonth: budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
     resetProfileData,
@@ -2346,7 +2050,4 @@ export function useFinanceDataLogic() {
   };
 }
 
-// Global hook to be used by components
-export function useFinanceData() {
-  return useFinance();
-}
+

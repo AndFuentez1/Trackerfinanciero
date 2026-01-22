@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PaymentMethod } from '@/hooks/useFinanceData';
 import {
   Dialog,
@@ -23,8 +23,7 @@ const PAYMENT_METHOD_TYPES = [
   { value: 'cash', label: 'Efectivo' },
   { value: 'debit', label: 'Débito' },
   { value: 'credit', label: 'Crédito' },
-  { value: 'savings', label: 'Ahorros' },
-  { value: 'investment', label: 'Inversión' },
+  { value: 'savings', label: 'Ahorro/Inversión' },
 ];
 
 const COLORS = [
@@ -43,6 +42,7 @@ interface EditPaymentMethodDialogProps {
   onOpenChange: (open: boolean) => void;
   paymentMethod: PaymentMethod | null;
   onSave?: (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => Promise<any>;
+  lockType?: boolean;
 }
 
 export function EditPaymentMethodDialog({
@@ -50,27 +50,45 @@ export function EditPaymentMethodDialog({
   onOpenChange,
   paymentMethod,
   onSave,
+  lockType = false,
 }: EditPaymentMethodDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'debit' as any,
+    balance: '0',
+    creditLimit: '',
+    closingDate: '',
+    paymentDay: '',
+    color: '#3b82f6',
+    isSavingsAccount: false,
+    savingsGoal: '',
+    estimatedYield: '',
+  });
+
+  // Update form data when paymentMethod changes
+  useEffect(() => {
+    if (paymentMethod) {
+      setFormData({
+        name: paymentMethod.name,
+        type: paymentMethod.type,
+        balance: paymentMethod.balance.toString(),
+        creditLimit: paymentMethod.credit_limit?.toString() || '',
+        closingDate: paymentMethod.closing_date?.toString() || '',
+        paymentDay: paymentMethod.payment_day?.toString() || '',
+        color: paymentMethod.color || '#3b82f6',
+        isSavingsAccount: paymentMethod.is_savings_account || false,
+        savingsGoal: paymentMethod.savings_goal?.toString() || '',
+        estimatedYield: paymentMethod.estimated_yield?.toString() || '',
+      });
+    }
+  }, [paymentMethod]);
 
   // Don't render if paymentMethod is null
   if (!paymentMethod) {
     return null;
   }
-
-  const [formData, setFormData] = useState({
-    name: paymentMethod.name,
-    type: paymentMethod.type,
-    balance: paymentMethod.balance.toString(),
-    creditLimit: paymentMethod.credit_limit?.toString() || '',
-    closingDate: paymentMethod.closing_date?.toString() || '',
-    paymentDay: paymentMethod.payment_day?.toString() || '',
-    color: paymentMethod.color || '#3b82f6',
-    isSavingsAccount: paymentMethod.is_savings_account || false,
-    savingsGoal: paymentMethod.savings_goal?.toString() || '',
-    estimatedYield: paymentMethod.estimated_yield?.toString() || '',
-  });
 
   const handleSave = async () => {
     try {
@@ -86,6 +104,12 @@ export function EditPaymentMethodDialog({
         return;
       }
 
+      // Show warning about configuration change
+      toast({
+        title: 'Configuración actualizada',
+        description: 'Los cambios se aplicarán al método de pago. Las transacciones existentes no se verán afectadas.',
+      });
+
       const updates: Partial<Omit<PaymentMethod, 'id'>> = {
         name: formData.name,
         type: formData.type as any,
@@ -93,11 +117,18 @@ export function EditPaymentMethodDialog({
         color: formData.color,
       };
 
-      if (formData.type === 'credit' && formData.creditLimit) {
-        updates.credit_limit = parseFloat(formData.creditLimit);
-      }
-
-      if (formData.isSavingsAccount) {
+      if (formData.type === 'credit') {
+        updates.is_savings_account = false;
+        if (formData.creditLimit) {
+          updates.credit_limit = parseFloat(formData.creditLimit);
+        }
+        if (formData.closingDate) {
+          updates.closing_date = parseInt(formData.closingDate);
+        }
+        if (formData.paymentDay) {
+          updates.payment_day = parseInt(formData.paymentDay);
+        }
+      } else if (formData.type === 'savings') {
         updates.is_savings_account = true;
         if (formData.savingsGoal) {
           updates.savings_goal = parseFloat(formData.savingsGoal);
@@ -105,14 +136,9 @@ export function EditPaymentMethodDialog({
         if (formData.estimatedYield) {
           updates.estimated_yield = parseFloat(formData.estimatedYield);
         }
-      }
-
-      if (formData.closingDate) {
-        updates.closing_date = parseInt(formData.closingDate);
-      }
-
-      if (formData.paymentDay) {
-        updates.payment_day = parseInt(formData.paymentDay);
+      } else {
+        // For debit, cash, or any other type
+        updates.is_savings_account = false;
       }
 
       if (onSave) {
@@ -126,7 +152,7 @@ export function EditPaymentMethodDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar método de pago</DialogTitle>
           <DialogDescription>
@@ -156,6 +182,7 @@ export function EditPaymentMethodDialog({
               onValueChange={(value) =>
                 setFormData({ ...formData, type: value as any })
               }
+              disabled={lockType}
             >
               <SelectTrigger id="type">
                 <SelectValue />
@@ -168,11 +195,14 @@ export function EditPaymentMethodDialog({
                 ))}
               </SelectContent>
             </Select>
+            {lockType && (
+              <p className="text-xs text-muted-foreground">El tipo no se puede cambiar al editar desde cuentas de ahorro</p>
+            )}
           </div>
 
-          {/* Balance */}
+          {/* Balance/Debt */}
           <div className="space-y-2">
-            <Label htmlFor="balance">Saldo</Label>
+            <Label htmlFor="balance">{formData.type === 'credit' ? 'Deuda actual' : 'Saldo'}</Label>
             <Input
               id="balance"
               type="number"
@@ -187,71 +217,57 @@ export function EditPaymentMethodDialog({
 
           {/* Credit Limit (for credit cards) */}
           {formData.type === 'credit' && (
-            <div className="space-y-2">
-              <Label htmlFor="creditLimit">Límite de crédito</Label>
-              <Input
-                id="creditLimit"
-                type="number"
-                step="0.01"
-                value={formData.creditLimit}
-                onChange={(e) =>
-                  setFormData({ ...formData, creditLimit: e.target.value })
-                }
-                placeholder="0.00"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="creditLimit">Límite de crédito</Label>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  step="0.01"
+                  value={formData.creditLimit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, creditLimit: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Closing/Payment Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="closingDate">Día de corte</Label>
+                  <Input
+                    id="closingDate"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.closingDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, closingDate: e.target.value })
+                    }
+                    placeholder="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentDay">Día de pago</Label>
+                  <Input
+                    id="paymentDay"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.paymentDay}
+                    onChange={(e) =>
+                      setFormData({ ...formData, paymentDay: e.target.value })
+                    }
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+            </>
           )}
 
-          {/* Closing/Payment Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="closingDate">Día de cierre</Label>
-              <Input
-                id="closingDate"
-                type="number"
-                min="1"
-                max="31"
-                value={formData.closingDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, closingDate: e.target.value })
-                }
-                placeholder="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="paymentDay">Día de pago</Label>
-              <Input
-                id="paymentDay"
-                type="number"
-                min="1"
-                max="31"
-                value={formData.paymentDay}
-                onChange={(e) =>
-                  setFormData({ ...formData, paymentDay: e.target.value })
-                }
-                placeholder="1"
-              />
-            </div>
-          </div>
-
-          {/* Savings Account */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                id="isSavingsAccount"
-                type="checkbox"
-                checked={formData.isSavingsAccount}
-                onChange={(e) =>
-                  setFormData({ ...formData, isSavingsAccount: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <Label htmlFor="isSavingsAccount">Es una cuenta de ahorro</Label>
-            </div>
-          </div>
-
           {/* Savings Goal and Estimated Yield (for savings accounts) */}
-          {formData.isSavingsAccount && (
+          {formData.type === 'savings' && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="savingsGoal">Meta de ahorro</Label>

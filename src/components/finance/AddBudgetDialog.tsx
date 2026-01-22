@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
@@ -37,6 +38,7 @@ import {
 
 interface AddBudgetDialogProps {
   onAdd: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>;
+  monthOverride?: string;
   editingBudget?: {
     id: string;
     category_id: string;
@@ -46,7 +48,7 @@ interface AddBudgetDialogProps {
   children?: React.ReactNode;
 }
 
-export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDialogProps) {
+export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride }: AddBudgetDialogProps) {
   const [open, setOpen] = useState(false);
   const { categories, addCategory, loading } = useFinanceData();
   const { budgets } = useBudgetsData();
@@ -81,10 +83,15 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
   }, [editingBudget, reset]);
 
   // Filter only expense categories for budgets
-  const expenseCategories = categories.filter(c => c.type === 'expense');
+  const expenseCategories = useMemo(() =>
+    categories
+      .filter(c => c.type === 'expense')
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
+  [categories]);
 
   const onFormSubmit = async (values: BudgetFormValues) => {
-    const currentMonth = new Date().toISOString().split('T')[0].substring(0, 8) + '01';
+    const now = new Date();
+    const currentMonth = monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
     // Force IDs & Log as requested
     console.log('Submitting Budget Data:', {
@@ -176,6 +183,9 @@ export function AddBudgetDialog({ onAdd, editingBudget, children }: AddBudgetDia
           <DialogTitle className="text-lg">
             {editingBudget ? 'Editar presupuesto' : 'Nuevo presupuesto'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Define un presupuesto mensual para controlar tus gastos por categoría.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

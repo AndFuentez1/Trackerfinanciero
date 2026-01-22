@@ -12,6 +12,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
@@ -45,6 +46,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { AddCategoryDialog } from './AddCategoryDialog';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 
 export interface AddTransactionDialogProps {
   onAdd?: (transaction: Omit<Transaction, 'id'>) => Promise<{ error?: unknown } | void>;
@@ -54,6 +56,7 @@ export interface AddTransactionDialogProps {
   onOpenChange?: (open: boolean) => void;
   categories?: any[];
   paymentMethods?: any[];
+  onAddTransfer?: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: any }>;
 }
 
 const typeOptions: { value: TransactionType; label: string }[] = [
@@ -70,8 +73,9 @@ export function AddTransactionDialog({
   transactionToEdit,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
-  categories: propCategories, // optional override
-  paymentMethods: propPaymentMethods // optional override
+  categories: propCategories,
+  paymentMethods: propPaymentMethods,
+  onAddTransfer
 }: AddTransactionDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -95,8 +99,9 @@ export function AddTransactionDialog({
       category_id: '',
       amount: 0,
       description: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: getTodayLocalDate(),
       payment_method_id: '',
+      to_payment_method_id: '',
     },
   });
 
@@ -111,6 +116,7 @@ export function AddTransactionDialog({
         description: transactionToEdit.description,
         date: transactionToEdit.date,
         payment_method_id: transactionToEdit.payment_method_id || '',
+        to_payment_method_id: '',
       });
     } else if (!transactionToEdit && open && !isControlled) {
       // Reset only if opening in "Add" mode (uncontrolled)
@@ -120,8 +126,9 @@ export function AddTransactionDialog({
         category_id: '',
         amount: 0,
         description: '',
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: getTodayLocalDate(),
         payment_method_id: '',
+        to_payment_method_id: '',
       });
     }
   }, [transactionToEdit, open, isControlled, form]);
@@ -133,7 +140,8 @@ export function AddTransactionDialog({
   const availableCategories = useMemo(() => {
     return categories
       .filter(c => c.type === currentType)
-      .map(c => ({ value: c.id, label: c.name }));
+      .map(c => ({ value: c.id, label: c.name }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
   }, [currentType, categories]);
 
   // Set first available category when type changes
@@ -167,6 +175,42 @@ export function AddTransactionDialog({
   };
 
   const onFormSubmit = async (values: TransactionFormValues) => {
+    // 1. Handle Transfer separately if onAddTransfer is provided
+    if (values.type === 'transfer_in' && onAddTransfer) {
+      if (!values.payment_method_id || !values.to_payment_method_id) {
+        toast({
+          title: 'Error de validación',
+          description: 'Debes seleccionar cuenta de origen y destino.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (values.payment_method_id === values.to_payment_method_id) {
+        toast({
+          title: 'Error de validación',
+          description: 'Las cuentas de origen y destino deben ser diferentes.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const result = await onAddTransfer(
+        values.payment_method_id,
+        values.to_payment_method_id,
+        values.amount,
+        values.description || 'Transferencia',
+        values.date
+      );
+
+      if (!result?.error) {
+        toast({ title: 'Éxito', description: 'Transferencia realizada correctamente.' });
+        reset();
+        setOpen(false);
+      }
+      return;
+    }
+
+    // 2. Standard Transaction Logic...
     // Sync category name if missing (safety check)
     let categoryName = values.category;
     if (!categoryName && values.category_id) {
@@ -298,6 +342,7 @@ export function AddTransactionDialog({
           description: '',
           date: format(new Date(), 'yyyy-MM-dd'),
           payment_method_id: '',
+          to_payment_method_id: '',
         });
         setOpen(false);
       }
@@ -351,9 +396,12 @@ export function AddTransactionDialog({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{transactionToEdit ? 'Corregir Transacción' : 'Nueva transacción'}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Completa el formulario para registrar o corregir una transacción.
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4">
@@ -363,7 +411,7 @@ export function AddTransactionDialog({
                 render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel>Tipo</FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-12 gap-2">
                       {typeOptions.map((option) => (
                         <button
                           key={option.value}
@@ -371,6 +419,7 @@ export function AddTransactionDialog({
                           onClick={() => field.onChange(option.value)}
                           className={cn(
                             'px-2 py-2 text-xs sm:text-sm rounded-lg border transition-all',
+                            option.value === 'transfer_in' ? 'col-span-8' : 'col-span-4',
                             field.value === option.value
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'bg-background hover:bg-muted border-border'
@@ -466,34 +515,83 @@ export function AddTransactionDialog({
                 />
               </div>
 
-              <FormField
-                control={control}
-                name="payment_method_id"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Método de pago</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 md:h-9">
-                          <SelectValue placeholder="Seleccionar (opcional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Sin método</SelectItem>
-                        {paymentMethods.map((pm) => (
-                          <SelectItem key={pm.id} value={pm.id}>
-                            {pm.name}
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              (${Number(pm.balance).toLocaleString()})
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              <div className={cn("grid gap-4", currentType === 'transfer_in' ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+                <FormField
+                  control={control}
+                  name="payment_method_id"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>{currentType === 'transfer_in' ? 'Desde (Origen)' : 'Método de pago'}</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === 'none' ? null : val)}
+                        value={field.value || 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 md:h-9">
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin método</SelectItem>
+                          {paymentMethods.map((pm) => {
+                            const isCredit = pm.type === 'credit';
+                            const available = isCredit ? (pm.credit_limit || 0) - pm.balance : pm.balance;
+                            return (
+                              <SelectItem key={pm.id} value={pm.id}>
+                                {pm.name}
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {isCredit ? '' : ''}
+                                  (${Number(available).toLocaleString()})
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {currentType === 'transfer_in' && (
+                  <FormField
+                    control={control}
+                    name="to_payment_method_id"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Hacia (Destino)</FormLabel>
+                        <Select
+                          onValueChange={(val) => field.onChange(val === 'none' ? null : val)}
+                          value={field.value || 'none'}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-11 md:h-9">
+                              <SelectValue placeholder="Destino" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">Seleccionar destino</SelectItem>
+                            {paymentMethods.map((pm) => {
+                              const isCredit = pm.type === 'credit';
+                              const available = isCredit ? (pm.credit_limit || 0) - pm.balance : pm.balance;
+                              return (
+                                <SelectItem key={pm.id} value={pm.id}>
+                                  {pm.name}
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {isCredit ? '' : ''}
+                                    (${Number(available).toLocaleString()})
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </div>
 
               <FormField
                 control={control}
@@ -544,7 +642,7 @@ export function AddTransactionDialog({
             </form>
           </Form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </>
   );
 }

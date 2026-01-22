@@ -119,6 +119,7 @@ function CategoryBudgetRow({ budget, onSave, onRefresh }: { budget: BudgetState,
                             categoryName: budget.categoryName,
                             amount: budget.budget.amount
                         }}
+                            monthOverride={budget.budget.month}
                         onAdd={async (data) => {
                             const result = await onSave(data);
                             onRefresh();

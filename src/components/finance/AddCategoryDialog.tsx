@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -83,6 +84,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                         <Tag className="h-5 w-5" />
                         Nueva Categoría
                     </DialogTitle>
+                    <DialogDescription className="sr-only">Crea una categoría para organizar tus transacciones.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                     <div className="space-y-2">

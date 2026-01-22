@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
 import { ExpenseChart } from './ExpenseChart';
@@ -8,6 +8,7 @@ import { PaymentMethodList } from './PaymentMethodList';
 import { EditPaymentMethodDialog } from './EditPaymentMethodDialog';
 import { AddPaymentMethodDialog } from './AddPaymentMethodDialog';
 import { useFinanceData } from '@/hooks/useFinanceData';
+import { calculateExpensesByCategory } from '@/hooks/financeUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
 import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/hooks/useFinanceData';
 import { useLoans } from '@/hooks/useLoans';
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 
 interface SummaryTabProps {
@@ -59,10 +61,90 @@ export function SummaryTab({
   dateFilter,
   updateFilter
 }: SummaryTabProps) {
+  // Get current date values first
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  // Extract available years from all transactions
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    if (allTransactions && allTransactions.length > 0) {
+      allTransactions.forEach(t => years.add(new Date(t.date).getFullYear().toString()));
+    }
+    // Always include current year
+    years.add(currentYear.toString());
+    return Array.from(years).sort((a, b) => Number(b) - Number(a)); // descending order
+  }, [allTransactions, currentYear]);
+
+  // Determine which months to show based on selected year
+  const selectedYear = dateFilter.from ? new Date(dateFilter.from).getFullYear() : currentYear;
+  const isAllYears = !dateFilter.from; // When no dateFilter, we're showing all years
+  
+  const availableMonths = useMemo(() => {
+    const months = [
+      { value: 'all', label: 'Todo' },
+      { value: '0', label: 'Ene' },
+      { value: '1', label: 'Feb' },
+      { value: '2', label: 'Mar' },
+      { value: '3', label: 'Abr' },
+      { value: '4', label: 'May' },
+      { value: '5', label: 'Jun' },
+      { value: '6', label: 'Jul' },
+      { value: '7', label: 'Ago' },
+      { value: '8', label: 'Sep' },
+      { value: '9', label: 'Oct' },
+      { value: '10', label: 'Nov' },
+      { value: '11', label: 'Dic' },
+    ];
+    
+    // If showing all years or if it's the current year, only show months up to current month
+    if (isAllYears || selectedYear === currentYear) {
+      return months.slice(0, currentMonth + 2); // +2 because index 0 is 'all'
+    }
+    
+    // For past/future years, show all months
+    return months;
+  }, [selectedYear, currentMonth, currentYear, isAllYears]);
   const { addPaymentMethod, updatePaymentMethod } = useFinanceData();
   const [isAddPMOpen, setIsAddPMOpen] = useState(false);
   const [editingPM, setEditingPM] = useState<PaymentMethod | null>(null);
   const [isEditPMOpen, setIsEditPMOpen] = useState(false);
+
+  // Estado compartido entre la gráfica de evolución y el donut
+  const [selectedYears, setSelectedYears] = useState<string[]>(() => availableYears.length ? availableYears : [currentYear.toString()]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+
+  // Asegurar que siempre haya al menos un año seleccionado
+  useEffect(() => {
+    if (selectedYears.length === 0 && availableYears.length > 0) {
+      setSelectedYears([availableYears[0]]);
+      return;
+    }
+    const filtered = selectedYears.filter(y => availableYears.includes(y));
+    if (filtered.length !== selectedYears.length) {
+      setSelectedYears(filtered.length ? filtered : [availableYears[0] || currentYear.toString()]);
+    }
+  }, [availableYears, selectedYears, currentYear]);
+
+  // Transacciones filtradas según la selección de la gráfica (años/mes)
+  const filteredChartTransactions = useMemo(() => {
+    if (!allTransactions || allTransactions.length === 0) return [];
+    return allTransactions.filter(t => {
+      const d = new Date(t.date);
+      const yearStr = d.getFullYear().toString();
+      if (!selectedYears.includes(yearStr)) return false;
+      if (selectedMonth !== 'all') {
+        const monthNum = d.getMonth() + 1;
+        if (monthNum !== Number(selectedMonth)) return false;
+      }
+      return true;
+    });
+  }, [allTransactions, selectedYears, selectedMonth]);
+
+  const expensesByCategoryFiltered = useMemo(
+    () => calculateExpensesByCategory(filteredChartTransactions),
+    [filteredChartTransactions]
+  );
 
 
 
@@ -70,6 +152,7 @@ export function SummaryTab({
   const { loans } = useLoans();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const isDateFiltered = dateFilter.period !== 'all';
 
   // SECTION 0: Global Alerts (Incomplete Transactions)
   // Exclude loans explicitly, they are handled in Loans tab
@@ -171,164 +254,6 @@ export function SummaryTab({
             <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
             <span className="truncate">Mis Cuentas</span>
           </h2>
-          
-          {/* Date Filtering Controls - Top Right */}
-          <div className="w-full sm:w-auto space-y-2">
-            {/* Quick Action Buttons */}
-            <div className="flex gap-1 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const now = new Date();
-                  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-                  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-                  updateFilter('custom', format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
-                }}
-                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
-              >
-                Semana
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const now = new Date();
-                  const monthStart = startOfMonth(now);
-                  const monthEnd = endOfMonth(now);
-                  updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
-                }}
-                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
-              >
-                Mes
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const now = new Date();
-                  const yearStart = startOfYear(now);
-                  const yearEnd = endOfYear(now);
-                  updateFilter('custom', format(yearStart, 'yyyy-MM-dd'), format(yearEnd, 'yyyy-MM-dd'));
-                }}
-                className="h-8 px-2 text-xs whitespace-nowrap flex-shrink-0"
-              >
-                Año
-              </Button>
-            </div>
-
-            {/* Month, Year Selectors & Calendar */}
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              {/* Month Selector */}
-              <Select
-                value={dateFilter.from ? new Date(dateFilter.from).getMonth().toString() : ''}
-                onValueChange={(month) => {
-                  const year = dateFilter.from ? new Date(dateFilter.from).getFullYear() : new Date().getFullYear();
-                  const monthStart = new Date(year, parseInt(month), 1);
-                  const monthEnd = new Date(year, parseInt(month) + 1, 0);
-                  updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
-                }}
-              >
-                <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-24 text-xs">
-                  <SelectValue placeholder="Mes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Ene</SelectItem>
-                  <SelectItem value="1">Feb</SelectItem>
-                  <SelectItem value="2">Mar</SelectItem>
-                  <SelectItem value="3">Abr</SelectItem>
-                  <SelectItem value="4">May</SelectItem>
-                  <SelectItem value="5">Jun</SelectItem>
-                  <SelectItem value="6">Jul</SelectItem>
-                  <SelectItem value="7">Ago</SelectItem>
-                  <SelectItem value="8">Sep</SelectItem>
-                  <SelectItem value="9">Oct</SelectItem>
-                  <SelectItem value="10">Nov</SelectItem>
-                  <SelectItem value="11">Dic</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Year Selector */}
-              <Select
-                value={dateFilter.from ? new Date(dateFilter.from).getFullYear().toString() : ''}
-                onValueChange={(year) => {
-                  const month = dateFilter.from ? new Date(dateFilter.from).getMonth() : new Date().getMonth();
-                  const monthStart = new Date(parseInt(year), month, 1);
-                  const monthEnd = new Date(parseInt(year), month + 1, 0);
-                  updateFilter('custom', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
-                }}
-              >
-                <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-20 text-xs">
-                  <SelectValue placeholder="Año" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2022">2022</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2025">2025</SelectItem>
-                  <SelectItem value="2026">2026</SelectItem>
-                  <SelectItem value="2027">2027</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Calendar Picker */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-8 px-2 sm:px-3 text-xs gap-1 bg-background/50 hover:bg-background border-border/50 flex-1 sm:flex-initial whitespace-nowrap overflow-hidden text-ellipsis">
-                    <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate text-xs">
-                      {dateFilter.from ? (
-                        <>
-                          {format(new Date(dateFilter.from), 'dd MMM', { locale: es })}
-                          {dateFilter.to && dateFilter.from !== dateFilter.to && (
-                            <>
-                              <span className="mx-0.5">-</span>
-                              {format(new Date(dateFilter.to), 'dd MMM', { locale: es })}
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <span>Todo</span>
-                      )}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateFilter.from ? new Date(dateFilter.from) : new Date()}
-                    selected={{
-                      from: dateFilter.from ? new Date(dateFilter.from) : undefined,
-                      to: dateFilter.to ? new Date(dateFilter.to) : undefined,
-                    }}
-                    onSelect={(range) => {
-                      if (range?.from && range?.to) {
-                        updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.to, 'yyyy-MM-dd'));
-                      } else if (range?.from) {
-                        updateFilter('custom', format(range.from, 'yyyy-MM-dd'), format(range.from, 'yyyy-MM-dd'));
-                      }
-                    }}
-                    numberOfMonths={1}
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {/* Clear Filter Button */}
-              {dateFilter.period !== 'all' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateFilter('all')}
-                  className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive transition-colors flex-1 sm:flex-initial whitespace-nowrap"
-                >
-                  <FilterX className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">Limpiar</span>
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
         
         <PaymentMethodList
@@ -432,10 +357,17 @@ export function SummaryTab({
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm overflow-x-auto">
-              <EvolutionChart transactions={allTransactions} />
+              <EvolutionChart
+                transactions={allTransactions}
+                selectedYears={selectedYears}
+                onSelectedYearsChange={setSelectedYears}
+                selectedMonth={selectedMonth}
+                onSelectedMonthChange={setSelectedMonth}
+                onSelectAllYears={() => setSelectedYears(availableYears)}
+              />
             </div>
             <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm">
-              <ExpenseChart data={expensesByCategory} categories={categories} />
+              <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
             </div>
           </div>
         </div>

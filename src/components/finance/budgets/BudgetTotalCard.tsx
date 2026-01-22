@@ -17,7 +17,7 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
     const isOverBudget = actualExpenses > totalBudgeted;
 
     return (
-        <Card className="flex-1 min-h-[200px] p-6 border-blue-200 bg-blue-50/30 hover:shadow-md transition-shadow overflow-hidden">
+        <Card className="flex h-full min-h-[360px] flex-col p-6 border-blue-200 bg-blue-50/30 hover:shadow-md transition-shadow overflow-hidden">
             <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-bold text-blue-800">Presupuesto</CardTitle>
             </CardHeader>

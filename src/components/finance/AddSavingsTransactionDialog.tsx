@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { SavingsAccount, SavingsTransaction } from '@/hooks/useSavingsData';
 
 interface AddSavingsTransactionDialogProps {
@@ -29,7 +30,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState<'deposit' | 'withdrawal' | 'interest'>('deposit');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getTodayLocalDate());
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +54,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
       setAccountId('');
       setType('deposit');
       setAmount('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(getTodayLocalDate());
       setDescription('');
     }
   };
@@ -61,14 +62,15 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Movimiento
+        <Button size="sm" className="gap-2">
+          <Coins className="h-4 w-4" />
+          <span className="hidden sm:inline">Movimiento</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo movimiento</DialogTitle>
+          <DialogDescription className="sr-only">Registra un depósito, retiro o interés en una cuenta de ahorro.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

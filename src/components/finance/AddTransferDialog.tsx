@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -109,6 +110,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
             <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Mover dinero entre cuentas</DialogTitle>
+                    <DialogDescription className="sr-only">Transfiere saldo entre tus cuentas de forma interna.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4 pr-2">

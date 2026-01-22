@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -31,6 +32,7 @@ import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 
 export default function LoansPage() {
     const navigate = useNavigate();
@@ -43,11 +45,11 @@ export default function LoansPage() {
 
     // Payment Dialog State
     const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
-    const [paymentData, setPaymentData] = useState({ amount: '', date: new Date().toISOString().split('T')[0], methodId: '' });
+    const [paymentData, setPaymentData] = useState({ amount: '', date: getTodayLocalDate(), methodId: '' });
 
     // Disbursement Dialog State
     const [disbursementDialog, setDisbursementDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
-    const [disbursementData, setDisbursementData] = useState({ date: new Date().toISOString().split('T')[0], methodId: '' });
+    const [disbursementData, setDisbursementData] = useState({ date: getTodayLocalDate(), methodId: '' });
 
     // Edit Dialog State for Orphaned Loans
     const [editDialog, setEditDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
@@ -101,12 +103,12 @@ export default function LoansPage() {
 
     const handleOpenPayment = (loan: Loan) => {
         setPaymentDialog({ open: true, loan });
-        setPaymentData({ amount: '', date: new Date().toISOString().split('T')[0], methodId: '' });
+        setPaymentData({ amount: '', date: getTodayLocalDate(), methodId: '' });
     };
 
     const handleOpenDisbursement = (loan: Loan) => {
         setDisbursementDialog({ open: true, loan });
-        setDisbursementData({ date: new Date().toISOString().split('T')[0], methodId: '' });
+        setDisbursementData({ date: getTodayLocalDate(), methodId: '' });
     };
 
     const handleOpenEdit = (loan: Loan) => {
@@ -245,9 +247,10 @@ export default function LoansPage() {
                                     <span className="hidden sm:inline">Nuevo Préstamo</span>
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Agregar Nuevo Préstamo</DialogTitle>
+                                    <DialogDescription className="sr-only">Registra un nuevo préstamo o deuda con sus datos básicos.</DialogDescription>
                                 </DialogHeader>
                                 <form onSubmit={handleCreate} className="space-y-4">
                                     <div className="space-y-2">
@@ -370,9 +373,10 @@ export default function LoansPage() {
             {/* Payment Dialog */}
             < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
             }>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
+                        <DialogDescription className="sr-only">Registra un abono o pago a este préstamo.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submitPayment} className="space-y-4">
                         <div className="space-y-2">
@@ -423,9 +427,10 @@ export default function LoansPage() {
 
             {/* Disbursement Dialog */}
             <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
+                        <DialogDescription className="sr-only">Confirma el desembolso del préstamo y su impacto en la cuenta.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-200">
@@ -463,9 +468,10 @@ export default function LoansPage() {
 
             {/* Edit Dialog for Orphaned Loans */}
             <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
+                        <DialogDescription className="sr-only">Asocia una cuenta a este préstamo para reclasificarlo.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-200">

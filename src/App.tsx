@@ -13,6 +13,8 @@ import ConfiguracionPage from "./pages/Configuracion";
 import BudgetsPage from "./pages/Budgets";
 import MainLayout from "./components/MainLayout";
 import { FinanceProvider } from "./contexts/FinanceContext";
+import { SavingsProvider } from "./contexts/SavingsContext";
+import { LoansProvider } from "./contexts/LoansContext";
 
 const queryClient = new QueryClient();
 
@@ -20,21 +22,25 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <FinanceProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/historial" element={<HistoryPage />} />
-              <Route path="/ahorros" element={<SavingsPage />} />
-              <Route path="/presupuestos" element={<BudgetsPage />} />
-              <Route path="/prestamos" element={<LoansPage />} />
-              <Route path="/configuracion" element={<ConfiguracionPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <SavingsProvider>
+          <LoansProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/historial" element={<HistoryPage />} />
+                  <Route path="/ahorros" element={<SavingsPage />} />
+                  <Route path="/presupuestos" element={<BudgetsPage />} />
+                  <Route path="/prestamos" element={<LoansPage />} />
+                  <Route path="/configuracion" element={<ConfiguracionPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </LoansProvider>
+        </SavingsProvider>
       </FinanceProvider>
     </TooltipProvider>
     <Toaster />

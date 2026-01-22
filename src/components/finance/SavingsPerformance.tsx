@@ -31,8 +31,9 @@ interface SavingsPerformanceProps {
   accountPerformance: AccountPerformance[];
   transactions: SavingsTransaction[];
   totalBalance: number;
-  onAddAccount: (account: { name: string; balance?: number; interest_rate?: number }) => Promise<{ error: any }>;
+  onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: any }>;
   onDeleteAccount: (id: string) => Promise<void>;
+  onEdit: (id: string) => void;
   onAddTransaction: (transaction: Omit<SavingsTransaction, 'id'>) => Promise<{ error: any }>;
   onUpdateTransactionAmount: (id: string, newAmount: number) => Promise<{ error: any }>;
   onUpdateTransactionFull: (id: string, updates: {
@@ -57,7 +58,12 @@ const formatCurrency = (amount: number) => {
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+  if (isNaN(date.getTime())) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const month = months[date.getMonth()] || '';
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
 };
 
 
@@ -68,6 +74,7 @@ export function SavingsPerformance({
   totalBalance,
   onAddAccount,
   onDeleteAccount,
+  onEdit,
   onAddTransaction,
   onUpdateTransactionAmount,
   onUpdateTransactionFull,
@@ -157,14 +164,24 @@ export function SavingsPerformance({
                   <CardTitle className="text-base">{account.name}</CardTitle>
                   <p className="text-2xl font-bold mt-1">{formatCurrency(account.balance)}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => onDeleteAccount(account.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => onEdit(account.id)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDeleteAccount(account.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -172,7 +189,7 @@ export function SavingsPerformance({
                 <div className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">
-                    Tasa: {account.interest_rate.toFixed(2)}% anual
+                    Rentabilidad estimada: {account.interest_rate.toFixed(2)}%
                   </span>
                 </div>
               )}
@@ -217,12 +234,12 @@ export function SavingsPerformance({
             <table className="w-full table-auto">
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
                 <tr>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fecha</th>
-                  <th className="py-4 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Descripción</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Método de Pago</th>
-                  <th className="py-4 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monto</th>
-                  <th className="py-4 px-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">% Rendimiento</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Fecha</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Descripción</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Tipo</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Método de Pago</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Monto</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">% Rendimiento</th>
                   <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>

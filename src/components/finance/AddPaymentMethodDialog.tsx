@@ -6,11 +6,11 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { CreditCard, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddPaymentMethodDialogProps {
@@ -25,7 +25,7 @@ const typeOptions: { value: PaymentMethodType; label: string }[] = [
   { value: 'cash', label: 'Efectivo' },
   { value: 'debit', label: 'Débito' },
   { value: 'credit', label: 'Crédito' },
-  { value: 'savings', label: 'Cuenta de Ahorro / Inversión' },
+  { value: 'savings', label: 'Ahorro' },
 ];
 
 // Professional color palette for payment methods
@@ -51,7 +51,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const [type, setType] = useState<PaymentMethodType | 'savings'>('debit');
   const [balance, setBalance] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
-  const [isSavingsAccount, setIsSavingsAccount] = useState(false);
   const [savingsGoal, setSavingsGoal] = useState('');
   const [estimatedYield, setEstimatedYield] = useState('');
   const [closingDate, setClosingDate] = useState('');
@@ -72,9 +71,9 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       type,
       balance: parseFloat(balance || '0'),
       credit_limit: type === 'credit' ? parseFloat(creditLimit || '0') : null,
-      is_savings_account: isSavingsAccount,
-      savings_goal: isSavingsAccount && savingsGoal ? parseFloat(savingsGoal) : null,
-      estimated_yield: isSavingsAccount && estimatedYield ? parseFloat(estimatedYield) : null,
+      is_savings_account: type === 'savings',
+      savings_goal: type === 'savings' && savingsGoal ? parseFloat(savingsGoal) : null,
+      estimated_yield: type === 'savings' && estimatedYield ? parseFloat(estimatedYield) : null,
       closing_date: type === 'credit' && closingDate ? parseInt(closingDate) : null,
       color,
     });
@@ -90,7 +89,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
     setType('debit');
     setBalance('');
     setCreditLimit('');
-    setIsSavingsAccount(false);
     setSavingsGoal('');
     setEstimatedYield('');
     setClosingDate('');
@@ -103,6 +101,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Nuevo método de pago</DialogTitle>
+          <DialogDescription className="sr-only">Crea un método de pago para registrar movimientos y saldos.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 mt-4">
           <div className="space-y-2">
@@ -126,7 +125,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   type="button"
                   onClick={() => {
                     setType(option.value);
-                    setIsSavingsAccount(option.value === 'savings');
                   }}
                   className={cn(
                     'px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-lg border transition-all whitespace-nowrap',
@@ -153,7 +151,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                   title={preset.label}
                 >
                   <div
-                    className="w-full h-8 sm:h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md"
+                    className="w-full h-8 sm:h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md flex items-center justify-center"
                     style={{
                       backgroundColor: preset.value,
                       borderColor: color === preset.value ? '#fff' : 'transparent',
@@ -161,9 +159,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                     }}
                   >
                     {color === preset.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Check className="h-3 sm:h-4 w-3 sm:w-4 text-white" strokeWidth={3} />
-                      </div>
+                      <Check className="h-3 sm:h-4 w-3 sm:w-4 text-white" strokeWidth={3} />
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground text-center block mt-1 group-hover:text-foreground hidden sm:block">
@@ -239,21 +235,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
             </div>
           )}
 
-          <div className="flex items-start sm:items-center justify-between p-2 sm:p-3 rounded-lg border border-border bg-card/50 gap-3">
-            <div className="space-y-0.5 flex-1">
-              <Label htmlFor="is-savings" className="text-xs sm:text-sm font-medium">Cuenta de ahorro / Inversión</Label>
-              <p className="text-xs text-muted-foreground">Se mostrará en el panel de ahorros con barra de progreso.</p>
-            </div>
-            <input
-              id="is-savings"
-              type="checkbox"
-              className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
-              checked={isSavingsAccount}
-              onChange={(e) => setIsSavingsAccount(e.target.checked)}
-            />
-          </div>
-
-          {(type === 'savings' || isSavingsAccount) && (
+          {type === 'savings' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="space-y-2">
                 <Label htmlFor="goal" className="text-sm">Meta de ahorro ($)</Label>
