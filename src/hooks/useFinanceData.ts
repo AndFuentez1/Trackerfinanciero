@@ -466,7 +466,7 @@ export function useFinanceDataLogic() {
     if (budgetsRes.error) {
       toast({ title: 'Error', description: 'No se pudieron cargar los presupuestos. Por favor, intenta de nuevo.', variant: 'destructive' });
     } else {
-      setBudgets(budgetsRes.data.map(b => ({
+      const mappedBudgets = budgetsRes.data.map(b => ({
         id: b.id,
         category: b.category as string,
         category_id: b.category_id,
@@ -475,7 +475,8 @@ export function useFinanceDataLogic() {
         user_id: b.user_id,
         created_at: b.created_at,
         updated_at: b.updated_at
-      })));
+      }));
+      setBudgets(mappedBudgets);
     }
 
     if (paymentMethodsRes.error) {
@@ -501,7 +502,7 @@ export function useFinanceDataLogic() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('currency, onboarding_decision, has_pending_import, welcome_completed')
+        .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -526,10 +527,13 @@ export function useFinanceDataLogic() {
       setCurrency('');
     }
     
-    // Decimal places es solo una preferencia de visualización, no afecta datos en BD
-    // Se auto-configura según moneda pero puede cambiar sin persistir
-    const currConfig = CURRENCIES.find(c => c.code === profile?.currency);
-    setDecimalPlaces(currConfig?.decimals ?? 0);
+    // Decimal places: usar el valor guardado en perfil, o default basado en moneda
+    if (profile?.decimal_places !== undefined && profile?.decimal_places !== null) {
+      setDecimalPlaces(profile.decimal_places);
+    } else {
+      const currConfig = CURRENCIES.find(c => c.code === profile?.currency);
+      setDecimalPlaces(currConfig?.decimals ?? 0);
+    }
     
     // Set onboarding decision state
     setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
@@ -1221,6 +1225,17 @@ export function useFinanceDataLogic() {
   const addPaymentMethod = async (pm: Omit<PaymentMethod, 'id'>) => {
     if (!user) return { error: 'No autenticado' };
 
+    // Check for duplicate name
+    const existingMethod = paymentMethods.find(p => p.name.toLowerCase() === pm.name.toLowerCase());
+    if (existingMethod) {
+      toast({ 
+        title: 'Nombre ya usado', 
+        description: 'Ya existe un método de pago con ese nombre. Por favor, elige otro nombre.', 
+        variant: 'destructive' 
+      });
+      return { error: 'Nombre duplicado', data: null };
+    }
+
     const { data, error } = await supabase
       .from('payment_methods')
       .insert({
@@ -1353,7 +1368,7 @@ export function useFinanceDataLogic() {
     return { error: null };
   };
 
-  const updateProfile = async (updates: { currency?: string; display_name?: string }) => {
+  const updateProfile = async (updates: { currency?: string; display_name?: string; decimal_places?: number }) => {
     if (!user) return { error: 'No autenticado' };
 
     // Primero verificar si existe el perfil usando 'id' como identificador
@@ -1395,7 +1410,16 @@ export function useFinanceDataLogic() {
       return { error };
     }
 
-    if (updates.currency) setCurrency(updates.currency);
+    // Actualizar currency local si cambió
+    if (updates.currency) {
+      setCurrency(updates.currency);
+    }
+    
+    // Actualizar decimal_places local si cambió
+    if (updates.decimal_places !== undefined) {
+      setDecimalPlaces(updates.decimal_places);
+    }
+
     toast({ title: 'Éxito', description: 'Perfil actualizado' });
 
     // Refrescar datos después de actualizar
@@ -1689,7 +1713,7 @@ export function useFinanceDataLogic() {
       }
 
       // Update profile currency
-      const { error: profErr } = await supabase.from('profiles').update({ currency: newCurrency }).eq('user_id', user.id);
+      const { error: profErr } = await supabase.from('profiles').update({ currency: newCurrency }).eq('id', user.id);
       if (profErr) throw profErr;
 
       // Update local state IMMEDIATELY for instant UX (before fetchData)

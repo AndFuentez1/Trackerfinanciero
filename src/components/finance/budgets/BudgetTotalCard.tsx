@@ -3,6 +3,7 @@ import { formatCurrency } from "@/lib/utils";
 import { TotalBudgetState } from "@/hooks/useBudgetsData";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface BudgetTotalCardProps {
     totalBudget: TotalBudgetState;
@@ -26,9 +27,12 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-blue-700">Ejecución del Presupuesto</span>
-                        <span className={cn("text-xl font-bold", isOverBudget ? "text-red-600" : "text-blue-600")}>
-                            {percentage.toFixed(0)}%
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-foreground">
+                                {percentage.toFixed(0)}%
+                            </span>
+                            {isOverBudget && <TrendingDown className="h-5 w-5 text-red-500" />}
+                        </div>
                     </div>
                     <Progress
                         value={Math.min(percentage, 100)}
@@ -49,9 +53,15 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
                     </div>
                     <div className="flex justify-between items-center py-2">
                         <span className="text-sm text-blue-600 font-medium">Diferencia</span>
-                        <span className={cn("text-lg font-bold", difference >= 0 ? "text-green-600" : "text-red-600")}>
-                            {formatCurrency(difference)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-foreground">
+                                {formatCurrency(difference)}
+                            </span>
+                            {difference >= 0 ? 
+                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
+                                <TrendingDown className="h-5 w-5 text-red-500" />
+                            }
+                        </div>
                     </div>
                 </div>
 

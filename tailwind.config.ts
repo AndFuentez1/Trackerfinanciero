@@ -15,7 +15,7 @@ export default {  darkMode: ["class"],
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Google Sans', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -65,6 +65,11 @@ export default {  darkMode: ["class"],
         expense: "hsl(var(--expense))",
         savings: "hsl(var(--savings))",
         investment: "hsl(var(--investment))",
+        "arquitectura-1": "hsl(var(--arquitectura-1))",
+        "arquitectura-2": "hsl(var(--arquitectura-2))",
+        "arquitectura-3": "hsl(var(--arquitectura-3))",
+        "arquitectura-4": "hsl(var(--arquitectura-4))",
+        "arquitectura-5": "hsl(var(--arquitectura-5))",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

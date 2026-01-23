@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLoans, useCreateLoan, useUpdateLoan, useCreateLoanPayment, Loan } from '@/hooks/useLoans';
 import { useFinanceData } from '@/hooks/useFinanceData';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ export default function LoansPage() {
     const { updateLoan, deleteLoan } = useUpdateLoan();
     const { createPayment } = useCreateLoanPayment();
     const { paymentMethods, updateTransaction, transactions } = useFinanceData();
+    const decimalPlaces = useDecimalPlaces();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     // Payment Dialog State
@@ -71,7 +73,8 @@ export default function LoansPage() {
         return val.toLocaleString('es-CO', {
             style: 'currency',
             currency: 'COP',
-            minimumFractionDigits: 0,
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
         });
     };
 
@@ -227,7 +230,7 @@ export default function LoansPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -507,7 +510,7 @@ export default function LoansPage() {
                 </DialogContent>
             </Dialog>
 
-            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
                 {pendingDisbursementCount > 0 && (
                     <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
                         <AlertCircle className="h-5 w-5" />
@@ -545,10 +548,10 @@ export default function LoansPage() {
                     </Card>
                 </div>
 
-                <div className="space-y-6">
+                <div className="flex flex-col gap-6">
                     <h2 className="text-lg font-semibold px-1">Controla tus pagos y saldos pendientes</h2>
 
-                    <div className="space-y-4">
+                    <div className="flex flex-col gap-4">
                         {loans.length === 0 ? (
                             <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed border-border">
                                 No tienes préstamos registrados.

@@ -53,9 +53,6 @@ export function WelcomePanel({
                 </SelectItem>
               ))}
             </SelectContent>
-                </SelectItem>
-              ))}
-            </SelectContent>
           </Select>
           <Button
             onClick={async () => {
@@ -119,7 +116,7 @@ export function WelcomePanel({
               <Card
                 key={step.id}
                 className={`overflow-hidden transition-all ${
-                  step.completed ? 'bg-success/5 border-success/20' : ''
+                  step.completed ? 'bg-primary/5 border-primary/20' : ''
                 } ${isDisabled ? 'opacity-50' : ''}`}
               >
                 <CardHeader className="pb-3">
@@ -127,11 +124,11 @@ export function WelcomePanel({
                     <div className="flex items-center gap-4">
                       <div
                         className={`p-2 rounded-lg ${
-                          step.completed ? 'bg-success/20' : 'bg-primary/20'
+                          step.completed ? 'bg-primary/20' : 'bg-primary/20'
                         }`}
                       >
                         {step.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
                         ) : (
                           <Icon className="h-5 w-5 text-primary" />
                         )}
@@ -142,7 +139,7 @@ export function WelcomePanel({
                       </div>
                     </div>
                     {step.completed && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-success/20 text-success">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
                         Completado
                       </span>
                     )}
@@ -157,10 +154,10 @@ export function WelcomePanel({
         </div>
 
         {allCompleted && (
-          <Card className="bg-success/5 border-success/20">
+          <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-6 text-center">
-              <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-2" />
-              <p className="font-medium text-success">¡Listo para comenzar!</p>
+              <CheckCircle2 className="h-8 w-8 text-primary mx-auto mb-2" />
+              <p className="font-medium text-primary">¡Listo para comenzar!</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Tu cuenta está configurada. Presiona F5 para recargar y ver tu dashboard.
               </p>

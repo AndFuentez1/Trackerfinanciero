@@ -133,6 +133,8 @@ export default function ConfiguracionPage() {
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
     const [decimalPlaces, setDecimalPlaces] = useState<number>(0);
+    const [originalDecimalPlaces, setOriginalDecimalPlaces] = useState<number>(0);
+    const [isDecimalsSaved, setIsDecimalsSaved] = useState(true);
 
     // Duplicate detection/confirmation state
     const [duplicateResolve, setDuplicateResolve] = useState<PaymentMethodWithColor | null>(null);
@@ -199,10 +201,15 @@ export default function ConfiguracionPage() {
 
                 if (!error && data?.decimal_places !== undefined && data.decimal_places !== null) {
                     setDecimalPlaces(data.decimal_places);
+                    setOriginalDecimalPlaces(data.decimal_places);
+                    setIsDecimalsSaved(true);
                 } else {
                     // Set default based on current currency
                     const currConfig = CURRENCIES.find(c => c.code === currency);
-                    setDecimalPlaces(currConfig?.decimals ?? 0);
+                    const defaultValue = currConfig?.decimals ?? 0;
+                    setDecimalPlaces(defaultValue);
+                    setOriginalDecimalPlaces(defaultValue);
+                    setIsDecimalsSaved(true);
                 }
             } catch (err) {
                 console.error('Error loading decimal places:', err);
@@ -232,12 +239,35 @@ export default function ConfiguracionPage() {
     };
 
     const handleSaveDecimalPlaces = async () => {
-        // Decimal places es solo una preferencia de UI, se guarda en estado local
-        // No necesita persistencia en BD - solo afecta la visualización
-        toast({ 
-            title: 'Éxito', 
-            description: `Visualización configurada a ${decimalPlaces} decimales` 
-        });
+        if (!user?.id) return;
+        try {
+            // Usar updateProfile para actualizar y refrescar en toda la app
+            const result = await updateProfile({ decimal_places: decimalPlaces });
+            
+            if (result?.error) {
+                toast({
+                    title: 'Error',
+                    description: 'No se pudo guardar la configuración',
+                    variant: 'destructive'
+                });
+                return;
+            }
+            
+            setOriginalDecimalPlaces(decimalPlaces);
+            setIsDecimalsSaved(true);
+            
+            toast({ 
+                title: 'Éxito', 
+                description: `Visualización configurada a ${decimalPlaces} decimales` 
+            });
+        } catch (err) {
+            console.error('Error saving decimal places:', err);
+            toast({
+                title: 'Error',
+                description: 'Error al guardar la configuración',
+                variant: 'destructive'
+            });
+        }
     };
 
     const handleOpenAdd = () => {
@@ -329,7 +359,7 @@ export default function ConfiguracionPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Moneda Section */}
-                <Card className="shadow-sm border-border/60">
+                <Card className="config-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Globe className="h-5 w-5 text-blue-500" />
@@ -354,7 +384,7 @@ export default function ConfiguracionPage() {
                 </Card>
 
                 {/* Sesión Section */}
-                <Card className="shadow-sm border-border/60">
+                <Card className="config-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <LogOut className="h-5 w-5 text-destructive" />
@@ -370,7 +400,7 @@ export default function ConfiguracionPage() {
                 </Card>
 
                 {/* Unified Category Management Section */}
-                <Card className="shadow-sm border-border/60 md:col-span-2">
+                <Card className="config-card md:col-span-2">
                     <CardHeader className="flex flex-col gap-4 pb-4">
                         <div className="flex flex-row items-start sm:items-center justify-between gap-2">
                             <div className="space-y-1 flex-1">
@@ -388,14 +418,14 @@ export default function ConfiguracionPage() {
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="expense" className="w-full">
-                            <TabsList className="grid w-full grid-cols-4 mb-6">
-                                <TabsTrigger value="expense">Gastos</TabsTrigger>
-                                <TabsTrigger value="income">Ingresos</TabsTrigger>
-                                <TabsTrigger value="savings">Ahorros</TabsTrigger>
-                                <TabsTrigger value="others">Otros</TabsTrigger>
+                            <TabsList className="flex w-full p-1 gap-2 mb-6 bg-muted/50 rounded-lg border border-muted-foreground/30">
+                                <TabsTrigger value="expense" className="rounded-md flex-1 py-1">Gastos</TabsTrigger>
+                                <TabsTrigger value="income" className="rounded-md flex-1 py-1">Ingresos</TabsTrigger>
+                                <TabsTrigger value="savings" className="rounded-md flex-1 py-1">Ahorros</TabsTrigger>
+                                <TabsTrigger value="others" className="rounded-md flex-1 py-1">Otros</TabsTrigger>
                             </TabsList>
-                            <TabsContent value="expense" className="mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <TabsContent value="expense" className="mt-0 pt-4 animate-in fade-in duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {categories.filter(c => c.type === 'expense').map(category => (
                                         <CategoryRow
                                             key={category.id}
@@ -405,12 +435,12 @@ export default function ConfiguracionPage() {
                                         />
                                     ))}
                                     {categories.filter(c => c.type === 'expense').length === 0 && (
-                                        <p className="col-span-2 text-center py-8 text-muted-foreground text-sm">No hay categorías de gastos creadas.</p>
+                                        <p className="col-span-full text-center py-8 text-muted-foreground text-sm">No hay categorías de gastos creadas.</p>
                                     )}
                                 </div>
                             </TabsContent>
-                            <TabsContent value="income" className="mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TabsContent value="income" className="mt-0 pt-4 animate-in fade-in duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {categories.filter(c => c.type === 'income').map(category => (
                                         <CategoryRow
                                             key={category.id}
@@ -420,12 +450,12 @@ export default function ConfiguracionPage() {
                                         />
                                     ))}
                                     {categories.filter(c => c.type === 'income').length === 0 && (
-                                        <p className="col-span-2 text-center py-8 text-muted-foreground text-sm">No hay categorías de ingresos creadas.</p>
+                                        <p className="col-span-full text-center py-8 text-muted-foreground text-sm">No hay categorías de ingresos creadas.</p>
                                     )}
                                 </div>
                             </TabsContent>
-                            <TabsContent value="savings" className="mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TabsContent value="savings" className="mt-0 pt-4 animate-in fade-in duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {categories.filter(c => ['saving', 'investment'].includes(c.type)).map(category => (
                                         <CategoryRow
                                             key={category.id}
@@ -435,12 +465,12 @@ export default function ConfiguracionPage() {
                                         />
                                     ))}
                                     {categories.filter(c => ['saving', 'investment'].includes(c.type)).length === 0 && (
-                                        <p className="col-span-2 text-center py-8 text-muted-foreground text-sm">No hay categorías de ahorro creadas.</p>
+                                        <p className="col-span-full text-center py-8 text-muted-foreground text-sm">No hay categorías de ahorro creadas.</p>
                                     )}
                                 </div>
                             </TabsContent>
-                            <TabsContent value="others" className="mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TabsContent value="others" className="mt-0 pt-4 animate-in fade-in duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {categories.filter(c => ['other', 'loan'].includes(c.type) || c.name === 'Loans').map(category => (
                                         <CategoryRow
                                             key={category.id}
@@ -450,7 +480,7 @@ export default function ConfiguracionPage() {
                                         />
                                     ))}
                                     {categories.filter(c => ['other', 'loan'].includes(c.type) || c.name === 'Loans').length === 0 && (
-                                        <p className="col-span-2 text-center py-8 text-muted-foreground text-sm">No hay otras categorías creadas.</p>
+                                        <p className="col-span-full text-center py-8 text-muted-foreground text-sm">No hay otras categorías creadas.</p>
                                     )}
                                 </div>
                             </TabsContent>
@@ -459,11 +489,11 @@ export default function ConfiguracionPage() {
                 </Card>
 
                 {/* Métodos de Pago Section */}
-                <Card className="shadow-sm border-border/60 md:col-span-2">
+                <Card className="config-card md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <div className="space-y-1">
                             <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <div className="w-2 h-6 bg-purple-500 rounded-full" />
+                                <div className="w-2 h-6 bg-slate-500 rounded-full" />
                                 Métodos de Pago
                             </CardTitle>
                             <CardDescription>Gestiona tus cuentas, tarjetas y efectivo.</CardDescription>
@@ -481,13 +511,13 @@ export default function ConfiguracionPage() {
                 </Card>
             </div>
 
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
                 {/* Decimal Places Section */}
-                <Card className="shadow-sm border-border/60">
+                <Card className="config-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <div className="w-2 h-6 bg-blue-500 rounded-full" />
-                            Lugares Decimales
+                            Números decimales
                         </CardTitle>
                         <CardDescription>Configura cuántos decimales mostrar en moneda</CardDescription>
                     </CardHeader>
@@ -501,30 +531,39 @@ export default function ConfiguracionPage() {
                                     id="decimal-places"
                                     type="range"
                                     min="0"
-                                    max="2"
+                                    max="3"
                                     value={decimalPlaces}
-                                    onChange={(e) => setDecimalPlaces(Number(e.target.value))}
+                                    onChange={(e) => {
+                                        const newValue = Number(e.target.value);
+                                        setDecimalPlaces(newValue);
+                                        setIsDecimalsSaved(newValue === originalDecimalPlaces);
+                                    }}
                                     className="w-full"
                                 />
                                 <p className="text-xs text-muted-foreground mt-2">
                                     {decimalPlaces === 0 && 'Sin decimales (ej: 1000)'}
                                     {decimalPlaces === 1 && 'Un decimal (ej: 1000.0)'}
                                     {decimalPlaces === 2 && 'Dos decimales (ej: 1000.00)'}
+                                    {decimalPlaces === 3 && 'Tres decimales (ej: 1000.000)'}
                                 </p>
                             </div>
                         </div>
                         <Button
                             onClick={handleSaveDecimalPlaces}
-                            className="w-full"
+                            className={cn(
+                                "w-full",
+                                isDecimalsSaved && "opacity-50 cursor-not-allowed"
+                            )}
+                            disabled={isDecimalsSaved}
                         >
-                            Aplicar Formato
+                            {isDecimalsSaved ? 'Configuración Guardada' : 'Guardar Configuración'}
                         </Button>
                     </CardContent>
                 </Card>
 
                 <Card className={cn(
-                    "border-primary/10 bg-primary/5 shadow-sm transition-all duration-1000",
-                    highlightPassword && "ring-4 ring-primary ring-offset-4 ring-offset-background bg-primary/10 scale-[1.02]"
+                    "config-card transition-all duration-1000",
+                    highlightPassword && "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.02]"
                 )}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-2xl font-bold">
@@ -546,7 +585,7 @@ export default function ConfiguracionPage() {
                 </Card>
 
                 <section className="pt-8 border-t border-destructive/20">
-                    <Card className="border-destructive/20 bg-destructive/5 shadow-sm">
+                    <Card className="config-card border-destructive/20">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                                 <div className="w-2 h-6 bg-destructive rounded-full" />
@@ -579,8 +618,8 @@ export default function ConfiguracionPage() {
                         <DialogDescription className="sr-only">Transfiere fondos desde una cuenta para pagar tu tarjeta de crédito.</DialogDescription>
                         <CardDescription>Transfiere fondos para pagar tu tarjeta.</CardDescription>
                     </DialogHeader>
-                    <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
+                    <div className="flex flex-col gap-4 pt-4">
+                        <div className="flex flex-col gap-2">
                             <Label>Pagar desde</Label>
                             <Select value={paySourceId} onValueChange={setPaySourceId}>
                                 <SelectTrigger>
@@ -625,8 +664,8 @@ export default function ConfiguracionPage() {
                         <DialogDescription className="sr-only">Configura la tasa y confirma el cambio de moneda de la aplicación.</DialogDescription>
                         <CardDescription>Estás cambiando la moneda de <strong>{currency}</strong> a <strong>{pendingCurrency}</strong>.</CardDescription>
                     </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                        <div className="space-y-2">
+                    <div className="flex flex-col gap-4 pt-2">
+                        <div className="flex flex-col gap-2">
                             <Label htmlFor="conversion-rate">Tasa de conversión (1 {currency} = ? {pendingCurrency})</Label>
                             <Input
                                 id="conversion-rate"
@@ -663,7 +702,7 @@ export default function ConfiguracionPage() {
                                 setPreviewModalOpen(true);
                             }
                         }} disabled={isConverting}>
-                            {isConverting ? 'Generando vista previa...' : 'Vista previa y convertir'}
+                            {isConverting ? 'Generando vista previa...' : 'Ver Vista Previa'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -907,22 +946,22 @@ function CategoryRow({
     onDelete: () => void
 }) {
     return (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-gray-100 shadow-sm hover:shadow-md hover:bg-gray-50 transition-all group">
-            <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-stone-200 hover:border-stone-300 transition-all group">
+            <div className="flex items-center gap-2.5 flex-1">
                 <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0 transition-transform group-hover:scale-110"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105"
                     style={{ backgroundColor: category.color || '#3b82f6' }}
                 >
-                    <div className="w-3 h-3 rounded-full bg-white/40" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/40" />
                 </div>
-                <span className="font-semibold text-sm text-foreground/90 flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
+                <span className="font-medium text-sm text-foreground flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <Button variant="ghost" size="icon" onClick={onEdit} className="h-9 w-9 hover:bg-white shadow-sm border border-transparent hover:border-border">
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 hover:bg-white border border-transparent hover:border-stone-300 rounded-md">
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onDelete} className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:border-destructive/20 border border-transparent">
-                    <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:border-destructive/20 border border-transparent rounded-md">
+                    <Trash2 className="h-3.5 w-3.5" />
                 </Button>
             </div>
         </div>

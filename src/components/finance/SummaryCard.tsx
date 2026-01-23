@@ -1,5 +1,6 @@
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 
 interface SummaryCardProps {
   title: string;
@@ -11,21 +12,26 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', description, className }: SummaryCardProps) {
+  const decimalPlaces = useDecimalPlaces();
+  
   const formatSmartCurrency = (value: number) => {
     const absValue = Math.abs(value);
     const formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
     }).format(absValue);
 
-    // Remove currency symbol for custom formatting
-    const numberPart = formatted.replace(/[^\d.,]/g, '');
+    // Separar símbolo, parte entera y decimales
+    const parts = formatted.split(',');
+    const integerPart = parts[0]; // "$1.000"
+    const decimalPart = parts.length > 1 && decimalPlaces > 0 ? parts[1] : ''; // "00"
 
     return {
       symbol: '$',
-      number: numberPart,
+      integerPart: integerPart.replace('$', ''),
+      decimalPart,
       fullLength: formatted.length
     };
   };
@@ -37,9 +43,6 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
   };
 
   const getTextColor = () => {
-    if (variant === 'positive') return 'text-emerald-600';
-    if (variant === 'negative') return 'text-red-600';
-    if (variant === 'warning') return 'text-amber-600';
     return 'text-foreground';
   };
 
@@ -50,12 +53,18 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
     return 'text-muted-foreground';
   };
 
-  const { symbol, number, fullLength } = formatSmartCurrency(amount);
+  const getVariantIcon = () => {
+    if (variant === 'positive') return <TrendingUp className="h-4 w-4 text-emerald-500" />;
+    if (variant === 'negative') return <TrendingDown className="h-4 w-4 text-red-500" />;
+    return null;
+  };
+
+  const { symbol, integerPart, decimalPart, fullLength } = formatSmartCurrency(amount);
   const fontSize = getFontSize(fullLength);
 
   return (
     <div className={cn(
-      "bg-card rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-all duration-200 group relative flex flex-col justify-between h-full",
+      "summary-card",
       className
     )}>
       {/* Icon - top right */}
@@ -80,8 +89,14 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
             fontSize,
             getTextColor()
           )}>
-            {number}
+            {integerPart}
+            {decimalPart && <span className="opacity-60" style={{ fontSize: '0.6em' }}>,{decimalPart}</span>}
           </span>
+          {getVariantIcon() && (
+            <span className="ml-2">
+              {getVariantIcon()}
+            </span>
+          )}
         </div>
 
         {description && (

@@ -248,7 +248,7 @@ export function SummaryTab({
 
 
       {/* SECCIÓN 1: Mis Cuentas (Prioridad Alta) */}
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
@@ -316,7 +316,7 @@ export function SummaryTab({
       </div>
 
       {/* SECCIÓN 3: Resumen Mensual Detallado */}
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">Resumen del Mes</span>
@@ -347,8 +347,8 @@ export function SummaryTab({
       </div>
 
       {/* Herramientas de Análisis y Detalles */}
-      <div className="space-y-8 sm:space-y-10 lg:space-y-12">
-        <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-8 sm:gap-10 lg:gap-12">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2">
             <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
             <h2 className="text-lg font-semibold border-b-2 border-primary/20 pb-1 pr-4 whitespace-nowrap">
@@ -356,7 +356,7 @@ export function SummaryTab({
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm overflow-x-auto">
+            <div className="lg:col-span-2 bg-[#F4F5F7] rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md overflow-x-auto">
               <EvolutionChart
                 transactions={allTransactions}
                 selectedYears={selectedYears}
@@ -366,7 +366,7 @@ export function SummaryTab({
                 onSelectAllYears={() => setSelectedYears(availableYears)}
               />
             </div>
-            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-sm">
+            <div className="lg:col-span-1 bg-[#F4F5F7] rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md">
               <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
             </div>
           </div>

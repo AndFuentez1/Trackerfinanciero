@@ -19,6 +19,7 @@ import { es } from 'date-fns/locale';
 import { WelcomePanel } from '@/components/WelcomePanel';
 import { OnboardingDecisionPanel } from '@/components/OnboardingDecisionPanel';
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/hooks/financeUtils';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -124,7 +125,13 @@ export default function Index() {
   if (showWelcomePanel) {
     return (
       <WelcomePanel
-        onConfigureCurrency={async (currencyCode) => { await updateProfile({ currency: currencyCode }); }}
+        onConfigureCurrency={async (currencyCode) => { 
+          const currConfig = CURRENCIES.find(c => c.code === currencyCode);
+          await updateProfile({ 
+            currency: currencyCode,
+            decimal_places: currConfig?.decimals ?? 0
+          }); 
+        }}
         onAddPaymentMethod={() => navigate('/configuracion')}
         onAddCategory={() => navigate('/configuracion')}
         currencyConfigured={Boolean(statsSummary.currency)}
@@ -155,7 +162,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold">Resumen</h1>

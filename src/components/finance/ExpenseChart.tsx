@@ -1,6 +1,7 @@
 import { CategoryItem } from '@/hooks/useFinanceData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 
 interface ExpenseChartProps {
   data: { category: string; category_id?: string | null; amount: number }[];
@@ -8,6 +9,7 @@ interface ExpenseChartProps {
 }
 
 export function ExpenseChart({ data, categories }: ExpenseChartProps) {
+  const decimalPlaces = useDecimalPlaces();
   const chartData = useMemo(() => {
     if (data.length === 0) return [];
 
@@ -46,13 +48,14 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
     }).format(value);
   };
 
   if (data.length === 0) {
     return (
-      <div className="bg-card rounded-xl border border-border p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+      <div className="bg-[#F4F5F7] rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
         <p>No hay gastos registrados para este periodo.</p>
       </div>
     );

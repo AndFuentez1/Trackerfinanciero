@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
@@ -45,6 +46,7 @@ export function EvolutionChart({
   onSelectedMonthChange,
   onSelectAllYears,
 }: EvolutionChartProps) {
+  const decimalPlaces = useDecimalPlaces();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
@@ -238,13 +240,14 @@ export function EvolutionChart({
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
     }).format(value);
   };
 
   if (transactions.length === 0) {
     return (
-      <div className="bg-card rounded-xl border border-border p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+      <div className="bg-[#F4F5F7] rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
         <p>No hay datos suficientes para mostrar la evolución.</p>
       </div>
     );
@@ -401,7 +404,8 @@ export function EvolutionChart({
                 dataKey={`year_${year}`}
                 stroke={COLORS[idx % COLORS.length]}
                 strokeWidth={2.5}
-                dot={false}
+                dot={{ r: 5, strokeWidth: 2, fill: COLORS[idx % COLORS.length], stroke: '#fff' }}
+                activeDot={{ r: 7, strokeWidth: 2 }}
                 isAnimationActive={true}
                 animationDuration={1000}
                 connectNulls={false}

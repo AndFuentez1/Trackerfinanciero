@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PiggyBank, TrendingUp, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X } from 'lucide-react';
+import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -47,15 +48,6 @@ interface SavingsPerformanceProps {
   onDeleteTransaction: (id: string) => Promise<void>;
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr + 'T00:00:00');
   if (isNaN(date.getTime())) return '';
@@ -81,6 +73,17 @@ export function SavingsPerformance({
   onAddTransfer,
   onDeleteTransaction
 }: SavingsPerformanceProps) {
+  const decimalPlaces = useDecimalPlaces();
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(amount);
+  };
+
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
     amount: number;
@@ -128,7 +131,7 @@ export function SavingsPerformance({
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+      <Card className="bg-[#F4F5F7] border border-arquitectura-2/30 shadow-md">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -157,7 +160,7 @@ export function SavingsPerformance({
       {/* Accounts performance */}
       <div className="grid gap-4 md:grid-cols-2 auto-rows-fr">
         {accountPerformance.map(account => (
-          <Card key={account.id} className="h-full">
+          <Card key={account.id} className="savings-card h-full">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
                 <div>
@@ -195,15 +198,21 @@ export function SavingsPerformance({
               )}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-muted/30 rounded p-2">
+                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Depósitos</p>
-                  <p className="text-lg font-bold text-green-600 tracking-tight">{formatCurrency(account.totalDeposits)}</p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrency(account.totalDeposits)}</p>
+                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  </div>
                 </div>
-                <div className="bg-muted/30 rounded p-2">
+                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Retiros</p>
-                  <p className="text-lg font-bold text-red-600 tracking-tight">{formatCurrency(account.totalWithdrawals)}</p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrency(account.totalWithdrawals)}</p>
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                  </div>
                 </div>
-                <div className="bg-muted/30 rounded p-2">
+                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Intereses</p>
                   <p className="text-lg font-bold text-primary tracking-tight">{formatCurrency(account.totalInterest)}</p>
                 </div>
@@ -216,7 +225,7 @@ export function SavingsPerformance({
       </div>
 
       {accounts.length === 0 && (
-        <Card className="border-dashed">
+        <Card className="bg-[#F4F5F7] border-2 border-dashed border-arquitectura-2/30">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
@@ -229,21 +238,21 @@ export function SavingsPerformance({
 
       {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="bg-gradient-to-b from-[#F4F5F7] to-[#F4F5F7]/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
             <table className="w-full table-auto">
-              <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
+              <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
                 <tr>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Fecha</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Descripción</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Tipo</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Método de Pago</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">Monto</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40">% Rendimiento</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Fecha</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Descripción</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Tipo</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Método de Pago</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Monto</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">% Rendimiento</th>
                   <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/20">
+              <tbody className="divide-y divide-arquitectura-2/30">
                 {transactions.slice(0, 20).map((tx, index) => {
                   const account = accounts.find(a => a.id === tx.payment_method_id);
                   const isEditing = editingTxId === tx.id;

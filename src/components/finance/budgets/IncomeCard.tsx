@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { parseISO, isWithinInterval } from "date-fns";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 export function IncomeCard() {
     const { transactions, allTransactions } = useFinanceData();
@@ -113,9 +114,15 @@ export function IncomeCard() {
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-emerald-700">Tasa de Ahorro</span>
-                        <span className={cn("text-xl font-bold", savingsRate >= 0 ? "text-emerald-600" : "text-red-600")}>
-                            {savingsRate.toFixed(0)}%
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-foreground">
+                                {savingsRate.toFixed(0)}%
+                            </span>
+                            {savingsRate >= 0 ? 
+                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
+                                <TrendingDown className="h-5 w-5 text-red-500" />
+                            }
+                        </div>
                     </div>
                     <Progress
                         value={Math.max(0, Math.min(savingsRate, 100))}
@@ -136,9 +143,15 @@ export function IncomeCard() {
                     </div>
                     <div className="flex justify-between items-center py-2">
                         <span className="text-sm text-emerald-600 font-medium">Flujo Neto</span>
-                        <span className={cn("text-lg font-bold", netFlow >= 0 ? "text-green-600" : "text-red-600")}>
-                            {formatCurrency(netFlow)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-foreground">
+                                {formatCurrency(netFlow)}
+                            </span>
+                            {netFlow >= 0 ? 
+                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
+                                <TrendingDown className="h-5 w-5 text-red-500" />
+                            }
+                        </div>
                     </div>
                 </div>
 

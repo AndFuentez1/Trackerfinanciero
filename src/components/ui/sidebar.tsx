@@ -75,6 +75,47 @@ const SidebarProvider = React.forwardRef<
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
   }, [isMobile, setOpen, setOpenMobile]);
 
+  // Auto expand/collapse on hover (desktop only)
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout>();
+
+  React.useEffect(() => {
+    const container = sidebarRef.current;
+    if (!container || isMobile) return;
+
+    // Find the actual sidebar element inside
+    const sidebarElement = container.querySelector('[data-sidebar="sidebar"]');
+    if (!sidebarElement) return;
+
+    const handleMouseEnter = () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      setOpen(true);
+    };
+
+    const handleMouseLeave = () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      // Collapse after a small delay
+      hoverTimeoutRef.current = setTimeout(() => {
+        setOpen(false);
+      }, 100);
+    };
+
+    sidebarElement.addEventListener("mouseenter", handleMouseEnter);
+    sidebarElement.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      sidebarElement.removeEventListener("mouseenter", handleMouseEnter);
+      sidebarElement.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [setOpen, isMobile]);
+
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -109,6 +150,7 @@ const SidebarProvider = React.forwardRef<
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
+          ref={sidebarRef}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH,
@@ -117,7 +159,6 @@ const SidebarProvider = React.forwardRef<
             } as React.CSSProperties
           }
           className={cn("group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar", className)}
-          ref={ref}
           {...props}
         >
           {children}

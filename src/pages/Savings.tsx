@@ -76,7 +76,7 @@ export default function SavingsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">

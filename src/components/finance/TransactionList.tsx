@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, PaymentMethod, CategoryItem } from '@/hooks/useFinanceData';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import {
   Trash2,
   CreditCard,
@@ -73,6 +74,8 @@ export function TransactionList({
   statusFilter,
   setStatusFilter
 }: TransactionListProps) {
+  const decimalPlaces = useDecimalPlaces();
+  
   const [sortConfig, setSortConfig] = useState<{
     key: 'date' | 'category' | 'amount' | 'status' | null;
     direction: 'asc' | 'desc';
@@ -153,7 +156,8 @@ export function TransactionList({
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
     }).format(value);
   };
 
@@ -262,13 +266,13 @@ export function TransactionList({
   return (
     <>
       {/* Desktop Table View */}
-      <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-gradient-to-b from-[#F4F5F7] to-[#F4F5F7]/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
         <div className="w-full overflow-hidden">
           <table className="w-full table-auto">
-            <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/30">
+            <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
               <tr>
                 <th
-                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border/40"
+                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-arquitectura-2/30"
                   onClick={() => handleSort('date')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -277,14 +281,14 @@ export function TransactionList({
                     <span>{getSortIcon('date')}</span>
                   </div>
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border/40" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                   Descripción
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                   Tipo
                 </th>
                 <th
-                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-border/40"
+                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-arquitectura-2/30"
                   onClick={() => handleSort('category')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -293,11 +297,11 @@ export function TransactionList({
                     <span>{getSortIcon('category')}</span>
                   </div>
                 </th>
-                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/40" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                   Método de Pago
                 </th>
                 <th
-                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border/40"
+                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-arquitectura-2/30"
                   onClick={() => handleSort('amount')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -338,7 +342,7 @@ export function TransactionList({
                   <tr
                     key={transaction.id}
                     className={cn(
-                      'border-b border-border/20 transition-all duration-200 group hover:bg-muted/20',
+                      'border-b border-arquitectura-2/30 transition-all duration-200 group hover:bg-muted/30',
                       isEditing && 'bg-primary/5 hover:bg-primary/10',
                       isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
                       highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
@@ -347,7 +351,7 @@ export function TransactionList({
                     style={{ animationDelay: `${index * 20}ms` }}
                   >
                     {/* Date */}
-                    <td className="py-3 px-4 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-3 px-4 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <input
                           type="date"
@@ -363,7 +367,7 @@ export function TransactionList({
                     </td>
 
                     {/* Description */}
-                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           value={draft?.description ?? transaction.description}
@@ -386,7 +390,7 @@ export function TransactionList({
                     </td>
 
                     {/* Type */}
-                    <td className="py-2.5 px-2 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       <span className={cn(
                         'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         typeStyles[transaction.type]
@@ -396,7 +400,7 @@ export function TransactionList({
                     </td>
 
                     {/* Category */}
-                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <div className="mx-auto max-w-[120px]">
                           <Select
@@ -452,7 +456,7 @@ export function TransactionList({
                     </td>
 
                     {/* Payment Method */}
-                    <td className="py-2.5 px-3 align-middle text-center border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-3 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <div className="mx-auto max-w-[160px]">
                           <Select
@@ -498,7 +502,7 @@ export function TransactionList({
                     </td>
 
                     {/* Amount */}
-                    <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-border/20" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           type="number"

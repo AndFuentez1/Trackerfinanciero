@@ -107,7 +107,6 @@ export function useBudgetsData() {
             supabase.removeChannel(channel);
         };
     }, [user]);
-
     // Derived state calculation
     const budgetsStats = useMemo(() => {
         const stats: BudgetState[] = [];
@@ -195,8 +194,10 @@ export function useBudgetsData() {
         const categoryDetails = categories.find(c => c.id === budgetData.category_id);
         const finalCategoryName = budgetData.category_name || categoryDetails?.name || '';
 
+        // Evitar problemas de zona horaria: budgetData.month ya viene como YYYY-MM-DD
+        // Solo extraer YYYY-MM y agregar -01 para primer día del mes
         const targetMonth = budgetData.month
-            ? startOfMonth(new Date(budgetData.month)).toISOString().split('T')[0]
+            ? budgetData.month.substring(0, 7) + '-01'
             : startOfMonth(new Date()).toISOString().split('T')[0];
 
         const { data, error } = await supabase
@@ -213,13 +214,13 @@ export function useBudgetsData() {
             .single();
 
         if (error) {
-
             toast({ title: 'Error', description: 'No se pudo guardar el presupuesto', variant: 'destructive' });
             return { error };
         }
-
-        refreshData();
-        toast({ title: 'Éxito', description: 'Presupuesto guardado correctamente' });
+        
+        // Refresh data and wait for it to complete
+        await refreshData();
+        
         return { data, error: null };
     };
 

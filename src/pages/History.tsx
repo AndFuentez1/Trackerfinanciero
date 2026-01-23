@@ -267,7 +267,7 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -326,7 +326,7 @@ export default function HistoryPage() {
                         <div className="animate-pulse text-muted-foreground">Cargando datos...</div>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="flex flex-col gap-6">
                         {/* Barra de estado: Mostrar siempre que haya datos cargados */}
                         <ImportStatusBar
                             uiState={
@@ -353,7 +353,7 @@ export default function HistoryPage() {
                                     <AlertCircle className="h-5 w-5 text-amber-500" />
                                     Zona de Reclasificación
                                 </h2>
-                                <div className="space-y-4">
+                                <div className="flex flex-col gap-4">
                                     {reclassifyTxs.map(tx => {
                                         const initialDraft = {
                                             description: tx.description || '',
@@ -500,8 +500,8 @@ export default function HistoryPage() {
 
                         {/* FILTROS UNIFICADOS */}
                         <div className={cn(
-                            "bg-card/30 p-4 rounded-xl border border-border/50",
-                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
+                            "bg-[#F4F5F7]/30 p-4 rounded-xl border border-border/50",
+                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-[#F4F5F7]"
                         )}>
                             <div className="flex items-center gap-2 mb-3">
                                 <BarChart3 className="h-5 w-5 text-primary" />

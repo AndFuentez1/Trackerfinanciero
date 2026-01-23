@@ -20,6 +20,7 @@ import { BudgetTotalCard } from "@/components/finance/budgets/BudgetTotalCard";
 import { CategoryBudgetList } from "@/components/finance/budgets/CategoryBudgetList";
 import { IncomeCard } from "@/components/finance/budgets/IncomeCard";
 import { AddBudgetDialog } from '@/components/finance/AddBudgetDialog';
+import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
 import { FutureExpensesList } from "@/components/finance/budgets/FutureExpensesList";
 
 export default function BudgetsPage() {
@@ -37,7 +38,13 @@ export default function BudgetsPage() {
         setBudgetPeriod,
         availableYears,
     } = useBudgetsData();
-    const { insights } = useFinanceData();
+    const { 
+        insights, 
+        addTransaction,
+        categories,
+        paymentMethods,
+        addTransfer,
+    } = useFinanceData();
 
     // Filter only budget-related insights
     const budgetInsights = insights.filter(i => i.id.startsWith('budget-'));
@@ -47,7 +54,7 @@ export default function BudgetsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -55,7 +62,13 @@ export default function BudgetsPage() {
                         </div>
                         <h1 className="text-xl font-semibold">Presupuesto Mensual</h1>
                     </div>
-                    <div className="z-20">
+                    <div className="z-20 flex gap-2 flex-wrap justify-center sm:justify-start">
+                        <AddTransactionDialog
+                            onAdd={addTransaction}
+                            categories={categories}
+                            paymentMethods={paymentMethods}
+                            onAddTransfer={addTransfer}
+                        />
                         <AddBudgetDialog
                             onAdd={saveBudget}
                             monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
@@ -87,7 +100,7 @@ export default function BudgetsPage() {
                         </h2>
                     </div>
 
-                    <CategoryBudgetList budgets={budgets} />
+                    <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
                 </div>
 
                 <Separator className="my-6" />

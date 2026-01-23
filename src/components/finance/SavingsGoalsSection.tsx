@@ -2,6 +2,7 @@ import { CategoryItem } from '@/hooks/useFinanceData';
 import { Target, TrendingUp, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -11,6 +12,7 @@ interface SavingsGoalsSectionProps {
 }
 
 export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSectionProps) {
+    const decimalPlaces = useDecimalPlaces();
     const [editingGoal, setEditingGoal] = useState<string | null>(null);
     const [goalValue, setGoalValue] = useState<string>('');
 
@@ -22,8 +24,8 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',
             currency: 'COP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
         }).format(value);
     };
 

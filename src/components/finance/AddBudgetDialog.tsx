@@ -100,11 +100,8 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
       month: currentMonth,
     };
 
-
-
     // Strict validation
     if (!budgetPayload.category_id || !budgetPayload.category_name || budgetPayload.amount <= 0) {
-
       toast({
         title: 'Error de validación',
         description: 'Debes seleccionar una categoría y el monto debe ser mayor a 0.',
@@ -121,13 +118,18 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
     });
 
     if (!result?.error) {
-      // Invalidate queries to refresh data automatically
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      const isUpdate = !!editingBudget;
+      
+      toast({
+        title: 'Éxito',
+        description: isUpdate ? 'Presupuesto actualizado correctamente' : 'Presupuesto creado correctamente',
+      });
 
-      if (!editingBudget) {
+      if (!isUpdate) {
         reset();
       }
       setOpen(false);
+    } else {
     }
   };
 
@@ -143,7 +145,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
           <Button

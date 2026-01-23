@@ -2,6 +2,7 @@ import { PaymentMethod } from '@/hooks/useFinanceData';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 
 interface PaymentMethodListProps {
   paymentMethods: PaymentMethod[];
@@ -10,15 +11,6 @@ interface PaymentMethodListProps {
   onDelete?: (pm: PaymentMethod) => void;
   onAdd?: () => void;
 }
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
 
 // Color scheme based on account type
 const getTextColor = (hexColor: string): string => {
@@ -49,12 +41,38 @@ const getInitial = (name: string): string => {
 };
 
 export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdit, onDelete, onAdd }: PaymentMethodListProps) {
+  const decimalPlaces = useDecimalPlaces();
+  
+  const formatCurrency = (value: number) => {
+    const formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+
+    if (decimalPlaces === 0) return formatted;
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return formatted;
+
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    return (
+      <>
+        {integerPart}
+        <span className="opacity-60" style={{ fontSize: '0.6em' }}>,{decimalPart}</span>
+      </>
+    );
+  };
+
   if (paymentMethods.length === 0) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-border/50 bg-muted/30 min-h-[200px]" onClick={onAdd} role={onAdd ? 'button' : undefined}>
-          <div className="text-4xl font-light text-muted-foreground/50 mb-2">+</div>
-          <p className="text-sm text-muted-foreground text-center">Agrega un método de pago</p>
+        <div className="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 min-h-[200px] hover:bg-slate-100 hover:border-slate-400 transition-all cursor-pointer" onClick={onAdd} role={onAdd ? 'button' : undefined}>
+          <div className="text-4xl font-light text-slate-400 mb-2">+</div>
+          <p className="text-sm text-slate-600 text-center">Agrega un método de pago</p>
         </div>
       </div>
     );
@@ -64,7 +82,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {paymentMethods.map((pm, idx) => {
         // Strict color usage
-        const bgColor = pm.color || '#475569';
+        const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
         const accountType = getAccountType(pm.type, pm.is_savings_account || false);
 
@@ -182,7 +200,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
       <Button
         variant="outline"
         onClick={onAdd}
-        className="h-48 rounded-xl border-2 border-dashed border-border/50 bg-muted/30 hover:bg-muted/50 hover:border-border flex flex-col items-center justify-center gap-2 text-muted-foreground"
+        className="h-48 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 flex flex-col items-center justify-center gap-2 text-slate-600 transition-all"
       >
         <Plus className="h-6 w-6" />
         <span className="text-sm font-medium">Agregar método</span>
