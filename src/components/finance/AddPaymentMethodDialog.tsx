@@ -82,23 +82,25 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
     if (!result.error && result.data) {
       onSuccess?.(result.data);
+      // Reset form
+      setName('');
+      setType('debit');
+      setBalance('');
+      setCreditLimit('');
+      setSavingsGoal('');
+      setEstimatedYield('');
+      setClosingDate('');
+      setColor('#4f46e5');
     }
-
-    // Always reset form and close dialog
-    setName('');
-    setType('debit');
-    setBalance('');
-    setCreditLimit('');
-    setSavingsGoal('');
-    setEstimatedYield('');
-    setClosingDate('');
-    setColor('#4f46e5');
     setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+      <DialogContent 
+        className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-lg">Nuevo método de pago</DialogTitle>
           <DialogDescription className="sr-only">Crea un método de pago para registrar movimientos y saldos.</DialogDescription>

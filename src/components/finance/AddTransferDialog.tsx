@@ -95,7 +95,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={setOpen} modal={false}>
             <DialogTrigger asChild>
                 <Button
                     variant="outline"
@@ -107,7 +107,10 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                     <span className="hidden sm:inline">Transferencia</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent 
+              className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+              onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>Mover dinero entre cuentas</DialogTitle>
                     <DialogDescription className="sr-only">Transfiere saldo entre tus cuentas de forma interna.</DialogDescription>

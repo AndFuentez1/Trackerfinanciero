@@ -10,7 +10,7 @@ export function useInactivityLogout(timeoutMinutes: number = 30) {
         }
 
         timerRef.current = setTimeout(async () => {
-            console.log('Inactivity timeout reached, signing out...');
+
             await supabase.auth.signOut();
             window.location.reload(); // Ensure everything is cleared
         }, timeoutMinutes * 60 * 1000);

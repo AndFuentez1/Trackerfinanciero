@@ -37,23 +37,26 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
 
     setIsSubmitting(false);
     if (!error) {
-      setOpen(false);
       setName('');
       setBalance('');
       setSavingsGoal('');
       setEstimatedYield('');
+      setOpen(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nueva cuenta</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Nueva cuenta de ahorro</DialogTitle>
           <DialogDescription className="sr-only">Crea una cuenta de ahorro para registrar depósitos y retiros.</DialogDescription>

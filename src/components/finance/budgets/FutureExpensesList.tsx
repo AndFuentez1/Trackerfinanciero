@@ -133,7 +133,6 @@ export function FutureExpensesList() {
             setSelectedPaymentMethod('');
 
         } catch (error) {
-            console.error(error);
             toast({ title: 'Error', description: 'Ocurrió un error al procesar el pago.', variant: 'destructive' });
         }
     };
@@ -154,7 +153,6 @@ export function FutureExpensesList() {
             setExpenseToDelete(null);
             fetchExpenses(); // Refresh list immediately
         } catch (error) {
-            console.error(error);
             toast({ title: 'Error', description: 'No se pudo eliminar el gasto.', variant: 'destructive' });
         }
     };
@@ -311,8 +309,11 @@ export function FutureExpensesList() {
             </div>
 
             {/* Delete Confirmation Alert */}
-            <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-                <DialogContent className="sm:max-w-[400px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[400px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Eliminar Gasto Futuro</DialogTitle>
                         <DialogDescription className="sr-only">
@@ -333,8 +334,11 @@ export function FutureExpensesList() {
             </Dialog>
 
             {/* Pay Dialog */}
-            <Dialog open={isPayOpen} onOpenChange={setIsPayOpen}>
-                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={isPayOpen} onOpenChange={setIsPayOpen} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Realizar Pago</DialogTitle>
                         <DialogDescription className="sr-only">

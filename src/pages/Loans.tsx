@@ -171,7 +171,7 @@ export default function LoansPage() {
             // Or just warn. But usually it should be there if createLoan made it.
             // If createLoan failed to make it, we might want to make one now using addTransaction logic
             // But let's assume it exists for now or the user manually manages it.
-            console.warn("Could not find original transaction for disbursement. Data might be out of sync.");
+
         }
 
         setDisbursementDialog({ open: false, loan: null });
@@ -372,8 +372,11 @@ export default function LoansPage() {
 
             {/* Payment Dialog */}
             < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
-            }>
-                <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto">
+            } modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
                         <DialogDescription className="sr-only">Registra un abono o pago a este préstamo.</DialogDescription>
@@ -426,8 +429,11 @@ export default function LoansPage() {
 
 
             {/* Disbursement Dialog */}
-            <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })}>
-                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
                         <DialogDescription className="sr-only">Confirma el desembolso del préstamo y su impacto en la cuenta.</DialogDescription>
@@ -467,8 +473,11 @@ export default function LoansPage() {
             </Dialog>
 
             {/* Edit Dialog for Orphaned Loans */}
-            <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })}>
-                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
                         <DialogDescription className="sr-only">Asocia una cuenta a este préstamo para reclasificarlo.</DialogDescription>

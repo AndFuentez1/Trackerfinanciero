@@ -81,7 +81,7 @@ export function useFinanceDataLogic() {
           .eq('user_id', user.id);
 
         if (error) {
-          console.warn(`Error clearing table ${table}:`, error);
+
         }
       }
 
@@ -96,7 +96,7 @@ export function useFinanceDataLogic() {
         .eq('id', user.id);
 
       if (profileError) {
-        console.warn('Error resetting profile:', profileError);
+
       }
 
       // Clear local states
@@ -119,7 +119,7 @@ export function useFinanceDataLogic() {
 
       return { error: null };
     } catch (err) {
-      console.error('Reset error:', err);
+
       toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos.', variant: 'destructive' });
       return { error: err };
     } finally {
@@ -364,7 +364,7 @@ export function useFinanceDataLogic() {
       .maybeSingle();
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError);
+
     }
 
     if (profile?.currency) {
@@ -503,7 +503,7 @@ export function useFinanceDataLogic() {
       .order('date', { ascending: true });
 
     if (error || !data) {
-      console.error('Error calculating balance:', error);
+
       return 0;
     }
 
@@ -639,7 +639,7 @@ export function useFinanceDataLogic() {
             .single();
 
           if (catError) {
-            console.error('Error ensuring category persistence:', catError);
+
           } else if (catData) {
             resolvedCategoryId = catData.id;
           }
@@ -720,7 +720,7 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-      console.error('Add transaction error:', error);
+
       toast({
         title: 'Error al crear transacción',
         description: error.message || 'No se pudo agregar la transacción. Por favor, intenta de nuevo.',
@@ -1208,7 +1208,7 @@ export function useFinanceDataLogic() {
     const { data, error } = result;
 
     if (error) {
-      console.error('Error actualizando perfil:', error.message);
+
       toast({ title: 'Error', description: `No se pudo actualizar el perfil: ${error.message}`, variant: 'destructive' });
       return { error };
     }
@@ -1231,7 +1231,7 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error setting onboarding decision:', error.message);
+
       toast({ title: 'Error', description: 'No se pudo guardar tu decisión', variant: 'destructive' });
       return { error };
     }
@@ -1261,7 +1261,7 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error confirming import:', error.message);
+
       toast({ title: 'Error', description: 'No se pudo confirmar la importación', variant: 'destructive' });
       return { error };
     }
@@ -1291,7 +1291,7 @@ export function useFinanceDataLogic() {
         .from('profiles')
         .update({ has_pending_import: true })
         .eq('id', user.id)
-        .catch(err => console.error('Error marking pending import:', err));
+        .catch(err => {});
     }
   };
 
@@ -1445,7 +1445,7 @@ export function useFinanceDataLogic() {
 
   const convertCurrency = async (rate: number, newCurrency: string, dryRun = false) => {
     if (!user?.id) {
-      console.error('convertCurrency aborted: no authenticated user');
+
       return { error: 'No autenticado' };
     }
 
@@ -1519,7 +1519,7 @@ export function useFinanceDataLogic() {
       // The realtime subscription will handle refreshing if needed
       return { error: null };
     } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
-      console.error('convertCurrency error', err);
+
       toast({ title: 'Error', description: 'No se pudo aplicar la conversión', variant: 'destructive' });
       return { error: err };
     }
@@ -1592,7 +1592,7 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-      console.error('Upsert budget error:', error);
+
       toast({
         title: 'Error al manejar presupuesto',
         description: error.message || 'No se pudo guardar el presupuesto.',
@@ -1815,7 +1815,7 @@ export function useFinanceDataLogic() {
           }
         }
 
-        console.error('Error creating category:', error);
+
         toast({
           title: 'Error',
           description: error?.message || 'No se pudo crear la categoría. Por favor, intenta de nuevo.',
@@ -1840,7 +1840,7 @@ export function useFinanceDataLogic() {
       toast({ title: 'Éxito', description: 'Categoría creada' });
       return { error: null, data: newCategory };
     } catch (err) {
-      console.error('Unexpected error in addCategory:', err);
+
       toast({
         title: 'Error inesperado',
         description: 'Ocurrió un error al crear la categoría',

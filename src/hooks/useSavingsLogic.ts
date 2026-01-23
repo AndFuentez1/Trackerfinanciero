@@ -196,7 +196,7 @@ export function useSavingsDataLogic() {
       .single();
 
     if (insertError) {
-      console.error('Error inserting transaction:', insertError);
+
       toast({ title: 'Error', description: 'No se pudo agregar la transacción', variant: 'destructive' });
       return { error: insertError };
     }

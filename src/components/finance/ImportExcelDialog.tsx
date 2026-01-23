@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { parse, isValid, format as formatDateFns } from 'date-fns';
 
@@ -43,6 +43,20 @@ interface ParsedRow {
   isValid: boolean;
   error?: string;
   inferredType?: TransactionType;
+}
+
+interface ColumnMapping {
+  date: number | null;
+  description: number | null;
+  category: number | null;
+  amount: number | null;
+  paymentMethod: number | null;
+}
+
+interface ColumnPreview {
+  index: number;
+  header: string;
+  samples: string[];
 }
 
 // Map keywords to standardized database category names (defaults)
@@ -201,58 +215,235 @@ export function ImportExcelDialog({
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState('');
+  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>('');
+  const [workbookData, setWorkbookData] = useState<XLSX.WorkBook | null>(null);
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
+    date: null,
+    description: null,
+    category: null,
+    amount: null,
+    paymentMethod: null,
+  });
+  const [columnPreviews, setColumnPreviews] = useState<ColumnPreview[]>([]);
+  const [hasHeader, setHasHeader] = useState(true);
+  const [showMappingStep, setShowMappingStep] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Función auxiliar para seleccionar la mejor hoja automáticamente
+  const findBestSheet = (workbook: XLSX.WorkBook): string => {
+    const sheetNames = workbook.SheetNames;
+    
+    if (sheetNames.length === 1) {
+      return sheetNames[0];
+    }
+
+    // Palabras clave que indican una hoja de transacciones
+    const keywords = ['transaccion', 'movimiento', 'finanza', 'gasto', 'ingreso', 'datos', 'principal'];
+    
+    for (const keyword of keywords) {
+      const match = sheetNames.find(name => 
+        name.toLowerCase().includes(keyword)
+      );
+      if (match) return match;
+    }
+
+    // Buscar la hoja con más datos
+    let maxRows = 0;
+    let bestSheet = sheetNames[0];
+
+    for (const sheetName of sheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+      if (data.length > maxRows) {
+        maxRows = data.length;
+        bestSheet = sheetName;
+      }
+    }
+
+    return bestSheet;
+  };
+
+  // Función para detectar automáticamente el mapeo de columnas
+  const autoDetectMapping = (headers: unknown[]): ColumnMapping => {
+    const mapping: ColumnMapping = {
+      date: null,
+      description: null,
+      category: null,
+      amount: null,
+      paymentMethod: null,
+    };
+
+    headers.forEach((header, index) => {
+      const headerStr = String(header || '').toLowerCase().trim();
+      
+      if (headerStr.includes('fecha') || headerStr.includes('date')) {
+        mapping.date = index;
+      } else if (headerStr.includes('descripci') || headerStr.includes('description') || headerStr.includes('concepto')) {
+        mapping.description = index;
+      } else if (headerStr.includes('categor') || headerStr.includes('category') || headerStr.includes('tipo')) {
+        mapping.category = index;
+      } else if (headerStr.includes('valor') || headerStr.includes('monto') || headerStr.includes('amount') || headerStr.includes('precio') || headerStr.includes('importe')) {
+        mapping.amount = index;
+      } else if (headerStr.includes('metodo') || headerStr.includes('method') || headerStr.includes('pago') || headerStr.includes('payment')) {
+        mapping.paymentMethod = index;
+      }
+    });
+
+    return mapping;
+  };
+
+  // Función para procesar una hoja específica
+  const processSheet = (workbook: XLSX.WorkBook, sheetName: string, mapping?: ColumnMapping) => {
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+
+    if (jsonData.length === 0) {
+      setParsedRows([]);
+      return;
+    }
+
+    // Si no hay mapeo, mostrar paso de mapeo
+    if (!mapping) {
+      const firstRow = jsonData[0] as unknown[];
+      const previews: ColumnPreview[] = firstRow.map((header, index) => ({
+        index,
+        header: String(header || `Columna ${index + 1}`),
+        samples: jsonData.slice(1, 4).map(row => String((row as unknown[])[index] || '')).filter(s => s),
+      }));
+      
+      setColumnPreviews(previews);
+      
+      // Detectar automáticamente
+      const detectedMapping = autoDetectMapping(firstRow);
+      setColumnMapping(detectedMapping);
+      
+      setShowMappingStep(true);
+      return;
+    }
+
+    // Procesar con el mapeo proporcionado
+    const startRow = hasHeader ? 1 : 0;
+    const rows = jsonData.slice(startRow).filter(row => Array.isArray(row) && row.length > 0) as unknown[][];
+
+    const MAX_AMOUNT = 9999999999.99; // Límite de la base de datos (10^10 - 0.01)
+
+    const parsed: ParsedRow[] = rows.map((row: unknown[]) => {
+      const rawDate = mapping.date !== null ? row[mapping.date] : undefined;
+      const date = parseDate(rawDate as any);
+      const description = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
+      const category = mapping.category !== null ? String(row[mapping.category] || '').trim() : '';
+      const rawValue = mapping.amount !== null ? String(row[mapping.amount] || '0').trim() : '0';
+
+      const cleanValue = rawValue
+        .replace(/\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.');
+
+      const amount = parseFloat(cleanValue);
+      const absAmount = Math.abs(amount);
+      const paymentMethod = mapping.paymentMethod !== null && row[mapping.paymentMethod] 
+        ? String(row[mapping.paymentMethod]).trim() 
+        : undefined;
+
+      const errors: string[] = [];
+      const warnings: string[] = [];
+      
+      if (!date) errors.push('Fecha inválida');
+      if (!description) errors.push('Sin descripción');
+      if (isNaN(amount) || amount === 0) errors.push('Monto inválido');
+      
+      // Solo advertir sobre montos excesivos, no rechazar
+      if (absAmount > MAX_AMOUNT) {
+        warnings.push(`Monto excesivo (${absAmount.toLocaleString()}) - Se truncará a ${MAX_AMOUNT.toLocaleString()} para revisión`);
+      }
+
+      return {
+        date: date || '',
+        description,
+        category,
+        amount: isNaN(amount) ? 0 : absAmount,
+        paymentMethod,
+        isValid: errors.length === 0,
+        error: errors.length > 0 ? errors.join(', ') : warnings.length > 0 ? warnings.join(', ') : undefined,
+        inferredType: undefined,
+      };
+    });
+
+    setParsedRows(parsed);
+    setShowMappingStep(false);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
+    setParsedRows([]);
+    setShowMappingStep(false);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const data = new Uint8Array(event.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
-
-      const rows = jsonData.slice(1).filter(row => Array.isArray(row) && row.length > 0) as unknown[][];
-
-      const parsed: ParsedRow[] = rows.map((row: unknown[]) => {
-        const rawDate = row[0] as string | number | undefined;
-        const date = parseDate(rawDate as any);
-        const description = String(row[1] || '').trim();
-        const category = String(row[2] || '').trim();
-        const rawValue = String(row[3] || '0').trim();
-
-        const cleanValue = rawValue
-          .replace(/\$/g, '')
-          .replace(/\./g, '')
-          .replace(/,/g, '.');
-
-        const amount = parseFloat(cleanValue);
-        const paymentMethod = row[4] ? String(row[4]).trim() : undefined;
-
-        const errors: string[] = [];
-        if (!date) errors.push('Fecha inválida');
-        if (!description) errors.push('Sin descripción');
-        if (isNaN(amount) || amount === 0) errors.push('Monto inválido');
-
-        return {
-          date: date || '',
-          description,
-          category,
-          amount: isNaN(amount) ? 0 : Math.abs(amount),
-          paymentMethod,
-          isValid: errors.length === 0,
-          error: errors.length > 0 ? errors.join(', ') : undefined,
-        };
-      });
-
-      setParsedRows(parsed);
+      
+      setWorkbookData(workbook);
+      setAvailableSheets(workbook.SheetNames);
+      
+      // Seleccionar automáticamente la mejor hoja
+      const bestSheet = findBestSheet(workbook);
+      setSelectedSheet(bestSheet);
+      
+      // Iniciar proceso de mapeo de columnas
+      processSheet(workbook, bestSheet);
+      
+      // Notificar si hay múltiples hojas
+      if (workbook.SheetNames.length > 1) {
+        toast({
+          title: "Hoja seleccionada",
+          description: `Se seleccionó automáticamente "${bestSheet}". Puedes cambiarla si lo deseas.`,
+        });
+      }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  // Manejar cambio de hoja seleccionada
+  const handleSheetChange = (sheetName: string) => {
+    setSelectedSheet(sheetName);
+    setShowMappingStep(false);
+    setParsedRows([]);
+    if (workbookData) {
+      processSheet(workbookData, sheetName);
+    }
+  };
+
+  // Confirmar mapeo y procesar datos
+  const handleConfirmMapping = () => {
+    if (!workbookData || !selectedSheet) return;
+    
+    // Validar que al menos los campos requeridos estén mapeados
+    if (columnMapping.date === null || columnMapping.description === null || columnMapping.amount === null) {
+      toast({
+        title: "Mapeo incompleto",
+        description: "Debes asignar al menos las columnas: Fecha, Descripción y Monto",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    processSheet(workbookData, selectedSheet, columnMapping);
+  };
+
+  // Función auxiliar para obtener opciones de columnas disponibles
+  const getAvailableColumns = (excludeIndex?: number | null) => {
+    return columnPreviews.filter(col => {
+      // Excluir la columna si ya está asignada a otro campo
+      const isAssigned = Object.entries(columnMapping).some(
+        ([key, value]) => value === col.index && value !== excludeIndex
+      );
+      return !isAssigned;
+    });
   };
 
   const handleImport = async () => {
@@ -391,7 +582,7 @@ export function ImportExcelDialog({
               .single();
 
             if (catErr) {
-              console.error('Error creating category:', catErr);
+
               errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
               continue;
             }
@@ -424,7 +615,7 @@ export function ImportExcelDialog({
               .single();
 
             if (pmErr) {
-              console.error('Error creating payment method:', pmErr);
+
               errors.push(`Fila ${i + 1}: Error creando método de pago "${rawPM}"`);
               continue;
             }
@@ -457,7 +648,7 @@ export function ImportExcelDialog({
 
       // En modo onboarding: pasar transacciones a onImport sin insertar en BD
       if (onboarding) {
-        console.log(`Procesadas ${transactionsToImport.length} transacciones en modo onboarding`);
+
         await onImport(transactionsToImport);
         setParsedRows([]);
         setFileName('');
@@ -468,24 +659,31 @@ export function ImportExcelDialog({
       }
 
       // Batch insert con tracking de errores por fila
-      console.log(`Importando ${transactionsToImport.length} transacciones en batch...`);
+
       const batchSize = 100;
       let successCount = 0;
       let failCount = 0;
       const failedRows: { row: number; error: string }[] = [];
 
       for (let batch = 0; batch < transactionsToImport.length; batch += batchSize) {
-        const batchTransactions = transactionsToImport.slice(batch, batch + batchSize).map((t, idx) => ({
-          user_id: user.id,
-          type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
-          category: t.category,
-          category_id: t.category_id,
-          amount: t.amount,
-          description: t.description,
-          date: t.date,
-          payment_method_id: t.payment_method_id,
-          _originalIndex: batch + idx, // Track original row index
-        }));
+        const batchTransactions = transactionsToImport.slice(batch, batch + batchSize).map((t, idx) => {
+          // Truncar montos excesivos para permitir inserción
+          const MAX_AMOUNT = 9999999999.99;
+          const truncatedAmount = Math.min(t.amount, MAX_AMOUNT);
+          const needsReview = t.amount > MAX_AMOUNT;
+          
+          return {
+            user_id: user.id,
+            type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
+            category: needsReview ? 'Por Clasificar' : t.category,
+            category_id: needsReview ? null : t.category_id,
+            amount: truncatedAmount,
+            description: t.description,
+            date: t.date,
+            payment_method_id: needsReview ? null : t.payment_method_id,
+            _originalIndex: batch + idx,
+          };
+        });
 
         try {
           const { error: insError, data } = await supabase
@@ -494,12 +692,19 @@ export function ImportExcelDialog({
             .select();
 
           if (insError) {
-            console.error("Error en batch insert:", insError);
+
+            
+            // Determinar el mensaje de error específico
+            let errorMsg = insError.message || 'Error desconocido';
+            if (insError.code === '22003') {
+              errorMsg = 'Error de formato numérico';
+            }
+            
             // Registrar todas las filas del batch como fallidas
             batchTransactions.forEach(t => {
               failedRows.push({
                 row: t._originalIndex + 2, // +2 por header y base-1
-                error: insError.message || 'Error desconocido'
+                error: errorMsg
               });
             });
             failCount += batchTransactions.length;
@@ -507,12 +712,16 @@ export function ImportExcelDialog({
             successCount += (data?.length || 0);
           }
         } catch (e) {
-          console.error("Excepción en batch insert:", e);
+
+          
+          // Determinar el mensaje de error específico
+          let errorMsg = e instanceof Error ? e.message : 'Error desconocido';
+          
           // Registrar todas las filas del batch como fallidas
           batchTransactions.forEach(t => {
             failedRows.push({
               row: t._originalIndex + 2,
-              error: e instanceof Error ? e.message : 'Error desconocido'
+              error: errorMsg
             });
           });
           failCount += batchTransactions.length;
@@ -534,37 +743,35 @@ export function ImportExcelDialog({
       // Mostrar resultados con detalle de errores
       if (failCount > 0) {
         const errorSummary = failedRows
-          .slice(0, 10)
-          .map(f => `Fila ${f.row}: ${f.error}`)
+          .slice(0, 5)
+          .map(f => `• Fila ${f.row}: ${f.error}`)
           .join('\n');
         
-        const moreErrors = failedRows.length > 10 ? `\n...y ${failedRows.length - 10} errores más` : '';
+        const moreErrors = failedRows.length > 5 ? `\n• ...y ${failedRows.length - 5} filas más con errores` : '';
         
         toast({
-          title: 'Importación completada con errores',
-          description: `✓ ${successCount} exitosos | ✗ ${failCount} fallidos\n\n${errorSummary}${moreErrors}`,
+          title: `⚠️ Importación con errores`,
+          description: `Se importaron ${successCount} de ${successCount + failCount} transacciones.\n\nErrores encontrados:\n${errorSummary}${moreErrors}\n\nRevisa el archivo Excel y vuelve a intentar.`,
           variant: 'destructive',
-          duration: 10000,
+          duration: 15000,
         });
-        
-        // Mantener el diálogo abierto para que el usuario vea los errores
-        setParsedRows([]);
-        setFileName('');
       } else {
         toast({ 
-          title: 'Importación completada', 
+          title: '✅ Importación exitosa', 
           description: `Se importaron ${successCount} transacciones correctamente.` 
         });
-        setParsedRows([]);
-        setFileName('');
-        setOpen(false);
       }
+      
+      // Cerrar el diálogo siempre después de importar
+      setParsedRows([]);
+      setFileName('');
+      setOpen(false);
 
       // Limpiar localStorage
       localStorage.removeItem(importKey);
 
     } catch (err) {
-      console.error("Excepción durante la importación:", err);
+
       alert("Ocurrió un error inesperado durante la importación.");
       localStorage.removeItem(importKey);
     } finally {
@@ -577,7 +784,7 @@ export function ImportExcelDialog({
   const invalidCount = parsedRows.filter(r => !r.isValid).length;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
@@ -592,7 +799,18 @@ export function ImportExcelDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          // Prevenir cierre cuando se hace clic fuera o se cambia de aplicación
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          // Permitir cerrar con ESC
+          // Si quieres que ESC tampoco cierre, descomenta la siguiente línea:
+          // e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Importar desde Excel</DialogTitle>
           <DialogDescription>
@@ -614,8 +832,8 @@ export function ImportExcelDialog({
           <div className="space-y-2">
             <Label className="text-sm">Archivo Excel</Label>
             <div
-              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+              onClick={() => !fileName && fileInputRef.current?.click()}
             >
               <input
                 ref={fileInputRef}
@@ -628,6 +846,25 @@ export function ImportExcelDialog({
                 <div className="flex items-center justify-center gap-2">
                   <FileSpreadsheet className="h-5 w-5 text-primary" />
                   <span className="text-sm">{fileName}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFileName('');
+                      setParsedRows([]);
+                      setShowMappingStep(false);
+                      setWorkbookData(null);
+                      setAvailableSheets([]);
+                      setSelectedSheet('');
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -640,21 +877,178 @@ export function ImportExcelDialog({
             </div>
           </div>
 
-          {parsedRows.length > 0 && (
-            <>
+          {availableSheets.length > 1 && !showMappingStep && parsedRows.length > 0 && (
+            <div className="space-y-2">
+              <Label>
+                Seleccionar hoja
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({availableSheets.length} hojas disponibles)
+                </span>
+              </Label>
+              <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una hoja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSheets.map((sheetName) => (
+                    <SelectItem key={sheetName} value={sheetName}>
+                      {sheetName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                💡 Se seleccionó automáticamente la hoja con más datos relevantes
+              </p>
+            </div>
+          )}
+
+          {showMappingStep && (
+            <div className="space-y-4 p-4 border rounded-lg bg-card">
               <div className="space-y-2">
-                <Label>Método de pago (para todas las filas)</Label>
-                <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Usar columna Excel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="excel_column">Usar columna Excel</SelectItem>
-                    {paymentMethods.map(pm => (
-                      <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
+                <p className="text-xs text-muted-foreground">
+                  Asigna cada columna de tu archivo a los campos requeridos
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="hasHeader"
+                  checked={hasHeader}
+                  onChange={(e) => setHasHeader(e.target.checked)}
+                  className="rounded"
+                />
+                <Label htmlFor="hasHeader" className="text-sm cursor-pointer">
+                  La primera fila contiene encabezados
+                </Label>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Fecha <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={columnMapping.date?.toString() ?? 'none'}
+                    onValueChange={(val) => setColumnMapping({ ...columnMapping, date: val !== 'none' ? parseInt(val) : null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona columna..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {columnPreviews.map((col) => (
+                        <SelectItem key={col.index} value={col.index.toString()}>
+                          {col.header} - Ej: {col.samples[0]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Descripción <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={columnMapping.description?.toString() ?? 'none'}
+                    onValueChange={(val) => setColumnMapping({ ...columnMapping, description: val !== 'none' ? parseInt(val) : null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona columna..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {columnPreviews.map((col) => (
+                        <SelectItem key={col.index} value={col.index.toString()}>
+                          {col.header} - Ej: {col.samples[0]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Monto <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={columnMapping.amount?.toString() ?? 'none'}
+                    onValueChange={(val) => setColumnMapping({ ...columnMapping, amount: val !== 'none' ? parseInt(val) : null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona columna..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {columnPreviews.map((col) => (
+                        <SelectItem key={col.index} value={col.index.toString()}>
+                          {col.header} - Ej: {col.samples[0]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Categoría (opcional)</Label>
+                  <Select
+                    value={columnMapping.category?.toString() ?? 'none'}
+                    onValueChange={(val) => setColumnMapping({ ...columnMapping, category: val !== 'none' ? parseInt(val) : null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona columna..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguna</SelectItem>
+                      {columnPreviews.map((col) => (
+                        <SelectItem key={col.index} value={col.index.toString()}>
+                          {col.header} - Ej: {col.samples[0]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Método de pago (opcional)</Label>
+                  <Select
+                    value={columnMapping.paymentMethod?.toString() ?? 'none'}
+                    onValueChange={(val) => setColumnMapping({ ...columnMapping, paymentMethod: val !== 'none' ? parseInt(val) : null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona columna..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguna</SelectItem>
+                      {columnPreviews.map((col) => (
+                        <SelectItem key={col.index} value={col.index.toString()}>
+                          {col.header} - Ej: {col.samples[0]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button onClick={handleConfirmMapping} className="w-full">
+                Continuar con este mapeo
+              </Button>
+            </div>
+          )}
+
+          {parsedRows.length > 0 && !showMappingStep && (
+            <>
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowMappingStep(true);
+                    setParsedRows([]);
+                  }}
+                >
+                  ⚙️ Cambiar mapeo de columnas
+                </Button>
               </div>
 
               <div className="flex items-center gap-4 text-sm">
@@ -669,6 +1063,15 @@ export function ImportExcelDialog({
                   </div>
                 )}
               </div>
+
+              {invalidCount > 0 && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
+                  <p className="font-medium text-amber-900 mb-1">⚠️ Advertencias detectadas</p>
+                  <p className="text-xs text-muted-foreground">
+                    Revisa la tabla abajo. Los montos excesivos se truncarán y se marcarán con estado de atención para filtrarlas en el historial.
+                  </p>
+                </div>
+              )}
 
               <div className="max-h-48 overflow-y-auto border rounded-lg">
                 <table className="w-full text-xs">

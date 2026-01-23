@@ -58,7 +58,7 @@ export function useCreateLoan() {
                 });
 
             if (paymentError) {
-                console.error('Error creating initial payment:', paymentError);
+
             }
         }
 

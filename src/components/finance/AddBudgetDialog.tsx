@@ -93,14 +93,6 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
     const now = new Date();
     const currentMonth = monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
-    // Force IDs & Log as requested
-    console.log('Submitting Budget Data:', {
-      category_id: values.category_id,
-      category: values.category,
-      amount: values.amount,
-      month: currentMonth
-    });
-
     const budgetPayload = {
       category_id: values.category_id,
       category_name: values.category || '',
@@ -108,11 +100,11 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
       month: currentMonth,
     };
 
-    console.log('📦 OBJETO A ENVIAR (Budget):', budgetPayload);
+
 
     // Strict validation
     if (!budgetPayload.category_id || !budgetPayload.category_name || budgetPayload.amount <= 0) {
-      console.error('❌ VALIDACIÓN FALLIDA (Budget):', budgetPayload);
+
       toast({
         title: 'Error de validación',
         description: 'Debes seleccionar una categoría y el monto debe ser mayor a 0.',
@@ -151,7 +143,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
         {children || (
           <Button
@@ -204,7 +196,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
                           const cat = expenseCategories.find(c => c.id === val);
                           if (cat) {
                             setValue('category', cat.name);
-                            console.log('Category name set to:', cat.name);
+
                           }
                         }}
                         value={field.value}

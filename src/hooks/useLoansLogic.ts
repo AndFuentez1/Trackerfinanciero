@@ -65,7 +65,7 @@ export function useLoansDataLogic() {
             .eq('user_id', user.id);
 
         if (error) {
-            console.error('Error fetching loans:', error);
+
         } else if (data) {
             setLoans((data as unknown as LoanRow[]).map((l: LoanRow) => {
                 const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({

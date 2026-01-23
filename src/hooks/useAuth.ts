@@ -45,8 +45,8 @@ export function useAuth() {
     // El redirect URL DEBE SER EXACTO - sin "/" final, sin "/auth", solo el origin
     const origin = window.location.origin;
     
-    console.log('[Auth] Magic Link - Origin:', origin);
-    console.log('[Auth] Magic Link - emailRedirectTo:', origin);
+
+
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -58,7 +58,7 @@ export function useAuth() {
     });
     
     if (error) {
-      console.error('[Auth Error] signInWithOtp failed:', error);
+
     }
     
     return { error };

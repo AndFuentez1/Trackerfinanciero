@@ -107,7 +107,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       const { error } = await signInWithPassword(email, '', false);
 
       if (error) {
-        console.log('Detection error:', error.message);
+
 
         // If "Invalid login credentials" - user EXISTS and HAS a password
         if (error.message.includes('Invalid login credentials') || error.message.includes('invalid')) {
@@ -133,7 +133,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
         setPasswordStep('login');
       }
     } catch (err) {
-      console.error('Email detection error:', err);
+
       // On any exception, assume new user
       setUserExists(false);
       setUserNeedsPassword(true);

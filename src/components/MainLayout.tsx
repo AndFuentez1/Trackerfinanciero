@@ -2,7 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useInactivityLogout } from "@/hooks/useInactivityLogout";
+// import { useInactivityLogout } from "@/hooks/useInactivityLogout"; // Deshabilitado: solo cerrar sesión manual
 import { useEffect, useState } from "react";
 import { Mail, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,8 +15,8 @@ export default function MainLayout() {
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [hasCheckedPassword, setHasCheckedPassword] = useState(false);
 
-    // Auto logout after 30 minutes of inactivity
-    useInactivityLogout(30);
+    // Auto logout after 30 minutes of inactivity - DESHABILITADO
+    // useInactivityLogout(30);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -53,7 +53,7 @@ export default function MainLayout() {
                 }
                 setHasCheckedPassword(true);
             } catch (error) {
-                console.error('Error checking user password:', error);
+
                 setHasCheckedPassword(true);
             }
         };

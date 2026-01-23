@@ -50,24 +50,27 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
 
     setIsSubmitting(false);
     if (!error) {
-      setOpen(false);
       setAccountId('');
       setType('deposit');
       setAmount('');
       setDate(getTodayLocalDate());
       setDescription('');
+      setOpen(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
           <Coins className="h-4 w-4" />
           <span className="hidden sm:inline">Movimiento</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Nuevo movimiento</DialogTitle>
           <DialogDescription className="sr-only">Registra un depósito, retiro o interés en una cuenta de ahorro.</DialogDescription>

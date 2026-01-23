@@ -57,7 +57,7 @@ export function PendingInvoicesPanel() {
                 .order('arrival_date', { ascending: false })) as any;
 
             if (error) {
-                console.error('Error fetching pending invoices:', error);
+
             } else {
                 setInvoices((data as PendingInvoice[]) || []);
             }
@@ -78,7 +78,7 @@ export function PendingInvoicesPanel() {
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    console.log('Realtime Pending Invoice Update:', payload);
+
                     fetchInvoices(); // Refresh consistent state
                 }
             )
@@ -148,7 +148,7 @@ export function PendingInvoicesPanel() {
                         .single();
 
                     if (catError) {
-                        console.error('Error creating category:', catError);
+
                         toast({ title: 'Error', description: 'No se pudo crear la categoría', variant: 'destructive' });
                         return;
                     }
@@ -179,7 +179,7 @@ export function PendingInvoicesPanel() {
                 .eq('id', invoice.id);
 
             if (deleteError) {
-                console.error('Error deleting invoice:', deleteError);
+
                 toast({ title: 'Error', description: 'No se pudo eliminar la factura', variant: 'destructive' });
                 return;
             }
@@ -198,7 +198,7 @@ export function PendingInvoicesPanel() {
             refreshData();
 
         } catch (error) {
-            console.error('Error approving invoice:', error);
+
             toast({ title: 'Error', description: 'No se pudo aprobar la factura', variant: 'destructive' });
         }
     };

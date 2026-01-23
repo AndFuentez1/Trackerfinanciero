@@ -183,9 +183,13 @@ export function useFinanceDataLogic() {
     to: null,
     period: 'all'
   });
+  const [sortConfig, setSortConfig] = useState<{
+    column: 'date' | 'amount';
+    ascending: boolean;
+  }>({ column: 'date', ascending: false });
   const queryClient = useQueryClient();
 
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 50000;
 
   const resetProfileData = async () => {
     if (!user) return { error: 'No autenticado' };
@@ -209,7 +213,7 @@ export function useFinanceDataLogic() {
           .eq('user_id', user.id);
 
         if (error) {
-          console.warn(`Error clearing table ${table}:`, error);
+
         }
       }
 
@@ -225,7 +229,7 @@ export function useFinanceDataLogic() {
         .eq('id', user.id);
 
       if (profileError) {
-        console.warn('Error resetting profile:', profileError);
+
       }
 
       // Clear local states
@@ -249,7 +253,7 @@ export function useFinanceDataLogic() {
 
       return { error: null };
     } catch (err) {
-      console.error('Reset error:', err);
+
       toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos.', variant: 'destructive' });
       return { error: err };
     } finally {
@@ -301,7 +305,7 @@ export function useFinanceDataLogic() {
       .from('transactions')
       .select('*', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('date', { ascending: false })
+      .order(sortConfig.column, { ascending: sortConfig.ascending })
       .range(from_idx, to_idx);
 
     if (dateFilter.from) paginatedQuery = paginatedQuery.gte('date', dateFilter.from);
@@ -314,7 +318,7 @@ export function useFinanceDataLogic() {
         .from('transactions')
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
-        .order('date', { ascending: false })
+        .order(sortConfig.column, { ascending: sortConfig.ascending })
         .limit(50000); // Increased to 50000 to ensure we get all historical data for charts
       // NOTE: Intentionally NOT applying dateFilter here - charts need all years
     }
@@ -370,13 +374,18 @@ export function useFinanceDataLogic() {
     }
 
     return { data: mappedPaginated, total: paginatedRes.count || 0 };
-  }, [user, dateFilter, toast]); // Removed transactions.length dependency
+  }, [user, dateFilter, sortConfig, toast]); // Removed transactions.length dependency
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loading) return;
     setPage(prev => prev + 1);
     await fetchTransactions(true);
   }, [hasMore, loading, fetchTransactions]);
+
+  // Re-fetch when sort configuration changes to ensure ordering uses full dataset
+  useEffect(() => {
+    fetchTransactions(false);
+  }, [fetchTransactions]);
 
   const updateFilter = useCallback((period: string, from?: string | null, to?: string | null) => {
     setPage(0);
@@ -497,15 +506,15 @@ export function useFinanceDataLogic() {
       if (error) {
         // If the column doesn't exist yet (migration pending), continue gracefully
         if (error.code === '42703') {
-          console.warn('welcome_completed column missing; apply latest migration');
+
         } else {
-          console.error('Error fetching profile:', error);
+
         }
       } else {
         profile = data;
       }
     } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
+
     }
 
     if (profile?.currency) {
@@ -666,7 +675,7 @@ export function useFinanceDataLogic() {
       .order('date', { ascending: true });
 
     if (error || !data) {
-      console.error('Error calculating balance:', error);
+
       return 0;
     }
 
@@ -802,7 +811,7 @@ export function useFinanceDataLogic() {
             .single();
 
           if (catError) {
-            console.error('Error ensuring category persistence:', catError);
+
           } else if (catData) {
             resolvedCategoryId = catData.id;
           }
@@ -883,7 +892,7 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-      console.error('Add transaction error:', error);
+
       toast({
         title: 'Error al crear transacción',
         description: error.message || 'No se pudo agregar la transacción. Por favor, intenta de nuevo.',
@@ -1184,10 +1193,12 @@ export function useFinanceDataLogic() {
         ? (data.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in')
         : data.type) as TransactionType,
       category: data.category as string | null,
+      category_id: (data as any).category_id,
       amount: Number(data.amount),
       description: data.description,
       date: data.date,
       payment_method_id: data.payment_method_id,
+      created_at: data.created_at,
     };
 
     if (updatedTx.payment_method_id) {
@@ -1371,7 +1382,7 @@ export function useFinanceDataLogic() {
     const { data, error } = result;
 
     if (error) {
-      console.error('Error actualizando perfil:', error.message);
+
       toast({ title: 'Error', description: `No se pudo actualizar el perfil: ${error.message}`, variant: 'destructive' });
       return { error };
     }
@@ -1394,7 +1405,7 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error setting onboarding decision:', error.message);
+
       toast({ title: 'Error', description: 'No se pudo guardar tu decisión', variant: 'destructive' });
       return { error };
     }
@@ -1424,7 +1435,7 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error confirming import:', error.message);
+
       toast({ title: 'Error', description: 'No se pudo confirmar la importación', variant: 'destructive' });
       return { error };
     }
@@ -1454,7 +1465,7 @@ export function useFinanceDataLogic() {
         .from('profiles')
         .update({ has_pending_import: true })
         .eq('id', user.id)
-        .catch(err => console.error('Error marking pending import:', err));
+        .catch(err => {});
     }
   };
 
@@ -1608,7 +1619,7 @@ export function useFinanceDataLogic() {
 
   const convertCurrency = async (rate: number, newCurrency: string, dryRun = false) => {
     if (!user?.id) {
-      console.error('convertCurrency aborted: no authenticated user');
+
       return { error: 'No autenticado' };
     }
 
@@ -1682,7 +1693,7 @@ export function useFinanceDataLogic() {
       // The realtime subscription will handle refreshing if needed
       return { error: null };
     } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
-      console.error('convertCurrency error', err);
+
       toast({ title: 'Error', description: 'No se pudo aplicar la conversión', variant: 'destructive' });
       return { error: err };
     }
@@ -1755,7 +1766,7 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-      console.error('Upsert budget error:', error);
+
       toast({
         title: 'Error al manejar presupuesto',
         description: error.message || 'No se pudo guardar el presupuesto.',
@@ -1978,7 +1989,7 @@ export function useFinanceDataLogic() {
           }
         }
 
-        console.error('Error creating category:', error);
+
         toast({
           title: 'Error',
           description: error?.message || 'No se pudo crear la categoría. Por favor, intenta de nuevo.',
@@ -2003,7 +2014,7 @@ export function useFinanceDataLogic() {
       toast({ title: 'Éxito', description: 'Categoría creada' });
       return { error: null, data: newCategory };
     } catch (err) {
-      console.error('Unexpected error in addCategory:', err);
+
       toast({
         title: 'Error inesperado',
         description: 'Ocurrió un error al crear la categoría',
@@ -2333,6 +2344,8 @@ export function useFinanceDataLogic() {
     updateTransaction,
     orphanedTransactions,
     dateFilter,
+    sortConfig,
+    setSortConfig,
     loadMore,
     updateFilter,
     hasMore,

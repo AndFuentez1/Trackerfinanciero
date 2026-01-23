@@ -66,12 +66,12 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
         if (!result.error && result.data) {
             onSuccess?.(result.data);
             setName('');
-            setOpen(false);
         }
+        setOpen(false);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={setOpen} modal={false}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs font-medium text-primary hover:text-primary">
                     <Plus className="h-4 w-4" />

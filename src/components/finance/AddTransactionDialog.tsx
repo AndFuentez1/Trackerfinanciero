@@ -233,12 +233,12 @@ export function AddTransactionDialog({
       payment_method_id: values.payment_method_id === 'none' || !values.payment_method_id ? null : values.payment_method_id,
     };
 
-    console.log('OBJETO A ENVIAR (Transaction):', transactionData);
+
 
     // Strict validation - skip category for transfers
     if (values.type !== 'transfer_in') {
       if (!transactionData.category_id || !transactionData.category || transactionData.amount <= 0) {
-        console.error('VALIDACIÓN FALLIDA:', transactionData);
+
         toast({
           title: 'Error de validación',
           description: 'Campos obligatorios incompletos (Categoría o Monto).',
@@ -395,8 +395,11 @@ export function AddTransactionDialog({
         </Button>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={setOpen} modal={false}>
+        <DialogContent 
+          className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{transactionToEdit ? 'Corregir Transacción' : 'Nueva transacción'}</DialogTitle>
             <DialogDescription className="sr-only">

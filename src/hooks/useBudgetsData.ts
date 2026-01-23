@@ -213,7 +213,7 @@ export function useBudgetsData() {
             .single();
 
         if (error) {
-            console.error('Error saving budget:', error);
+
             toast({ title: 'Error', description: 'No se pudo guardar el presupuesto', variant: 'destructive' });
             return { error };
         }

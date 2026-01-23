@@ -225,12 +225,12 @@ export default function ConfiguracionPage() {
         } else {
             await addCategory(formData);
         }
-        setIsDialogOpen(false);
         
         // Solo verificar y redirigir si venía del onboarding
         if (wasOnboardingIncomplete) {
             checkOnboardingAndRedirect();
         }
+        setIsDialogOpen(false);
     };
 
     const checkOnboardingAndRedirect = () => {
@@ -486,8 +486,11 @@ export default function ConfiguracionPage() {
                 </section>
             </div>
 
-            <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog(prev => ({ ...prev, open }))}>
-                <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog(prev => ({ ...prev, open }))} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Pagar Tarjeta de Crédito</DialogTitle>
                         <DialogDescription className="sr-only">Transfiere fondos desde una cuenta para pagar tu tarjeta de crédito.</DialogDescription>
@@ -529,8 +532,11 @@ export default function ConfiguracionPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={conversionModalOpen} onOpenChange={setConversionModalOpen}>
-                <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={conversionModalOpen} onOpenChange={setConversionModalOpen} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Cambiar Moneda</DialogTitle>
                         <DialogDescription className="sr-only">Configura la tasa y confirma el cambio de moneda de la aplicación.</DialogDescription>
@@ -581,8 +587,11 @@ export default function ConfiguracionPage() {
             </Dialog>
 
             {/* Preview Modal: show simple table of old/new balances */}
-            <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-                <DialogContent className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Vista previa: cambios por conversión</DialogTitle>
                         <DialogDescription className="sr-only">Revisa la vista previa de saldos antes de aplicar la conversión de moneda.</DialogDescription>
@@ -643,8 +652,11 @@ export default function ConfiguracionPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={false}>
+                <DialogContent 
+                  className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
                         <DialogDescription className="sr-only">Gestiona las categorías para organizar tus transacciones.</DialogDescription>
