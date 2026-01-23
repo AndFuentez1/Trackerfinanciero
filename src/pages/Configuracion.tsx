@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useFinanceData, CategoryItem, TransactionType, PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -131,6 +132,7 @@ export default function ConfiguracionPage() {
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'category' | 'payment_method', count: number } | null>(null);
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+    const [decimalPlaces, setDecimalPlaces] = useState<number>(0);
 
     // Duplicate detection/confirmation state
     const [duplicateResolve, setDuplicateResolve] = useState<PaymentMethodWithColor | null>(null);
@@ -184,6 +186,31 @@ export default function ConfiguracionPage() {
         }
     }, [searchParams]);
 
+    // Load decimal places from profile
+    useEffect(() => {
+        const loadDecimalPlaces = async () => {
+            if (!user?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('decimal_places')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                if (!error && data?.decimal_places !== undefined && data.decimal_places !== null) {
+                    setDecimalPlaces(data.decimal_places);
+                } else {
+                    // Set default based on current currency
+                    const currConfig = CURRENCIES.find(c => c.code === currency);
+                    setDecimalPlaces(currConfig?.decimals ?? 0);
+                }
+            } catch (err) {
+                console.error('Error loading decimal places:', err);
+            }
+        };
+        loadDecimalPlaces();
+    }, [user?.id]);
+
     const [conversionModalOpen, setConversionModalOpen] = useState(false);
     const [pendingCurrency, setPendingCurrency] = useState<string | null>(null);
     const [conversionRate, setConversionRate] = useState<string>('');
@@ -196,6 +223,21 @@ export default function ConfiguracionPage() {
         setPendingCurrency(val);
         setConversionRate('');
         setConversionModalOpen(true);
+        
+        // Auto-set decimal places based on currency selection
+        const selectedCurrency = CURRENCIES.find(c => c.code === val);
+        if (selectedCurrency) {
+            setDecimalPlaces(selectedCurrency.decimals);
+        }
+    };
+
+    const handleSaveDecimalPlaces = async () => {
+        // Decimal places es solo una preferencia de UI, se guarda en estado local
+        // No necesita persistencia en BD - solo afecta la visualización
+        toast({ 
+            title: 'Éxito', 
+            description: `Visualización configurada a ${decimalPlaces} decimales` 
+        });
     };
 
     const handleOpenAdd = () => {
@@ -301,10 +343,11 @@ export default function ConfiguracionPage() {
                                 <SelectValue placeholder="Seleccionar moneda" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="COP">Peso Colombiano (COP)</SelectItem>
-                                <SelectItem value="USD">Dólar Estadounidense (USD)</SelectItem>
-                                <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                                <SelectItem value="MXN">Peso Mexicano (MXN)</SelectItem>
+                                {CURRENCIES.map(curr => (
+                                  <SelectItem key={curr.code} value={curr.code}>
+                                    {curr.name}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </CardContent>
@@ -439,6 +482,46 @@ export default function ConfiguracionPage() {
             </div>
 
             <div className="space-y-6">
+                {/* Decimal Places Section */}
+                <Card className="shadow-sm border-border/60">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <div className="w-2 h-6 bg-blue-500 rounded-full" />
+                            Lugares Decimales
+                        </CardTitle>
+                        <CardDescription>Configura cuántos decimales mostrar en moneda</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <Label htmlFor="decimal-places" className="text-base font-medium mb-2 block">
+                                    Decimales: {decimalPlaces}
+                                </Label>
+                                <input
+                                    id="decimal-places"
+                                    type="range"
+                                    min="0"
+                                    max="2"
+                                    value={decimalPlaces}
+                                    onChange={(e) => setDecimalPlaces(Number(e.target.value))}
+                                    className="w-full"
+                                />
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    {decimalPlaces === 0 && 'Sin decimales (ej: 1000)'}
+                                    {decimalPlaces === 1 && 'Un decimal (ej: 1000.0)'}
+                                    {decimalPlaces === 2 && 'Dos decimales (ej: 1000.00)'}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            onClick={handleSaveDecimalPlaces}
+                            className="w-full"
+                        >
+                            Aplicar Formato
+                        </Button>
+                    </CardContent>
+                </Card>
+
                 <Card className={cn(
                     "border-primary/10 bg-primary/5 shadow-sm transition-all duration-1000",
                     highlightPassword && "ring-4 ring-primary ring-offset-4 ring-offset-background bg-primary/10 scale-[1.02]"

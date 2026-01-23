@@ -335,10 +335,44 @@ export function ImportExcelDialog({
       const category = mapping.category !== null ? String(row[mapping.category] || '').trim() : '';
       const rawValue = mapping.amount !== null ? String(row[mapping.amount] || '0').trim() : '0';
 
-      const cleanValue = rawValue
-        .replace(/\$/g, '')
-        .replace(/\./g, '')
-        .replace(/,/g, '.');
+      // Parse numeric values correctly handling different locale formats
+      // Supports: 1000.50, 1.000,50, 1,000.50, etc.
+      const cleanValue = (() => {
+        const val = rawValue.replace(/\$/g, '').trim();
+        
+        // Determine which is the decimal separator
+        // If there's both comma and period, the last one is the decimal separator
+        const lastCommaIdx = val.lastIndexOf(',');
+        const lastPeriodIdx = val.lastIndexOf('.');
+        
+        if (lastCommaIdx === -1 && lastPeriodIdx === -1) {
+          // No separators, it's an integer
+          return val;
+        } else if (lastCommaIdx > lastPeriodIdx) {
+          // Comma is the decimal separator (European format: 1.000,50)
+          return val.replace(/\./g, '').replace(/,/, '.');
+        } else if (lastPeriodIdx > lastCommaIdx) {
+          // Period is the decimal separator (US format: 1,000.50)
+          return val.replace(/,/g, '');
+        } else {
+          // Single separator
+          if (lastCommaIdx !== -1) {
+            // Only comma
+            const beforeComma = val.substring(0, lastCommaIdx).replace(/\./g, '');
+            const afterComma = val.substring(lastCommaIdx + 1);
+            // If after comma has more than 2 digits, it's thousands separator
+            return afterComma.length > 2 
+              ? beforeComma + afterComma 
+              : beforeComma + '.' + afterComma;
+          } else {
+            // Only period
+            const beforePeriod = val.substring(0, lastPeriodIdx).replace(/,/g, '');
+            const afterPeriod = val.substring(lastPeriodIdx + 1);
+            // If after period has exactly 2-3 digits and nothing after, it could be decimal
+            return afterPeriod.length <= 3 ? beforePeriod + '.' + afterPeriod : beforePeriod + afterPeriod;
+          }
+        }
+      })();
 
       const amount = parseFloat(cleanValue);
       const absAmount = Math.abs(amount);

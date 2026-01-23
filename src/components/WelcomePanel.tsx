@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CURRENCIES } from '@/hooks/currencyConstants';
 
 interface WelcomePanelProps {
   onConfigureCurrency: (currencyCode: string) => Promise<void>;
@@ -19,17 +20,6 @@ interface WelcomePanelProps {
   hasCategories: boolean;
   currentCurrency?: string;
 }
-
-const CURRENCIES = [
-  { code: 'USD', name: 'Dólar estadounidense ($)', symbol: '$' },
-  { code: 'EUR', name: 'Euro (€)', symbol: '€' },
-  { code: 'COP', name: 'Peso colombiano (COP)', symbol: '$' },
-  { code: 'MXN', name: 'Peso mexicano (Mex$)', symbol: '$' },
-  { code: 'ARS', name: 'Peso argentino (ARS)', symbol: '$' },
-  { code: 'BRL', name: 'Real brasileño (R$)', symbol: 'R$' },
-  { code: 'CLP', name: 'Peso chileno (CLP)', symbol: '$' },
-  { code: 'PEN', name: 'Sol peruano (S/)', symbol: 'S/' },
-];
 
 export function WelcomePanel({
   onConfigureCurrency,
@@ -60,6 +50,9 @@ export function WelcomePanel({
               {CURRENCIES.map(curr => (
                 <SelectItem key={curr.code} value={curr.code}>
                   {curr.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
                 </SelectItem>
               ))}
             </SelectContent>

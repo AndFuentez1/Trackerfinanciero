@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from './currencyConstants';
 import type { Database } from '@/integrations/supabase/types';
 
 export type TransactionType = 'income' | 'expense' | 'saving' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan';
@@ -155,6 +156,7 @@ export function useFinanceDataLogic() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [currency, setCurrency] = useState('COP');
+  const [decimalPlaces, setDecimalPlaces] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [page, setPage] = useState(0);
@@ -523,6 +525,12 @@ export function useFinanceDataLogic() {
       // Usuario nuevo sin moneda configurada
       setCurrency('');
     }
+    
+    // Decimal places es solo una preferencia de visualización, no afecta datos en BD
+    // Se auto-configura según moneda pero puede cambiar sin persistir
+    const currConfig = CURRENCIES.find(c => c.code === profile?.currency);
+    setDecimalPlaces(currConfig?.decimals ?? 0);
+    
     // Set onboarding decision state
     setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
     const hasPending = profile?.has_pending_import || false;
@@ -2315,6 +2323,7 @@ export function useFinanceDataLogic() {
     insights,
     yieldStatistics,
     currency,
+    decimalPlaces,
     onboardingDecision,
     hasPendingImport,
     welcomeCompleted,
