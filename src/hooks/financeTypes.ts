@@ -1,6 +1,6 @@
 import type { Database } from '@/integrations/supabase/types';
 
-export type TransactionType = 'income' | 'expense' | 'saving' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan';
+export type TransactionType = 'income' | 'expense' | 'saving' | 'savings' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan' | 'other';
 export type PaymentMethodType = 'cash' | 'debit' | 'credit' | 'savings' | 'investment';
 
 export interface CategoryItem {

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { PendingInvoicesPanel } from '@/components/finance/PendingInvoicesPanel';
 import { ImportStatusBar } from '@/components/finance/ImportStatusBar';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
 import { cn } from '@/lib/utils';
@@ -74,7 +75,7 @@ export default function HistoryPage() {
 
     // Computed values (not hooks, safe to compute here)
     const isLoading = authLoading || dataLoading;
-    
+
     // Get current date values FIRST
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
@@ -94,7 +95,7 @@ export default function HistoryPage() {
         setYears.add(currentYear);
         return Array.from(setYears).sort((a, b) => b - a).map(String);
     }, [allTransactions, currentYear]);
-    
+
     const monthOptions = useMemo(() => {
         const baseMonths = [
             { value: 'all', label: 'Todo el año' },
@@ -111,12 +112,12 @@ export default function HistoryPage() {
             { value: '11', label: 'Noviembre' },
             { value: '12', label: 'Diciembre' },
         ];
-        
+
         // If year filter is "all", show all 12 months
         if (yearFilter === 'all') {
             return baseMonths;
         }
-        
+
         // If current year is selected, limit to current month
         if (yearFilter === currentYear.toString()) {
             return baseMonths.slice(0, currentMonth + 1);
@@ -213,8 +214,10 @@ export default function HistoryPage() {
                 categoryId = existingCategory.id;
             } else if (draft.category_name) {
                 // Create category
-                const newCategory = await addCategory({ name: draft.category_name, type: draft.type });
-                categoryId = newCategory.id;
+                const result = await addCategory({ name: draft.category_name, type: draft.type });
+                if ('data' in result && result.data && 'id' in result.data) {
+                    categoryId = result.data.id;
+                }
             }
 
             // Find or create payment method
@@ -255,19 +258,16 @@ export default function HistoryPage() {
     // ============================================================================
     // CONDITIONAL RETURNS (after all hooks)
     // ============================================================================
-    if (authLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="animate-pulse text-muted-foreground">Cargando...</div>
-            </div>
-        );
+    // Loading state (High Fidelity Skeleton Reveal)
+    if (isLoading) {
+        return <SkeletonLoader tab="transactions" />;
     }
 
     if (!user) return null;
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -361,7 +361,7 @@ export default function HistoryPage() {
                                             date: tx.date || '',
                                             category_name: tx.category || '',
                                             type: tx.type || 'expense',
-                                            payment_method_name: tx.payment_method || '',
+                                            payment_method_name: (tx as any).payment_method || '',
                                         };
                                         const draft = reclassifyDrafts[tx.id] ? { ...initialDraft, ...reclassifyDrafts[tx.id] } : initialDraft;
 
@@ -466,7 +466,7 @@ export default function HistoryPage() {
                                                     <Button
                                                         variant="default"
                                                         size="sm"
-                                                        className="bg-amber-400/90 text-amber-900 font-bold hover:bg-amber-500 whitespace-nowrap h-9"
+                                                        className="bg-amber-400/90 text-amber-900 font-bold hover:bg-amber-500 whitespace-nowrap h-9 border border-primary"
                                                         onClick={() => handleReclassifySave(tx)}
                                                         disabled={!draft.category_name || !draft.type || isSaving}
                                                     >
@@ -500,8 +500,8 @@ export default function HistoryPage() {
 
                         {/* FILTROS UNIFICADOS */}
                         <div className={cn(
-                            "bg-[#F4F5F7]/30 p-4 rounded-xl border border-border/50",
-                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-[#F4F5F7]"
+                            "bg-card/30 p-4 rounded-xl border border-border/50",
+                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
                         )}>
                             <div className="flex items-center gap-2 mb-3">
                                 <BarChart3 className="h-5 w-5 text-primary" />
@@ -632,7 +632,7 @@ export default function HistoryPage() {
                                     <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
                                         <div className="flex gap-2 justify-end">
                                             <Button
-                                                variant="outline"
+                                                variant="default"
                                                 size="sm"
                                                 onClick={() => {
                                                     const now = new Date();
@@ -645,7 +645,7 @@ export default function HistoryPage() {
                                                 Esta semana
                                             </Button>
                                             <Button
-                                                variant="outline"
+                                                variant="default"
                                                 size="sm"
                                                 onClick={() => {
                                                     const now = new Date();
@@ -656,7 +656,7 @@ export default function HistoryPage() {
                                                 Este mes
                                             </Button>
                                             <Button
-                                                variant="outline"
+                                                variant="default"
                                                 size="sm"
                                                 onClick={() => {
                                                     const now = new Date();
@@ -671,7 +671,7 @@ export default function HistoryPage() {
                                         </div>
 
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="icon"
                                             className="h-10 w-10 border border-border/60"
                                             onClick={clearAllFilters}
@@ -698,7 +698,7 @@ export default function HistoryPage() {
                             searchTerm={searchTerm}
                             typeFilter={typeFilter}
                             categoryFilter={categoryFilter}
-                            statusFilter={statusFilter}
+                            statusFilter={statusFilter as "attention" | "ok" | undefined}
                             paymentMethodFilter={paymentMethodFilter}
                             setStatusFilter={setStatusFilter}
                         />

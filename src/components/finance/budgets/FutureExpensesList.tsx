@@ -14,6 +14,10 @@ import { es } from 'date-fns/locale';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { PaymentMethod } from '@/hooks/useFinanceData';
 import { AddCategoryDialog } from '../AddCategoryDialog';
+import { useFormatCurrency } from '@/hooks/useFormatCurrency';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
+import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 
 interface FutureExpense {
     id: string;
@@ -28,6 +32,58 @@ export function FutureExpensesList() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { categories, paymentMethods, addTransaction, addCategory, loading: dataLoading } = useFinanceData();
+    const { currency } = useFormatCurrency();
+    const { currency: ctxCurrency } = useFinance();
+    const decimalPlaces = useDecimalPlaces();
+
+    const formatCurrency80 = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = decimalPlaces;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
+
+    const getStepValue = () => {
+        if (decimalPlaces === 0) return "1";
+        return `0.${'0'.repeat(decimalPlaces - 1)}1`;
+    };
+
+    const currSymbol = CURRENCIES.find(c => c.code === (ctxCurrency || currency || 'COP'))?.symbol || '$';
+    const placeholderAmount = decimalPlaces === 0 ? '0' : `0,${'0'.repeat(decimalPlaces)}`;
+    const dynamicPadding = currSymbol.length > 1 ? 'pl-10' : 'pl-8';
+
     const [expenses, setExpenses] = useState<FutureExpense[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -175,8 +231,8 @@ export function FutureExpensesList() {
                     <DialogTrigger asChild>
                         <Button 
                             size="sm" 
-                            variant="outline" 
-                            className="border-dashed"
+                            variant="default" 
+                            className="border-dashed min-w-[160px] sm:min-w-[190px]"
                             onClick={(e) => {
                                 if (dataLoading) {
                                     e.preventDefault();
@@ -192,7 +248,8 @@ export function FutureExpensesList() {
                                 }
                             }}
                         >
-                            <Plus className="h-4 w-4 mr-1" /> Agregar
+                            <Plus className="h-4 w-4 mr-1 sm:hidden" />
+                            <span className="hidden sm:inline">Nuevo gasto futuro</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
@@ -214,12 +271,19 @@ export function FutureExpensesList() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Monto</label>
-                                    <Input
-                                        type="number"
-                                        value={newExpense.amount}
-                                        onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
-                                        placeholder="0.00"
-                                    />
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            {currSymbol}
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            value={newExpense.amount}
+                                            onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
+                                            placeholder={placeholderAmount}
+                                            step={getStepValue()}
+                                            className={dynamicPadding}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -280,7 +344,7 @@ export function FutureExpensesList() {
                                         </p>
                                     </div>
                                     <span className="font-bold text-indigo-600">
-                                        ${expense.amount.toLocaleString('es-CO')}
+                                        {formatCurrency80(expense.amount)}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between mt-4">
@@ -288,7 +352,7 @@ export function FutureExpensesList() {
                                         {category?.name || 'Sin categoría'}
                                     </span>
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                                        <Button size="sm" variant="destructive" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
                                             setExpenseToDelete(expense);
                                             setIsDeleteAlertOpen(true);
                                         }}>
@@ -327,7 +391,7 @@ export function FutureExpensesList() {
                         </p>
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setIsDeleteAlertOpen(false)}>Cancelar</Button>
+                        <Button variant="default" onClick={() => setIsDeleteAlertOpen(false)}>Cancelar</Button>
                         <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
                     </div>
                 </DialogContent>
@@ -347,7 +411,7 @@ export function FutureExpensesList() {
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <p className="text-sm text-muted-foreground">
-                            Estás a punto de pagar <strong>{selectedExpense?.description}</strong> por valor de <strong>${selectedExpense?.amount.toLocaleString('es-CO')}</strong>.
+                            Estás a punto de pagar <strong>{selectedExpense?.description}</strong> por valor de <strong>{selectedExpense && formatCurrency80(selectedExpense.amount)}</strong>.
                             Selecciona la cuenta de origen:
                         </p>
 
@@ -363,7 +427,7 @@ export function FutureExpensesList() {
                                             <div className="flex items-center gap-2">
                                                 <Wallet className="w-4 h-4 text-muted-foreground" />
                                                 <span>{pm.name}</span>
-                                                <span className="text-xs text-muted-foreground">(${Number(pm.balance).toLocaleString()})</span>
+                                                <span className="text-xs text-muted-foreground">({formatCurrency80(Number(pm.balance))})</span>
                                             </div>
                                         </SelectItem>
                                     ))}

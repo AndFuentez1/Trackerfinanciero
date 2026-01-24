@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, PaymentMethod, CategoryItem } from '@/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFormatCurrency } from '@/hooks/useFormatCurrency';
 import {
   Trash2,
   CreditCard,
@@ -14,7 +15,7 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getCurrencySymbol } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,11 +39,13 @@ interface TransactionListProps {
   highlightOrphaned?: boolean;
   statusFilter?: 'attention' | 'ok';
   setStatusFilter: (value: 'attention' | 'ok' | undefined) => void;
+  currency?: string;
 }
 
 const typeLabels = {
   income: 'Ingreso',
   expense: 'Gasto',
+  saving: 'Ahorro',
   savings: 'Ahorro',
   investment: 'Inversión',
   loan: 'Préstamo',
@@ -54,6 +57,7 @@ const typeLabels = {
 const typeStyles = {
   income: 'text-emerald-600 bg-emerald-50',
   expense: 'text-rose-600 bg-rose-50',
+  saving: 'text-blue-600 bg-blue-50',
   savings: 'text-blue-600 bg-blue-50',
   investment: 'text-purple-600 bg-purple-50',
   loan: 'text-amber-600 bg-amber-50',
@@ -72,10 +76,12 @@ export function TransactionList({
   showOnlyRecent = false,
   highlightOrphaned = false,
   statusFilter,
-  setStatusFilter
+  setStatusFilter,
+  currency = 'COP',
 }: TransactionListProps) {
   const decimalPlaces = useDecimalPlaces();
-  
+  const { formatCurrencySmall } = useFormatCurrency();
+
   const [sortConfig, setSortConfig] = useState<{
     key: 'date' | 'category' | 'amount' | 'status' | null;
     direction: 'asc' | 'desc';
@@ -152,15 +158,6 @@ export function TransactionList({
     return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces,
-    }).format(value);
-  };
-
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '';
@@ -179,7 +176,7 @@ export function TransactionList({
 
   const getCategoryOptionsForType = (type: Transaction['type']) => {
     if (type === 'transfer_in' || type === 'transfer_out') {
-      return categories.filter(c => c.type === 'transfer' || c.type === 'transfer_out' || c.type === 'transfer_in');
+      return categories.filter(c => (c.type as string) === 'transfer' || c.type === 'transfer_out' || c.type === 'transfer_in');
     }
     return categories.filter(c => c.type === type);
   };
@@ -251,7 +248,14 @@ export function TransactionList({
 
   if (displayTransactions.length === 0) {
     return (
-      <div className="bg-white rounded-[2rem] border border-gray-100 p-12 flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
+      <div
+        className="rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center animate-in fade-in duration-500 transition-all shadow-sm"
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          border: '1px dashed var(--border)',
+          color: 'var(--text-muted)'
+        }}
+      >
         <div className="p-4 rounded-full bg-muted/50 mb-4">
           <Search className="h-8 w-8 text-muted-foreground/50" />
         </div>
@@ -266,13 +270,13 @@ export function TransactionList({
   return (
     <>
       {/* Desktop Table View */}
-      <div className="hidden md:block bg-gradient-to-b from-[#F4F5F7] to-[#F4F5F7]/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
-        <div className="w-full overflow-hidden">
-          <table className="w-full table-auto">
-            <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
+      <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden shadow-md transition-all duration-300">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[600px] table-auto">
+            <thead className="bg-muted/30">
               <tr>
                 <th
-                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-arquitectura-2/30"
+                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border"
                   onClick={() => handleSort('date')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -281,14 +285,14 @@ export function TransactionList({
                     <span>{getSortIcon('date')}</span>
                   </div>
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border" style={{ fontStyle: 'normal' }}>
                   Descripción
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
                   Tipo
                 </th>
                 <th
-                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-arquitectura-2/30"
+                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-border"
                   onClick={() => handleSort('category')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -297,11 +301,11 @@ export function TransactionList({
                     <span>{getSortIcon('category')}</span>
                   </div>
                 </th>
-                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
                   Método de Pago
                 </th>
                 <th
-                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-arquitectura-2/30"
+                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border"
                   onClick={() => handleSort('amount')}
                   style={{ fontStyle: 'normal' }}
                 >
@@ -342,7 +346,7 @@ export function TransactionList({
                   <tr
                     key={transaction.id}
                     className={cn(
-                      'border-b border-arquitectura-2/30 transition-all duration-200 group hover:bg-muted/30',
+                      'border-b border-border transition-all duration-200 group hover:bg-muted/30',
                       isEditing && 'bg-primary/5 hover:bg-primary/10',
                       isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
                       highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
@@ -351,7 +355,7 @@ export function TransactionList({
                     style={{ animationDelay: `${index * 20}ms` }}
                   >
                     {/* Date */}
-                    <td className="py-3 px-4 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                    <td className="py-3 px-4 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <input
                           type="date"
@@ -367,7 +371,7 @@ export function TransactionList({
                     </td>
 
                     {/* Description */}
-                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           value={draft?.description ?? transaction.description}
@@ -390,7 +394,7 @@ export function TransactionList({
                     </td>
 
                     {/* Type */}
-                    <td className="py-2.5 px-2 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       <span className={cn(
                         'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         typeStyles[transaction.type]
@@ -400,7 +404,7 @@ export function TransactionList({
                     </td>
 
                     {/* Category */}
-                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <div className="mx-auto max-w-[120px]">
                           <Select
@@ -456,7 +460,7 @@ export function TransactionList({
                     </td>
 
                     {/* Payment Method */}
-                    <td className="py-2.5 px-3 align-middle text-center border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-3 align-middle text-center border-r border-border min-w-[140px]">
                       {isEditing ? (
                         <div className="mx-auto max-w-[160px]">
                           <Select
@@ -476,7 +480,22 @@ export function TransactionList({
                       ) : pmName ? (
                         <div className="flex items-center justify-center gap-1.5 overflow-hidden">
                           <CreditCard className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate" style={{ fontStyle: 'normal' }}>{pmName}</span>
+                          <span className="text-xs text-muted-foreground truncate text-center font-bold" style={{ fontStyle: 'normal', minWidth: '100px', display: 'inline-block' }}>
+                            {(() => {
+                              const pm = paymentMethods.find(p => p.id === transaction.payment_method_id);
+                              let suffix = '';
+                              if (pm) {
+                                switch (pm.type) {
+                                  case 'debit': suffix = ' (D)'; break;
+                                  case 'credit': suffix = ' (C)'; break;
+                                  case 'cash': suffix = ' (E)'; break;
+                                  case 'savings': suffix = ' (A)'; break;
+                                  default: suffix = '';
+                                }
+                              }
+                              return pmName + suffix;
+                            })()}
+                          </span>
                         </div>
                       ) : (
                         onUpdate ? (
@@ -496,7 +515,7 @@ export function TransactionList({
                             </Select>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-bold text-slate-400 uppercase" style={{ fontStyle: 'normal' }}>Sin desembolso</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase text-center" style={{ fontStyle: 'normal', minWidth: '100px', display: 'inline-block' }}>Sin desembolso</span>
                         )
                       )}
                     </td>
@@ -511,9 +530,44 @@ export function TransactionList({
                           onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) } : d)}
                         />
                       ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums whitespace-nowrap">
-                          {isNegativeType(transaction.type) ? '-' : '+'}
-                          {formatCurrency(transaction.amount)}
+                        <span className="text-sm font-bold tabular-nums whitespace-nowrap flex items-center justify-center gap-1 text-foreground">
+                          <span className={isNegativeType(transaction.type) ? 'text-red-500' : 'text-green-600'} style={{ fontWeight: 700 }}>
+                            {isNegativeType(transaction.type) ? '-' : '+'}
+                          </span>
+                          {(() => {
+                            // Usar el símbolo correcto según currency (import directo)
+                            const currCode = typeof currency === 'string' ? currency : 'COP';
+                            const symbol = getCurrencySymbol(currCode);
+                            const decimals = decimalPlaces;
+                            let formatted = new Intl.NumberFormat('es-CO', {
+                              style: 'currency',
+                              currency: currCode,
+                              minimumFractionDigits: decimals,
+                              maximumFractionDigits: decimals,
+                              currencyDisplay: 'code',
+                            }).format(transaction.amount).replace(currCode, symbol);
+                            if (decimals === 0) {
+                              return (
+                                <span className="inline-flex items-baseline gap-1">
+                                  <span style={{ fontSize: '80%' }}>{symbol}</span>
+                                  <span>{formatted.replace(symbol, '').trim()}</span>
+                                </span>
+                              );
+                            }
+                            const parts = formatted.split(',');
+                            if (parts.length === 1) return formatted;
+                            const integerPart = parts[0].replace(symbol, '').trim();
+                            const decimalPart = parts[1];
+                            return (
+                              <span className="inline-flex items-baseline gap-[2px]">
+                                <span style={{ fontSize: '80%' }}>{symbol}</span>
+                                <span>
+                                  {integerPart}
+                                  <span style={{ fontSize: '80%', opacity: 0.8 }}>,{decimalPart}</span>
+                                </span>
+                              </span>
+                            );
+                          })()}
                         </span>
                       )}
                     </td>
@@ -534,7 +588,7 @@ export function TransactionList({
                         {isEditing ? (
                           <>
                             <Button
-                              variant="ghost"
+                              variant="default"
                               size="icon"
                               className="h-8 w-8 hover:bg-primary/10 transition-colors"
                               onClick={() => saveEdit(transaction)}
@@ -543,7 +597,7 @@ export function TransactionList({
                               <Check className="h-4 w-4 text-primary" />
                             </Button>
                             <Button
-                              variant="ghost"
+                              variant="default"
                               size="icon"
                               className="h-8 w-8 hover:bg-muted/50 transition-colors"
                               onClick={cancelEdit}
@@ -554,23 +608,23 @@ export function TransactionList({
                           </>
                         ) : (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 hover:bg-primary/10 transition-colors"
+                            className="h-8 w-8 rounded-sm border-primary/80"
                             onClick={() => startEdit(transaction)}
                             title="Editar transacción"
                           >
-                            <Pencil className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                            <Pencil className="h-4 w-4 text-black" />
                           </Button>
                         )}
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          className="h-8 w-8 hover:bg-destructive/10 transition-colors"
+                          className="h-8 w-8 rounded-sm border-primary/80"
                           onClick={() => onDelete(transaction.id)}
                           title="Eliminar transacción"
                         >
-                          <Trash2 className="h-4 w-4 text-slate-400 group-hover:text-destructive transition-colors" />
+                          <Trash2 className="h-4 w-4 text-black" />
                         </Button>
                       </div>
                     </td>
@@ -624,7 +678,7 @@ export function TransactionList({
                       isNegativeType(transaction.type) ? "text-rose-600" : "text-emerald-600"
                     )}>
                       {isNegativeType(transaction.type) ? '-' : '+'}
-                      {formatCurrency(transaction.amount)}
+                      {formatCurrencySmall(transaction.amount)}
                     </span>
                   </div>
                 </div>
@@ -637,20 +691,20 @@ export function TransactionList({
 
                   <div className="flex gap-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 rounded-sm border-primary/80"
                       onClick={() => startEdit(transaction)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-4 w-4 text-black" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-8 w-8 p-0 text-destructive"
+                      className="h-8 w-8 p-0 rounded-sm border-primary/80"
                       onClick={() => onDelete(transaction.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-black" />
                     </Button>
                   </div>
                 </div>

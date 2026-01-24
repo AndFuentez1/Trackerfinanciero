@@ -1,5 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 
 interface HighlightedCardProps {
     title: string;
@@ -17,12 +19,23 @@ interface HighlightedCardProps {
 }
 
 export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }: HighlightedCardProps) {
+    const { currency, decimalPlaces } = useFinance();
+    
+    const getCurrencySymbol = (currencyCode: string): string => {
+        const curr = CURRENCIES.find(c => c.code === currencyCode);
+        return curr?.symbol || currencyCode;
+    };
+    
     const formatSmartCurrency = (value: number) => {
-        const formatted = new Intl.NumberFormat('es-CO', {
+        const symbol = getCurrencySymbol(currency || 'COP');
+        let formatted = new Intl.NumberFormat('es-CO', {
             style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: 2,
+            currency: currency || 'COP',
+            currencyDisplay: 'code',
+            minimumFractionDigits: decimalPlaces ?? 2,
         }).format(value);
+        
+        formatted = formatted.replace(currency || 'COP', symbol);
 
         const [main, cents] = formatted.split(',');
 
@@ -63,7 +76,11 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
                                     {item.label}
                                 </p>
                                 <p className={cn("text-xs font-black tracking-tight", item.color || "text-slate-900")}>
-                                    {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(item.value)}
+                                    {(() => {
+                                        const symbol = getCurrencySymbol(currency || 'COP');
+                                        const formatted = new Intl.NumberFormat('es-CO', { style: 'currency', currency: currency || 'COP', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(item.value);
+                                        return formatted.replace(currency || 'COP', symbol);
+                                    })()}
                                 </p>
                             </div>
                         ))}
@@ -76,7 +93,7 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
                     <div className="space-y-2">
                         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">
                             <span>{footer.label}</span>
-                            <span className="text-primary font-black">{footer.value.toFixed(1)}%</span>
+                            <span className="text-primary font-black">{footer.value.toFixed(decimalPlaces)}%</span>
                         </div>
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                             <div

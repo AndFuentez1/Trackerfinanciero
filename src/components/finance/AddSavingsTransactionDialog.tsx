@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getTodayLocalDate } from '@/lib/dateUtils';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +36,24 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   const [date, setDate] = useState(getTodayLocalDate());
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, decimalPlaces } = useFinance();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getCurrencyPadding = () => {
+    const symbol = getCurrencySymbol();
+    if (symbol.length > 2) return 'pl-16';
+    if (symbol.length === 2) return 'pl-12';
+    return 'pl-9';
+  };
+
+  const getPlaceholderAmount = () => {
+    const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+    return decimalPlaces > 0 ? `1000${decimals}` : '1000';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,9 +83,9 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2">
-          <Coins className="h-4 w-4" />
-          <span className="hidden sm:inline">Movimiento</span>
+        <Button size="sm" variant="default" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center">
+          <span className="hidden sm:flex flex-row items-center gap-2">Nuevo Movimiento <Coins className="h-3 w-3" /></span>
+          <span className="sm:hidden flex flex-row items-center gap-2">Nuevo Movimiento <Coins className="h-3 w-3" /></span>
         </Button>
       </DialogTrigger>
       <DialogContent 
@@ -107,16 +127,20 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Monto</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder={getPlaceholderAmount()}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+                className={getCurrencyPadding()}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Fecha</Label>

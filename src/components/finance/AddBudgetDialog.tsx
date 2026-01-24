@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useFinanceData } from '@/hooks/useFinanceData';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +40,7 @@ import {
 
 interface AddBudgetDialogProps {
   onAdd: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>;
+  onDelete?: (budgetId: string) => Promise<{ error: any }>;
   monthOverride?: string;
   editingBudget?: {
     id: string;
@@ -48,12 +51,30 @@ interface AddBudgetDialogProps {
   children?: React.ReactNode;
 }
 
-export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride }: AddBudgetDialogProps) {
+export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, monthOverride }: AddBudgetDialogProps) {
   const [open, setOpen] = useState(false);
   const { categories, addCategory, loading } = useFinanceData();
   const { budgets } = useBudgetsData();
+  const { currency, decimalPlaces } = useFinance();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getCurrencyPadding = () => {
+    const symbol = getCurrencySymbol();
+    if (symbol.length > 2) return 'pl-16';
+    if (symbol.length === 2) return 'pl-12';
+    return 'pl-9';
+  };
+
+  const getPlaceholderAmount = () => {
+    const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+    return decimalPlaces > 0 ? `100000${decimals}` : '100000';
+  };
 
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
@@ -87,7 +108,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
     categories
       .filter(c => c.type === 'expense')
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
-  [categories]);
+    [categories]);
 
   const onFormSubmit = async (values: BudgetFormValues) => {
     const now = new Date();
@@ -119,7 +140,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
 
     if (!result?.error) {
       const isUpdate = !!editingBudget;
-      
+
       toast({
         title: 'Éxito',
         description: isUpdate ? 'Presupuesto actualizado correctamente' : 'Presupuesto creado correctamente',
@@ -130,6 +151,17 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
       }
       setOpen(false);
     } else {
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editingBudget?.id || !onDelete) return;
+
+    if (confirm('¿Estás seguro de que deseas eliminar este presupuesto?')) {
+      const result = await onDelete(editingBudget.id);
+      if (!result?.error) {
+        setOpen(false);
+      }
     }
   };
 
@@ -149,7 +181,7 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
       <DialogTrigger asChild>
         {children || (
           <Button
-            className="gap-2 shadow-lg shadow-primary/20"
+            className="gap-2 shadow-lg shadow-primary/20 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
             onClick={(e) => {
@@ -167,8 +199,8 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
               }
             }}
           >
-            <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">Nuevo Presupuesto</span>
+            <span className="hidden sm:flex flex-row items-center gap-2">Nuevo Presupuesto <Target className="h-3 w-3" /></span>
+            <span className="sm:hidden flex flex-row items-center gap-2">Nuevo Presupuesto <Target className="h-3 w-3" /></span>
           </Button>
         )}
       </DialogTrigger>
@@ -237,10 +269,10 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
                   <FormLabel className="text-sm">Monto máximo</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
+                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
                       <Input
-                        className="pl-7 h-11 md:h-9 text-sm"
-                        placeholder="0.00"
+                        className={`${getCurrencyPadding()} h-11 md:h-9 text-sm placeholder:text-[90%]`}
+                        placeholder={getPlaceholderAmount()}
                         inputMode="decimal"
                         value={formatDisplayedAmount(field.value)}
                         onChange={(e) => handleAmountChange(e, field.onChange)}
@@ -261,12 +293,24 @@ export function AddBudgetDialog({ onAdd, editingBudget, children, monthOverride 
               </Alert>
             )}
 
-            <Button type="submit" className="w-full h-11 md:h-9 text-sm sm:text-base" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando...' : (
-                isUpdatingExisting ? '¿Actualizar presupuesto existente?' :
-                  (editingBudget ? 'Actualizar presupuesto' : 'Guardar presupuesto')
+            <div className={`grid gap-2 ${editingBudget && onDelete ? "grid-cols-2" : "grid-cols-1"}`}>
+              <Button type="submit" className="w-full h-11 md:h-9 text-sm sm:text-base font-medium" disabled={isSubmitting}>
+                {isSubmitting ? 'Guardando...' : (
+                  editingBudget ? 'Actualizar' : 'Guardar presupuesto'
+                )}
+              </Button>
+              {editingBudget && onDelete && (
+                <Button
+                  type="button"
+                  variant="default"
+                  className="w-full h-11 md:h-9 text-sm font-medium text-destructive hover:bg-destructive/10 border-destructive/20"
+                  onClick={handleDelete}
+                  disabled={isSubmitting}
+                >
+                  Eliminar
+                </Button>
               )}
-            </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>

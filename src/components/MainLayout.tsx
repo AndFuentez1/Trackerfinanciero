@@ -92,10 +92,10 @@ export default function MainLayout() {
                         </div>
                     </div>
                     <div className="space-y-3">
-                        <Button variant="outline" className="w-full h-11" onClick={() => window.location.reload()}>
+                        <Button variant="default" className="w-full h-11" onClick={() => window.location.reload()}>
                             Ya lo he confirmado
                         </Button>
-                        <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => signOut()}>
+                        <Button variant="destructive" className="w-full text-muted-foreground" onClick={() => signOut()}>
                             Cerrar sesión
                         </Button>
                     </div>
@@ -106,7 +106,9 @@ export default function MainLayout() {
 
     return (
         <>
-            <div className="flex min-h-screen bg-background font-sans antialiased">
+            <div
+                className="flex min-h-screen font-sans antialiased"
+            >
                 <Sidebar />
                 <main className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative">
                     <Outlet />

@@ -356,7 +356,7 @@ export function SummaryTab({
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-[#F4F5F7] rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md overflow-x-auto">
+            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md overflow-x-auto">
               <EvolutionChart
                 transactions={allTransactions}
                 selectedYears={selectedYears}
@@ -366,7 +366,7 @@ export function SummaryTab({
                 onSelectAllYears={() => setSelectedYears(availableYears)}
               />
             </div>
-            <div className="lg:col-span-1 bg-[#F4F5F7] rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md">
+            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md">
               <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
             </div>
           </div>

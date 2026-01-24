@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { TransactionType, Transaction, useFinanceData } from '@/hooks/useFinanceData';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { insertTransactionSchema, TransactionFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +88,25 @@ export function AddTransactionDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { categories: contextCategories, paymentMethods: contextPaymentMethods, addCategory, loading } = useFinanceData();
+  const { currency, decimalPlaces } = useFinance();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getCurrencyPadding = () => {
+    const symbol = getCurrencySymbol();
+    // COP, ARS, CLP, Mex$ necesitan más espacio
+    if (symbol.length > 2) return 'pl-16';
+    if (symbol.length === 2) return 'pl-12';
+    return 'pl-9';
+  };
+
+  const getPlaceholderAmount = () => {
+    const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+    return decimalPlaces > 0 ? `100000${decimals}` : '100000';
+  };
 
   // Use props if provided (for edit mode from dashboard), else context
   const categories = propCategories || contextCategories;
@@ -386,12 +407,12 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2"
-          aria-label="Agregar"
-          title="Agregar"
+          className="gap-2 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+          aria-label="Nueva transacción"
+          title="Nueva transacción"
         >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Agregar</span>
+          <span className="hidden sm:flex flex-row items-center gap-2">Nueva transacción <Plus className="h-3 w-3" /></span>
+          <span className="sm:hidden flex flex-row items-center gap-2">Nueva transacción <Plus className="h-3 w-3" /></span>
         </Button>
       )}
 
@@ -492,7 +513,7 @@ export function AddTransactionDialog({
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
-                            variant="outline"
+                            variant="default"
                             className={cn(
                               'w-full justify-start text-left font-normal h-11 md:h-9',
                               !field.value && 'text-muted-foreground'
@@ -604,11 +625,11 @@ export function AddTransactionDialog({
                     <FormLabel htmlFor="amount">Monto</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
                         <Input
                           id="amount"
-                          className="pl-7 h-11 md:h-9"
-                          placeholder="Ej: 100000"
+                          className={`${getCurrencyPadding()} h-11 md:h-9`}
+                          placeholder={`${getPlaceholderAmount()}`}
                           inputMode="decimal"
                           value={formatDisplayedAmount(field.value)}
                           onChange={(e) => handleAmountChange(e, field.onChange)}

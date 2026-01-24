@@ -2,7 +2,8 @@ import type { Config } from "tailwindcss";
 import plugin from 'tailwindcss/plugin';
 import animate from 'tailwindcss-animate';
 
-export default {  darkMode: ["class"],
+export default {
+  darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -14,9 +15,6 @@ export default {  darkMode: ["class"],
       },
     },
     extend: {
-      fontFamily: {
-        sans: ['Google Sans', 'sans-serif'],
-      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

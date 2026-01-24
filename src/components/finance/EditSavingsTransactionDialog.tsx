@@ -151,7 +151,7 @@ export function EditSavingsTransactionDialog({
           <div className="flex gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               className="flex-1"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}

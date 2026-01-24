@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { TotalBudgetState } from "@/hooks/useBudgetsData";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { useFinance } from "@/contexts/FinanceContext";
+import { CURRENCIES } from "@/hooks/currencyConstants";
+import { useDecimalPlaces } from "@/hooks/useDecimalPlaces";
 
 interface BudgetTotalCardProps {
     totalBudget: TotalBudgetState;
@@ -11,6 +13,48 @@ interface BudgetTotalCardProps {
 
 export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
     const { totalBudgeted, totalSpent, totalRemaining, percentage } = totalBudget;
+    const { formatCurrencySmall, currency } = useFormatCurrency();
+    const { currency: ctxCurrency } = useFinance();
+    const decimalPlaces = useDecimalPlaces();
+
+    const formatCurrency70 = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = decimalPlaces;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
 
     // Calculate actual expenses excluding transfers
     const actualExpenses = totalSpent; // Assuming totalSpent already excludes transfers based on the hook
@@ -18,18 +62,18 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
     const isOverBudget = actualExpenses > totalBudgeted;
 
     return (
-        <Card className="flex h-full min-h-[360px] flex-col p-6 border-blue-200 bg-blue-50/30 hover:shadow-md transition-shadow overflow-hidden">
+        <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-blue-800">Presupuesto</CardTitle>
+                <CardTitle className="text-lg font-bold text-primary">Presupuesto</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Progress Bar and Percentage */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-700">Ejecución del Presupuesto</span>
+                        <span className="text-sm font-medium text-muted-foreground">Ejecución del Presupuesto</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-foreground">
-                                {percentage.toFixed(0)}%
+                                {percentage.toFixed(decimalPlaces)}%
                             </span>
                             {isOverBudget && <TrendingDown className="h-5 w-5 text-red-500" />}
                         </div>
@@ -43,32 +87,29 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-1 gap-3">
-                    <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                        <span className="text-sm text-blue-600 font-medium">Presupuestado</span>
-                        <span className="text-lg font-bold text-blue-800">{formatCurrency(totalBudgeted)}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground font-medium">Presupuestado</span>
+                        <span className="text-lg font-bold text-foreground">{formatCurrency70(totalBudgeted)}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                        <span className="text-sm text-blue-600 font-medium">Gastos Reales</span>
-                        <span className="text-lg font-bold text-blue-800">{formatCurrency(actualExpenses)}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground font-medium">Gastos Reales</span>
+                        <span className="text-lg font-bold text-foreground">{formatCurrency70(actualExpenses)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-blue-600 font-medium">Diferencia</span>
+                        <span className="text-sm text-muted-foreground font-medium">Diferencia</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-foreground">
-                                {formatCurrency(difference)}
+                                {formatCurrency70(difference)}
                             </span>
-                            {difference >= 0 ? 
-                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
-                                <TrendingDown className="h-5 w-5 text-red-500" />
-                            }
+
                         </div>
                     </div>
                 </div>
 
                 {/* Bottom Message */}
-                <div className="text-center pt-2 border-t border-blue-100">
-                    <p className="text-xs text-blue-600 font-medium">
-                        Has gastado {percentage.toFixed(0)}% de tu presupuesto
+                <div className="text-center pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground font-medium">
+                        Has gastado {percentage.toFixed(decimalPlaces)}% de tu presupuesto
                     </p>
                 </div>
             </CardContent>

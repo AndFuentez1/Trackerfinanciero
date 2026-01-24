@@ -57,7 +57,7 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
                                 </div>
                                 {!hasGoal && !isEditing && (
                                     <Button
-                                        variant="ghost"
+                                        variant="default"
                                         size="sm"
                                         className="text-[10px] h-7 px-2 gap-1 text-primary hover:text-primary hover:bg-primary/10"
                                         onClick={() => {
@@ -104,7 +104,7 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
                                         OK
                                     </Button>
                                     <Button
-                                        variant="ghost"
+                                        variant="default"
                                         size="sm"
                                         className="h-8 px-2 text-xs"
                                         onClick={() => setEditingGoal(null)}

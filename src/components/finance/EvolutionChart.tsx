@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
@@ -28,7 +30,7 @@ interface EvolutionChartProps {
 }
 
 const COLORS = [
-  '#10b981', // emerald
+  '#10b98a', // emerald
   '#3b82f6', // blue
   '#f97316', // orange
   '#ef4444', // red
@@ -47,6 +49,7 @@ export function EvolutionChart({
   onSelectAllYears,
 }: EvolutionChartProps) {
   const decimalPlaces = useDecimalPlaces();
+  const { currency } = useFinance();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
@@ -235,19 +238,71 @@ export function EvolutionChart({
     }
   };
 
-  const formatCurrency = (value: number | null) => {
+  const getCurrencySymbol = (currencyCode: string): string => {
+    const curr = CURRENCIES.find(c => c.code === currencyCode);
+    return curr?.symbol || currencyCode;
+  };
+
+  const formatCurrencyString = (value: number | null) => {
     if (value === null) return 'N/A';
-    return new Intl.NumberFormat('es-CO', {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
     }).format(value);
+
+    return formatted.replace(currency || 'COP', symbol);
+  };
+
+  const formatCurrency = (value: number | null) => {
+    if (value === null) return 'N/A';
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+
+    formatted = formatted.replace(currency || 'COP', symbol);
+
+    if (decimalPlaces === 0) return formatted;
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return formatted;
+
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    return (
+      <>
+        <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{symbol}</span>{integerPart}
+        {decimalPart && <span style={{ fontSize: '0.8em', opacity: 0.6 }}>,{decimalPart}</span>}
+      </>
+    );
+  };
+
+  // Formatter for axis: must return string only
+  const formatCurrencyAxis = (value: number | null) => {
+    if (value === null) return '';
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'symbol',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+    return formatted; // Only string, no JSX
   };
 
   if (transactions.length === 0) {
     return (
-      <div className="bg-[#F4F5F7] rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+      <div className="bg-card rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
         <p>No hay datos suficientes para mostrar la evolución.</p>
       </div>
     );
@@ -281,7 +336,7 @@ export function EvolutionChart({
           {/* Multi-year selector dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
+              <Button variant="default" size="sm" className="h-9">
                 Años ({selectedYears.length})
                 <ChevronDown className="h-4 w-4 ml-1" />
               </Button>
@@ -296,7 +351,7 @@ export function EvolutionChart({
                       setYears([...years]);
                     }
                   }}
-                  variant="ghost"
+                  variant="default"
                   size="sm"
                   className="h-7 px-2 w-full"
                 >
@@ -318,7 +373,7 @@ export function EvolutionChart({
 
           {/* Clear selection pinned to the far right */}
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             className="h-9 ml-auto"
             onClick={() => {
@@ -362,7 +417,7 @@ export function EvolutionChart({
               dy={10}
             />
             <YAxis
-              tickFormatter={formatCurrency}
+              tickFormatter={formatCurrencyAxis}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: '#64748b' }}

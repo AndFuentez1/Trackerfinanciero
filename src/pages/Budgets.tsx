@@ -4,6 +4,7 @@ import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { PieChart, LogOut, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -38,8 +39,8 @@ export default function BudgetsPage() {
         setBudgetPeriod,
         availableYears,
     } = useBudgetsData();
-    const { 
-        insights, 
+    const {
+        insights,
         addTransaction,
         categories,
         paymentMethods,
@@ -49,12 +50,16 @@ export default function BudgetsPage() {
     // Filter only budget-related insights
     const budgetInsights = insights.filter(i => i.id.startsWith('budget-'));
 
-    if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse">Cargando...</div></div>;
+    const isLoading = authLoading || budgetsLoading;
+
+    if (isLoading) {
+        return <SkeletonLoader tab="budgets" />;
+    }
     if (!user) return null;
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
                         <div className="p-2 rounded-lg bg-primary/10">

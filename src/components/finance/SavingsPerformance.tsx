@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button';
 import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFormatCurrency } from '@/hooks/useFormatCurrency';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -74,14 +77,124 @@ export function SavingsPerformance({
   onDeleteTransaction
 }: SavingsPerformanceProps) {
   const decimalPlaces = useDecimalPlaces();
+  const { formatCurrencySmall: formatCurrency, currency } = useFormatCurrency();
+  const { currency: ctxCurrency } = useFinance();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
+  const formatCurrencyCard70 = (value: number) => {
+    const currCode = ctxCurrency || currency || 'COP';
+    const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+    const decimals = decimalPlaces;
+
+    const formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces,
-    }).format(amount);
+      currency: currCode,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      currencyDisplay: 'code',
+    }).format(value).replace(currCode, symbol);
+
+    if (decimals === 0) {
+      return (
+        <span className="inline-flex items-baseline gap-1">
+          <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+          <span>{formatted.replace(symbol, '').trim()}</span>
+        </span>
+      );
+    }
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return formatted;
+
+    const integerPart = parts[0].replace(symbol, '').trim();
+    const decimalPart = parts[1];
+
+    return (
+      <span className="inline-flex items-baseline gap-[2px]">
+        <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+        <span>
+          {integerPart}
+          <span className="opacity-85" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>
+        </span>
+      </span>
+    );
+  };
+
+  const formatCurrencyAccount80 = (value: number) => {
+    const currCode = ctxCurrency || currency || 'COP';
+    const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+    const decimals = decimalPlaces;
+
+    const formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currCode,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      currencyDisplay: 'code',
+    }).format(value).replace(currCode, symbol);
+
+    if (decimals === 0) {
+      return (
+        <span className="inline-flex items-baseline gap-1">
+          <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+          <span>{formatted.replace(symbol, '').trim()}</span>
+        </span>
+      );
+    }
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return formatted;
+
+    const integerPart = parts[0].replace(symbol, '').trim();
+    const decimalPart = parts[1];
+
+    return (
+      <span className="inline-flex items-baseline gap-[2px]">
+        <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+        <span>
+          {integerPart}
+          <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+        </span>
+      </span>
+    );
+  };
+
+  const formatCurrencyTable90 = (value: number) => {
+    const currCode = ctxCurrency || currency || 'COP';
+    const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+    const decimals = decimalPlaces;
+
+    const formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currCode,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      currencyDisplay: 'code',
+    }).format(value).replace(currCode, symbol);
+
+    if (decimals === 0) {
+      return (
+        <span className="inline-flex items-baseline gap-1">
+          <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+          <span>{formatted.replace(symbol, '').trim()}</span>
+        </span>
+      );
+    }
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return formatted;
+
+    const integerPart = parts[0].replace(symbol, '').trim();
+    const decimalPart = parts[1];
+
+    return (
+      <span className="inline-flex items-baseline gap-[2px]">
+        <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+        <span>
+          {integerPart}
+          <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+        </span>
+      </span>
+    );
   };
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -128,15 +241,61 @@ export function SavingsPerformance({
     setEditingTxId(null);
     setDraft(null);
   };
+
+  // Yield calculation per spec:
+  // Yield = Interest / (Deposits_accumulated + Balance_before_interest)
+  // Where:
+  // - Deposits_accumulated = sum of TRANSACTION deposits only (excluding initial balance, interests, withdrawals)
+  // - Balance_before_interest = initial_balance + transaction_deposits - withdrawals + interests_before_current
+  const parseDate = (d: string) => new Date(d + 'T00:00:00');
+  
+  // Compute initial balance by reversing all transactions from current balance
+  const getInitialBalance = (accountId: string) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+    
+    let balance = account.balance;
+    transactions
+      .filter(t => t.payment_method_id === accountId)
+      .forEach(t => {
+        const amt = Number(t.amount) || 0;
+        if (t.type === 'withdrawal') balance += amt; // reverse withdrawal
+        else balance -= amt; // reverse deposit/interest
+      });
+    return balance;
+  };
+  
+  const getDepositsAccumulated = (accountId: string, beforeDate: string) => {
+    const cutoff = parseDate(beforeDate).getTime();
+    // Only count transaction deposits, NOT initial balance
+    return transactions
+      .filter(t => t.payment_method_id === accountId && t.type === 'deposit' && parseDate(t.date).getTime() < cutoff)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  };
+
+  const getBalanceBeforeInterest = (accountId: string, beforeDate: string) => {
+    const cutoff = parseDate(beforeDate).getTime();
+    const initialBalance = getInitialBalance(accountId);
+    let deposits = 0, withdrawals = 0, interests = 0;
+    transactions
+      .filter(t => t.payment_method_id === accountId && parseDate(t.date).getTime() < cutoff)
+      .forEach(t => {
+        const amt = Number(t.amount) || 0;
+        if (t.type === 'deposit') deposits += amt;
+        else if (t.type === 'withdrawal') withdrawals += amt;
+        else if (t.type === 'interest') interests += amt;
+      });
+    return { balance: initialBalance + deposits - withdrawals + interests, deposits, withdrawals, interests, initialBalance };
+  };
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="bg-[#F4F5F7] border border-arquitectura-2/30 shadow-md">
+      <Card className="bg-card border border-arquitectura-2/30 shadow-md">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total en ahorros</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalBalance)}</p>
+              <p className="text-3xl font-bold">{formatCurrencyCard70(totalBalance)}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}
               </p>
@@ -154,7 +313,9 @@ export function SavingsPerformance({
         {accounts.length > 0 && (
           <AddSavingsTransactionDialog accounts={accounts} onAdd={onAddTransaction} />
         )}
-        <AddTransferDialog onAdd={onAddTransfer} />
+        {accounts.length > 0 && (
+          <AddTransferDialog onAdd={onAddTransfer} />
+        )}
       </div>
 
       {/* Accounts performance */}
@@ -165,11 +326,11 @@ export function SavingsPerformance({
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-base">{account.name}</CardTitle>
-                  <p className="text-2xl font-bold mt-1">{formatCurrency(account.balance)}</p>
+                  <p className="text-2xl font-bold mt-1">{formatCurrencyAccount80(account.balance)}</p>
                 </div>
                 <div className="flex gap-1">
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-primary"
                     onClick={() => onEdit(account.id)}
@@ -177,7 +338,7 @@ export function SavingsPerformance({
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => onDeleteAccount(account.id)}
@@ -192,29 +353,29 @@ export function SavingsPerformance({
                 <div className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">
-                    Rentabilidad estimada: {account.interest_rate.toFixed(2)}%
+                    Rentabilidad estimada: {account.interest_rate.toFixed(decimalPlaces)}%
                   </span>
                 </div>
               )}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Depósitos</p>
                   <div className="flex items-center justify-center gap-1">
-                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrency(account.totalDeposits)}</p>
+                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalDeposits)}</p>
                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
-                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Retiros</p>
                   <div className="flex items-center justify-center gap-1">
-                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrency(account.totalWithdrawals)}</p>
+                    <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalWithdrawals)}</p>
                     <TrendingDown className="h-4 w-4 text-red-500" />
                   </div>
                 </div>
-                <div className="bg-[#F4F5F7] border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Intereses</p>
-                  <p className="text-lg font-bold text-primary tracking-tight">{formatCurrency(account.totalInterest)}</p>
+                  <p className="text-lg font-bold text-primary tracking-tight">{formatCurrencyAccount80(account.totalInterest)}</p>
                 </div>
               </div>
 
@@ -225,7 +386,7 @@ export function SavingsPerformance({
       </div>
 
       {accounts.length === 0 && (
-        <Card className="bg-[#F4F5F7] border-2 border-dashed border-arquitectura-2/30">
+        <Card className="bg-card border-2 border-dashed border-arquitectura-2/30">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
@@ -238,7 +399,7 @@ export function SavingsPerformance({
 
       {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
-        <div className="bg-gradient-to-b from-[#F4F5F7] to-[#F4F5F7]/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
+        <div className="bg-gradient-to-b from-card to-card/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
             <table className="w-full table-auto">
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
@@ -278,19 +439,19 @@ export function SavingsPerformance({
                         {isEditing ? (
                           <input
                             type="date"
-                            className="h-8 px-2 text-xs bg-background/50 border rounded-md"
+                            className="h-8 px-2 text-sm bg-background/50 border rounded-md"
                             value={toInputDate(draft?.date || tx.date)}
                             onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value ?? '' } : d)}
                           />
                         ) : (
-                          <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">
+                          <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">
                             {formatDate(tx.date)}
                           </span>
                         )}
                       </td>
 
                       {/* Description */}
-                      <td className="py-2.5 px-3 align-middle">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
                             value={draft?.description ?? tx.description ?? ''}
@@ -298,8 +459,8 @@ export function SavingsPerformance({
                             className="h-8 text-sm"
                           />
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13px] text-foreground font-medium line-clamp-1 leading-tight">
+                          <div className="flex items-center justify-center">
+                            <span className="text-sm text-foreground font-medium line-clamp-1 leading-tight">
                               {tx.description || ''}
                             </span>
                           </div>
@@ -313,7 +474,7 @@ export function SavingsPerformance({
                             value={draft?.type || tx.type}
                             onValueChange={(v) => setDraft(d => d ? { ...d, type: v as 'deposit' | 'withdrawal' | 'interest' } : d)}
                           >
-                            <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background">
+                            <SelectTrigger className="h-8 text-sm bg-background/50 hover:bg-background">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -323,7 +484,7 @@ export function SavingsPerformance({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className="text-xs text-muted-foreground font-medium">
+                          <span className="text-sm text-muted-foreground font-medium">
                             {tx.type === 'deposit' ? 'Depósito' : tx.type === 'withdrawal' ? 'Retiro' : 'Interés'}
                           </span>
                         )}
@@ -337,7 +498,7 @@ export function SavingsPerformance({
                               onValueChange={(v) => setDraft(d => d ? { ...d, payment_method_id: v } : d)}
                               value={draft?.payment_method_id || tx.payment_method_id}
                             >
-                              <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background">
+                              <SelectTrigger className="h-8 text-sm bg-background/50 hover:bg-background">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -348,44 +509,56 @@ export function SavingsPerformance({
                             </Select>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground truncate font-medium leading-tight block">
+                          <span className="text-sm text-muted-foreground truncate font-medium leading-tight block">
                             {account?.name || 'Otro'}
                           </span>
                         )}
                       </td>
 
                       {/* Amount */}
-                      <td className="py-2.5 px-3 align-middle text-right">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
                             type="number"
-                            className="h-8 text-xs font-bold border-primary w-[8rem] ml-auto text-right"
+                            className="h-8 text-sm font-bold border-primary w-[8rem] mx-auto text-center"
                             value={draft?.amount ?? tx.amount}
                             onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) || 0 } : d)}
                           />
                         ) : (
-                          <span className={cn(
-                            "text-sm font-bold tabular-nums",
-                            tx.type === 'withdrawal' ? 'text-rose-600' : 'text-emerald-600'
-                          )}>
-                            {tx.type === 'withdrawal' ? '-' : '+'}
-                            {formatCurrency(tx.amount)}
+                          <span className="inline-flex items-center justify-center gap-1">
+                            <span className={cn("font-bold", tx.type === 'withdrawal' ? 'text-rose-600' : 'text-emerald-600')}>
+                              {tx.type === 'withdrawal' ? '-' : '+'}
+                            </span>
+                            <span className="text-sm text-foreground font-medium tabular-nums">
+                              {formatCurrencyTable90(tx.amount)}
+                            </span>
                           </span>
                         )}
                       </td>
 
                       {/* Yield/Rendimiento */}
-                      <td className="py-2.5 px-3 align-middle text-right">
-                        <span 
-                          className={`text-xs font-semibold tabular-nums ${
-                            tx.type === 'interest' ? 'text-emerald-600' : 'text-muted-foreground/60'
-                          }`} 
-                          style={{ fontStyle: 'normal' }}
-                        >
-                          {tx.calculated_yield !== null && tx.calculated_yield !== undefined
-                            ? `${tx.calculated_yield.toFixed(2)}%`
-                            : '0.00%'}
-                        </span>
+                      <td className="py-2.5 px-3 align-middle text-center">
+                        {(() => {
+                          const depositsAccumulated = getDepositsAccumulated(tx.payment_method_id, tx.date);
+                          const balanceData = getBalanceBeforeInterest(tx.payment_method_id, tx.date);
+                          const balanceBeforeInterest = balanceData.balance;
+                          const denominator = depositsAccumulated + balanceBeforeInterest;
+                          const isInterest = tx.type === 'interest';
+                          const yieldPercent = isInterest && denominator > 0 ? (tx.amount / denominator) * 100 : 0;
+
+                          return (
+                            <span 
+                              className={`text-sm font-semibold tabular-nums ${
+                                isInterest ? 'text-emerald-600' : 'text-muted-foreground/60'
+                              }`} 
+                              style={{ fontStyle: 'normal' }}
+                            >
+                              {yieldPercent < 1 && yieldPercent > 0 
+                                ? `<${(1).toFixed(decimalPlaces).replace('.', ',')}%` 
+                                : `${yieldPercent.toFixed(decimalPlaces)}%`}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Actions */}
@@ -394,7 +567,7 @@ export function SavingsPerformance({
                           {isEditing ? (
                             <>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 className="h-8 w-8 hover:bg-primary/10 transition-colors"
                                 onClick={() => handleSaveEdit(tx.id)}
@@ -403,7 +576,7 @@ export function SavingsPerformance({
                                 <Check className="h-4 w-4 text-primary" />
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 className="h-8 w-8 hover:bg-muted/50 transition-colors"
                                 onClick={handleCancelEdit}
@@ -415,7 +588,7 @@ export function SavingsPerformance({
                           ) : (
                             <>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 className="h-8 w-8 hover:bg-primary/10 transition-colors group/edit"
                                 onClick={() => handleStartEdit(tx)}
@@ -424,7 +597,7 @@ export function SavingsPerformance({
                                 <Pencil className="h-4 w-4 text-slate-400 group-hover/edit:text-primary transition-colors" />
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 className="h-8 w-8 hover:bg-destructive/10 transition-colors group/del"
                                 onClick={() => onDeleteTransaction(tx.id)}

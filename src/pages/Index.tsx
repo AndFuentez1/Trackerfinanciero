@@ -8,6 +8,7 @@ import { useBudgetsData } from '@/hooks/useBudgetsData';
 import { ImportExcelDialog } from '@/components/finance/ImportExcelDialog';
 import { ExportExcelButton } from '@/components/finance/ExportExcelButton';
 import { SummaryTab } from '@/components/finance/SummaryTab';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { Wallet, AlertCircle, Calendar as CalendarIcon, FilterX, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -53,6 +54,10 @@ export default function Index() {
     addTransactionsBulk,
     currency,
     welcomeCompleted,
+    baseColor,
+    themeOptions,
+    setAppThemePreference,
+    setHighlightedCard,
   } = useFinanceData();
 
   const { lastModification: budgetLastUpdated, loading: budgetsLoading } = useBudgetsData();
@@ -110,13 +115,9 @@ export default function Index() {
     [hasPendingImport, importProgress.status]
   );
 
-  // Loading state
+  // Loading state (High Fidelity Skeleton Reveal)
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
-      </div>
-    );
+    return <SkeletonLoader tab="dashboard" />;
   }
 
   if (!user) return null;
@@ -125,15 +126,21 @@ export default function Index() {
   if (showWelcomePanel) {
     return (
       <WelcomePanel
-        onConfigureCurrency={async (currencyCode) => { 
+        onConfigureCurrency={async (currencyCode) => {
           const currConfig = CURRENCIES.find(c => c.code === currencyCode);
-          await updateProfile({ 
+          await updateProfile({
             currency: currencyCode,
             decimal_places: currConfig?.decimals ?? 0
-          }); 
+          });
         }}
-        onAddPaymentMethod={() => navigate('/configuracion')}
-        onAddCategory={() => navigate('/configuracion')}
+        onAddPaymentMethod={() => {
+          setHighlightedCard('payment-methods');
+          navigate('/configuracion');
+        }}
+        onAddCategory={() => {
+          setHighlightedCard('categories');
+          navigate('/configuracion');
+        }}
         currencyConfigured={Boolean(statsSummary.currency)}
         hasPaymentMethods={paymentMethods.length > 0}
         hasCategories={categories.length > 0}
@@ -146,7 +153,7 @@ export default function Index() {
   if (showDecisionPanel) {
     return (
       <OnboardingDecisionPanel
-        onStartFromScratch={async () => await setOnboardingDecision('from_scratch')}
+        onStartFromScratch={async () => { await setOnboardingDecision('from_scratch'); }}
         onImportData={() => {/* open file selector */ }}
         hasPendingImport={hasPendingImport}
         onConfirmImport={async () => { await confirmImportData(); }}
@@ -156,13 +163,16 @@ export default function Index() {
         paymentMethods={paymentMethods}
         onImportComplete={(data) => startImport(data)}
         showCompletionCard={showCompletionCard}
+        baseColor={baseColor}
+        themeOptions={themeOptions}
+        onSelectTheme={(hex) => setAppThemePreference(hex)}
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold">Resumen</h1>
@@ -191,7 +201,7 @@ export default function Index() {
             onUpdateCategoryGoal={updateCategoryGoal}
             onUpdateTransaction={updateTransaction}
             dateFilter={{ period: 'all', from: null, to: null }}
-            updateFilter={() => {}}
+            updateFilter={() => { }}
           />
         </div>
         {lastUpdated && (

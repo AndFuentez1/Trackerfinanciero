@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { Transaction, TransactionType, PaymentMethod, MASTER_PALETTE } from '@/hooks/useFinanceData';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -188,8 +190,8 @@ const parseDate = (value: string | number): string | null => {
   return null;
 };
 
-export function ImportExcelDialog({ 
-  paymentMethods, 
+export function ImportExcelDialog({
+  paymentMethods,
   onImport,
   onImportBackground,
   open: externalOpen,
@@ -199,8 +201,28 @@ export function ImportExcelDialog({
 }: ImportExcelDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currency, decimalPlaces } = useFinance();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getExampleAmountDisplay = () => {
+    if (decimalPlaces > 0) {
+      const decimals = '0'.repeat(decimalPlaces);
+      return (
+        <>
+          {getCurrencySymbol()} 500
+          <span style={{ fontSize: '0.8em', opacity: 0.75 }}>.{decimals}</span>
+        </>
+      );
+    }
+    return `${getCurrencySymbol()} 500`;
+  };
+
   const [internalOpen, setInternalOpen] = useState(false);
-  
+
   // Usar estado externo si se proporciona, sino usar estado interno
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (newOpen: boolean) => {
@@ -233,16 +255,16 @@ export function ImportExcelDialog({
   // Función auxiliar para seleccionar la mejor hoja automáticamente
   const findBestSheet = (workbook: XLSX.WorkBook): string => {
     const sheetNames = workbook.SheetNames;
-    
+
     if (sheetNames.length === 1) {
       return sheetNames[0];
     }
 
     // Palabras clave que indican una hoja de transacciones
     const keywords = ['transaccion', 'movimiento', 'finanza', 'gasto', 'ingreso', 'datos', 'principal'];
-    
+
     for (const keyword of keywords) {
-      const match = sheetNames.find(name => 
+      const match = sheetNames.find(name =>
         name.toLowerCase().includes(keyword)
       );
       if (match) return match;
@@ -276,7 +298,7 @@ export function ImportExcelDialog({
 
     headers.forEach((header, index) => {
       const headerStr = String(header || '').toLowerCase().trim();
-      
+
       if (headerStr.includes('fecha') || headerStr.includes('date')) {
         mapping.date = index;
       } else if (headerStr.includes('descripci') || headerStr.includes('description') || headerStr.includes('concepto')) {
@@ -311,13 +333,13 @@ export function ImportExcelDialog({
         header: String(header || `Columna ${index + 1}`),
         samples: jsonData.slice(1, 4).map(row => String((row as unknown[])[index] || '')).filter(s => s),
       }));
-      
+
       setColumnPreviews(previews);
-      
+
       // Detectar automáticamente
       const detectedMapping = autoDetectMapping(firstRow);
       setColumnMapping(detectedMapping);
-      
+
       setShowMappingStep(true);
       return;
     }
@@ -339,12 +361,12 @@ export function ImportExcelDialog({
       // Supports: 1000.50, 1.000,50, 1,000.50, etc.
       const cleanValue = (() => {
         const val = rawValue.replace(/\$/g, '').trim();
-        
+
         // Determine which is the decimal separator
         // If there's both comma and period, the last one is the decimal separator
         const lastCommaIdx = val.lastIndexOf(',');
         const lastPeriodIdx = val.lastIndexOf('.');
-        
+
         if (lastCommaIdx === -1 && lastPeriodIdx === -1) {
           // No separators, it's an integer
           return val;
@@ -361,8 +383,8 @@ export function ImportExcelDialog({
             const beforeComma = val.substring(0, lastCommaIdx).replace(/\./g, '');
             const afterComma = val.substring(lastCommaIdx + 1);
             // If after comma has more than 2 digits, it's thousands separator
-            return afterComma.length > 2 
-              ? beforeComma + afterComma 
+            return afterComma.length > 2
+              ? beforeComma + afterComma
               : beforeComma + '.' + afterComma;
           } else {
             // Only period
@@ -376,17 +398,17 @@ export function ImportExcelDialog({
 
       const amount = parseFloat(cleanValue);
       const absAmount = Math.abs(amount);
-      const paymentMethod = mapping.paymentMethod !== null && row[mapping.paymentMethod] 
-        ? String(row[mapping.paymentMethod]).trim() 
+      const paymentMethod = mapping.paymentMethod !== null && row[mapping.paymentMethod]
+        ? String(row[mapping.paymentMethod]).trim()
         : undefined;
 
       const errors: string[] = [];
       const warnings: string[] = [];
-      
+
       if (!date) errors.push('Fecha inválida');
       if (!description) errors.push('Sin descripción');
       if (isNaN(amount) || amount === 0) errors.push('Monto inválido');
-      
+
       // Solo advertir sobre montos excesivos, no rechazar
       if (absAmount > MAX_AMOUNT) {
         warnings.push(`Monto excesivo (${absAmount.toLocaleString()}) - Se truncará a ${MAX_AMOUNT.toLocaleString()} para revisión`);
@@ -420,17 +442,17 @@ export function ImportExcelDialog({
     reader.onload = (event) => {
       const data = new Uint8Array(event.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
-      
+
       setWorkbookData(workbook);
       setAvailableSheets(workbook.SheetNames);
-      
+
       // Seleccionar automáticamente la mejor hoja
       const bestSheet = findBestSheet(workbook);
       setSelectedSheet(bestSheet);
-      
+
       // Iniciar proceso de mapeo de columnas
       processSheet(workbook, bestSheet);
-      
+
       // Notificar si hay múltiples hojas
       if (workbook.SheetNames.length > 1) {
         toast({
@@ -455,7 +477,7 @@ export function ImportExcelDialog({
   // Confirmar mapeo y procesar datos
   const handleConfirmMapping = () => {
     if (!workbookData || !selectedSheet) return;
-    
+
     // Validar que al menos los campos requeridos estén mapeados
     if (columnMapping.date === null || columnMapping.description === null || columnMapping.amount === null) {
       toast({
@@ -465,7 +487,7 @@ export function ImportExcelDialog({
       });
       return;
     }
-    
+
     processSheet(workbookData, selectedSheet, columnMapping);
   };
 
@@ -490,7 +512,7 @@ export function ImportExcelDialog({
     if (validRows.length === 0) return;
 
     setIsImporting(true);
-    
+
     // Guardar estado en localStorage para recuperar si la página se cierra
     const importKey = `import_${user.id}_${Date.now()}`;
     localStorage.setItem(importKey, JSON.stringify({
@@ -572,11 +594,11 @@ export function ImportExcelDialog({
         let finalCategoryId: string | undefined = undefined;
 
         // Check if payment method is savings or investment
-        const pmName = selectedPaymentMethod && selectedPaymentMethod !== "excel_column" 
+        const pmName = selectedPaymentMethod && selectedPaymentMethod !== "excel_column"
           ? paymentMethods.find(pm => pm.id === selectedPaymentMethod)?.name?.toLowerCase()
           : row.paymentMethod?.toLowerCase();
 
-        const pmDetails = currentPaymentMethods?.find(pm => 
+        const pmDetails = currentPaymentMethods?.find(pm =>
           pm.name.toLowerCase() === pmName || pm.id === selectedPaymentMethod
         );
 
@@ -705,7 +727,7 @@ export function ImportExcelDialog({
           const MAX_AMOUNT = 9999999999.99;
           const truncatedAmount = Math.min(t.amount, MAX_AMOUNT);
           const needsReview = t.amount > MAX_AMOUNT;
-          
+
           return {
             user_id: user.id,
             type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
@@ -727,13 +749,13 @@ export function ImportExcelDialog({
 
           if (insError) {
 
-            
+
             // Determinar el mensaje de error específico
             let errorMsg = insError.message || 'Error desconocido';
             if (insError.code === '22003') {
               errorMsg = 'Error de formato numérico';
             }
-            
+
             // Registrar todas las filas del batch como fallidas
             batchTransactions.forEach(t => {
               failedRows.push({
@@ -747,10 +769,10 @@ export function ImportExcelDialog({
           }
         } catch (e) {
 
-          
+
           // Determinar el mensaje de error específico
           let errorMsg = e instanceof Error ? e.message : 'Error desconocido';
-          
+
           // Registrar todas las filas del batch como fallidas
           batchTransactions.forEach(t => {
             failedRows.push({
@@ -764,7 +786,7 @@ export function ImportExcelDialog({
         // Update progress
         const processed = Math.min(batch + batchSize, transactionsToImport.length);
         setProgress(Math.round((processed / transactionsToImport.length) * 100));
-        
+
         // Actualizar localStorage
         localStorage.setItem(importKey, JSON.stringify({
           startTime: Date.now(),
@@ -780,9 +802,9 @@ export function ImportExcelDialog({
           .slice(0, 5)
           .map(f => `• Fila ${f.row}: ${f.error}`)
           .join('\n');
-        
+
         const moreErrors = failedRows.length > 5 ? `\n• ...y ${failedRows.length - 5} filas más con errores` : '';
-        
+
         toast({
           title: `⚠️ Importación con errores`,
           description: `Se importaron ${successCount} de ${successCount + failCount} transacciones.\n\nErrores encontrados:\n${errorSummary}${moreErrors}\n\nRevisa el archivo Excel y vuelve a intentar.`,
@@ -790,12 +812,12 @@ export function ImportExcelDialog({
           duration: 15000,
         });
       } else {
-        toast({ 
-          title: '✅ Importación exitosa', 
-          description: `Se importaron ${successCount} transacciones correctamente.` 
+        toast({
+          title: '✅ Importación exitosa',
+          description: `Se importaron ${successCount} transacciones correctamente.`
         });
       }
-      
+
       // Cerrar el diálogo siempre después de importar
       setParsedRows([]);
       setFileName('');
@@ -824,16 +846,16 @@ export function ImportExcelDialog({
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Importar Excel"
             title="Importar Excel"
           >
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Importar Excel</span>
+            <span className="hidden sm:flex flex-row items-center gap-2">Importar Excel <Upload className="h-3 w-3" /></span>
+            <span className="sm:hidden flex flex-row items-center gap-2">Importar Excel <Upload className="h-3 w-3" /></span>
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => {
           // Prevenir cierre cuando se hace clic fuera o se cambia de aplicación
@@ -859,7 +881,7 @@ export function ImportExcelDialog({
               Columnas: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
             </p>
             <p className="text-xs text-muted-foreground">
-              Ejemplo: 15/01/2026 | Supermercado | Comida | 500 | Débito BBVA
+              Ejemplo: 15/01/2026 | Supermercado | Comida | {getExampleAmountDisplay()} | Débito BBVA
             </p>
           </div>
 
@@ -881,7 +903,7 @@ export function ImportExcelDialog({
                   <FileSpreadsheet className="h-5 w-5 text-primary" />
                   <span className="text-sm">{fileName}</span>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="icon"
                     className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10"
                     onClick={(e) => {
@@ -939,11 +961,30 @@ export function ImportExcelDialog({
 
           {showMappingStep && (
             <div className="space-y-4 p-4 border rounded-lg bg-card">
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
-                <p className="text-xs text-muted-foreground">
-                  Asigna cada columna de tu archivo a los campos requeridos
-                </p>
+              <div className="space-y-2 flex items-center justify-between">
+                <div className="space-y-2 flex-1">
+                  <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Asigna cada columna de tu archivo a los campos requeridos
+                  </p>
+                </div>
+                {availableSheets.length > 1 && (
+                  <Select value={selectedSheet} onValueChange={(sheetName) => {
+                    setSelectedSheet(sheetName);
+                    if (workbookData) processSheet(workbookData, sheetName);
+                  }}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Cambiar hoja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSheets.map((sheetName) => (
+                        <SelectItem key={sheetName} value={sheetName}>
+                          {sheetName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -1074,7 +1115,7 @@ export function ImportExcelDialog({
             <>
               <div className="flex items-center justify-between">
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => {
                     setShowMappingStep(true);
@@ -1107,8 +1148,8 @@ export function ImportExcelDialog({
                 </div>
               )}
 
-              <div className="max-h-48 overflow-y-auto border rounded-lg">
-                <table className="w-full text-xs">
+              <div className="max-h-48 overflow-y-auto border rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[600px] text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
                       <th className="p-2 text-left">Fecha</th>
@@ -1124,7 +1165,7 @@ export function ImportExcelDialog({
                         <td className="p-2">{row.date || '-'}</td>
                         <td className="p-2 truncate max-w-32">{row.description || '-'}</td>
                         <td className="p-2">{row.category || '-'}</td>
-                        <td className="p-2 text-right">${row.amount.toLocaleString()}</td>
+                        <td className="p-2 text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
                         <td className="p-2 text-center">
                           {row.isValid ? (
                             <CheckCircle className="h-3 w-3 text-green-600 mx-auto" />

@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PaymentMethod, useFinanceData } from '@/hooks/useFinanceData';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +55,24 @@ interface AddTransferDialogProps {
 export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     const [open, setOpen] = useState(false);
     const { paymentMethods } = useFinanceData();
+    const { currency, decimalPlaces } = useFinance();
+
+    const getCurrencySymbol = () => {
+        const curr = CURRENCIES.find(c => c.code === currency);
+        return curr?.symbol || currency || '$';
+    };
+
+    const getCurrencyPadding = () => {
+        const symbol = getCurrencySymbol();
+        if (symbol.length > 2) return 'pl-16';
+        if (symbol.length === 2) return 'pl-12';
+        return 'pl-9';
+    };
+
+    const getPlaceholderAmount = () => {
+        const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+        return decimalPlaces > 0 ? `100000${decimals}` : '100000';
+    };
 
     const form = useForm<TransferFormValues>({
         resolver: zodResolver(transferSchema),
@@ -98,13 +118,14 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
         <Dialog open={open} onOpenChange={setOpen} modal={false}>
             <DialogTrigger asChild>
                 <Button
-                    variant="outline"
-                    className="gap-2"
-                    aria-label="Transferencia"
-                    title="Transferencia"
+                    variant="default"
+                    size="sm"
+                    className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                    aria-label="Nueva transferencia"
+                    title="Nueva transferencia"
                 >
-                    <ArrowRightLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline">Transferencia</span>
+                    <span className="hidden sm:flex flex-row items-center gap-2">Nueva transferencia <ArrowRightLeft className="h-3 w-3" /></span>
+                    <span className="sm:hidden flex flex-row items-center gap-2">Nueva transferencia <ArrowRightLeft className="h-3 w-3" /></span>
                 </Button>
             </DialogTrigger>
             <DialogContent 
@@ -181,10 +202,10 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                                     <FormLabel>Monto</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
                                             <Input
-                                                className="pl-7"
-                                                placeholder="0"
+                                                className={getCurrencyPadding()}
+                                                placeholder={getPlaceholderAmount()}
                                                 value={formatDisplayedAmount(field.value)}
                                                 onChange={(e) => handleAmountChange(e, field.onChange)}
                                             />

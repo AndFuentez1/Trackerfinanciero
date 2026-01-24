@@ -29,7 +29,7 @@ const PAYMENT_METHOD_TYPES = [
 const COLORS = [
   '#3b82f6', // blue
   '#ef4444', // red
-  '#10b981', // emerald
+  '#10b98a', // emerald
   '#f59e0b', // amber
   '#8b5cf6', // violet
   '#ec4899', // pink
@@ -152,7 +152,7 @@ export function EditPaymentMethodDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -309,11 +309,10 @@ export function EditPaymentMethodDialog({
                 <button
                   key={color}
                   onClick={() => setFormData({ ...formData, color })}
-                  className={`w-8 h-8 rounded-lg border-2 transition-all ${
-                    formData.color === color
+                  className={`w-8 h-8 rounded-lg border-2 transition-all ${formData.color === color
                       ? 'border-foreground'
                       : 'border-transparent'
-                  }`}
+                    }`}
                   style={{ backgroundColor: color }}
                 />
               ))}
@@ -323,7 +322,7 @@ export function EditPaymentMethodDialog({
           {/* Actions */}
           <div className="flex gap-2 pt-4">
             <Button
-              variant="outline"
+              variant="default"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >

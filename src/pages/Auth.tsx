@@ -132,7 +132,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const handleSendMagicLink = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
     setError('');
-    
+
     // Validar rate limit antes de proceder
     if (!checkAndUpdateRateLimit()) {
       return;
@@ -205,7 +205,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       if (error) {
         const errorStatus = (error as any).status;
         const errorError = (error as any).error;
-        
+
         // 400 invalid_grant = usuario existe pero sin contraseña
         if (errorStatus === 400 && errorError === 'invalid_grant') {
           // Auto-enviar Magic Link
@@ -259,12 +259,12 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
     try {
       const { data, error } = await signInWithPassword(email.trim(), password, rememberMe);
-      
+
       if (error) {
         // Detectar por status + error property (más robusto)
         const errorStatus = (error as any).status;
         const errorError = (error as any).error;
-        
+
         // 400 invalid_grant = usuario existe pero sin contraseña → Enviar Magic Link
         if (errorStatus === 400 && errorError === 'invalid_grant') {
           setIsSubmitting(false);
@@ -272,7 +272,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           await handleSendMagicLink(e as any);
           return;
         }
-        
+
         // Credenciales incorrectas o usuario no existe
         if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid')) {
           setError('Correo o contraseña incorrectos.');
@@ -449,7 +449,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
               Debes confirmar tu correo para acceder al Dashboard.
             </p>
           </div>
-          <Button variant="outline" className="w-full" onClick={() => {
+          <Button variant="default" className="w-full" onClick={() => {
             setNeedsVerification(false);
             setEmailSent(false);
           }}>
@@ -476,7 +476,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
         <Button
           variant="outline"
-          className="w-full h-11 text-base font-semibold flex items-center justify-center gap-2"
+          className="w-full h-11 text-base font-semibold flex items-center justify-center gap-2 bg-white border border-slate-300 rounded-[8.8px] transition-all duration-300 text-foreground opacity-100 hover:bg-slate-100 hover:text-foreground focus:bg-gray-200 active:bg-gray-200"
+          style={{ boxShadow: 'none' }}
           onClick={handleGoogleSignIn}
           disabled={isSubmitting || isGoogleSubmitting}
         >
@@ -507,10 +508,10 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             }
           }}
           className="w-full flex flex-col"
-          >
-          <TabsList className="flex w-full p-1 gap-2 mb-8 bg-muted/50 rounded-lg">
-            <TabsTrigger value="magic-link" className="rounded-md flex-1 py-1">Magic Link</TabsTrigger>
-            <TabsTrigger value="password" className="rounded-md flex-1 py-1">Contraseña</TabsTrigger>
+        >
+          <TabsList className="flex w-full p-1 gap-2 mb-8 bg-muted/20 border border-slate-300 rounded-[8px]">
+            <TabsTrigger value="magic-link" className="rounded-[7px] flex-1 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-2 data-[state=active]:border-slate-300 border border-transparent data-[state=inactive]:hover:border-slate-300 data-[state=inactive]:hover:border-2 transition-all duration-300 ease-in-out">Magic Link</TabsTrigger>
+            <TabsTrigger value="password" className="rounded-[7px] flex-1 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-2 data-[state=active]:border-slate-300 border border-transparent data-[state=inactive]:hover:border-slate-300 data-[state=inactive]:hover:border-2 transition-all duration-300 ease-in-out">Contraseña</TabsTrigger>
           </TabsList>
 
           <TabsContent value="magic-link" className="animate-in fade-in duration-300">
@@ -524,7 +525,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                       id="email-otp"
                       type="email"
                       placeholder="nombre@ejemplo.com"
-                      className="pl-10 h-11"
+                      className="pl-10 h-11 border-default/80 rounded-[8.8px]"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -537,6 +538,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     id="remember-otp"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
                   />
                   <Label htmlFor="remember-otp" className="text-sm text-muted-foreground cursor-pointer">
                     Mantener sesión iniciada
@@ -552,7 +554,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
                   disabled={isSubmitting || rateLimitError}
                 >
                   {isSubmitting ? 'Enviando...' : rateLimitError ? `Espera un momento antes de reintentar (${rateLimitCountdown}s)` : 'Enviar enlace mágico'}
@@ -572,8 +574,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             ) : (
               <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                 <div className="bg-muted border border-muted-foreground/30 p-6 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 bg-white border border-muted-foreground/60 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                  <div className="w-12 h-12 bg-white border border-primary/60 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">¡Enlace enviado!</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -584,7 +586,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300"
                   onClick={(e) => handleSendMagicLink(e)}
                   disabled={resendTimer > 0 || isSubmitting || rateLimitError}
                 >
@@ -592,8 +594,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </Button>
 
                 <Button
-                  variant="ghost"
-                  className="w-full text-muted-foreground hover:text-foreground"
+                  variant="outline"
+                  className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300"
                   onClick={() => setEmailSent(false)}
                 >
                   Usar otro correo o método
@@ -613,7 +615,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                       id="email-direct"
                       type="email"
                       placeholder="nombre@ejemplo.com"
-                      className="pl-10 h-11"
+                      className="pl-10 h-11 border-default/80 rounded-[8.8px]"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -629,7 +631,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                       id="password-direct"
                       type={showPasswordField ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-10 h-11"
+                      className="pl-10 h-11 border-default/80 rounded-[8.8px]"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -643,6 +645,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     id="remember-direct"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
                   />
                   <Label htmlFor="remember-direct" className="text-sm text-muted-foreground cursor-pointer">
                     Mantener sesión iniciada
@@ -658,7 +661,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Iniciando sesión...' : 'Entrar'}
@@ -695,7 +698,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     id="name-register"
                     type="text"
                     placeholder="Tu nombre completo"
-                    className="h-11"
+                    className="h-11 border-slate-300 rounded-[8.8px]"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     required
@@ -735,9 +738,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                       id="email-register"
                       type="email"
                       placeholder="nombre@ejemplo.com"
-                      className={`pl-10 h-11 transition-colors ${
-                        editingEmail ? 'bg-background border-primary/50 focus:border-primary' : 'bg-muted/30 cursor-not-allowed'
-                      }`}
+                      className={`pl-10 h-11 transition-colors border-slate-300 rounded-[8.8px] ${editingEmail ? 'bg-background border-primary/50 focus:border-primary' : 'bg-muted/30 cursor-not-allowed'
+                        }`}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={!editingEmail}
@@ -751,6 +753,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     id="remember-register"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
                   />
                   <Label htmlFor="remember-register" className="text-sm text-muted-foreground cursor-pointer">
                     Mantener sesión iniciada
@@ -766,7 +769,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
                   disabled={isSubmitting || rateLimitError}
                 >
                   {isSubmitting ? 'Enviando link...' : rateLimitError ? `Espera un momento (${rateLimitCountdown}s)` : 'Registrarse y recibir enlace'}
@@ -790,8 +793,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             {showPasswordForm && emailSent && (
               <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                 <div className="bg-muted border border-muted-foreground/30 p-6 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 bg-white border border-muted-foreground/60 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                  <div className="w-12 h-12 bg-white border border-primary/60 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <CheckCircle2 className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">¡Enlace enviado!</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -801,8 +804,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
 
                 <Button
-                  variant="ghost"
-                  className="w-full text-muted-foreground hover:text-foreground"
+                  variant="outline"
+                  className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300"
                   onClick={() => {
                     setEmailSent(false);
                     setUserNotFound(false);
@@ -872,7 +875,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     </div>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="default"
                       size="sm"
                       onClick={() => {
                         setPasswordStep('email');
@@ -893,7 +896,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                         id="password-login"
                         type="password"
                         placeholder="••••••••"
-                        className="pl-10 h-11"
+                        className="pl-10 h-11 rounded-[8.8px]"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -908,6 +911,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     id="remember-login"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
                   />
                   <Label
                     htmlFor="remember-login"
@@ -926,7 +930,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Iniciando sesión...' : 'Entrar'}
@@ -939,7 +943,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                       setError('Por favor, ingresa tu correo primero.');
                       return;
                     }
-                    
+
                     if (!checkAndUpdateRateLimit()) {
                       return;
                     }
@@ -947,10 +951,12 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     setError('');
                     setIsSubmitting(true);
                     try {
-                      const { error } = await supabase.auth.signInWithOtp(
-                        { email: email.trim() },
-                        { shouldCreateUser: false }
-                      );
+                      const { error } = await supabase.auth.signInWithOtp({
+                        email: email.trim(),
+                        options: {
+                          shouldCreateUser: false
+                        }
+                      });
 
                       if (error) {
                         const isOverEmailLimit =
@@ -995,7 +1001,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     </div>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="default"
                       size="sm"
                       onClick={() => {
                         setPasswordStep('email');

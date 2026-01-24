@@ -71,7 +71,7 @@ export function ImportStatusBar({
                         </Button>
                         {onDiscard && (
                             <Button
-                                variant="outline"
+                                variant="default"
                                 size="sm"
                                 onClick={onDiscard}
                                 className="text-slate-600 border-slate-300 hover:bg-slate-100"

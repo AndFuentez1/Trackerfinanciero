@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useFinanceData, CategoryItem, TransactionType, PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { PaymentMethodList } from '@/components/finance/PaymentMethodList';
 import { EditPaymentMethodDialog } from '@/components/finance/EditPaymentMethodDialog';
 import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDialog';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import {
     Dialog,
     DialogContent,
@@ -44,11 +46,10 @@ import {
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { SetPasswordDialog } from '@/components/auth/SetPasswordDialog';
-import { Shield, Lock } from 'lucide-react';
+import { Shield, Lock, Book } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
     Settings,
-    Plus,
     Pencil,
     Trash2,
     TrendingUp,
@@ -60,37 +61,37 @@ import {
     Calendar,
     Wallet,
     Banknote,
-    CreditCard as CreditCardIcon,
-    Check
+    Plus,
+    CreditCard as CreditCardIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Professional color palette for payment methods
 const PRESET_COLORS = [
-  { value: '#64748b', label: 'Slate' },
-  { value: '#0d9488', label: 'Teal' },
-  { value: '#4f46e5', label: 'Indigo' },
-  { value: '#e11d48', label: 'Rose' },
-  { value: '#f59e0b', label: 'Amber' },
-  { value: '#8b5cf6', label: 'Violet' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#10b981', label: 'Emerald' },
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#ec4899', label: 'Pink' },
+    { value: '#64748b', label: 'Slate' },
+    { value: '#0d9488', label: 'Teal' },
+    { value: '#4f46e5', label: 'Indigo' },
+    { value: '#e11d48', label: 'Rose' },
+    { value: '#f59e0b', label: 'Amber' },
+    { value: '#8b5cf6', label: 'Violet' },
+    { value: '#06b6d4', label: 'Cyan' },
+    { value: '#10b98a', label: 'Emerald' },
+    { value: '#3b82f6', label: 'Blue' },
+    { value: '#ec4899', label: 'Pink' },
 ];
 
 type ConversionPreview = {
-  payment_methods: Array<{
-    id: string;
-    name: string;
-    oldBalance: number | null;
-    newBalance: number | null;
-  }>;
-  transactions: Array<{
-    id: string;
-    oldAmount: number;
-    newAmount: number;
-  }>;
+    payment_methods: Array<{
+        id: string;
+        name: string;
+        oldBalance: number | null;
+        newBalance: number | null;
+    }>;
+    transactions: Array<{
+        id: string;
+        oldAmount: number;
+        newAmount: number;
+    }>;
 };
 
 export default function ConfiguracionPage() {
@@ -113,7 +114,12 @@ export default function ConfiguracionPage() {
         addTransfer,
         convertCurrency,
         loading,
-        resetProfileData
+        resetProfileData,
+        baseColor,
+        themeOptions,
+        setAppThemePreference,
+        highlightedCard,
+        setHighlightedCard,
     } = useFinanceData();
 
     // Credit Card Payment State
@@ -132,9 +138,11 @@ export default function ConfiguracionPage() {
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'category' | 'payment_method', count: number } | null>(null);
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+    const [isDeleteTransactionsDialogOpen, setIsDeleteTransactionsDialogOpen] = useState(false);
     const [decimalPlaces, setDecimalPlaces] = useState<number>(0);
     const [originalDecimalPlaces, setOriginalDecimalPlaces] = useState<number>(0);
     const [isDecimalsSaved, setIsDecimalsSaved] = useState(true);
+    const [selectedTheme, setSelectedTheme] = useState<string>(baseColor);
 
     // Duplicate detection/confirmation state
     const [duplicateResolve, setDuplicateResolve] = useState<PaymentMethodWithColor | null>(null);
@@ -150,6 +158,100 @@ export default function ConfiguracionPage() {
         setIsEditPMOpen(true);
     };
 
+    // Obtener símbolo de moneda dinámico
+    const getCurrencySymbol = () => {
+        const curr = CURRENCIES.find(c => c.code === currency);
+        return curr?.symbol || currency || '$';
+    };
+
+    const renderDecimalExample = () => {
+        const symbol = getCurrencySymbol();
+        const decimalsSpan = (count: number) => {
+            if (count <= 0) return null;
+            return (
+                <span style={{ fontSize: '0.8em', opacity: 0.85 }}>
+                    .{'0'.repeat(count)}
+                </span>
+            );
+        };
+
+        const symbolSpan = (
+            <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+        );
+
+        if (decimalPlaces === 0) return <>Sin decimales (ej: {symbolSpan} 1000)</>;
+        if (decimalPlaces === 1) return <>Un decimal (ej: {symbolSpan} 1000{decimalsSpan(1)})</>;
+        if (decimalPlaces === 2) return <>Dos decimales (ej: {symbolSpan} 1000{decimalsSpan(2)})</>;
+        return <>Tres decimales (ej: {symbolSpan} 1000{decimalsSpan(3)})</>;
+    };
+
+    // Conversión estimada basada en pares de monedas comunes
+    const getEstimatedConversionRate = (from: string, to: string): number | null => {
+        const rates: { [key: string]: number } = {
+            // COP conversions
+            'COP_USD': 0.00024038, 'USD_COP': 4159.35,
+            'COP_EUR': 0.00023070, 'EUR_COP': 4335.41,
+            'COP_MXN': 0.00419340, 'MXN_COP': 238.47,
+            'COP_ARS': 0.02260870, 'ARS_COP': 44.23,
+            'COP_BRL': 0.00149701, 'BRL_COP': 667.64,
+            'COP_CLP': 0.20576131, 'CLP_COP': 4.86,
+            'COP_PEN': 0.00869423, 'PEN_COP': 115.04,
+            // USD conversions
+            'USD_EUR': 0.92589, 'EUR_USD': 1.08004,
+            'USD_MXN': 17.4598, 'MXN_USD': 0.057297,
+            'USD_ARS': 94.0617, 'ARS_USD': 0.010631,
+            'USD_BRL': 5.00648, 'BRL_USD': 0.19974,
+            'USD_CLP': 856.13, 'CLP_USD': 0.0011680,
+            'USD_PEN': 3.70981, 'PEN_USD': 0.26954,
+            // EUR conversions
+            'EUR_MXN': 18.8693, 'MXN_EUR': 0.052997,
+            'EUR_ARS': 101.537, 'ARS_EUR': 0.0098486,
+            'EUR_BRL': 5.41049, 'BRL_EUR': 0.18484,
+            'EUR_CLP': 924.563, 'CLP_EUR': 0.0010816,
+            'EUR_PEN': 4.01042, 'PEN_EUR': 0.24935,
+            // MXN conversions
+            'MXN_ARS': 5.38079, 'ARS_MXN': 0.18584,
+            'MXN_BRL': 0.28695, 'BRL_MXN': 3.48488,
+            'MXN_CLP': 49.0134, 'CLP_MXN': 0.020402,
+            'MXN_PEN': 0.21252, 'PEN_MXN': 4.70515,
+            // ARS conversions
+            'ARS_BRL': 0.053272, 'BRL_ARS': 18.77,
+            'ARS_CLP': 9.10544, 'CLP_ARS': 0.10981,
+            'ARS_PEN': 0.039477, 'PEN_ARS': 25.331,
+            // BRL conversions
+            'BRL_CLP': 170.976, 'CLP_BRL': 0.0058462,
+            'BRL_PEN': 0.74038, 'PEN_BRL': 1.35067,
+            // CLP conversions
+            'CLP_PEN': 0.0043297, 'PEN_CLP': 231.04,
+        };
+        return rates[`${from}_${to}`] || null;
+    };
+
+    const renderConversionPlaceholder = (includeExample: boolean = true) => {
+        if (!pendingCurrency) return includeExample ? 'Ej. 4000' : '4000';
+
+        // Extraer solo el código si viene con espacios
+        const currencyCode = currency.split(' ')[0];
+        const pendingCode = pendingCurrency.split(' ')[0];
+
+        const rate = getEstimatedConversionRate(currencyCode, pendingCode);
+        if (!rate) return includeExample ? 'Ej. 4000' : '4000';
+
+        // Obtener símbolos de ambas monedas usando getCurrencyConfig o buscando directamente
+        const currencyConfig = CURRENCIES.find(c => c.code === currencyCode);
+        const pendingConfig = CURRENCIES.find(c => c.code === pendingCode);
+
+        const currencySymbol = currencyConfig?.symbol || currencyCode;
+        const pendingSymbol = pendingConfig?.symbol || pendingCode;
+
+        // Mostrar todos los decimales significativos
+        const formatted = rate >= 1
+            ? rate.toFixed(2)
+            : rate.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
+
+        const example = `1 ${currencySymbol} = ${formatted} ${pendingSymbol}`;
+        return includeExample ? `Ej: ${example}` : example;
+    };
 
 
     const [formData, setFormData] = useState({
@@ -188,6 +290,13 @@ export default function ConfiguracionPage() {
         }
     }, [searchParams]);
 
+    // Clear highlighted card on unmount
+    useEffect(() => {
+        return () => {
+            setHighlightedCard(null);
+        };
+    }, []);
+
     // Load decimal places from profile
     useEffect(() => {
         const loadDecimalPlaces = async () => {
@@ -212,11 +321,16 @@ export default function ConfiguracionPage() {
                     setIsDecimalsSaved(true);
                 }
             } catch (err) {
-                console.error('Error loading decimal places:', err);
+                // Error loading decimal places
             }
         };
         loadDecimalPlaces();
     }, [user?.id]);
+
+    // Sync selectedTheme with baseColor from context
+    useEffect(() => {
+        setSelectedTheme(baseColor);
+    }, [baseColor]);
 
     const [conversionModalOpen, setConversionModalOpen] = useState(false);
     const [pendingCurrency, setPendingCurrency] = useState<string | null>(null);
@@ -230,7 +344,7 @@ export default function ConfiguracionPage() {
         setPendingCurrency(val);
         setConversionRate('');
         setConversionModalOpen(true);
-        
+
         // Auto-set decimal places based on currency selection
         const selectedCurrency = CURRENCIES.find(c => c.code === val);
         if (selectedCurrency) {
@@ -243,7 +357,7 @@ export default function ConfiguracionPage() {
         try {
             // Usar updateProfile para actualizar y refrescar en toda la app
             const result = await updateProfile({ decimal_places: decimalPlaces });
-            
+
             if (result?.error) {
                 toast({
                     title: 'Error',
@@ -252,16 +366,15 @@ export default function ConfiguracionPage() {
                 });
                 return;
             }
-            
+
             setOriginalDecimalPlaces(decimalPlaces);
             setIsDecimalsSaved(true);
-            
-            toast({ 
-                title: 'Éxito', 
-                description: `Visualización configurada a ${decimalPlaces} decimales` 
+
+            toast({
+                title: 'Éxito',
+                description: `Visualización configurada a ${decimalPlaces} decimales`
             });
         } catch (err) {
-            console.error('Error saving decimal places:', err);
             toast({
                 title: 'Error',
                 description: 'Error al guardar la configuración',
@@ -288,21 +401,33 @@ export default function ConfiguracionPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Verificar si venía del onboarding ANTES de agregar
         const wasOnboardingIncomplete = !currency || paymentMethods.length === 0 || categories.length === 0;
-        
+
         if (editingCategory) {
             await updateCategory(editingCategory.id, formData);
         } else {
             await addCategory(formData);
         }
-        
-        // Solo verificar y redirigir si venía del onboarding
+
+        // Si venía del onboarding, cerrar formulario -> esperar -> pop down -> esperar -> volver
         if (wasOnboardingIncomplete) {
-            checkOnboardingAndRedirect();
+            // 1. Cerrar formulario primero
+            setIsDialogOpen(false);
+
+            // 2. Esperar a que el modal se oculte antes de iniciar el pop-down
+            setTimeout(() => {
+                setHighlightedCard(null);
+
+                // 3. Esperar a que la animación de pop-down termine antes de navegar
+                setTimeout(() => {
+                    navigate('/');
+                }, 600);
+            }, 300);
+        } else {
+            setIsDialogOpen(false);
         }
-        setIsDialogOpen(false);
     };
 
     const checkOnboardingAndRedirect = () => {
@@ -314,14 +439,26 @@ export default function ConfiguracionPage() {
     const handleAddPaymentMethod = async (pm: Omit<PaymentMethod, 'id'>) => {
         // Verificar si venía del onboarding ANTES de agregar
         const wasOnboardingIncomplete = !currency || paymentMethods.length === 0 || categories.length === 0;
-        
+
         const result = await addPaymentMethod(pm);
-        
-        // Si se agregó exitosamente y venía del onboarding, volver al panel principal
+
+        // Si se agregó exitosamente y venía del onboarding, cerrar diálogos -> esperar -> pop down -> esperar -> volver
         if (!result.error && wasOnboardingIncomplete) {
-            checkOnboardingAndRedirect();
+            // 1. Cerrar diálogo de adición/edición (esto se maneja en el componente padre pero por si acaso)
+            setIsAddPMOpen(false);
+
+            // 2. Esperar un momento decente
+            setTimeout(() => {
+                // 3. Efecto pop-down: limpiar el resaltado
+                setHighlightedCard(null);
+
+                // 4. Esperar a que la animación de pop-down termine antes de navegar
+                setTimeout(() => {
+                    navigate('/');
+                }, 600);
+            }, 300);
         }
-        
+
         return result;
     };
 
@@ -346,7 +483,9 @@ export default function ConfiguracionPage() {
         setDeleteConfirm(null);
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Cargando categorías...</div>;
+    if (loading) {
+        return <SkeletonLoader tab="config" />;
+    }
 
     return (
         <div className="container max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -357,7 +496,7 @@ export default function ConfiguracionPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Moneda Section */}
                 <Card className="config-card">
                     <CardHeader>
@@ -374,9 +513,9 @@ export default function ConfiguracionPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 {CURRENCIES.map(curr => (
-                                  <SelectItem key={curr.code} value={curr.code}>
-                                    {curr.name}
-                                  </SelectItem>
+                                    <SelectItem key={curr.code} value={curr.code}>
+                                        {curr.name}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -393,28 +532,49 @@ export default function ConfiguracionPage() {
                         <CardDescription>Cerrar sesión en este dispositivo.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button variant="outline" className="w-full text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
+                        <Button variant="destructive" className="w-full text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
                             Cerrar Sesión
                         </Button>
                     </CardContent>
                 </Card>
 
+                <div className="hidden md:block md:col-span-2 w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
+
                 {/* Unified Category Management Section */}
-                <Card className="config-card md:col-span-2">
+                <Card
+                    className={cn(
+                        "config-card md:col-span-2 transition-all duration-500 ease-in-out",
+                        highlightedCard === 'categories' && [
+                            "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.05] z-30",
+                            "bg-primary text-primary-foreground shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
+                            "animate-in zoom-in-[1.02] duration-500"
+                        ]
+                    )}
+                >
                     <CardHeader className="flex flex-col gap-4 pb-4">
                         <div className="flex flex-row items-start sm:items-center justify-between gap-2">
                             <div className="space-y-1 flex-1">
                                 <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                    <div className="w-2 h-6 bg-primary rounded-full" />
+                                    <div className={cn("w-2 h-6 bg-primary rounded-full", highlightedCard === 'categories' && "bg-primary-foreground")} />
                                     Gestión de Categorías
                                 </CardTitle>
                             </div>
-                            <Button onClick={handleOpenAdd} size="sm" className="gap-2 shrink-0">
-                                <Plus className="h-4 w-4" />
-                                <span className="hidden sm:inline">Nueva</span>
+                            <Button
+                                onClick={handleOpenAdd}
+                                size="sm"
+                                variant="default"
+                                className={cn(
+                                    "gap-2 shrink-0 duration-500",
+                                    highlightedCard === 'categories' && "bg-white text-primary border-white hover:bg-white/90 scale-110 shadow-[0_0_30px_0_hsl(var(--primary)/0.8)] font-bold z-10"
+                                )}
+                            >
+                                <span>Nueva categoría</span>
+                                <Plus className={cn("h-4 w-4", highlightedCard === 'categories' && "animate-pulse")} />
                             </Button>
                         </div>
-                        <CardDescription>Personaliza tus categorías para clasificar mejor tus movimientos.</CardDescription>
+                        <CardDescription className={cn("transition-colors", highlightedCard === 'categories' ? "text-primary-foreground/90 font-medium" : "text-muted-foreground")}>
+                            Configura tus categorías aquí para completar tu perfil.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="expense" className="w-full">
@@ -488,15 +648,28 @@ export default function ConfiguracionPage() {
                     </CardContent>
                 </Card>
 
+                <div className="md:col-span-2 w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
+
                 {/* Métodos de Pago Section */}
-                <Card className="config-card md:col-span-2">
+                <Card
+                    className={cn(
+                        "config-card md:col-span-2 transition-all duration-500 ease-in-out relative",
+                        highlightedCard === 'payment-methods' && [
+                            "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.05] z-30",
+                            "bg-primary text-primary-foreground shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
+                            "animate-in zoom-in-[1.02] duration-500"
+                        ]
+                    )}
+                >
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <div className="space-y-1">
                             <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <div className="w-2 h-6 bg-slate-500 rounded-full" />
+                                <div className={cn("w-2 h-6 bg-slate-500 rounded-full", highlightedCard === 'payment-methods' && "bg-primary-foreground")} />
                                 Métodos de Pago
                             </CardTitle>
-                            <CardDescription>Gestiona tus cuentas, tarjetas y efectivo.</CardDescription>
+                            <CardDescription className={cn("transition-colors", highlightedCard === 'payment-methods' ? "text-primary-foreground/90 font-medium" : "text-muted-foreground")}>
+                                Configura tus cuentas y tarjetas aquí para completar tu perfil.
+                            </CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -506,17 +679,20 @@ export default function ConfiguracionPage() {
                             onEdit={(pm) => handleOpenEditPM(pm)}
                             onDelete={(pm) => initiateDeletePaymentMethod(pm)}
                             onAdd={() => handleOpenAddPM()}
+                            highlighted={highlightedCard === 'payment-methods'}
                         />
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-primary/25 to-transparent rounded-full my-3 shadow-sm hover:via-primary/60 transition-all duration-500" />
+
+            <div className="flex flex-col gap-3">
                 {/* Decimal Places Section */}
                 <Card className="config-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <div className="w-2 h-6 bg-blue-500 rounded-full" />
+                            <div className="w-2 h-6 bg-primary rounded-full" />
                             Números decimales
                         </CardTitle>
                         <CardDescription>Configura cuántos decimales mostrar en moneda</CardDescription>
@@ -538,13 +714,10 @@ export default function ConfiguracionPage() {
                                         setDecimalPlaces(newValue);
                                         setIsDecimalsSaved(newValue === originalDecimalPlaces);
                                     }}
-                                    className="w-full"
+                                    className="w-full premium-slider"
                                 />
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    {decimalPlaces === 0 && 'Sin decimales (ej: 1000)'}
-                                    {decimalPlaces === 1 && 'Un decimal (ej: 1000.0)'}
-                                    {decimalPlaces === 2 && 'Dos decimales (ej: 1000.00)'}
-                                    {decimalPlaces === 3 && 'Tres decimales (ej: 1000.000)'}
+                                    {renderDecimalExample()}
                                 </p>
                             </div>
                         </div>
@@ -561,57 +734,117 @@ export default function ConfiguracionPage() {
                     </CardContent>
                 </Card>
 
+                <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
+
+                {/* Theme Color Section */}
+                <Card className="config-card">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <div className="w-2 h-6 bg-primary rounded-full" />
+                            Tema de color
+                        </CardTitle>
+                        <CardDescription>Elige el color base de la aplicación</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {themeOptions.map((theme) => (
+                                <button
+                                    key={theme.hex}
+                                    onClick={() => setSelectedTheme(theme.hex)}
+                                    className={cn(
+                                        "p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2",
+                                        selectedTheme === theme.hex
+                                            ? "border-primary ring-2 ring-primary ring-offset-2"
+                                            : "border-border hover:border-primary"
+                                    )}
+                                    style={{ backgroundColor: `${theme.hex}20` }}
+                                >
+                                    <div
+                                        className="w-10 h-10 rounded-full border-2 border-white shadow-md flex items-center justify-center"
+                                        style={{ backgroundColor: theme.hex }}
+                                    >
+                                        {selectedTheme === theme.hex && (
+                                            <div className="w-4 h-4 rounded-full bg-white" />
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                        <Button
+                            onClick={() => setAppThemePreference(selectedTheme)}
+                            className="w-full"
+                        >
+                            Guardar Color
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
+
                 <Card className={cn(
-                    "config-card transition-all duration-1000",
+                    "config-card bg-slate-50/80 border-slate-200 shadow-sm transition-all duration-1000",
                     highlightPassword && "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.02]"
                 )}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                            <div className="w-2 h-6 bg-primary rounded-full" />
+                            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
                             Seguridad
                         </CardTitle>
                         <CardDescription>Configura una contraseña para proteger tu acceso.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button
-                            variant="outline"
-                            className="gap-2 h-auto py-2 px-3 justify-start"
+                            variant="default"
+                            className="gap-2 h-auto py-2 px-3 justify-start bg-white border-slate-200 hover:bg-slate-100"
                             onClick={() => setShowPasswordDialog(true)}
                         >
-                            <Lock className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                            <span className="text-left whitespace-normal">Establecer / Cambiar Contraseña</span>
+                            <Lock className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600" />
+                            <span className="text-left whitespace-normal text-slate-700 font-medium">Establecer / Cambiar Contraseña</span>
                         </Button>
                     </CardContent>
                 </Card>
 
-                <section className="pt-8 border-t border-destructive/20">
-                    <Card className="config-card border-destructive/20">
+                <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
+
+                <section>
+                    <Card className="config-card bg-red-100 border-red-200 shadow-sm">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <div className="w-2 h-6 bg-destructive rounded-full" />
+                            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-black">
+                                <div className="w-1.5 h-6 bg-red-600 rounded-full" />
                                 Zona de Peligro
                             </CardTitle>
-                            <CardDescription>Acciones irreversibles sobre tu cuenta.</CardDescription>
+                            <CardDescription className="text-black">Acciones irreversibles sobre tu cuenta.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Button
-                                variant="destructive"
-                                className="bg-destructive hover:bg-destructive/90 text-white font-bold w-full sm:w-auto text-sm sm:text-base"
-                                onClick={() => setIsResetDialogOpen(true)}
-                            >
-                                <span className="whitespace-normal break-words text-left">
-                                    Resetear Perfil / Borrar todos los datos
-                                </span>
-                            </Button>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button
+                                    variant="default"
+                                    className="bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 rounded-2xl font-medium shadow-sm transition-all duration-200 h-auto py-3 justify-center"
+                                    onClick={() => setIsDeleteTransactionsDialogOpen(true)}
+                                >
+                                    <span className="whitespace-normal break-words text-center">
+                                        Eliminar Datos
+                                    </span>
+                                </Button>
+                                <Button
+                                    variant="default"
+                                    className="bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-2xl font-semibold shadow-sm transition-all duration-200 h-auto py-3 px-6 justify-center text-center"
+                                    onClick={() => setIsResetDialogOpen(true)}
+                                >
+                                    <span className="whitespace-normal break-words">
+                                        Resetear Perfil
+                                    </span>
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </section>
             </div>
 
             <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog(prev => ({ ...prev, open }))} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Pagar Tarjeta de Crédito</DialogTitle>
@@ -645,7 +878,7 @@ export default function ConfiguracionPage() {
                     <DialogFooter>
                         <Button onClick={async () => {
                             if (!paySourceId || !payDialog.cardId) return;
-                            await addTransfer(paySourceId, payDialog.cardId, Number(payAmount), 'Pago Tarjeta Crédito', new Date().toISOString());
+                            await addTransfer(paySourceId, payDialog.cardId, Number(payAmount), 'Pago Tarjeta Crédito', getTodayLocalDate());
                             setPayDialog({ open: false, cardId: null, balance: 0 });
                             setPayAmount('');
                             setPaySourceId('');
@@ -655,9 +888,9 @@ export default function ConfiguracionPage() {
             </Dialog>
 
             <Dialog open={conversionModalOpen} onOpenChange={setConversionModalOpen} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Cambiar Moneda</DialogTitle>
@@ -666,19 +899,26 @@ export default function ConfiguracionPage() {
                     </DialogHeader>
                     <div className="flex flex-col gap-4 pt-2">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="conversion-rate">Tasa de conversión (1 {currency} = ? {pendingCurrency})</Label>
+                            <Label htmlFor="conversion-rate">
+                                {conversionRate ? (
+                                    <>Tasa de conversión: {renderConversionPlaceholder(false)}</>
+                                ) : (
+                                    <>Tasa de conversión</>
+                                )}
+                            </Label>
                             <Input
                                 id="conversion-rate"
                                 type="number"
                                 value={conversionRate}
                                 onChange={e => setConversionRate(e.target.value)}
-                                placeholder={`Ej. 4000 (1 ${currency} = 4000 ${pendingCurrency})`}
+                                placeholder={!conversionRate ? renderConversionPlaceholder(true) : ''}
+                                className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&]:appearance-textfield"
                             />
                         </div>
                         <p className="text-sm text-muted-foreground">Al confirmar, todos los saldos de tus métodos de pago y los montos de las transacciones serán multiplicados por esta tasa.</p>
                     </div>
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => { setConversionModalOpen(false); setPendingCurrency(null); setConversionRate(''); }}>Cancelar</Button>
+                        <Button variant="default" onClick={() => { setConversionModalOpen(false); setPendingCurrency(null); setConversionRate(''); }}>Cancelar</Button>
                         <Button onClick={async () => {
                             const rate = parseFloat(conversionRate.replace(',', '.'));
                             if (isNaN(rate) || rate <= 0) {
@@ -710,9 +950,9 @@ export default function ConfiguracionPage() {
 
             {/* Preview Modal: show simple table of old/new balances */}
             <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Vista previa: cambios por conversión</DialogTitle>
@@ -733,8 +973,8 @@ export default function ConfiguracionPage() {
                                     {conversionPreview?.payment_methods.map(pm => (
                                         <tr key={pm.id} className="border-t">
                                             <td className="py-2">{pm.name}</td>
-                                            <td className="py-2">{pm.oldBalance == null ? '-' : pm.oldBalance}</td>
-                                            <td className="py-2">{pm.newBalance == null ? '-' : pm.newBalance}</td>
+                                            <td className="py-2">{pm.oldBalance == null ? '-' : pm.oldBalance.toFixed(decimalPlaces)}</td>
+                                            <td className="py-2">{pm.newBalance == null ? '-' : pm.newBalance.toFixed(decimalPlaces)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -743,7 +983,7 @@ export default function ConfiguracionPage() {
                         <p className="text-sm text-muted-foreground mt-3">Nota: Las transacciones también serán actualizadas; este resumen muestra las cuentas para facilitar la revisión.</p>
                     </div>
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => { setPreviewModalOpen(false); setConversionPreview(null); setPendingCurrency(null); setConversionRate(''); }}>Cancelar</Button>
+                        <Button variant="default" onClick={() => { setPreviewModalOpen(false); setConversionPreview(null); setPendingCurrency(null); setConversionRate(''); }}>Cancelar</Button>
                         <Button onClick={async () => {
                             const rate = parseFloat(conversionRate.replace(',', '.'));
                             if (isNaN(rate) || rate <= 0) {
@@ -762,11 +1002,11 @@ export default function ConfiguracionPage() {
                                 setConversionModalOpen(false);
                                 setPendingCurrency(null);
                                 setConversionRate('');
-                                
+
                                 // Mostrar mensaje de éxito - la conversión ya actualiza currency internamente
-                                toast({ 
-                                    title: '✓ Conversión completada', 
-                                    description: `La moneda se cambió a ${pendingCurrency ?? ''}` 
+                                toast({
+                                    title: '✓ Conversión completada',
+                                    description: `La moneda se cambió a ${pendingCurrency ?? ''}`
                                 });
                             }
                         }}>{isConverting ? 'Convirtiendo...' : 'Confirmar y convertir'}</Button>
@@ -775,9 +1015,9 @@ export default function ConfiguracionPage() {
             </Dialog>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
@@ -860,14 +1100,43 @@ export default function ConfiguracionPage() {
             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                 <AlertDialogContent className="border-destructive/50">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                        <AlertDialogTitle className="text-red-600 font-bold flex items-center gap-2">
                             <AlertCircle className="h-5 w-5" />
-                            ¿Estás completamente seguro?
+                            ¿Resetear perfil?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-foreground font-medium" asChild>
                             <div>
-                                Esta acción eliminará permanentemente todos tus gastos, presupuestos, cuentas y categorías.
-                                <span className="block mt-2 text-destructive font-bold uppercase underline">No se puede deshacer.</span>
+                                <p className="text-[#333333]">Esta acción eliminará permanentemente todos tus gastos, presupuestos, cuentas y categorías.</p>
+                                <span className="block mt-2 text-destructive font-bold uppercase underline tracking-wide">ESTA ACCIÓN ES IRREVERSIBLE</span>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="text-gray-600 hover:bg-gray-100 border-none shadow-none">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                await resetProfileData();
+                                setIsResetDialogOpen(false);
+                            }}
+                            className="bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-2xl font-semibold px-6"
+                        >
+                            Resetear perfil
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteTransactionsDialogOpen} onOpenChange={setIsDeleteTransactionsDialogOpen}>
+                <AlertDialogContent className="border-orange-600/50">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-orange-600 flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5" />
+                            ¿Eliminar todos los datos?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-foreground font-medium" asChild>
+                            <div>
+                                Se eliminarán todas tus transacciones, préstamos, presupuestos y ahorros.
+                                <span className="block mt-2 text-destructive font-bold uppercase underline">Esta acción no se puede deshacer. ¿Continuar?</span>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -875,12 +1144,41 @@ export default function ConfiguracionPage() {
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={async () => {
-                                await resetProfileData();
-                                setIsResetDialogOpen(false);
+                                try {
+                                    if (!user?.id) return;
+                                    // Eliminar datos operativos (manteniendo config: categorias, metodos)
+                                    const tablesToDelete = [
+                                        'transactions',
+                                        'loans',
+                                        'budgets',
+                                        'savings_transactions',
+                                        'savings_accounts'
+                                    ];
+
+                                    for (const table of tablesToDelete) {
+                                        await supabase.from(table as any).delete().eq('user_id', user.id);
+                                    }
+
+                                    // Resetear los saldos de los métodos de pago a 0
+                                    for (const pm of paymentMethods) {
+                                        await supabase
+                                            .from('payment_methods')
+                                            .update({ balance: 0 })
+                                            .eq('id', pm.id);
+                                    }
+
+                                    toast({ title: 'Éxito', description: 'Datos eliminados correctamente (Configuración conservada)' });
+                                    setIsDeleteTransactionsDialogOpen(false);
+                                    // Recargar datos
+                                    window.location.reload();
+                                } catch (err) {
+                                    console.error(err);
+                                    toast({ title: 'Error', description: 'No se pudieron eliminar los datos', variant: 'destructive' });
+                                }
                             }}
-                            className="bg-destructive text-white hover:bg-destructive/90"
+                            className="bg-orange-600/20 text-orange-600 hover:bg-orange-600/30 border border-orange-600/30"
                         >
-                            Sí, borrar todo permanentemente
+                            Sí, eliminar todos mis datos
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -946,22 +1244,30 @@ function CategoryRow({
     onDelete: () => void
 }) {
     return (
-        <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-stone-200 hover:border-stone-300 transition-all group">
+        <div className="flex items-center justify-between p-2 rounded-lg border transition-all group"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
+        >
             <div className="flex items-center gap-2.5 flex-1">
                 <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105"
                     style={{ backgroundColor: category.color || '#3b82f6' }}
                 >
-                    <div className="w-2.5 h-2.5 rounded-full bg-white/40" />
+                    <div className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: 'var(--bg-card-inner)' }}
+                    />
                 </div>
                 <span className="font-medium text-sm text-foreground flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 hover:bg-white border border-transparent hover:border-stone-300 rounded-md">
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                <Button variant="outline" size="icon" onClick={onEdit}
+                    className="h-7 w-7 rounded-sm border-primary/80"
+                >
+                    <Pencil className="h-3.5 w-3.5 text-black" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:border-destructive/20 border border-transparent rounded-md">
-                    <Trash2 className="h-3.5 w-3.5" />
+                <Button variant="outline" size="icon" onClick={onDelete}
+                    className="h-7 w-7 rounded-sm border-primary/80"
+                >
+                    <Trash2 className="h-3.5 w-3.5 text-black" />
                 </Button>
             </div>
         </div>

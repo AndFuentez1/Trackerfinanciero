@@ -143,6 +143,8 @@ export type Database = {
           email: string | null
           type: string | null
           profile_type: string | null
+          decimal_places: number | null
+          base_color: string | null
         }
         Insert: {
           created_at?: string
@@ -158,6 +160,8 @@ export type Database = {
           email?: string | null
           type?: string | null
           profile_type?: string | null
+          decimal_places?: number | null
+          base_color?: string | null
         }
         Update: {
           created_at?: string
@@ -173,6 +177,8 @@ export type Database = {
           email?: string | null
           type?: string | null
           profile_type?: string | null
+          decimal_places?: number | null
+          base_color?: string | null
         }
         Relationships: []
       }

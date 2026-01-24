@@ -1,6 +1,8 @@
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 
 interface SummaryCardProps {
   title: string;
@@ -13,24 +15,37 @@ interface SummaryCardProps {
 
 export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', description, className }: SummaryCardProps) {
   const decimalPlaces = useDecimalPlaces();
-  
+  const { currency } = useFinance();
+
+  const getCurrencySymbol = (currencyCode: string): string => {
+    const curr = CURRENCIES.find(c => c.code === currencyCode);
+    return curr?.symbol || currencyCode;
+  };
+
   const formatSmartCurrency = (value: number) => {
     const absValue = Math.abs(value);
-    const formatted = new Intl.NumberFormat('es-CO', {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
     }).format(absValue);
 
+    formatted = formatted.replace(currency || 'COP', symbol);
+
     // Separar símbolo, parte entera y decimales
     const parts = formatted.split(',');
-    const integerPart = parts[0]; // "$1.000"
+    const integerPart = parts[0]; // "$1.000" o "€1.000"
     const decimalPart = parts.length > 1 && decimalPlaces > 0 ? parts[1] : ''; // "00"
 
+    // Extraer símbolo (puede ser $, €, etc.)
+    const extractedSymbol = integerPart.match(/[^0-9.,\s]+/)?.[0] || '$';
+
     return {
-      symbol: '$',
-      integerPart: integerPart.replace('$', ''),
+      symbol: extractedSymbol,
+      integerPart: integerPart.replace(/[^0-9.,\s]+/g, ''),
       decimalPart,
       fullLength: formatted.length
     };
@@ -53,23 +68,17 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
     return 'text-muted-foreground';
   };
 
-  const getVariantIcon = () => {
-    if (variant === 'positive') return <TrendingUp className="h-4 w-4 text-emerald-500" />;
-    if (variant === 'negative') return <TrendingDown className="h-4 w-4 text-red-500" />;
-    return null;
-  };
-
   const { symbol, integerPart, decimalPart, fullLength } = formatSmartCurrency(amount);
   const fontSize = getFontSize(fullLength);
 
   return (
     <div className={cn(
-      "summary-card",
+      "summary-card overflow-hidden transition-all duration-300",
       className
     )}>
       {/* Icon - top right */}
-      <div className="absolute top-5 right-5">
-        <Icon className={cn("h-4 w-4 transition-colors duration-200", getIconColor())} strokeWidth={2} />
+      <div className="absolute top-5 right-5 z-10">
+        <Icon className={cn("h-4 w-4 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
       </div>
 
       {/* Content */}
@@ -80,23 +89,16 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
         </p>
 
         {/* Amount */}
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-medium text-muted-foreground/60">
-            {symbol}
-          </span>
+        <div className="flex items-baseline gap-0.5">
           <span className={cn(
             'font-bold tracking-tight leading-none',
             fontSize,
             getTextColor()
           )}>
-            {integerPart}
-            {decimalPart && <span className="opacity-60" style={{ fontSize: '0.6em' }}>,{decimalPart}</span>}
+            <span style={{ fontSize: '0.7em', opacity: 0.8 }}>{symbol}</span>
+            <span>{integerPart}</span>
+            {decimalPart && <span className="opacity-60" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>}
           </span>
-          {getVariantIcon() && (
-            <span className="ml-2">
-              {getVariantIcon()}
-            </span>
-          )}
         </div>
 
         {description && (

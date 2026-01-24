@@ -3,15 +3,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
-import { formatCurrency } from "@/lib/utils";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { parseISO, isWithinInterval } from "date-fns";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { useFinance } from "@/contexts/FinanceContext";
+import { CURRENCIES } from "@/hooks/currencyConstants";
+import { useDecimalPlaces } from "@/hooks/useDecimalPlaces";
 
 export function IncomeCard() {
     const { transactions, allTransactions } = useFinanceData();
     const { budgetYear, budgetMonth, setBudgetPeriod, availableYears } = useBudgetsData();
+    const { formatCurrencySmall, currency } = useFormatCurrency();
+    const { currency: ctxCurrency } = useFinance();
+    const decimalPlaces = useDecimalPlaces();
+
+    const formatCurrency70 = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = decimalPlaces;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.7em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
 
     const selectedMonth = budgetMonth === 'all' ? 'all' : (budgetMonth - 1).toString();
     const selectedYear = budgetYear === 'all' ? 'all' : budgetYear.toString();
@@ -69,10 +113,10 @@ export function IncomeCard() {
     const expensePercentage = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
 
     return (
-        <Card className="flex h-full min-h-[360px] flex-col p-6 border-emerald-200 bg-emerald-50/30 hover:shadow-md transition-shadow overflow-hidden">
+        <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
             <CardHeader className="pb-4">
                 <div className="flex flex-col gap-3">
-                    <CardTitle className="text-lg font-bold text-emerald-800">Balance</CardTitle>
+                    <CardTitle className="text-lg font-bold text-primary">Balance</CardTitle>
                     <div className="flex flex-col gap-2">
                         <Select
                             value={selectedMonth}
@@ -113,15 +157,11 @@ export function IncomeCard() {
                 {/* Main Metric: Savings Rate */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-emerald-700">Tasa de Ahorro</span>
+                        <span className="text-sm font-medium text-muted-foreground">Tasa de Ahorro</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-foreground">
-                                {savingsRate.toFixed(0)}%
+                                {savingsRate.toFixed(decimalPlaces)}%
                             </span>
-                            {savingsRate >= 0 ? 
-                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
-                                <TrendingDown className="h-5 w-5 text-red-500" />
-                            }
                         </div>
                     </div>
                     <Progress
@@ -133,32 +173,29 @@ export function IncomeCard() {
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-1 gap-3">
-                    <div className="flex justify-between items-center py-2 border-b border-emerald-100">
-                        <span className="text-sm text-emerald-600 font-medium">Ingresos Reales</span>
-                        <span className="text-lg font-bold text-emerald-800">{formatCurrency(totalIncome)}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground font-medium">Ingresos Reales</span>
+                        <span className="text-lg font-bold text-foreground">{formatCurrency70(totalIncome)}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-emerald-100">
-                        <span className="text-sm text-emerald-600 font-medium">Gastos Reales</span>
-                        <span className="text-lg font-bold text-emerald-800">{formatCurrency(totalExpenses)}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-sm text-muted-foreground font-medium">Gastos Reales</span>
+                        <span className="text-lg font-bold text-foreground">{formatCurrency70(totalExpenses)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-emerald-600 font-medium">Flujo Neto</span>
+                        <span className="text-sm text-muted-foreground font-medium">Flujo Neto</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-foreground">
-                                {formatCurrency(netFlow)}
+                                {formatCurrency70(netFlow)}
                             </span>
-                            {netFlow >= 0 ? 
-                                <TrendingUp className="h-5 w-5 text-emerald-500" /> : 
-                                <TrendingDown className="h-5 w-5 text-red-500" />
-                            }
+
                         </div>
                     </div>
                 </div>
 
                 {/* Bottom Message */}
-                <div className="text-center pt-2 border-t border-emerald-100">
-                    <p className="text-xs text-emerald-600 font-medium">
-                        Has gastado {expensePercentage.toFixed(0)}% de tus ingresos totales
+                <div className="text-center pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground font-medium">
+                        Has gastado {expensePercentage.toFixed(decimalPlaces)}% de tus ingresos totales
                     </p>
                 </div>
             </CardContent>

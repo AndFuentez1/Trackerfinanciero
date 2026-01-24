@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TransactionType, CategoryItem, useFinanceData, MASTER_PALETTE } from '@/hooks/useFinanceData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,11 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
     }, [open, availableColors, usedColors, selectedColor]);
 
 
+    // Mantener sincronizado el tipo con el valor inicial recibido
+    useEffect(() => {
+        setType(initialType);
+    }, [initialType]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name) return;
@@ -73,7 +78,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
     return (
         <Dialog open={open} onOpenChange={setOpen} modal={false}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs font-medium text-primary hover:text-primary">
+                <Button variant="default" size="sm" className="w-full justify-start gap-2 text-xs font-medium text-primary hover:text-primary">
                     <Plus className="h-4 w-4" />
                     Nueva categoría
                 </Button>
@@ -102,21 +107,31 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                     <div className="space-y-2">
                         <Label>Tipo de flujo</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {typeOptions.map((option) => (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => setType(option.value)}
-                                    className={cn(
-                                        'px-2 py-2 text-xs rounded-lg border transition-all truncate min-h-[44px] md:min-h-[36px] flex items-center justify-center',
-                                        type === option.value
-                                            ? 'bg-primary text-primary-foreground border-primary'
-                                            : 'bg-background hover:bg-muted border-border'
-                                    )}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
+                            {typeOptions.map((option) => {
+                                const isLocked = option.value !== initialType;
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        aria-disabled={isLocked}
+                                        disabled={isLocked}
+                                        onClick={() => {
+                                            if (isLocked) return;
+                                            setType(option.value);
+                                        }}
+                                        className={cn(
+                                            'px-2 py-2 text-xs rounded-lg border transition-all truncate min-h-[44px] md:min-h-[36px] flex items-center justify-center',
+                                            isLocked
+                                                ? 'bg-muted text-muted-foreground opacity-70 cursor-not-allowed border-border'
+                                                : type === option.value
+                                                    ? 'bg-primary text-primary-foreground border-primary'
+                                                    : 'bg-background hover:bg-muted border-border'
+                                        )}
+                                    >
+                                        {option.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useLoans, useCreateLoan, useUpdateLoan, useCreateLoanPayment, Loan } from '@/hooks/useLoans';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFormatCurrency } from '@/hooks/useFormatCurrency';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { format, isPast, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -43,7 +47,118 @@ export default function LoansPage() {
     const { createPayment } = useCreateLoanPayment();
     const { paymentMethods, updateTransaction, transactions } = useFinanceData();
     const decimalPlaces = useDecimalPlaces();
+    const { formatCurrencySmall: formatCurrency, currency, decimalPlaces: dp } = useFormatCurrency();
+    const { currency: ctxCurrency, decimalPlaces: ctxDecimalPlaces } = useFinance();
+    const activeDecimals = ctxDecimalPlaces ?? decimalPlaces ?? 0;
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const getCurrencySymbol = () => {
+        const curr = CURRENCIES.find(c => c.code === ctxCurrency);
+        return curr?.symbol || ctxCurrency || '$';
+    };
+
+    const getPlaceholderAmount = () => {
+        const decimals = '.'.padEnd(activeDecimals + 1, '0');
+        return activeDecimals > 0 ? `100000${decimals}` : '100000';
+    };
+
+    const getCurrencyPadding = () => {
+        const symbol = getCurrencySymbol();
+        if (symbol.length > 2) return 'pl-16';
+        if (symbol.length === 2) return 'pl-12';
+        return 'pl-9';
+    };
+
+    const getStepValue = () => {
+        if (!activeDecimals || activeDecimals <= 0) return '1';
+        return `0.${'0'.repeat(activeDecimals - 1)}1`;
+    };
+
+    const getPlaceholderInterest = () => {
+        if (activeDecimals && activeDecimals > 0) {
+            const decimals = '.'.padEnd(activeDecimals + 1, '0');
+            return `5${decimals}`;
+        }
+        return '5';
+    };
+
+    const formatBalanceOption = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = activeDecimals;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
+
+    const formatCurrencyCard = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = activeDecimals;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
 
     // Payment Dialog State
     const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
@@ -61,22 +176,13 @@ export default function LoansPage() {
     const [formData, setFormData] = useState({
         name: '',
         total_amount: '',
-        paid_amount: '0',
-        interest_rate: '0',
+        paid_amount: '',
+        interest_rate: '',
         type: 'borrowed' as 'borrowed' | 'lent',
         due_date: '',
         payment_method_id: '',
         is_disbursed: true,
     });
-
-    const formatCurrency = (val: number) => {
-        return val.toLocaleString('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces,
-        });
-    };
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -92,7 +198,7 @@ export default function LoansPage() {
 
         if (!error) {
             setIsDialogOpen(false);
-            setFormData({ name: '', total_amount: '', paid_amount: '0', interest_rate: '0', type: 'borrowed', due_date: '', payment_method_id: '', is_disbursed: true });
+            setFormData({ name: '', total_amount: '', paid_amount: '', interest_rate: '', type: 'borrowed', due_date: '', payment_method_id: '', is_disbursed: true });
             refetch();
         }
     };
@@ -117,6 +223,18 @@ export default function LoansPage() {
     const handleOpenEdit = (loan: Loan) => {
         setEditDialog({ open: true, loan });
         setEditData({ methodId: '' });
+    };
+
+    const handlePayInFull = (loan: Loan) => {
+        const remaining = loan.total_amount - loan.paid_amount;
+        if (remaining <= 0) return;
+
+        setPaymentDialog({ open: true, loan });
+        setPaymentData({
+            amount: remaining.toString(),
+            date: getTodayLocalDate(),
+            methodId: loan.payment_method_id || ''
+        });
     };
 
 
@@ -221,16 +339,12 @@ export default function LoansPage() {
 
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="animate-pulse text-muted-foreground">Cargando préstamos...</div>
-            </div>
-        );
+        return <SkeletonLoader tab="loans" />;
     }
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border/50 bg-[#F4F5F7]/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -242,12 +356,12 @@ export default function LoansPage() {
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button
-                                    className="gap-2"
-                                    aria-label="Nuevo Préstamo"
-                                    title="Nuevo Préstamo"
+                                    className="gap-2 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                                    aria-label="Nuevo préstamo"
+                                    title="Nuevo préstamo"
                                 >
-                                    <Plus className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Nuevo Préstamo</span>
+                                    <span className="hidden sm:flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
+                                    <span className="sm:hidden flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
@@ -283,23 +397,33 @@ export default function LoansPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Monto Total Original</label>
-                                            <Input
-                                                required
-                                                type="number"
-                                                placeholder="5000000"
-                                                value={formData.total_amount}
-                                                onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
-                                            />
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                                <Input
+                                                    required
+                                                    type="number"
+                                                    placeholder={getPlaceholderAmount()}
+                                                    value={formData.total_amount}
+                                                    onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
+                                                    step={getStepValue()}
+                                                    className={getCurrencyPadding()}
+                                                />
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Monto Ya Pagado</label>
-                                            <Input
-                                                required
-                                                type="number"
-                                                placeholder="0"
-                                                value={formData.paid_amount}
-                                                onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
-                                            />
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                                <Input
+                                                    required
+                                                    type="number"
+                                                    placeholder={getPlaceholderAmount()}
+                                                    value={formData.paid_amount}
+                                                    onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
+                                                    step={getStepValue()}
+                                                    className={getCurrencyPadding()}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -307,8 +431,8 @@ export default function LoansPage() {
                                             <label className="text-sm font-medium">Tasa de Interés (%)</label>
                                             <Input
                                                 type="number"
-                                                step="0.01"
-                                                placeholder="0.00"
+                                                step={getStepValue()}
+                                                placeholder={getPlaceholderInterest()}
                                                 value={formData.interest_rate}
                                                 onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
                                             />
@@ -355,9 +479,13 @@ export default function LoansPage() {
                                             <SelectContent>
                                                 {paymentMethods.map(pm => (
                                                     <SelectItem key={pm.id} value={pm.id}>
-                                                        {pm.name}
-                                                        <span className="ml-2 text-xs text-muted-foreground">
-                                                            (${Number(pm.balance).toLocaleString()})
+                                                        <span className="flex items-center justify-between w-full gap-2">
+                                                            <span className="truncate">{pm.name}</span>
+                                                            <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                                <span className="opacity-80">(</span>
+                                                                {formatBalanceOption(pm.balance)}
+                                                                <span className="opacity-80">)</span>
+                                                            </span>
                                                         </span>
                                                     </SelectItem>
                                                 ))}
@@ -365,7 +493,7 @@ export default function LoansPage() {
                                         </Select>
                                         <p className="text-[10px] text-muted-foreground mt-1">Cuenta donde se registra el movimiento inicial del préstamo.</p>
                                     </div>
-                                    <Button type="submit" className="w-full">Guardar</Button>
+                                    <Button type="submit" className="w-full min-w-[140px] flex items-center justify-center gap-2">Guardar <Save className="h-4 w-4" /></Button>
                                 </form>
                             </DialogContent>
                         </Dialog>
@@ -376,9 +504,9 @@ export default function LoansPage() {
             {/* Payment Dialog */}
             < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
             } modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
@@ -387,13 +515,18 @@ export default function LoansPage() {
                     <form onSubmit={submitPayment} className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Monto del Abono</label>
-                            <Input
-                                required
-                                type="number"
-                                placeholder="0.00"
-                                value={paymentData.amount}
-                                onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
-                            />
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                <Input
+                                    required
+                                    type="number"
+                                    placeholder={getPlaceholderAmount()}
+                                    value={paymentData.amount}
+                                    onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                    step={getStepValue()}
+                                    className={getCurrencyPadding()}
+                                />
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Fecha</label>
@@ -415,7 +548,16 @@ export default function LoansPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                                        <SelectItem key={pm.id} value={pm.id}>
+                                            <span className="flex items-center justify-between w-full gap-2">
+                                                <span className="truncate">{pm.name}</span>
+                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                    <span className="opacity-80">(</span>
+                                                    {formatBalanceOption(pm.balance)}
+                                                    <span className="opacity-80">)</span>
+                                                </span>
+                                            </span>
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -425,7 +567,7 @@ export default function LoansPage() {
                                     : 'Cuenta donde entra el dinero recibido.'}
                             </p>
                         </div>
-                        <Button type="submit" className="w-full">Registrar Pago</Button>
+                        <Button type="submit" className="w-full border border-primary min-w-[170px] flex items-center justify-center gap-2">Registrar Pago <HandCoins className="h-4 w-4" /></Button>
                     </form>
                 </DialogContent>
             </Dialog >
@@ -433,9 +575,9 @@ export default function LoansPage() {
 
             {/* Disbursement Dialog */}
             <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
@@ -465,21 +607,30 @@ export default function LoansPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>{pm.name} (${Number(pm.balance).toLocaleString()})</SelectItem>
+                                        <SelectItem key={pm.id} value={pm.id}>
+                                            <span className="flex items-center justify-between w-full gap-2">
+                                                <span className="truncate">{pm.name}</span>
+                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                    <span className="opacity-80">(</span>
+                                                    {formatBalanceOption(pm.balance)}
+                                                    <span className="opacity-80">)</span>
+                                                </span>
+                                            </span>
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button onClick={confirmDisbursement} className="w-full" disabled={!disbursementData.methodId}>Confirmar Desembolso</Button>
+                        <Button onClick={confirmDisbursement} className="w-full min-w-[170px] flex items-center justify-center gap-2" disabled={!disbursementData.methodId}>Confirmar Desembolso <ArrowDownCircle className="h-4 w-4" /></Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Edit Dialog for Orphaned Loans */}
             <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent 
-                  className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                  onInteractOutside={(e) => e.preventDefault()}
+                <DialogContent
+                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                    onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
@@ -500,7 +651,16 @@ export default function LoansPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>{pm.name} (${Number(pm.balance).toLocaleString()})</SelectItem>
+                                        <SelectItem key={pm.id} value={pm.id}>
+                                            <span className="flex items-center justify-between w-full gap-2">
+                                                <span className="truncate">{pm.name}</span>
+                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                    <span className="opacity-80">(</span>
+                                                    {formatBalanceOption(pm.balance)}
+                                                    <span className="opacity-80">)</span>
+                                                </span>
+                                            </span>
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -522,27 +682,27 @@ export default function LoansPage() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="bg-destructive/5 border-destructive/20">
+                    <Card className="bg-card">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+                            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                                 <ArrowDownCircle className="h-4 w-4" />
                                 Mis Deudas Pendientes
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-destructive">{formatCurrency(totalRemainingDebt)}</div>
+                            <div className="text-2xl font-bold text-foreground">{formatCurrencyCard(totalRemainingDebt)}</div>
                             <p className="text-xs text-muted-foreground mt-1">(Solo préstamos desembolsados)</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-emerald-500/5 border-emerald-500/20">
+                    <Card className="bg-card">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-600 flex items-center gap-2">
+                            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                                 <ArrowUpCircle className="h-4 w-4" />
                                 Por Cobrar (Prestado)
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalRemainingReceivable)}</div>
+                            <div className="text-2xl font-bold text-foreground">{formatCurrencyCard(totalRemainingReceivable)}</div>
                             <p className="text-xs text-muted-foreground mt-1">(Solo préstamos desembolsados)</p>
                         </CardContent>
                     </Card>
@@ -563,6 +723,7 @@ export default function LoansPage() {
                                 const overdue = isOverdue(loan);
                                 const isPendingDisbursement = !loan.is_disbursed && !loan.payment_method_id;
                                 const isOrphaned = loan.is_disbursed && !loan.payment_method_id;
+                                const isFullyPaid = loan.paid_amount >= loan.total_amount;
 
                                 return (
                                     <Card key={loan.id} className={cn(
@@ -595,7 +756,7 @@ export default function LoansPage() {
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                                                        <p>{formatCurrency(loan.paid_amount)} de {formatCurrency(loan.total_amount)}</p>
+                                                        <p>{formatCurrencyCard(loan.paid_amount)} de {formatCurrencyCard(loan.total_amount)}</p>
                                                         {loan.interest_rate > 0 && (
                                                             <p className="flex items-center gap-1">
                                                                 <Percent className="h-3 w-3" />
@@ -633,42 +794,64 @@ export default function LoansPage() {
                                                                 onClick={() => handleOpenDisbursement(loan)}
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4" />
-                                                                {isDebt ? 'Recibir Dinero' : 'Confirmar Desembolso'}
+                                                                <span className="hidden sm:inline">{isDebt ? 'Recibir Dinero' : 'Confirmar Desembolso'}</span>
                                                             </Button>
                                                         ) : isOrphaned ? (
                                                             <Button
                                                                 size="sm"
-                                                                className="gap-2 shadow-sm bg-red-600 hover:bg-red-700 text-white"
+                                                                className="gap-2 shadow-sm bg-red-600 hover:bg-red-700 text-white min-w-[140px] flex items-center justify-center"
                                                                 onClick={() => handleOpenEdit(loan)}
                                                             >
-                                                                <Edit2 className="h-4 w-4" />
-                                                                Reclasificar
+                                                                Reclasificar <Edit2 className="h-4 w-4" />
                                                             </Button>
-                                                        ) : (
+                                                        ) : isFullyPaid ? (
                                                             <Button
                                                                 size="sm"
-                                                                className="gap-2 shadow-sm"
-                                                                onClick={() => handleOpenPayment(loan)}
+                                                                variant="default"
+                                                                className="gap-2 shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white min-w-[140px] flex items-center justify-center"
+                                                                onClick={() => handleDelete(loan.id)}
                                                             >
-                                                                <Save className="h-4 w-4" />
-                                                                Abonar
+                                                                Eliminar <Trash2 className="h-4 w-4" />
                                                             </Button>
+                                                        ) : (
+                                                            <>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    className="gap-2 shadow-sm"
+                                                                    onClick={() => handlePayInFull(loan)}
+                                                                >
+                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                    <span className="hidden sm:inline">Pagar Todo</span>
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    className="gap-2 shadow-sm border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                                                                    onClick={() => handleOpenPayment(loan)}
+                                                                >
+                                                                    <span className="hidden sm:flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>
+                                                                    <span className="sm:hidden flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>
+                                                                </Button>
+                                                            </>
                                                         )}
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                        onClick={() => handleDelete(loan.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {!isFullyPaid && (
+                                                        <Button
+                                                            variant="default"
+                                                            size="icon"
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDelete(loan.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-xs font-medium">
                                                     <span>Progreso de {isDebt ? 'pago' : 'cobro'}</span>
-                                                    <span>{percentage.toFixed(1)}%</span>
+                                                    <span>{percentage.toFixed(dp)}%</span>
                                                 </div>
                                                 <Progress
                                                     value={percentage}

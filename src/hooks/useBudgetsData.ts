@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useFinanceData, Transaction } from './useFinanceData';
+import { useFinanceData, Transaction, TransactionType } from './useFinanceData';
 import { useAuth } from './useAuth';
 import { startOfMonth, parseISO } from 'date-fns';
+import { formatLocalDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Budget {
@@ -106,7 +107,8 @@ export function useBudgetsData() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [user, refreshData]);
+
     // Derived state calculation
     const budgetsStats = useMemo(() => {
         const stats: BudgetState[] = [];
@@ -186,7 +188,7 @@ export function useBudgetsData() {
             status
         };
     }, [budgetsStats]);
-    
+
     const saveBudget = async (budgetData: { category_id: string; amount: number; category_name?: string; month?: string }) => {
         if (!user) return { error: 'No autenticado' };
 
@@ -198,7 +200,7 @@ export function useBudgetsData() {
         // Solo extraer YYYY-MM y agregar -01 para primer día del mes
         const targetMonth = budgetData.month
             ? budgetData.month.substring(0, 7) + '-01'
-            : startOfMonth(new Date()).toISOString().split('T')[0];
+            : formatLocalDate(startOfMonth(new Date()));
 
         const { data, error } = await supabase
             .from('budgets')
@@ -217,11 +219,29 @@ export function useBudgetsData() {
             toast({ title: 'Error', description: 'No se pudo guardar el presupuesto', variant: 'destructive' });
             return { error };
         }
-        
+
         // Refresh data and wait for it to complete
         await refreshData();
-        
+
         return { data, error: null };
+    };
+
+    const deleteBudget = async (budgetId: string) => {
+        if (!user) return { error: 'No autenticado' };
+
+        const { error } = await supabase
+            .from('budgets')
+            .delete()
+            .eq('id', budgetId);
+
+        if (error) {
+            toast({ title: 'Error', description: 'No se pudo eliminar el presupuesto', variant: 'destructive' });
+            return { error };
+        }
+
+        toast({ title: 'Éxito', description: 'Presupuesto eliminado correctamente' });
+        await refreshData();
+        return { error: null };
     };
 
     return {
@@ -230,10 +250,11 @@ export function useBudgetsData() {
         loading,
         refreshBudgets: refreshData,
         saveBudget,
-            lastModification,
-            budgetYear,
-            budgetMonth,
-            setBudgetPeriod: (year: number | 'all', month: number | 'all') => { setBudgetYear(year); setBudgetMonth(month); },
-            availableYears
+        deleteBudget,
+        lastModification,
+        budgetYear,
+        budgetMonth,
+        setBudgetPeriod: (year: number | 'all', month: number | 'all') => { setBudgetYear(year); setBudgetMonth(month); },
+        availableYears
     };
 }

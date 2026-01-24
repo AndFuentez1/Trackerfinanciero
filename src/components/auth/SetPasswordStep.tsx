@@ -42,7 +42,7 @@ export function SetPasswordStep({
                     </div>
                     <Button
                         type="button"
-                        variant="ghost"
+                        variant="default"
                         size="sm"
                         onClick={() => {
                             setPasswordStep('email');
@@ -74,7 +74,7 @@ export function SetPasswordStep({
                                 const magicLinkTab = document.querySelector('[value="magic-link"]') as HTMLElement;
                                 magicLinkTab?.click();
                             }}
-                            className="text-xs h-8"
+                            className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300 h-9"
                         >
                             ¿Prefieres entrar con un enlace a tu correo?
                         </Button>
@@ -89,7 +89,7 @@ export function SetPasswordStep({
                             id="password-set"
                             type="password"
                             placeholder="Mínimo 6 caracteres"
-                            className="pl-10 h-11"
+                            className="pl-10 h-11 border-slate-300 rounded-[8.8px]"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -106,7 +106,7 @@ export function SetPasswordStep({
                             id="password-set-confirm"
                             type="password"
                             placeholder="Repite tu contraseña"
-                            className="pl-10 h-11"
+                            className="pl-10 h-11 border-slate-300 rounded-[8.8px]"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
@@ -124,7 +124,7 @@ export function SetPasswordStep({
 
             <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
                 disabled={isSubmitting}
             >
                 {isSubmitting ? 'Enviando verificación...' : 'Establecer contraseña'}

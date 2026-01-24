@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { BudgetState, useBudgetsData } from "@/hooks/useBudgetsData";
-import { formatCurrency, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Pencil } from "lucide-react";
 import { AddBudgetDialog } from "../AddBudgetDialog";
+import { Button } from "@/components/ui/button";
 import { PaymentMethod } from "@/hooks/useFinanceData";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { useFinance } from "@/contexts/FinanceContext";
+import { CURRENCIES } from "@/hooks/currencyConstants";
+import { useDecimalPlaces } from "@/hooks/useDecimalPlaces";
 
 interface CategoryBudgetListProps {
     budgets: BudgetState[];
@@ -11,7 +16,8 @@ interface CategoryBudgetListProps {
 }
 
 export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBudgetListProps) {
-    const { refreshBudgets, saveBudget } = useBudgetsData();
+    const { refreshBudgets, saveBudget, deleteBudget } = useBudgetsData();
+    const { formatCurrencySmall } = useFormatCurrency();
     const [expandedCount, setExpandedCount] = useState(0);
 
     if (budgets.length === 0) {
@@ -24,7 +30,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
     }
 
     return (
-        <div className="hidden md:block bg-gradient-to-b from-[#F4F5F7] to-[#F4F5F7]/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
+        <div className="hidden md:block bg-gradient-to-b from-card to-card/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
             <div className="overflow-x-auto">
                 <table className="w-full table-fixed">
                     <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
@@ -44,6 +50,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
                                 key={budget.budget.id}
                                 budget={budget}
                                 onSave={saveBudget}
+                                onDelete={deleteBudget}
                                 onRefresh={refreshBudgets}
                                 paymentMethods={paymentMethods}
                                 onExpandChange={(isExpanded: boolean) => setExpandedCount(count => Math.max(0, count + (isExpanded ? 1 : -1)))}
@@ -56,8 +63,64 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
     );
 }
 
-function CategoryBudgetRow({ budget, onSave, onRefresh, paymentMethods = [], onExpandChange }: { budget: BudgetState, onSave: any, onRefresh: any, paymentMethods: PaymentMethod[], onExpandChange: (expanded: boolean) => void }) {
+function CategoryBudgetRow({
+    budget,
+    onSave,
+    onDelete,
+    onRefresh,
+    paymentMethods = [],
+    onExpandChange
+}: {
+    budget: BudgetState,
+    onSave: any,
+    onDelete: any,
+    onRefresh: any,
+    paymentMethods: PaymentMethod[],
+    onExpandChange: (expanded: boolean) => void
+}) {
     const [expanded, setExpanded] = useState(false);
+    const { formatCurrencySmall, currency } = useFormatCurrency();
+    const { currency: ctxCurrency } = useFinance();
+    const decimalPlaces = useDecimalPlaces();
+
+    const formatCurrency80 = (value: number) => {
+        const currCode = ctxCurrency || currency || 'COP';
+        const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+        const decimals = decimalPlaces;
+
+        const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            currencyDisplay: 'code',
+        }).format(value).replace(currCode, symbol);
+
+        if (decimals === 0) {
+            return (
+                <span className="inline-flex items-baseline gap-1">
+                    <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                    <span>{formatted.replace(symbol, '').trim()}</span>
+                </span>
+            );
+        }
+
+        const parts = formatted.split(',');
+        if (parts.length === 1) return formatted;
+
+        const integerPart = parts[0].replace(symbol, '').trim();
+        const decimalPart = parts[1];
+
+        return (
+            <span className="inline-flex items-baseline gap-[2px]">
+                <span style={{ fontSize: '0.8em' }}>{symbol}</span>
+                <span>
+                    {integerPart}
+                    <span className="opacity-85" style={{ fontSize: '0.8em' }}>,{decimalPart}</span>
+                </span>
+            </span>
+        );
+    };
 
     const toggleExpanded = () => {
         setExpanded(prev => {
@@ -80,18 +143,18 @@ function CategoryBudgetRow({ budget, onSave, onRefresh, paymentMethods = [], onE
                     </div>
                 </td>
                 <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
-                    <span className="font-medium">{formatCurrency(budget.budget.amount)}</span>
+                    <span className="font-medium text-sm">{formatCurrency80(budget.budget.amount)}</span>
                 </td>
                 <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
-                    <span className="font-medium">{formatCurrency(budget.spent)}</span>
+                    <span className="font-medium text-sm">{formatCurrency80(budget.spent)}</span>
                 </td>
                 <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
-                    <span className={cn("font-medium", budget.remaining >= 0 ? "text-emerald-600" : "text-destructive")}>
-                        {formatCurrency(budget.remaining)}
+                    <span className={cn("font-medium text-sm", budget.remaining >= 0 ? "text-emerald-600" : "text-destructive")}>
+                        {formatCurrency80(budget.remaining)}
                     </span>
                 </td>
                 <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
-                    <div className="text-xs font-bold">{budget.percentage.toFixed(0)}%</div>
+                    <div className="text-sm font-bold">{budget.percentage.toFixed(decimalPlaces)}%</div>
                 </td>
                 <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
                     <AddBudgetDialog
@@ -101,25 +164,36 @@ function CategoryBudgetRow({ budget, onSave, onRefresh, paymentMethods = [], onE
                             categoryName: budget.categoryName,
                             amount: budget.budget.amount
                         }}
-                            monthOverride={budget.budget.month}
+                        monthOverride={budget.budget.month}
                         onAdd={async (data) => {
                             const result = await onSave(data);
                             onRefresh();
                             return result;
                         }}
+                        onDelete={onDelete}
                     >
-                        <button className="p-1 hover:bg-muted rounded-md transition-colors" onClick={(e) => e.stopPropagation()}>
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-sm border-primary/80"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <Pencil className="h-4 w-4 text-black" />
+                        </Button>
                     </AddBudgetDialog>
                 </td>
-                <td className="px-4 py-3 text-center cursor-pointer hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}>
-                    <span className="text-lg font-semibold">{expanded ? '−' : '+'}</span>
+                <td className="px-4 py-3 text-center border-arquitectura-2/30">
+                    <button
+                        className="w-8 h-8 rounded-sm border border-primary/80 flex items-center justify-center mx-auto hover:bg-primary/10 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
+                    >
+                        <span className="text-lg font-semibold leading-none text-black">{expanded ? '−' : '+'}</span>
+                    </button>
                 </td>
             </tr>
             {expanded && (
                 <tr>
-                    <td colSpan={7} className="p-0 bg-[#FCFDFE] border-b">
+                    <td colSpan={7} className="p-0 bg-card/50 border-b">
                         <div className="space-y-2 px-4 py-3">
                             {budget.transactions.length === 0 ? (
                                 <p className="text-xs text-muted-foreground">No hay gastos recientes en este periodo.</p>
@@ -142,7 +216,7 @@ function CategoryBudgetRow({ budget, onSave, onRefresh, paymentMethods = [], onE
                                                         <td className="px-2 py-2 text-left text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</td>
                                                         <td className="px-2 py-2 text-left">{tx.description}</td>
                                                         <td className="px-2 py-2 text-center text-muted-foreground">{paymentMethod?.name || '-'}</td>
-                                                        <td className="px-2 py-2 text-right font-semibold text-destructive">-{formatCurrency(tx.amount)}</td>
+                                                        <td className="px-2 py-2 text-right font-semibold text-destructive">-{formatCurrencySmall(tx.amount)}</td>
                                                     </tr>
                                                 );
                                             })}

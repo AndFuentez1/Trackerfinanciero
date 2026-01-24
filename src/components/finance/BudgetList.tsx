@@ -57,12 +57,12 @@ export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
                     {formatCurrency(spent)} / {formatCurrency(budget.amount)}
                   </span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all rounded-sm border-primary/80"
                     onClick={() => onDelete(budget.id)}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Trash2 className="h-3.5 w-3.5 text-black" />
                   </Button>
                 </div>
               </div>

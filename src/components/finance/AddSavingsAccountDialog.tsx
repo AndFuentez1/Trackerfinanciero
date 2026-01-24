@@ -10,7 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Plus, Wallet } from 'lucide-react';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddSavingsAccountDialogProps {
   onAdd: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: any }>;
@@ -23,6 +26,30 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   const [savingsGoal, setSavingsGoal] = useState('');
   const [estimatedYield, setEstimatedYield] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currency, decimalPlaces } = useFinance();
+  const { toast } = useToast();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getCurrencyPadding = () => {
+    const symbol = getCurrencySymbol();
+    if (symbol.length > 2) return 'pl-16';
+    if (symbol.length === 2) return 'pl-12';
+    return 'pl-9';
+  };
+
+  const getPlaceholderAmount = () => {
+    const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+    return decimalPlaces > 0 ? `100000${decimals}` : '100000';
+  };
+
+  const getPlaceholderYield = () => {
+    if (decimalPlaces <= 0) return '3';
+    return `3.${'0'.repeat(decimalPlaces)}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,15 +69,30 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       setSavingsGoal('');
       setEstimatedYield('');
       setOpen(false);
+    } else {
+      // Check if it's a duplicate name error
+      if (error?.code === '23505' || error?.message?.includes('unique_payment_method_user')) {
+        toast({
+          title: 'Nombre duplicado',
+          description: 'Ya existe una cuenta con ese nombre. Por favor usa un nombre diferente.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error al crear cuenta',
+          description: error?.message || 'No se pudo crear la cuenta de ahorro',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nueva cuenta</span>
+        <Button variant="default" size="sm" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center">
+          <span className="hidden sm:flex flex-row items-center gap-2">Nueva cuenta <Wallet className="h-3 w-3" /></span>
+          <span className="sm:hidden flex flex-row items-center gap-2">Nueva cuenta <Wallet className="h-3 w-3" /></span>
         </Button>
       </DialogTrigger>
       <DialogContent 
@@ -74,27 +116,35 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
           </div>
           <div className="space-y-2">
             <Label htmlFor="balance">Saldo inicial</Label>
-            <Input
-              id="balance"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={balance}
-              onChange={(e) => setBalance(e.target.value)}
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+              <Input
+                id="balance"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={getPlaceholderAmount()}
+                value={balance}
+                onChange={(e) => setBalance(e.target.value)}
+                className={getCurrencyPadding()}
+              />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="goal">Meta de ahorro ($)</Label>
-            <Input
-              id="goal"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={savingsGoal}
-              onChange={(e) => setSavingsGoal(e.target.value)}
-            />
+            <Label htmlFor="goal">Meta de ahorro</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+              <Input
+                id="goal"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={getPlaceholderAmount()}
+                value={savingsGoal}
+                onChange={(e) => setSavingsGoal(e.target.value)}
+                className={getCurrencyPadding()}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="interest">Rentabilidad estimada (%)</Label>
@@ -103,7 +153,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
               type="number"
               step="0.01"
               min="0"
-              placeholder="0.00"
+              placeholder={getPlaceholderYield()}
               value={estimatedYield}
               onChange={(e) => setEstimatedYield(e.target.value)}
             />

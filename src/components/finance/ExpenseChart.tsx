@@ -2,6 +2,8 @@ import { CategoryItem } from '@/hooks/useFinanceData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 
 interface ExpenseChartProps {
   data: { category: string; category_id?: string | null; amount: number }[];
@@ -10,6 +12,7 @@ interface ExpenseChartProps {
 
 export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   const decimalPlaces = useDecimalPlaces();
+  const { currency } = useFinance();
   const chartData = useMemo(() => {
     if (data.length === 0) return [];
 
@@ -44,18 +47,60 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
 
   const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-CO', {
+  const getCurrencySymbol = (currencyCode: string): string => {
+    const curr = CURRENCIES.find(c => c.code === currencyCode);
+    return curr?.symbol || currencyCode;
+  };
+
+  const formatCurrencyString = (value: number) => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
     }).format(value);
+    
+    return formatted.replace(currency || 'COP', symbol);
+  };
+
+  const formatCurrencyForLegend = (value: number): { symbol: string; amount: string } => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+    
+    formatted = formatted.replace(currency || 'COP', symbol);
+    
+    // Split symbol and amount
+    const symbolMatch = formatted.match(/^[^\d]+/);
+    const displaySymbol = symbolMatch ? symbolMatch[0].trim() : symbol;
+    const amount = formatted.replace(/^[^\d]+/, '').trim();
+    
+    return { symbol: displaySymbol, amount };
+  };
+
+  // Formatter for axis: must return string only
+  const formatCurrencyAxis = (value: number) => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'symbol',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+    return formatted; // Only string, no JSX
   };
 
   if (data.length === 0) {
     return (
-      <div className="bg-[#F4F5F7] rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+      <div className="bg-card rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
         <p>No hay gastos registrados para este periodo.</p>
       </div>
     );
@@ -64,25 +109,31 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   const CustomLegend = ({ payload }: any) => {
     return (
       <div className="flex flex-col gap-1 mt-6 w-full px-2">
-        {payload.map((entry: any, index: number) => (
-          <div key={`item-${index}`} className="flex items-center justify-between py-1.5 border-b border-slate-100/50 last:border-0">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div
-                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-xs font-semibold text-slate-700 truncate">{entry.value}</span>
+        {payload.map((entry: any, index: number) => {
+          const { symbol, amount } = formatCurrencyForLegend(entry.payload.value);
+          const [integerPart, decimalPart] = amount.split(',');
+          
+          return (
+            <div key={`item-${index}`} className="flex items-center justify-between py-1.5 border-b border-slate-100/50 last:border-0">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div
+                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-xs font-semibold text-slate-700 truncate">{entry.value}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                  <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{symbol}</span> {integerPart}
+                  {decimalPart && <span style={{ fontSize: '0.8em', opacity: 0.6 }}>,{decimalPart}</span>}
+                </span>
+                <span className="text-[10px] font-black text-primary/70 bg-primary/5 px-1.5 py-0.5 rounded">
+                  {((entry.payload.value / total) * 100).toFixed(decimalPlaces)}%
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-                {formatCurrency(entry.payload.value).replace('$', '').trim()}
-              </span>
-              <span className="text-[10px] font-black text-primary/70 bg-primary/5 px-1.5 py-0.5 rounded">
-                {((entry.payload.value / total) * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -112,7 +163,7 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => formatCurrency(value)}
+              formatter={(value: number) => formatCurrencyAxis(value)}
               contentStyle={{
                 borderRadius: '12px',
                 border: 'none',

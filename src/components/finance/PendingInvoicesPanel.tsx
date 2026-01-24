@@ -312,7 +312,7 @@ export function PendingInvoicesPanel() {
                                             </div>
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2 flex-wrap">
-                                            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancelar</Button>
+                                            <Button size="sm" variant="default" onClick={handleCancelEdit}>Cancelar</Button>
                                             <Button
                                                 size="sm"
                                                 onClick={() => handleApprove(invoice)}
@@ -345,12 +345,12 @@ export function PendingInvoicesPanel() {
                                         </div>
 
                                         <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                                            <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleReject(invoice.id)}>
+                                            <Button size="sm" variant="destructive" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleReject(invoice.id)}>
                                                 <X className="w-4 h-4 mr-1" />
                                             </Button>
                                             <Button
                                                 size="sm"
-                                                variant="outline"
+                                                variant="default"
                                                 className="text-slate-600 border-slate-200 hover:bg-slate-50"
                                                 onClick={() => handleStartEdit(invoice)}
                                                 aria-label="Editar"

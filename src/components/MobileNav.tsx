@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, PieChart } from "lucide-react";
+import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, PieChart, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
     { name: "Panel", icon: LayoutDashboard, href: "/" },
     { name: "Historial", icon: Receipt, href: "/historial" },
+    { name: "Flujo de Caja", icon: Wallet, href: "/flujo-caja" },
     { name: "Presupuestos", icon: PieChart, href: "/presupuestos" },
     { name: "Ahorros", icon: PiggyBank, href: "/ahorros" },
     { name: "Préstamos", icon: HandCoins, href: "/prestamos" },

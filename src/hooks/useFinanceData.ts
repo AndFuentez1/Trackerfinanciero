@@ -1,4 +1,6 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { formatLocalDate } from '@/lib/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -7,8 +9,12 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from './currencyConstants';
 import type { Database } from '@/integrations/supabase/types';
 
-export type TransactionType = 'income' | 'expense' | 'saving' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan';
+export type TransactionType = 'income' | 'expense' | 'saving' | 'savings' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan' | 'other';
 export type PaymentMethodType = 'cash' | 'debit' | 'credit' | 'savings' | 'investment';
+
+// ...existing code...
+
+// ...existing code...
 
 export interface CategoryItem {
   id: string;
@@ -45,6 +51,372 @@ export interface PaymentMethod {
   color?: string | null;
 }
 
+export type AppThemeKey = 'rose' | 'gray' | 'blue' | 'emerald';
+
+type ThemePreset = {
+  label: string;
+  swatch: string;
+  vars: Record<string, string>;
+};
+
+// Theme color mapping for proportional theme calculation
+const GRAY_BASE_HEX = '#64748b';
+
+const ORIGINAL_COLOR_MAP: Record<string, { h: number; s: number; l: number }> = {
+  '--primary': { h: 215, s: 11, l: 50 },
+  '--primary-foreground': { h: 0, s: 0, l: 100 },
+  '--secondary': { h: 221, s: 15, l: 81 },
+  '--secondary-foreground': { h: 215, s: 11, l: 40 },
+  '--muted': { h: 223, s: 32, l: 91 },
+  '--muted-foreground': { h: 215, s: 11, l: 40 },
+  '--accent': { h: 221, s: 15, l: 81 },
+  '--accent-foreground': { h: 215, s: 11, l: 40 },
+  '--card': { h: 220, s: 16, l: 96 },
+  '--card-soft': { h: 220, s: 16, l: 94 },
+  '--card-bg-light': { h: 220, s: 16, l: 96 },
+  '--border': { h: 215, s: 11, l: 50 },
+  '--input': { h: 215, s: 11, l: 50 },
+  '--ring': { h: 215, s: 11, l: 50 },
+  '--sidebar-background': { h: 220, s: 16, l: 96 },
+  '--sidebar-foreground': { h: 215, s: 11, l: 40 },
+  '--sidebar-primary': { h: 215, s: 11, l: 50 },
+  '--sidebar-primary-foreground': { h: 0, s: 0, l: 100 },
+  '--sidebar-accent': { h: 209, s: 17, l: 30 },
+  '--sidebar-accent-foreground': { h: 223, s: 32, l: 91 },
+  '--sidebar-border': { h: 209, s: 17, l: 30 },
+  '--sidebar-ring': { h: 215, s: 11, l: 50 },
+  '--income': { h: 152, s: 60, l: 42 },
+  '--expense': { h: 0, s: 84, l: 60 },
+  '--savings': { h: 215, s: 11, l: 50 },
+};
+
+function hexToHSL(hex: string): { h: number; s: number; l: number } {
+  let r = parseInt(hex.slice(1, 3), 16) / 255;
+  let g = parseInt(hex.slice(3, 5), 16) / 255;
+  let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+}
+
+function clamp(val: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, val));
+}
+
+function calculateProportionalTheme(baseColorHex: string): Record<string, string> {
+  const baseHSL = hexToHSL(baseColorHex);
+  const { h, s, l } = baseHSL;
+  const themeVars: Record<string, string> = {};
+
+  // Fondos y superficies NEUTROS (constantes)
+  themeVars['--background'] = '0 0% 100%'; // blanco
+  themeVars['--foreground'] = '220 15% 15%';
+  themeVars['--container'] = '220 15% 97%';
+  themeVars['--card'] = '0 0% 100%';
+  themeVars['--card-foreground'] = '220 15% 15%';
+  themeVars['--border'] = '220 13% 90%';
+  themeVars['--muted'] = '220 15% 96%';
+  themeVars['--muted-foreground'] = '220 10% 45%';
+  themeVars['--input'] = '0 0% 100%';
+
+  // Accent tokens premium
+  // Accent fuerte: para CTA, pill, estado activo
+  const accentPrimaryS = Math.min(s, 45);
+  const accentPrimaryL = Math.max(l, 48);
+  themeVars['--accent-primary'] = `${h} ${accentPrimaryS}% ${accentPrimaryL}%`;
+  themeVars['--primary'] = themeVars['--accent-primary'];
+  themeVars['--primary-foreground'] = '0 0% 100%';
+
+  // Accent soft: para hover, focus, iconos activos, tabs activos
+  const accentSoftS = Math.round(accentPrimaryS * 0.4);
+  const accentSoftL = Math.min(accentPrimaryL + 10, 96);
+  themeVars['--accent-soft'] = `${h} ${accentSoftS}% ${accentSoftL}%`;
+
+  // Accent soft bg: para fondos sutiles de hover/focus
+  const accentSoftBgS = Math.round(accentPrimaryS * 0.25);
+  const accentSoftBgL = Math.min(accentPrimaryL + 16, 98);
+  themeVars['--accent-soft-bg'] = `${h} ${accentSoftBgS}% ${accentSoftBgL}%`;
+
+  // Accent soft border: para bordes activos
+  const accentSoftBorderS = Math.round(accentPrimaryS * 0.35);
+  const accentSoftBorderL = Math.min(accentPrimaryL + 4, 92);
+  themeVars['--accent-soft-border'] = `${h} ${accentSoftBorderS}% ${accentSoftBorderL}%`;
+
+  // Accent disabled: para estados deshabilitados
+  const accentDisabledS = Math.round(accentPrimaryS * 0.18);
+  const accentDisabledL = Math.min(accentPrimaryL + 24, 98);
+  themeVars['--accent-disabled'] = `${h} ${accentDisabledS}% ${accentDisabledL}%`;
+
+  // Accent general para compatibilidad
+  themeVars['--accent'] = themeVars['--accent-soft'];
+  themeVars['--ring'] = themeVars['--accent-soft-border'];
+
+  // Variables personalizadas del sistema (compatibilidad)
+  themeVars['--bg-app'] = themeVars['--background'];
+  themeVars['--bg-container'] = themeVars['--container'];
+  themeVars['--bg-card'] = themeVars['--card'];
+  themeVars['--bg-card-inner'] = themeVars['--card'];
+  themeVars['--text-primary'] = themeVars['--foreground'];
+  themeVars['--text-secondary'] = '220 10% 45%';
+  themeVars['--text-muted'] = '220 10% 45%';
+  themeVars['--text-inverse'] = '0 0% 100%';
+  themeVars['--color-primary'] = themeVars['--primary'];
+  themeVars['--color-primary-hover'] = themeVars['--accent-soft'];
+  themeVars['--color-primary-active'] = themeVars['--accent-primary'];
+  themeVars['--border-default'] = themeVars['--border'];
+  themeVars['--border-soft'] = '220 13% 92%';
+
+  // Superficies flotantes (dropdowns, popovers, selects) - NEUTRAS
+  themeVars['--popover'] = '0 0% 100%';
+  themeVars['--popover-foreground'] = '220 15% 15%';
+
+  return themeVars;
+}
+
+export const THEME_OPTIONS = [
+  { label: 'Rosa lila', hex: '#d946ef' },
+  { label: 'Gris', hex: '#64748b' },
+  { label: 'Azul', hex: '#2563eb' },
+  { label: 'Esmeralda', hex: '#10b98a' },
+];
+
+/**
+ * Calculate relative luminance for WCAG contrast calculation
+ * https://www.w3.org/TR/WCAG20/#relativeluminancedef
+ */
+function getLuminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map(val => {
+    const v = val / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+/**
+ * Calculate WCAG contrast ratio between two colors
+ * Returns ratio and WCAG level (AAA, AA, or FAIL)
+ */
+export function getContrastRatio(
+  foregroundHex: string,
+  backgroundHex: string
+): { ratio: number; level: 'AAA' | 'AA' | 'FAIL' } {
+  // Parse hex colors
+  const fgHex = foregroundHex.replace('#', '');
+  const bgHex = backgroundHex.replace('#', '');
+
+  const fg = {
+    r: parseInt(fgHex.substring(0, 2), 16),
+    g: parseInt(fgHex.substring(2, 4), 16),
+    b: parseInt(fgHex.substring(4, 6), 16),
+  };
+
+  const bg = {
+    r: parseInt(bgHex.substring(0, 2), 16),
+    g: parseInt(bgHex.substring(2, 4), 16),
+    b: parseInt(bgHex.substring(4, 6), 16),
+  };
+
+  const lFg = getLuminance(fg.r, fg.g, fg.b);
+  const lBg = getLuminance(bg.r, bg.g, bg.b);
+
+  const lighter = Math.max(lFg, lBg);
+  const darker = Math.min(lFg, lBg);
+
+  const ratio = (lighter + 0.05) / (darker + 0.05);
+
+  // WCAG levels: AAA >= 7, AA >= 4.5
+  const level = ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'FAIL';
+
+  return { ratio: Math.round(ratio * 100) / 100, level };
+}
+
+/**
+ * Validate contrast for a theme color
+ * Returns accessibility analysis
+ */
+export function validateThemeContrast(baseColorHex: string): {
+  foregroundContrast: { ratio: number; level: 'AAA' | 'AA' | 'FAIL' };
+  borderContrast: { ratio: number; level: 'AAA' | 'AA' | 'FAIL' };
+  isAccessible: boolean;
+} {
+  // White text (#ffffff) for foreground
+  const whiteHex = '#ffffff';
+
+  // Light gray background (#f4f5f7) for card background
+  const lightBgHex = '#f4f5f7';
+
+  const fgContrast = getContrastRatio(baseColorHex, whiteHex);
+  const bgContrast = getContrastRatio(baseColorHex, lightBgHex);
+
+  return {
+    foregroundContrast: fgContrast,
+    borderContrast: bgContrast,
+    isAccessible: fgContrast.level === 'AA' && bgContrast.level === 'AA',
+  };
+}
+
+/**
+ * Get accessibility report for all theme options
+ */
+export function getThemeAccessibilityReport() {
+  return THEME_OPTIONS.map(theme => ({
+    ...theme,
+    contrast: validateThemeContrast(theme.hex),
+  }));
+}
+
+export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
+  rose: {
+    label: 'Rosa lila',
+    swatch: 'hsl(315 75% 60%)',
+    vars: {
+      '--primary': 'hsl(315 75% 60%)',
+      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--secondary': 'hsl(315 55% 92%)',
+      '--secondary-foreground': 'hsl(315 30% 28%)',
+      '--muted': 'hsl(320 50% 95%)',
+      '--muted-foreground': 'hsl(315 30% 28%)',
+      '--accent': 'hsl(310 60% 90%)',
+      '--accent-foreground': 'hsl(315 30% 28%)',
+      '--card': 'hsl(320 45% 98%)',
+      '--card-soft': 'hsl(320 50% 96%)',
+      '--card-bg-light': 'hsl(320 45% 98%)',
+      '--border': 'hsl(315 65% 55%)',
+      '--input': 'hsl(315 65% 55%)',
+      '--ring': 'hsl(315 65% 55%)',
+      '--sidebar-background': 'hsl(320 40% 96%)',
+      '--sidebar-foreground': 'hsl(315 30% 32%)',
+      '--sidebar-primary': 'hsl(315 75% 60%)',
+      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
+      '--sidebar-accent': 'hsl(315 55% 85%)',
+      '--sidebar-accent-foreground': 'hsl(315 30% 28%)',
+      '--sidebar-border': 'hsl(315 35% 55%)',
+      '--sidebar-ring': 'hsl(315 75% 60%)',
+      '--income': 'hsl(152 60% 42%)',
+      '--expense': 'hsl(0 84% 60%)',
+      '--savings': 'hsl(315 75% 60%)',
+    },
+  },
+  gray: {
+    label: 'Gris',
+    swatch: 'hsl(215 11% 50%)',
+    vars: {
+      '--primary': 'hsl(215 11% 50%)',
+      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--secondary': 'hsl(221 15% 81%)',
+      '--secondary-foreground': 'hsl(215 11% 40%)',
+      '--muted': 'hsl(223 32% 91%)',
+      '--muted-foreground': 'hsl(215 11% 40%)',
+      '--accent': 'hsl(221 15% 81%)',
+      '--accent-foreground': 'hsl(215 11% 40%)',
+      '--card': 'hsl(220 16% 96%)',
+      '--card-soft': 'hsl(220 16% 94%)',
+      '--card-bg-light': 'hsl(220 16% 96%)',
+      '--border': 'hsl(215 11% 50%)',
+      '--input': 'hsl(215 11% 50%)',
+      '--ring': 'hsl(215 11% 50%)',
+      '--sidebar-background': 'hsl(220 16% 96%)',
+      '--sidebar-foreground': 'hsl(215 11% 40%)',
+      '--sidebar-primary': 'hsl(215 11% 50%)',
+      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
+      '--sidebar-accent': 'hsl(209 17% 30%)',
+      '--sidebar-accent-foreground': 'hsl(223 32% 91%)',
+      '--sidebar-border': 'hsl(209 17% 30%)',
+      '--sidebar-ring': 'hsl(215 11% 50%)',
+      '--income': 'hsl(152 60% 42%)',
+      '--expense': 'hsl(0 84% 60%)',
+      '--savings': 'hsl(215 11% 50%)',
+    },
+  },
+  blue: {
+    label: 'Azul',
+    swatch: 'hsl(220 80% 56%)',
+    vars: {
+      '--primary': 'hsl(220 80% 56%)',
+      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--secondary': 'hsl(220 65% 90%)',
+      '--secondary-foreground': 'hsl(222 35% 28%)',
+      '--muted': 'hsl(220 45% 94%)',
+      '--muted-foreground': 'hsl(222 35% 28%)',
+      '--accent': 'hsl(215 70% 88%)',
+      '--accent-foreground': 'hsl(222 35% 28%)',
+      '--card': 'hsl(220 45% 97%)',
+      '--card-soft': 'hsl(220 45% 95%)',
+      '--card-bg-light': 'hsl(220 45% 97%)',
+      '--border': 'hsl(220 70% 50%)',
+      '--input': 'hsl(220 70% 50%)',
+      '--ring': 'hsl(220 70% 50%)',
+      '--sidebar-background': 'hsl(220 50% 96%)',
+      '--sidebar-foreground': 'hsl(222 35% 32%)',
+      '--sidebar-primary': 'hsl(220 80% 56%)',
+      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
+      '--sidebar-accent': 'hsl(220 40% 80%)',
+      '--sidebar-accent-foreground': 'hsl(222 35% 28%)',
+      '--sidebar-border': 'hsl(220 50% 60%)',
+      '--sidebar-ring': 'hsl(220 80% 56%)',
+      '--income': 'hsl(152 60% 42%)',
+      '--expense': 'hsl(0 84% 60%)',
+      '--savings': 'hsl(220 80% 56%)',
+    },
+  },
+  emerald: {
+    label: 'Esmeralda',
+    swatch: 'hsl(152 65% 45%)',
+    vars: {
+      '--primary': 'hsl(152 65% 45%)',
+      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--secondary': 'hsl(152 50% 88%)',
+      '--secondary-foreground': 'hsl(152 30% 26%)',
+      '--muted': 'hsl(150 40% 92%)',
+      '--muted-foreground': 'hsl(152 30% 26%)',
+      '--accent': 'hsl(156 55% 86%)',
+      '--accent-foreground': 'hsl(152 30% 26%)',
+      '--card': 'hsl(150 45% 97%)',
+      '--card-soft': 'hsl(150 45% 95%)',
+      '--card-bg-light': 'hsl(150 45% 97%)',
+      '--border': 'hsl(152 55% 40%)',
+      '--input': 'hsl(152 55% 40%)',
+      '--ring': 'hsl(152 55% 40%)',
+      '--sidebar-background': 'hsl(150 40% 95%)',
+      '--sidebar-foreground': 'hsl(152 35% 30%)',
+      '--sidebar-primary': 'hsl(152 65% 45%)',
+      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
+      '--sidebar-accent': 'hsl(152 45% 80%)',
+      '--sidebar-accent-foreground': 'hsl(152 30% 26%)',
+      '--sidebar-border': 'hsl(152 45% 45%)',
+      '--sidebar-ring': 'hsl(152 65% 45%)',
+      '--income': 'hsl(152 60% 42%)',
+      '--expense': 'hsl(0 84% 60%)',
+      '--savings': 'hsl(152 65% 45%)',
+    },
+  },
+};
+
+export const APP_THEME_OPTIONS: { key: AppThemeKey; label: string; swatch: string }[] =
+  (Object.entries(APP_THEME_PRESETS) as [AppThemeKey, ThemePreset][]).map(([key, preset]) => ({
+    key,
+    label: preset.label,
+    swatch: preset.swatch,
+  }));
+
 // Row type returned by Supabase for payment_methods table
 export type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
 export type TransactionRow = Database['public']['Tables']['transactions']['Row'];
@@ -72,7 +444,7 @@ export interface Insight {
 
 // Palette of distinct colors for consistent assignment
 export const MASTER_PALETTE = [
-  '#10B981', // emerald-500
+  '#10B98A', // emerald-500
   '#F97316', // orange-500
   '#3B82F6', // blue-500
   '#EF4444', // red-500
@@ -105,7 +477,7 @@ export const MASTER_PALETTE = [
 ];
 
 const DEFAULT_CATEGORIES = [
-  { name: 'Salario', type: 'income', color: '#10B981' },
+  { name: 'Salario', type: 'income', color: '#10B98A' },
   { name: 'Otros ingresos', type: 'income', color: '#34D399' },
   { name: 'Alimentación', type: 'expense', color: '#F97316' },
   { name: 'Arriendo y mudanzas', type: 'expense', color: '#B45309' },
@@ -164,6 +536,7 @@ export function useFinanceDataLogic() {
   const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
   const [hasPendingImport, setHasPendingImport] = useState(false);
   const [welcomeCompleted, setWelcomeCompleted] = useState(false);
+  const [highlightedCard, setHighlightedCard] = useState<'categories' | 'payment-methods' | null>(null);
   const [importProgress, setImportProgress] = useState<{
     status: 'idle' | 'loading' | 'completed' | 'failed' | 'cancelled';
     progress: number;
@@ -185,11 +558,23 @@ export function useFinanceDataLogic() {
     to: null,
     period: 'all'
   });
+  const DEFAULT_BASE_COLOR = '#64748b'; // gris
+  const [baseColor, setBaseColor] = useState(() => {
+    return localStorage.getItem('theme-base-color') || DEFAULT_BASE_COLOR;
+  });
+  const [themeVars, setThemeVars] = useState<Record<string, string>>(() => calculateProportionalTheme(baseColor));
   const [sortConfig, setSortConfig] = useState<{
     column: 'date' | 'amount';
     ascending: boolean;
   }>({ column: 'date', ascending: false });
   const queryClient = useQueryClient();
+
+  // Compute theme variables based on base color
+  useEffect(() => {
+    const theme = calculateProportionalTheme(baseColor);
+    setThemeVars(theme);
+    localStorage.setItem('theme-base-color', baseColor);
+  }, [baseColor]);
 
   const PAGE_SIZE = 50000;
 
@@ -215,7 +600,7 @@ export function useFinanceDataLogic() {
           .eq('user_id', user.id);
 
         if (error) {
-
+          // Error deleting
         }
       }
 
@@ -231,7 +616,7 @@ export function useFinanceDataLogic() {
         .eq('id', user.id);
 
       if (profileError) {
-
+        // Error updating profile
       }
 
       // Clear local states
@@ -255,6 +640,7 @@ export function useFinanceDataLogic() {
 
       return { error: null };
     } catch (err) {
+      // Error resetting data
 
       toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos.', variant: 'destructive' });
       return { error: err };
@@ -291,8 +677,8 @@ export function useFinanceDataLogic() {
     }
 
     return {
-      from: from ? from.toISOString().split('T')[0] : null,
-      to: to ? to.toISOString().split('T')[0] : null
+      from: from ? formatLocalDate(from) : null,
+      to: to ? formatLocalDate(to) : null
     };
   }, []);
 
@@ -427,7 +813,7 @@ export function useFinanceDataLogic() {
         .eq('user_id', user.id)
         .order('date', { ascending: false })
         .range(offset, offset + PAGE_SIZE_ALL - 1);
-      
+
       if (res.error) {
         allTxnsRes = res;
         hasMore = false;
@@ -498,26 +884,26 @@ export function useFinanceDataLogic() {
     }
 
     // Fetch Profile/Currency using 'id' as the user identifier
-    let profile: Database['public']['Tables']['profiles']['Row'] | null = null;
+    let profile: any = null;
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places')
+        .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
         .eq('id', user.id)
         .maybeSingle();
 
       if (error) {
         // If the column doesn't exist yet (migration pending), continue gracefully
         if (error.code === '42703') {
-
+          // Column not found
         } else {
-
+          // Other error
         }
       } else {
         profile = data;
       }
     } catch (err) {
-
+      // Profile fetch error
     }
 
     if (profile?.currency) {
@@ -526,7 +912,13 @@ export function useFinanceDataLogic() {
       // Usuario nuevo sin moneda configurada
       setCurrency('');
     }
-    
+
+    // Load base color from profile and sync to local cache
+    if (profile?.base_color) {
+      setBaseColor(profile.base_color);
+      localStorage.setItem('theme-base-color', profile.base_color);
+    }
+
     // Decimal places: usar el valor guardado en perfil, o default basado en moneda
     if (profile?.decimal_places !== undefined && profile?.decimal_places !== null) {
       setDecimalPlaces(profile.decimal_places);
@@ -534,7 +926,7 @@ export function useFinanceDataLogic() {
       const currConfig = CURRENCIES.find(c => c.code === profile?.currency);
       setDecimalPlaces(currConfig?.decimals ?? 0);
     }
-    
+
     // Set onboarding decision state
     setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
     const hasPending = profile?.has_pending_import || false;
@@ -1228,10 +1620,10 @@ export function useFinanceDataLogic() {
     // Check for duplicate name
     const existingMethod = paymentMethods.find(p => p.name.toLowerCase() === pm.name.toLowerCase());
     if (existingMethod) {
-      toast({ 
-        title: 'Nombre ya usado', 
-        description: 'Ya existe un método de pago con ese nombre. Por favor, elige otro nombre.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Nombre ya usado',
+        description: 'Ya existe un método de pago con ese nombre. Por favor, elige otro nombre.',
+        variant: 'destructive'
       });
       return { error: 'Nombre duplicado', data: null };
     }
@@ -1368,7 +1760,7 @@ export function useFinanceDataLogic() {
     return { error: null };
   };
 
-  const updateProfile = async (updates: { currency?: string; display_name?: string; decimal_places?: number }) => {
+  const updateProfile = async (updates: { currency?: string; display_name?: string; decimal_places?: number; base_color?: string }) => {
     if (!user) return { error: 'No autenticado' };
 
     // Primero verificar si existe el perfil usando 'id' como identificador
@@ -1391,6 +1783,7 @@ export function useFinanceDataLogic() {
       result = await supabase
         .from('profiles')
         .insert({
+          user_id: user.id,
           id: user.id,
           email: user.email,
           type: 'personal',
@@ -1398,7 +1791,7 @@ export function useFinanceDataLogic() {
           onboarding_decision: null,
           has_pending_import: false,
           ...updates
-        })
+        } as any)
         .select();
     }
 
@@ -1414,7 +1807,12 @@ export function useFinanceDataLogic() {
     if (updates.currency) {
       setCurrency(updates.currency);
     }
-    
+
+    // Actualizar base_color local si cambió
+    if (updates.base_color) {
+      setBaseColor(updates.base_color);
+    }
+
     // Actualizar decimal_places local si cambió
     if (updates.decimal_places !== undefined) {
       setDecimalPlaces(updates.decimal_places);
@@ -1493,11 +1891,11 @@ export function useFinanceDataLogic() {
 
     // Marcar como pending en DB
     if (user) {
-      supabase
+      void supabase
         .from('profiles')
         .update({ has_pending_import: true })
         .eq('id', user.id)
-        .catch(err => {});
+        .select();
     }
   };
 
@@ -1760,7 +2158,7 @@ export function useFinanceDataLogic() {
     // Update local state immediately for optimistic UI
     setPaymentMethods(prev => prev.map(pm => pm.id === id ? { ...pm, ...updates } : pm));
     setLastUpdated(new Date());
-    
+
     toast({ title: 'Éxito', description: 'Método de pago actualizado' });
     return { error: null };
   };
@@ -1965,10 +2363,10 @@ export function useFinanceDataLogic() {
 
         // Add to local state if not already present
         setCategories(prev => {
-            if (prev.find(c => c.id === existingCategory.id)) {
+          if (prev.find(c => c.id === existingCategory.id)) {
             return prev;
           }
-            return [...prev, existingCategory];
+          return [...prev, existingCategory];
         });
 
         toast({
@@ -2363,6 +2761,8 @@ export function useFinanceDataLogic() {
     updateProfile,
     convertCurrency,
     setOnboardingDecision: setOnboardingDecisionFn,
+    highlightedCard,
+    setHighlightedCard,
     confirmPendingImport,
     startImport,
     cancelImport,
@@ -2388,7 +2788,12 @@ export function useFinanceDataLogic() {
     totalSpentCurrentMonth: budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
     resetProfileData,
     lastUpdated,
-    updateCategoryGoal
+    updateCategoryGoal,
+    // Theme management
+    baseColor,
+    themeVars,
+    themeOptions: THEME_OPTIONS,
+    setAppThemePreference: (color: string) => updateProfile({ base_color: color })
   };
 }
 

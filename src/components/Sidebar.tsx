@@ -10,6 +10,7 @@ import { useMemo } from "react";
 const items = [
     { name: "Panel", icon: LayoutDashboard, href: "/" },
     { name: "Historial", icon: Receipt, href: "/historial" },
+    { name: "Flujo de Caja", icon: Wallet, href: "/flujo-caja" },
     { name: "Presupuestos", icon: PieChart, href: "/presupuestos" },
     { name: "Ahorros", icon: PiggyBank, href: "/ahorros" },
     { name: "Préstamos", icon: HandCoins, href: "/prestamos" },
@@ -42,7 +43,10 @@ export function Sidebar() {
     // };
 
     return (
-        <div className="hidden lg:flex flex-col w-64 border-r border-border bg-card min-h-screen p-6">
+        <div
+            className="hidden lg:flex flex-col w-64 border-r min-h-screen p-6"
+            style={{ backgroundColor: 'hsl(var(--container))', color: 'hsl(var(--muted-foreground))', boxShadow: '1px 0 0 rgba(0,0,0,0.08)' }}
+        >
             <div className="flex items-center gap-3 mb-10 px-2">
                 <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
                     <Wallet className="w-6 h-6 text-primary-foreground" />
@@ -60,8 +64,8 @@ export function Sidebar() {
                         <Link key={item.name} to={item.href} className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium",
                             isActive
-                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                                : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:translate-x-1"
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
+                                : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:translate-x-1"
                         )}>
                             <item.icon className={cn("w-5 h-5", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
                             {item.name}

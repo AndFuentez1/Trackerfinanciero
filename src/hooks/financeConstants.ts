@@ -2,7 +2,7 @@ import { TransactionType } from './financeTypes';
 
 // Palette of distinct colors for consistent assignment
 export const MASTER_PALETTE = [
-    '#10B981', // emerald-500
+    '#10B98A', // emerald-500
     '#F97316', // orange-500
     '#3B82F6', // blue-500
     '#EF4444', // red-500
@@ -35,7 +35,7 @@ export const MASTER_PALETTE = [
 ];
 
 export const DEFAULT_CATEGORIES: { name: string; type: TransactionType; color: string }[] = [
-    { name: 'Salario', type: 'income', color: '#10B981' },
+    { name: 'Salario', type: 'income', color: '#10B98A' },
     { name: 'Otros ingresos', type: 'income', color: '#34D399' },
     { name: 'Alimentación', type: 'expense', color: '#F97316' },
     { name: 'Arriendo y mudanzas', type: 'expense', color: '#B45309' },

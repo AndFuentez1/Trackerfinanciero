@@ -133,7 +133,7 @@ export function SetPasswordDialog({ open, onOpenChange, userEmail }: SetPassword
                     <DialogFooter className="gap-2">
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant="default"
                             onClick={() => onOpenChange(false)}
                             disabled={isSubmitting}
                         >

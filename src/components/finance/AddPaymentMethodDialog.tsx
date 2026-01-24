@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
+import { useFinance } from '@/contexts/FinanceContext';
+import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,19 +32,38 @@ const typeOptions: { value: PaymentMethodType; label: string }[] = [
 
 // Professional color palette for payment methods
 const PRESET_COLORS = [
-  { value: '#64748b', label: 'Slate' },
-  { value: '#0d9488', label: 'Teal' },
-  { value: '#4f46e5', label: 'Indigo' },
-  { value: '#e11d48', label: 'Rose' },
-  { value: '#f59e0b', label: 'Amber' },
-  { value: '#8b5cf6', label: 'Violet' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#10b981', label: 'Emerald' },
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#ec4899', label: 'Pink' },
+  { value: '#64748b', label: 'Pizarra' },
+  { value: '#0d9488', label: 'Verde azulado' },
+  { value: '#4f46e5', label: 'Índigo' },
+  { value: '#e11d48', label: 'Rosa fuerte' },
+  { value: '#f59e0b', label: 'Ámbar' },
+  { value: '#8b5cf6', label: 'Violeta' },
+  { value: '#06b6d4', label: 'Cian' },
+  { value: '#10b98a', label: 'Esmeralda' },
+  { value: '#3b82f6', label: 'Azul' },
+  { value: '#ec4899', label: 'Rosa' },
 ];
 
 export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess }: AddPaymentMethodDialogProps) {
+  const { currency, decimalPlaces } = useFinance();
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === currency);
+    return curr?.symbol || currency || '$';
+  };
+
+  const getCurrencyPadding = () => {
+    const symbol = getCurrencySymbol();
+    if (symbol.length > 2) return 'pl-16';
+    if (symbol.length === 2) return 'pl-12';
+    return 'pl-9';
+  };
+
+  const getPlaceholderBalance = () => {
+    const decimals = '.'.padEnd(decimalPlaces + 1, '0');
+    return decimalPlaces > 0 ? `1000000${decimals}` : '1000000';
+  };
+
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -97,7 +118,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -142,29 +163,32 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
           </div>
 
           <div className="space-y-2">
-            <Label>Color de Tarjeta</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <Label className="text-sm px-1">Color de Tarjeta</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 px-1">
               {PRESET_COLORS.map((preset) => (
                 <button
                   key={preset.value}
                   type="button"
                   onClick={() => setColor(preset.value)}
-                  className="relative group"
+                  className={cn(
+                    "w-full h-20 rounded-[4px] transition-all relative flex flex-col items-center justify-between p-2 bg-secondary hover:bg-secondary/80",
+                    color === preset.value
+                      ? "ring-2 ring-primary ring-offset-0 scale-105 shadow-sm"
+                      : "border border-transparent"
+                  )}
                   title={preset.label}
                 >
                   <div
-                    className="w-full h-8 sm:h-10 rounded-lg border-2 transition-all shadow-sm hover:shadow-md flex items-center justify-center"
-                    style={{
-                      backgroundColor: preset.value,
-                      borderColor: color === preset.value ? '#fff' : 'transparent',
-                      borderWidth: color === preset.value ? '2px' : '1px',
-                    }}
-                  >
-                    {color === preset.value && (
-                      <Check className="h-3 sm:h-4 w-3 sm:w-4 text-white" strokeWidth={3} />
+                    className={cn(
+                      "flex-1 w-full rounded-[4px] shadow-sm transition-transform",
+                      color === preset.value ? "scale-95" : ""
                     )}
-                  </div>
-                  <span className="text-xs text-muted-foreground text-center block mt-1 group-hover:text-foreground hidden sm:block">
+                    style={{ backgroundColor: preset.value }}
+                  />
+                  <span className={cn(
+                    "text-[9px] font-medium mt-1.5 uppercase leading-tight w-full text-center px-0.5 min-h-[1.8rem] flex items-center justify-center",
+                    color === preset.value ? "text-primary" : "text-muted-foreground"
+                  )}>
                     {preset.label}
                   </span>
                 </button>
@@ -177,32 +201,38 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="debt">Deuda actual</Label>
-                  <Input
-                    id="debt"
-                    type="number"
-                    placeholder="0.00"
-                    value={balance}
-                    onChange={(e) => setBalance(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="h-11 md:h-9 text-sm"
-                    inputMode="decimal"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                    <Input
+                      id="debt"
+                      type="number"
+                      placeholder={getPlaceholderBalance()}
+                      value={balance}
+                      onChange={(e) => setBalance(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
+                      inputMode="decimal"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="limit">Límite de crédito</Label>
-                  <Input
-                    id="limit"
-                    type="number"
-                    placeholder="0.00"
-                    value={creditLimit}
-                    onChange={(e) => setCreditLimit(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    required
-                    className="h-11 md:h-9 text-sm"
-                    inputMode="decimal"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                    <Input
+                      id="limit"
+                      type="number"
+                      placeholder={getPlaceholderBalance()}
+                      value={creditLimit}
+                      onChange={(e) => setCreditLimit(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      required
+                      className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
+                      inputMode="decimal"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
@@ -224,32 +254,35 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
           ) : (
             <div className="space-y-2">
               <Label htmlFor="balance" className="text-sm">Saldo actual</Label>
-              <Input
-                id="balance"
-                type="number"
-                placeholder="0.00"
-                value={balance}
-                onChange={(e) => setBalance(e.target.value)}
-                step="0.01"
-                className="h-11 md:h-9 text-sm"
-                inputMode="decimal"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                <Input
+                  id="balance"
+                  type="number"
+                  placeholder={getPlaceholderBalance()}
+                  value={balance}
+                  onChange={(e) => setBalance(e.target.value)}
+                  step="0.01"
+                  className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
+                  inputMode="decimal"
+                />
+              </div>
             </div>
           )}
 
           {type === 'savings' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="space-y-2">
-                <Label htmlFor="goal" className="text-sm">Meta de ahorro ($)</Label>
+                <Label htmlFor="goal" className="text-sm">Meta de ahorro ({getCurrencySymbol()})</Label>
                 <Input
                   id="goal"
                   type="number"
-                  placeholder="Ej: 5000000"
+                  placeholder={`Ej: ${getPlaceholderBalance()}`}
                   value={savingsGoal}
                   onChange={(e) => setSavingsGoal(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="h-11 md:h-9 text-sm"
+                  className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
                   inputMode="decimal"
                 />
               </div>
@@ -258,7 +291,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                 <Input
                   id="yield"
                   type="number"
-                  placeholder="Ej: 3.5"
+                  placeholder={decimalPlaces > 0 ? 'Ej: 3.50' : 'Ej: 3'}
                   value={estimatedYield}
                   onChange={(e) => setEstimatedYield(e.target.value)}
                   min="0"
