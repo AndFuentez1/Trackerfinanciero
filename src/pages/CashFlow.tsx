@@ -7,7 +7,6 @@ import { CashFlowChart } from '@/components/cashflow/CashFlowChart';
 import { CashFlowTimeline } from '@/components/cashflow/CashFlowTimeline';
 
 export default function CashFlow() {
-  console.log('[Flujo de Caja] Renderizado');
   // Filtros de año/mes/rango
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [month, setMonth] = useState<number | 'all'>('all');
@@ -15,15 +14,6 @@ export default function CashFlow() {
 
   // Datos reales del hook
   const { cashFlowSeries, balance_actual, proyeccion_ingresos, compromisos_deuda } = useCashFlow(year, month, range);
-  console.log('[Flujo de Caja] Datos:', {
-    year,
-    month,
-    range,
-    balance_actual,
-    proyeccion_ingresos,
-    compromisos_deuda,
-    cashFlowSeries,
-  });
   const loading = !cashFlowSeries;
 
   // Años/meses disponibles (debería venir de los datos)

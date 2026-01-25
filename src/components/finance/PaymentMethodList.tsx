@@ -49,145 +49,40 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
   const { formatCurrencySmall, currency } = useFormatCurrency();
   const { currency: ctxCurrency } = useFinance();
 
-  const formatCurrencyDisplay = (value: number) => formatCurrencySmall(value);
-
   const formatCurrencyPayment = (value: number) => {
     const currCode = ctxCurrency || currency || 'COP';
     const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
 
-    let formatted = new Intl.NumberFormat('es-CO', {
+    return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: currCode,
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
       currencyDisplay: 'code',
     }).format(value).replace(currCode, symbol);
-
-    if (decimalPlaces === 0) {
-      // Sin decimales: mostrar símbolo en línea 1, número en línea 2
-      return (
-        <div className="flex flex-col">
-          <span style={{ fontSize: '0.7em' }}>{symbol}</span>
-          <span>{formatted.replace(symbol, '').trim()}</span>
-        </div>
-      );
-    }
-
-    const parts = formatted.split(',');
-    if (parts.length === 1) {
-      // Sin decimales encontrados
-      return (
-        <div className="flex flex-col">
-          <span style={{ fontSize: '0.7em' }}>{symbol}</span>
-          <span>{formatted.replace(symbol, '').trim()}</span>
-        </div>
-      );
-    }
-
-    const integerPart = parts[0].replace(symbol, '').trim();
-    const decimalPart = parts[1];
-
-    return (
-      <div className="flex flex-col">
-        <span style={{ fontSize: '0.7em' }}>{symbol}</span>
-        <span>
-          {integerPart}
-          <span className="opacity-85" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>
-        </span>
-      </div>
-    );
   };
 
-  if (paymentMethods.length === 0) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 min-h-[200px] hover:bg-slate-100 hover:border-slate-400 transition-all cursor-pointer" onClick={onAdd} role={onAdd ? 'button' : undefined}>
-          <div className="text-4xl font-light text-slate-400 mb-2">+</div>
-          <p className="text-sm text-slate-600 text-center">Agrega un método de pago</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {paymentMethods.map((pm, idx) => {
-        // Strict color usage
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {paymentMethods.map((pm) => {
         const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
         const accountType = getAccountType(pm.type, pm.is_savings_account || false);
 
-        // Función para generar números pseudo-aleatorios reproducibles basados en el ID
-        const seededRandom = (seed: number, index: number): number => {
-          const x = Math.sin(seed + index) * 10000;
-          return x - Math.floor(x);
-        };
-
-        // Usar el hash del ID como semilla
-        const seed = pm.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-        // Generate 3 fixed geometric shapes based on payment method ID
-        const randomShapes = Array.from({ length: 3 }, (_, i) => {
-          const shapeType = i % 3;
-          const posX = seededRandom(seed, i * 3) * 70;
-          const posY = seededRandom(seed, i * 3 + 1) * 70;
-          const size = 30 + seededRandom(seed, i * 3 + 2) * 40;
-          const rotation = seededRandom(seed, i * 3 + 3) * 45;
-
-          if (shapeType === 0) {
-            // Circle
-            return (
-              <circle
-                key={`shape-${i}`}
-                cx={posX}
-                cy={posY}
-                r={size / 2}
-                fill="black"
-                style={{ opacity: 0.07 }}
-              />
-            );
-          } else if (shapeType === 1) {
-            // Rectangle
-            return (
-              <rect
-                key={`shape-${i}`}
-                x={posX}
-                y={posY}
-                width={size}
-                height={size / 1.5}
-                fill="black"
-                style={{ opacity: 0.07 }}
-                transform={`rotate(${rotation} ${posX + size / 2} ${posY + size / 3})`}
-              />
-            );
-          } else {
-            // Triangle (polygon)
-            const points = `${posX},${posY} ${posX + size},${posY} ${posX + size / 2},${posY + size}`;
-            return (
-              <polygon
-                key={`shape-${i}`}
-                points={points}
-                fill="black"
-                style={{ opacity: 0.07 }}
-              />
-            );
-          }
-        });
-
         return (
           <div
             key={pm.id}
-            className="relative h-48 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
+            className="relative h-48 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
             style={{ backgroundColor: bgColor }}
           >
-            {/* Geometric texture patterns in background */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-              {randomShapes}
-            </svg>
+            {/* Icono círculo sólido */}
+            <div className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/30 flex items-center justify-center shadow-md">
+              <span className="text-lg font-bold" style={{ color: textColor }}>{getInitial(pm.name)}</span>
+            </div>
 
             {/* Top Level: Name (Left) + Account Type (Right) */}
             <div className="relative z-10 flex items-center justify-between">
-              <p className="text-sm font-medium" style={{ color: textColor }}>{pm.name}</p>
+              <p className="text-base font-semibold" style={{ color: textColor }}>{pm.name}</p>
               <span className="text-xs font-bold uppercase tracking-wide" style={{ color: textColor }}>{accountType}</span>
             </div>
 
@@ -214,18 +109,18 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
                     <button
                       title="Editar"
                       onClick={() => onEdit(pm)}
-                      className="h-7 w-7 rounded-sm border border-primary/80 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                      className="h-9 w-9 rounded-xl bg-white/80 hover:bg-blue-100 text-blue-600 shadow-none border-none flex items-center justify-center transition-all duration-200"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                     </button>
                   )}
                   {onDelete && (
                     <button
                       title="Eliminar"
                       onClick={() => onDelete(pm)}
-                      className="h-7 w-7 rounded-sm border border-primary/80 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                      className="h-9 w-9 rounded-xl bg-white/80 hover:bg-red-100 text-red-600 shadow-none border-none flex items-center justify-center transition-all duration-200"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
                     </button>
                   )}
                 </div>
@@ -240,7 +135,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         variant="default"
         onClick={onAdd}
         className={cn(
-          "h-48 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 flex flex-col items-center justify-center gap-2 text-slate-600 transition-all duration-500",
+          "h-48 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50 hover:border-blue-400 flex flex-col items-center justify-center gap-2 text-blue-600 font-semibold transition-all duration-500 text-base shadow-md",
           highlighted && [
             "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
             "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
@@ -248,10 +143,9 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
           ]
         )}
       >
-        <Plus className={cn("h-6 w-6", highlighted && "animate-pulse")} />
-        <span className="text-sm font-medium">Agregar método</span>
+        <Plus className={cn("h-7 w-7", highlighted && "animate-pulse")}/>
+        <span>Agregar método</span>
       </Button>
     </div>
   );
 }
-

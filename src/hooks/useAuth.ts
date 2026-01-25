@@ -12,18 +12,51 @@ export function useAuth() {
 
     // Check session first
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!ignore) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.ts:15',message:'Getting session',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.ts:18',message:'Session result',data:{hasSession:!!session,hasError:!!error,errorMessage:error?.message,errorCode:error?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
+        
+        // If refresh token error, clear invalid session
+        if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.ts:23',message:'Invalid refresh token - clearing',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H'})}).catch(()=>{});
+          // #endregion
+          // Clear all Supabase-related localStorage items
+          const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
+          supabaseKeys.forEach(key => localStorage.removeItem(key));
+          await supabase.auth.signOut();
+        }
+        
+        if (!ignore) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.ts:33',message:'Session error caught',data:{errorMessage:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
+        if (!ignore) {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        }
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.ts:45',message:'Auth state change event',data:{event,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'G'})}).catch(()=>{});
+        // #endregion
+        
         if (!ignore) {
           setSession(session);
           setUser(session?.user ?? null);

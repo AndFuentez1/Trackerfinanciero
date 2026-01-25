@@ -496,9 +496,9 @@ export default function ConfiguracionPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Moneda Section */}
-                <Card className="config-card">
+                <Card className="rounded-2xl shadow-lg border-none bg-white">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Globe className="h-5 w-5 text-blue-500" />
@@ -523,7 +523,7 @@ export default function ConfiguracionPage() {
                 </Card>
 
                 {/* Sesión Section */}
-                <Card className="config-card">
+                <Card className="rounded-2xl shadow-lg border-none bg-white">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <LogOut className="h-5 w-5 text-destructive" />
@@ -543,7 +543,7 @@ export default function ConfiguracionPage() {
                 {/* Unified Category Management Section */}
                 <Card
                     className={cn(
-                        "config-card md:col-span-2 transition-all duration-500 ease-in-out",
+                        "rounded-2xl shadow-xl border-none bg-white md:col-span-2 transition-all duration-500 ease-in-out",
                         highlightedCard === 'categories' && [
                             "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.05] z-30",
                             "bg-primary text-primary-foreground shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
@@ -579,10 +579,10 @@ export default function ConfiguracionPage() {
                     <CardContent>
                         <Tabs defaultValue="expense" className="w-full">
                             <TabsList className="flex w-full p-1 gap-2 mb-6 bg-muted/50 rounded-lg border border-muted-foreground/30">
-                                <TabsTrigger value="expense" className="rounded-md flex-1 py-1">Gastos</TabsTrigger>
-                                <TabsTrigger value="income" className="rounded-md flex-1 py-1">Ingresos</TabsTrigger>
-                                <TabsTrigger value="savings" className="rounded-md flex-1 py-1">Ahorros</TabsTrigger>
-                                <TabsTrigger value="others" className="rounded-md flex-1 py-1">Otros</TabsTrigger>
+                                <TabsTrigger value="expense" className="flex-1 py-2 rounded-xl bg-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-slate-600 font-semibold shadow-none border-none transition-all">Gastos</TabsTrigger>
+                                <TabsTrigger value="income" className="flex-1 py-2 rounded-xl bg-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-slate-600 font-semibold shadow-none border-none transition-all">Ingresos</TabsTrigger>
+                                <TabsTrigger value="savings" className="flex-1 py-2 rounded-xl bg-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-slate-600 font-semibold shadow-none border-none transition-all">Ahorros</TabsTrigger>
+                                <TabsTrigger value="others" className="flex-1 py-2 rounded-xl bg-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-slate-600 font-semibold shadow-none border-none transition-all">Otros</TabsTrigger>
                             </TabsList>
                             <TabsContent value="expense" className="mt-0 pt-4 animate-in fade-in duration-300">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -724,7 +724,7 @@ export default function ConfiguracionPage() {
                         <Button
                             onClick={handleSaveDecimalPlaces}
                             className={cn(
-                                "w-full",
+                                "w-full rounded-xl bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90 transition-all text-base py-3 border-none",
                                 isDecimalsSaved && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={isDecimalsSaved}
@@ -737,7 +737,7 @@ export default function ConfiguracionPage() {
                 <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
 
                 {/* Theme Color Section */}
-                <Card className="config-card">
+                <Card className="rounded-2xl shadow-lg border-none bg-white">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <div className="w-2 h-6 bg-primary rounded-full" />
@@ -772,7 +772,7 @@ export default function ConfiguracionPage() {
                         </div>
                         <Button
                             onClick={() => setAppThemePreference(selectedTheme)}
-                            className="w-full"
+                            className="w-full rounded-xl bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90 transition-all text-base py-3 border-none"
                         >
                             Guardar Color
                         </Button>
@@ -782,12 +782,12 @@ export default function ConfiguracionPage() {
                 <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
 
                 <Card className={cn(
-                    "config-card bg-slate-50/80 border-slate-200 shadow-sm transition-all duration-1000",
+                    "rounded-2xl shadow-lg border-none bg-white transition-all duration-1000",
                     highlightPassword && "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.02]"
                 )}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                            <div className="w-1.5 h-6 bg-primary rounded-full" />
                             Seguridad
                         </CardTitle>
                         <CardDescription>Configura una contraseña para proteger tu acceso.</CardDescription>
@@ -795,11 +795,11 @@ export default function ConfiguracionPage() {
                     <CardContent>
                         <Button
                             variant="default"
-                            className="gap-2 h-auto py-2 px-3 justify-start bg-white border-slate-200 hover:bg-slate-100"
+                            className="gap-2 h-auto py-2 px-3 justify-start bg-primary text-primary-foreground rounded-xl font-semibold shadow-md hover:bg-primary/90 border-none"
                             onClick={() => setShowPasswordDialog(true)}
                         >
-                            <Lock className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600" />
-                            <span className="text-left whitespace-normal text-slate-700 font-medium">Establecer / Cambiar Contraseña</span>
+                            <Lock className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary-foreground" />
+                            <span className="text-left whitespace-normal font-medium">Establecer / Cambiar Contraseña</span>
                         </Button>
                     </CardContent>
                 </Card>
@@ -807,7 +807,7 @@ export default function ConfiguracionPage() {
                 <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-slate-200 to-transparent rounded-full my-4" />
 
                 <section>
-                    <Card className="config-card bg-red-100 border-red-200 shadow-sm">
+                    <Card className="rounded-2xl shadow-lg border-none bg-red-100">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-black">
                                 <div className="w-1.5 h-6 bg-red-600 rounded-full" />
@@ -1172,8 +1172,8 @@ export default function ConfiguracionPage() {
                                     // Recargar datos
                                     window.location.reload();
                                 } catch (err) {
-                                    console.error(err);
-                                    toast({ title: 'Error', description: 'No se pudieron eliminar los datos', variant: 'destructive' });
+                                    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+                                    toast({ title: 'Error', description: `No se pudieron eliminar los datos: ${errorMessage}`, variant: 'destructive' });
                                 }
                             }}
                             className="bg-orange-600/20 text-orange-600 hover:bg-orange-600/30 border border-orange-600/30"
@@ -1244,30 +1244,27 @@ function CategoryRow({
     onDelete: () => void
 }) {
     return (
-        <div className="flex items-center justify-between p-2 rounded-lg border transition-all group"
-            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
-        >
-            <div className="flex items-center gap-2.5 flex-1">
+        <div className="flex items-center justify-between p-3 rounded-2xl shadow-md bg-white group transition-all hover:shadow-lg" style={{ minHeight: 56 }}>
+            <div className="flex items-center gap-3 flex-1">
                 <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105"
-                    style={{ backgroundColor: category.color || '#3b82f6' }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105 shadow-sm"
+                    style={{ backgroundColor: category.color || 'var(--primary)' }}
                 >
-                    <div className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: 'var(--bg-card-inner)' }}
-                    />
+                    {/* Icono sólido, sin borde */}
+                    <span className="sr-only">Icono</span>
                 </div>
-                <span className="font-medium text-sm text-foreground flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
+                <span className="font-medium text-base text-foreground flex-1">{category.name === 'Loans' ? 'Préstamos' : category.name}</span>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 <Button variant="outline" size="icon" onClick={onEdit}
-                    className="h-7 w-7 rounded-sm border-primary/80"
+                    className="h-9 w-9 rounded-xl border-none bg-slate-100 hover:bg-primary/1010 texprimaryy shadow-none"
                 >
-                    <Pencil className="h-3.5 w-3.5 text-black" />
+                    <Pencil className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="icon" onClick={onDelete}
-                    className="h-7 w-7 rounded-sm border-primary/80"
+                    className="h-9 w-9 rounded-xl border-none bg-slate-100 hover:bg-red-100 text-red-600 shadow-none"
                 >
-                    <Trash2 className="h-3.5 w-3.5 text-black" />
+                    <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
         </div>

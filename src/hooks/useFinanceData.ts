@@ -576,14 +576,14 @@ export function useFinanceDataLogic() {
     localStorage.setItem('theme-base-color', baseColor);
   }, [baseColor]);
 
-  const PAGE_SIZE = 50000;
+  const PAGE_SIZE = 50; // Reduced from 50000 to prevent memory issues
 
   const resetProfileData = async () => {
     if (!user) return { error: 'No autenticado' };
 
     setLoading(true);
     try {
-      const tables: (keyof Database['public']['Tables'])[] = [
+      const tables: Array<keyof Database['public']['Tables']> = [
         'transactions',
         'budgets',
         'payment_methods',
@@ -591,7 +591,7 @@ export function useFinanceDataLogic() {
         'savings_transactions',
         'savings_accounts',
         'loans',
-      ] as any;
+      ];
 
       for (const table of tables) {
         const { error } = await supabase
@@ -707,7 +707,7 @@ export function useFinanceDataLogic() {
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .order(sortConfig.column, { ascending: sortConfig.ascending })
-        .limit(50000); // Increased to 50000 to ensure we get all historical data for charts
+        .limit(10000); // Reduced from 50000 to prevent memory issues - still enough for charts
       // NOTE: Intentionally NOT applying dateFilter here - charts need all years
     }
 
@@ -800,13 +800,16 @@ export function useFinanceDataLogic() {
     ]);
 
     // Fetch ALL transactions for aggregate stats - paginate to get all records
-    const allTxnsData: any[] = [];
-    let allTxnsRes = null;
+    const allTxnsData: TransactionRow[] = [];
+    let allTxnsRes: { error: unknown } | null = null;
     let hasMore = true;
     let offset = 0;
     const PAGE_SIZE_ALL = 1000;
+    const MAX_ITERATIONS = 1000; // Safety limit to prevent infinite loops
+    let iterations = 0;
 
-    while (hasMore) {
+    while (hasMore && iterations < MAX_ITERATIONS) {
+      iterations++;
       const res = await supabase
         .from('transactions')
         .select('*')
@@ -815,7 +818,7 @@ export function useFinanceDataLogic() {
         .range(offset, offset + PAGE_SIZE_ALL - 1);
 
       if (res.error) {
-        allTxnsRes = res;
+        allTxnsRes = { error: res.error };
         hasMore = false;
       } else if (res.data) {
         allTxnsData.push(...res.data);
@@ -824,7 +827,13 @@ export function useFinanceDataLogic() {
         } else {
           offset += PAGE_SIZE_ALL;
         }
+      } else {
+        hasMore = false;
       }
+    }
+
+    if (iterations >= MAX_ITERATIONS) {
+      console.warn('Maximum iterations reached while fetching transactions. Some data may be missing.');
     }
 
     // Map all transactions for summary calculations
@@ -884,7 +893,7 @@ export function useFinanceDataLogic() {
     }
 
     // Fetch Profile/Currency using 'id' as the user identifier
-    let profile: any = null;
+    let profile: Database['public']['Tables']['profiles']['Row'] | null = null;
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -2122,9 +2131,10 @@ export function useFinanceDataLogic() {
       // Note: fetchData removed to prevent race condition overwriting currency state
       // The realtime subscription will handle refreshing if needed
       return { error: null };
-    } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
+    } catch (err: unknown) {
 
-      toast({ title: 'Error', description: 'No se pudo aplicar la conversión', variant: 'destructive' });
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      toast({ title: 'Error', description: `No se pudo aplicar la conversión: ${errorMessage}`, variant: 'destructive' });
       return { error: err };
     }
   };
@@ -2244,11 +2254,12 @@ export function useFinanceDataLogic() {
     toast({ title: 'Eliminado', description: 'Presupuesto eliminado' });
   };
 
-  // Real-time synchronization
+  // Real-time synchronization - optimized with useCallback to prevent re-subscriptions
   useEffect(() => {
     if (!user) return;
 
     let debounceTimer: NodeJS.Timeout | null = null;
+    let isSubscribed = true;
 
     // Debounced handler to avoid multiple rapid fetches
     const handleRealtimeChange = () => {
@@ -2256,13 +2267,15 @@ export function useFinanceDataLogic() {
         clearTimeout(debounceTimer);
       }
       debounceTimer = setTimeout(() => {
-        setLoading(true);
-        fetchData();
-      }, 500); // Wait 500ms after last change before fetching
+        if (isSubscribed) {
+          setLoading(true);
+          fetchData();
+        }
+      }, 1000); // Increased debounce to 1000ms to reduce API calls
     };
 
     const transactionsChannel = supabase
-      .channel('schema-db-changes')
+      .channel(`schema-db-changes-${user.id}`) // Unique channel per user
       .on(
         'postgres_changes',
         {
@@ -2271,9 +2284,7 @@ export function useFinanceDataLogic() {
           table: 'transactions',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          handleRealtimeChange();
-        }
+        handleRealtimeChange
       )
       .on(
         'postgres_changes',
@@ -2283,9 +2294,7 @@ export function useFinanceDataLogic() {
           table: 'budgets',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          handleRealtimeChange();
-        }
+        handleRealtimeChange
       )
       .on(
         'postgres_changes',
@@ -2295,19 +2304,18 @@ export function useFinanceDataLogic() {
           table: 'payment_methods',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          handleRealtimeChange();
-        }
+        handleRealtimeChange
       )
       .subscribe();
 
     return () => {
+      isSubscribed = false;
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
       supabase.removeChannel(transactionsChannel);
     };
-  }, [user]);
+  }, [user, fetchData]);
 
   const addCategory = async (category: Omit<CategoryItem, 'id' | 'created_at'>) => {
     try {

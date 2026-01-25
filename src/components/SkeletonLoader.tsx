@@ -55,13 +55,15 @@ const CardSkeleton: React.FC<{
 
 const StatCardSkeleton = () => (
     <CardSkeleton className="relative flex flex-col justify-between" height="120px">
-        <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem' }}>
-            <PulseBlock height="1.25rem" width="1.25rem" borderRadius="9999px" />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <PulseBlock height="0.65rem" width="40%" />
-            <PulseBlock height="1.5rem" width="70%" />
-            <PulseBlock height="0.5rem" width="30%" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                <PulseBlock height="0.65rem" width="40%" />
+                <PulseBlock height="1.5rem" width="70%" />
+                <PulseBlock height="0.5rem" width="30%" />
+            </div>
+            <div style={{ flexShrink: 0, marginLeft: '1rem' }}>
+                <PulseBlock height="1.25rem" width="1.25rem" borderRadius="9999px" />
+            </div>
         </div>
     </CardSkeleton>
 );
@@ -89,15 +91,15 @@ const PageHeaderSkeleton = () => (
 
 const SidebarSkeleton = () => (
     <div
-        className="hidden lg:flex flex-col w-64 border-r min-h-screen p-6"
+        className="hidden lg:flex flex-col border-r min-h-screen p-6"
         style={{
+            width: '256px',
+            flexShrink: 0,
             backgroundColor: 'hsl(var(--container))',
             borderRight: '1px solid var(--border)',
             boxShadow: '1px 0 0 rgba(0,0,0,0.05)',
-            position: 'sticky',
-            top: 0,
             height: '100vh',
-            flexShrink: 0
+            overflowY: 'auto'
         }}
     >
         <div className="flex items-center gap-3 mb-10 px-2">
@@ -390,14 +392,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
     return (
         <div style={{
-            position: 'relative',
+            display: 'flex',
             minHeight: '100vh',
             backgroundColor: 'hsl(var(--background))',
             width: '100%',
             overflowX: 'hidden',
-            paddingTop: 0,
-            transition: 'all 0.3s ease',
-            display: 'flex'
+            transition: 'all 0.3s ease'
         }}>
             <style>
                 {`
@@ -458,13 +458,24 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
             {tab !== 'config' && <SidebarSkeleton />}
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowY: 'auto' }}>
+            <div style={{ 
+                flexGrow: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                minHeight: '100vh',
+                overflowY: 'auto',
+                marginLeft: 0,
+                paddingLeft: 0
+            }}>
                 {tab !== 'config' && <PageHeaderSkeleton />}
 
-                <main className="max-w-6xl mx-auto px-4 w-full" style={{
-                    paddingTop: tab === 'config' ? '0px' : '0px',
+                <main className="max-w-6xl mx-auto w-full" style={{
+                    paddingTop: tab === 'config' ? '2rem' : '0px',
                     paddingBottom: '5rem',
-                    transition: 'all 0.3s ease'
+                    paddingLeft: '1rem',
+                    paddingRight: '1rem',
+                    transition: 'all 0.3s ease',
+                    flex: 1
                 }}>
                     {renderTabSkeleton()}
                 </main>
