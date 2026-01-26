@@ -34,6 +34,7 @@ export interface Transaction {
   description: string;
   date: string;
   payment_method_id?: string | null;
+  installments?: number;
   created_at?: string;
 }
 
@@ -196,6 +197,8 @@ export const THEME_OPTIONS = [
   { label: 'Gris', hex: '#64748b' },
   { label: 'Azul', hex: '#2563eb' },
   { label: 'Esmeralda', hex: '#10b98a' },
+  { label: 'Violeta', hex: '#8b5cf6' },
+  { label: 'Naranja', hex: '#f97316' },
 ];
 
 /**
@@ -649,6 +652,49 @@ export function useFinanceDataLogic() {
     }
   };
 
+  const resetOperationalData = async () => {
+    if (!user) return { error: 'No autenticado' };
+
+    setLoading(true);
+    try {
+      const tables = [
+        'transactions',
+        'savings_transactions',
+        'budgets',
+        'loans',
+      ];
+
+      for (const table of tables) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('user_id', user.id);
+
+        if (error) {
+        }
+      }
+
+      // Reset balances of payment methods to 0
+      const { error: pmError } = await supabase
+        .from('payment_methods')
+        .update({ balance: 0 })
+        .eq('user_id', user.id);
+
+      if (pmError) {
+      }
+
+      toast({ title: 'Éxito', description: 'Tus datos operativos han sido eliminados. Configuración conservada.' });
+
+      await fetchData();
+      return { error: null };
+    } catch (err) {
+      toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos operativos.', variant: 'destructive' });
+      return { error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const calculateDates = useCallback((period: string) => {
     const now = new Date();
     let from: Date | null = null;
@@ -732,6 +778,7 @@ export function useFinanceDataLogic() {
       description: t.description,
       date: t.date,
       payment_method_id: t.payment_method_id,
+      installments: (t as any).installments,
       created_at: t.created_at,
     }));
 
@@ -755,6 +802,7 @@ export function useFinanceDataLogic() {
           description: t.description,
           date: t.date,
           payment_method_id: t.payment_method_id,
+          installments: (t as any).installments,
           created_at: t.created_at,
         }));
         setRangeTransactions(mappedRange);
@@ -2787,6 +2835,7 @@ export function useFinanceDataLogic() {
     totalBudget: budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
     totalSpentCurrentMonth: budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
     resetProfileData,
+    resetOperationalData,
     lastUpdated,
     updateCategoryGoal,
     // Theme management

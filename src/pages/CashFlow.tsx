@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { useAuth } from "@/hooks/useAuth";
 import { useCashFlow } from '@/hooks/useCashFlow';
-import CashFlowSkeleton from '@/components/finance/CashFlowSkeleton';
-import { Sidebar } from '@/components/Sidebar';
-import { CashFlowFilters } from '@/components/cashflow/CashFlowFilters';
-import { CashFlowSummaryCards } from '@/components/cashflow/CashFlowSummaryCards';
-import { CashFlowChart } from '@/components/cashflow/CashFlowChart';
-// import { CashFlowTimeline } from '@/components/cashflow/CashFlowTimeline';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
+import { CashFlowFilters } from '@/features/cashflow/components/CashFlowFilters';
+import { CashFlowSummaryCards } from '@/features/cashflow/components/CashFlowSummaryCards';
+import { CashFlowChart } from '@/features/cashflow/components/CashFlowChart';
+import { CashFlowTimeline } from "@/features/cashflow/components/CashFlowTimeline";
+import { Wallet, BarChart3 } from 'lucide-react';
 
 export default function CashFlow() {
   // Filtros de año/mes/rango
@@ -22,34 +23,37 @@ export default function CashFlow() {
 
   // Años/meses disponibles (debería venir de los datos)
   const availableYears = [2024, 2025, 2026];
-  const availableMonths = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const availableMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
   // Datos para tarjetas
   const estimatedIncome = proyeccion_ingresos;
   const futureExpenses = 0; // Implementar si hay gastos fijos
   const debtCommitments = compromisos_deuda;
-  const projectedBalance = cashFlowSeries.length > 0 ? cashFlowSeries[cashFlowSeries.length-1].balanceProyectado : 0;
+  const projectedBalance = (cashFlowSeries && cashFlowSeries.length > 0) ? cashFlowSeries[cashFlowSeries.length - 1].balanceProyectado : 0;
 
   // Formateador global de moneda
   const formatCOP = (v: number | null | undefined) =>
     (typeof v === 'number' && !isNaN(v)) ? v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 }) : '$ 0,00';
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-row bg-background">
-        <Sidebar />
-        <div className="flex-1">
-          <CashFlowSkeleton />
-        </div>
-      </div>
-    );
+    return <SkeletonLoader tab="cashflow" fullPage withLayoutWrapper />;
   }
 
   return (
-    <div className="min-h-screen flex flex-row bg-background">
-      <Sidebar />
-      <div className="flex-1 min-h-[60vh] flex flex-col gap-6 w-full max-w-5xl mx-auto py-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Flujo de Caja</h2>
+    <div className="min-h-screen bg-background/30">
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Wallet className="h-5 w-5 text-primary" />
+            </div>
+            <h1 className="text-xl font-semibold">Flujo de Caja</h1>
+          </div>
+        </div>
+      </header>
+
+      <main className="container max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Removed internal heading h2 since we have a header now */}
         <CashFlowFilters
           year={year}
           month={month}
@@ -134,7 +138,7 @@ export default function CashFlow() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

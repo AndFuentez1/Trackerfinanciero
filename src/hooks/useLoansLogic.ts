@@ -25,6 +25,7 @@ export interface Loan {
     type: 'borrowed' | 'lent';
     payments?: LoanPayment[];
     is_disbursed?: boolean;
+    installments?: number;
 }
 
 // Row types from the database
@@ -48,6 +49,7 @@ export interface LoanRow {
     type?: 'borrowed' | 'lent' | string;
     loan_payments?: LoanPaymentRow[];
     is_disbursed?: boolean;
+    installments?: number | null;
 }
 
 export function useLoansDataLogic() {
@@ -90,6 +92,7 @@ export function useLoansDataLogic() {
                     type: (l.type as 'borrowed' | 'lent') || 'borrowed',
                     payments,
                     is_disbursed: l.is_disbursed,
+                    installments: l.installments ? Number(l.installments) : undefined,
                 };
             }));
         }

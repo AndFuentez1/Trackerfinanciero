@@ -23,9 +23,7 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   );
 }
 
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:25',message:'Before createClient',data:{urlIsValid:SUPABASE_URL?.startsWith('http'),urlLength:SUPABASE_URL?.length,keyLength:SUPABASE_PUBLISHABLE_KEY?.length,urlValue:SUPABASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-// #endregion
+
 
 // Usamos localStorage por defecto para persistencia robusta
 // Eliminamos la lógica condicional que causaba pérdida de sesión en magic links
@@ -44,11 +42,11 @@ const originalConsoleWarn = console.warn;
 
 const errorInterceptor = (...args: unknown[]) => {
   const fullErrorStr = args.map(String).join(' ');
-  
+
   // Check if this is a refresh token error
-  if (fullErrorStr.includes('Invalid Refresh Token') || 
-      fullErrorStr.includes('Refresh Token Not Found') ||
-      (fullErrorStr.includes('AuthApiError') && fullErrorStr.includes('refresh'))) {
+  if (fullErrorStr.includes('Invalid Refresh Token') ||
+    fullErrorStr.includes('Refresh Token Not Found') ||
+    (fullErrorStr.includes('AuthApiError') && fullErrorStr.includes('refresh'))) {
     // #region agent log
     // fetch('http://127.0.0.1:7242/ingest/...')
     // #endregion
@@ -89,13 +87,13 @@ try {
       autoRefreshToken: true,
     }
   });
-  
+
   // Set up error handler for refresh token errors - handle silently
   supabaseClient.auth.onAuthStateChange((event, session) => {
     // #region agent log
     // fetch('http://127.0.0.1:7242/ingest/...')
     // #endregion
-    
+
     // Handle token refresh failures silently
     if (event === 'TOKEN_REFRESHED' && !session) {
       // #region agent log
@@ -107,7 +105,7 @@ try {
       });
     }
   });
-  
+
   // Handle initialization errors silently - clear invalid tokens on startup
   supabaseClient.auth.getSession().then(({ error }) => {
     if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
@@ -124,9 +122,8 @@ try {
   }).catch(() => {
     // Ignore initialization errors - they're handled above
   });
-  
-  fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:58',message:'createClient succeeded',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-  // fetch('http://127.0.0.1:7242/ingest/...')
+
+
 } catch (error) {
   // fetch('http://127.0.0.1:7242/ingest/...')
   throw error;

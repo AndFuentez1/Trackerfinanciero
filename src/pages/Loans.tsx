@@ -34,11 +34,10 @@ import { cn } from '@/lib/utils';
 import { format, isPast, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { getTodayLocalDate } from '@/lib/dateUtils';
-import { Sidebar } from '@/components/Sidebar';
 
 export default function LoansPage() {
     const navigate = useNavigate();
@@ -340,18 +339,11 @@ export default function LoansPage() {
 
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex flex-row">
-                <Sidebar />
-                <div className="flex-1">
-                    <SkeletonLoader tab="loans" />
-                </div>
-            </div>
-        );
+        return <SkeletonLoader tab="loans" fullPage withLayoutWrapper />;
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background/30">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">

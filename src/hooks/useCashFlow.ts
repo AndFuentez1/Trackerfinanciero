@@ -1,11 +1,13 @@
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useLoans } from '@/contexts/LoansContext';
 import { useBudgetsData } from './useBudgetsData';
 import { useSavingsData } from './useSavingsData';
-import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth } from 'date-fns';
+import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth, setDate, getDate } from 'date-fns';
 import { CashFlowPoint } from '@/components/cashflow/cashflow.types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 // Helper: calcular cuota mensual de préstamo (sistema francés)
 function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: number) {
@@ -14,11 +16,46 @@ function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: num
   return principal * (tasaMensual * Math.pow(1 + tasaMensual, nMeses)) / (Math.pow(1 + tasaMensual, nMeses) - 1);
 }
 
+interface FutureExpense {
+  id: string;
+  payment_date: string;
+  amount: number;
+  description: string;
+  category_id: string | null;
+  status: 'pending' | 'paid';
+  is_subscription?: boolean;
+  payment_day?: number;
+  start_date?: string;
+  end_date?: string;
+  frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
+}
+
 export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año') {
-  const { transactions, paymentMethods } = useFinance();
+  // ... (hooks remain same)
+  const { user } = useAuth();
+  const { transactions, paymentMethods, categories } = useFinance();
   const { loans } = useLoans();
   const { budgets } = useBudgetsData();
   const { savingsAccounts } = useSavingsData();
+  const [futureExpenses, setFutureExpenses] = useState<FutureExpense[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchFE = async () => {
+      const { data } = await supabase
+        .from('future_expenses' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .neq('status', 'paid');
+      if (data) setFutureExpenses(data as any[]);
+    };
+    fetchFE();
+    const channel = supabase
+      .channel('cf_future_expenses')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` }, fetchFE)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // Balance actual por cuentas
   const balance_actual = useMemo(() => {
@@ -27,18 +64,26 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
   // Fechas de proyección
   const now = new Date();
+  const currentMonthStart = startOfMonth(now);
   const start = startOfMonth(new Date(year, 0, 1));
   const monthsCount = range === 'mes' ? 1 : range === '6m' ? 6 : 12;
   const monthStart = month === 'all' ? 0 : (Number(month) - 1);
 
+  // Importante: para calculo de diferencias de meses
+  const differenceInCalendarMonths = (dateLeft: Date, dateRight: Date) => {
+    return (dateLeft.getFullYear() - dateRight.getFullYear()) * 12 + (dateLeft.getMonth() - dateRight.getMonth());
+  };
+
   // --- Cálculo detallado mensual avanzado ---
-  function calculateMonthlySnapshot(date: Date, prevBalance: number, prevSavings: Record<string, number>, prevLoans: Record<string, {saldo: number, cuotasRestantes: number}>, prevCardInstallments: Record<string, {restantes: number, valorCuota: number, interes: number, capital: number}>) {
+  function calculateMonthlySnapshot(date: Date, prevBalance: number, prevSavings: Record<string, number>, prevLoans: Record<string, { saldo: number, cuotasRestantes: number }>, prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }>) {
+    const isPastMonth = isBefore(endOfMonth(date), currentMonthStart);
+
     // Ingresos
     let ingresosSalario = 0;
     let interesesAhorro = 0;
     let otrosIngresos = 0;
     // Egresos
-    let gastosFuturos = 0;
+    let gastosFuturos = 0; // Presupuestos + Future Expenses
     let egresosPrestamos = 0;
     let egresosPrestamosInteres = 0;
     let egresosPrestamosCapital = 0;
@@ -53,7 +98,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       const prev = prevSavings[acc.id] ?? acc.balance;
       let interes = 0;
       if (acc.estimated_yield && acc.estimated_yield > 0) {
-        interes = prev * (Math.pow(1 + acc.estimated_yield, 1/12) - 1);
+        interes = prev * (Math.pow(1 + acc.estimated_yield, 1 / 12) - 1);
         interesesAhorro += interes;
         newSavings[acc.id] = prev + interes;
       } else {
@@ -61,32 +106,102 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- Ingresos por salario (budgets tipo ingreso) ---
-    budgets.forEach(b => {
-      if (b.budget && b.budget.period === 'monthly' && b.budget.amount > 0 && b.categoryName === 'Ingresos') {
-        ingresosSalario += b.budget.amount;
-      }
-    });
+    // --- Ingresos proyectados (Budgets de tipo Income) ---
+    if (!isPastMonth) {
+      budgets.forEach(b => {
+        const cat = categories.find(c => c.id === b.budget.category_id);
+        const isIncome = cat?.type === 'income' || b.categoryName === 'Ingresos' || b.categoryName === 'Salario';
 
-    // --- Gastos presupuestados no ejecutados ---
-    budgets.forEach(b => {
-      if (b.budget && b.budget.period === 'monthly' && b.budget.amount > 0 && b.categoryName !== 'Ingresos') {
-        const yaGastado = transactions.some(tx => tx.category_id === b.budget.category_id && format(new Date(tx.date), 'yyyy-MM') === format(date, 'yyyy-MM'));
-        if (!yaGastado) gastosFuturos += b.budget.amount;
-      }
-    });
+        if (b.budget.period === 'monthly' && b.budget.amount > 0 && isIncome) {
+          ingresosSalario += b.budget.amount;
+        }
+      });
+    }
 
-    // --- Préstamos: amortización francesa real, separación capital/interés ---
-    const newLoans: Record<string, {saldo: number, cuotasRestantes: number}> = { ...prevLoans };
+    // --- Gastos presupuestados (Budgets) ---
+    if (!isPastMonth) {
+      budgets.forEach(b => {
+        const cat = categories.find(c => c.id === b.budget.category_id);
+        // Exclude income
+        if (cat?.type === 'income') return;
+
+        if (b.budget.period === 'monthly' && b.budget.amount > 0) {
+          // Check if already spent in THIS month (for current month accuracy)
+          if (format(date, 'yyyy-MM') === format(now, 'yyyy-MM')) {
+            gastosFuturos += b.remaining;
+          } else {
+            // Future month: add full budget
+            gastosFuturos += b.budget.amount;
+          }
+        }
+      });
+    }
+
+    // --- Future Expenses & Subscriptions ---
+    if (!isPastMonth) {
+      futureExpenses.forEach(fe => {
+        let matchesMonth = false;
+
+        if (fe.is_subscription) {
+          const startD = fe.start_date ? new Date(fe.start_date) : null;
+          const endD = fe.end_date ? new Date(fe.end_date) : null;
+
+          // Check validity range
+          if (startD && isBefore(endOfMonth(date), startOfMonth(startD))) return;
+          if (endD && isAfter(startOfMonth(date), endOfMonth(endD))) return;
+
+          // Check Frequency
+          const freq = fe.frequency || 'monthly';
+          const monthDiff = startD ? differenceInCalendarMonths(date, startD) : 0;
+
+          switch (freq) {
+            case 'monthly':
+              matchesMonth = true;
+              break;
+            case 'bimonthly':
+              matchesMonth = monthDiff % 2 === 0;
+              break;
+            case 'quarterly':
+              matchesMonth = monthDiff % 3 === 0;
+              break;
+            case 'semiannual':
+              matchesMonth = monthDiff % 6 === 0;
+              break;
+            case 'yearly':
+              matchesMonth = monthDiff % 12 === 0;
+              break;
+            default:
+              matchesMonth = true;
+          }
+        } else {
+          // One-time expense
+          const payDate = new Date(fe.payment_date);
+          if (format(payDate, 'yyyy-MM') === format(date, 'yyyy-MM')) {
+            matchesMonth = true;
+          }
+        }
+
+        if (matchesMonth) {
+          gastosFuturos += fe.amount;
+        }
+      });
+    }
+
+    // --- Préstamos: amortización francesa real ---
+    const newLoans: Record<string, { saldo: number, cuotasRestantes: number }> = { ...prevLoans };
     loans.forEach(loan => {
       const prev = prevLoans[loan.id] ?? { saldo: loan.total_amount - (loan.paid_amount || 0), cuotasRestantes: loan.installments || 12 };
       if (prev.saldo > 0 && prev.cuotasRestantes > 0) {
         const tasa = loan.interest_rate;
         const cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
         const interes = prev.saldo * tasa / 12;
-        egresosPrestamos += cuota;
-        egresosPrestamosInteres += interes;
-        egresosPrestamosCapital += cuota - interes;
+
+        if (!isPastMonth) {
+          egresosPrestamos += cuota;
+          egresosPrestamosInteres += interes;
+          egresosPrestamosCapital += cuota - interes;
+        }
+
         newLoans[loan.id] = {
           saldo: prev.saldo - (cuota - interes),
           cuotasRestantes: prev.cuotasRestantes - 1
@@ -96,48 +211,89 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- Tarjetas de crédito: proyección de cuotas futuras ---
-    const newCardInstallments: Record<string, {restantes: number, valorCuota: number, interes: number, capital: number}> = { ...prevCardInstallments };
-    transactions.filter(tx => tx.type === 'expense' && (tx as any).installments && (tx as any).installments > 1).forEach(tx => {
-      const key = tx.id;
-      const cuotas = (tx as any).installments;
-      const pagadas = (tx as any).current_installment || 0;
-      const pm = paymentMethods.find(pm => pm.id === tx.payment_method_id);
-      const tasa = pm && pm.type === 'credit' && pm.estimated_yield ? pm.estimated_yield : 0;
-      if (!newCardInstallments[key]) {
-        newCardInstallments[key] = {
-          restantes: cuotas - pagadas,
-          valorCuota: tx.amount / cuotas,
-          interes: tasa > 0 ? (tx.amount / cuotas) * tasa / 12 : 0,
-          capital: tasa > 0 ? (tx.amount / cuotas) - ((tx.amount / cuotas) * tasa / 12) : (tx.amount / cuotas)
-        };
-      }
-      if (newCardInstallments[key].restantes > 0) {
-        egresosTarjeta += newCardInstallments[key].valorCuota;
-        egresosTarjetaInteres += newCardInstallments[key].interes;
-        egresosTarjetaCapital += newCardInstallments[key].capital;
-        newCardInstallments[key].restantes -= 1;
+    // --- Tarjetas de crédito ---
+    const newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = { ...prevCardInstallments };
+
+    transactions.filter(tx => tx.type === 'expense' && (tx.installments || 1) > 1).forEach(tx => {
+      const txDate = new Date(tx.date);
+      const cuotas = tx.installments || 1;
+
+      // Calculate active range using calendar months difference
+      // Installment 1 is in txDate month (month 0)
+      // Installment N is in month N-1
+      const diffMonths = differenceInCalendarMonths(date, txDate);
+
+      // If we are in the transaction month or later, AND within the quota count
+      if (diffMonths >= 0 && diffMonths < cuotas) {
+        // This is a much safer check than day comparison
+        const pm = paymentMethods.find(pm => pm.id === tx.payment_method_id);
+        if (pm && pm.type === 'credit') {
+          const valorCuota = tx.amount / cuotas;
+          if (!isPastMonth) {
+            egresosTarjeta += valorCuota;
+          }
+        }
       }
     });
 
-    // --- Gastos reales del mes ---
+
+    // --- Gastos reales del mes (Historical) ---
     transactions.forEach(tx => {
       const txDate = new Date(tx.date);
       const isSameMonth = month === 'all' ? true : (tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM'));
-      if (
-        tx.type === 'expense' &&
-        isSameMonth
-      ) {
-        egresosReales += tx.amount;
+      const cat = categories.find(c => c.id === tx.category_id);
+      const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
+
+      // EXCLUSIÓN CRÍTICA: Si es Tarjeta de Crédito a > 1 cuota, NO lo sumamos como gasto real "de golpe".
+      // Ya se está sumando mes a mes en "egresosTarjeta" (arriba).
+      const isMultiCuotaCC = pm?.type === 'credit' && ((tx as any).installments || 1) > 1;
+
+      if (isSameMonth && !isMultiCuotaCC) {
+        if (tx.type === 'expense') {
+          egresosReales += tx.amount;
+        } else if (tx.type === 'income') {
+          // Add to ingresos for historical accuracy
+          if (isPastMonth || format(date, 'yyyy-MM') === format(now, 'yyyy-MM')) {
+            // Logic for avoiding double counting income is handled by keeping track of Budget vs Real.
+            // For simplicity here, we assume standard behavior.
+          }
+          if (isPastMonth) {
+            otrosIngresos += tx.amount; // Use generic bucket for historical income
+          }
+        }
       }
     });
 
+    // Cleaning up Income logic:
+    // Past: `ingresosSalario` (0), `otrosIngresos` (Real Sum).
+    // Future: `ingresosSalario` (Budget), `otrosIngresos` (0).
+    // Current: `ingresosSalario` (Budget), `otrosIngresos` (0)? 
+    // If I have extra income in current month? 
+    // Let's add real income to `otrosIngresos` if it's NOT the salary category? 
+    // Too complex to match strings.
+    // Simplification:
+    // Past: Ingresos = Sum(Real Transactions type income).
+    // Future: Ingresos = Sum(Budgets type income).
+    // Current: Max(Sum(Budgets), Sum(Real))? Or just Budget?
+    // Let's go with:
+    // Past:
+    if (isPastMonth) {
+      ingresosSalario = 0; // Clear budget projection
+      otrosIngresos = 0;
+      transactions.forEach(tx => {
+        const txDate = new Date(tx.date);
+        if (format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM') && tx.type === 'income') {
+          otrosIngresos += tx.amount;
+        }
+      });
+    }
+
     // --- Préstamos que me deben (ingresos por cobrar) ---
     let ingresosPrestamos = 0;
-    // Aquí podrías sumar préstamos a favor del usuario (por implementar si hay estructura)
 
     // Calcular totales y balances antes de usarlos
     const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos;
+    // Note: egresosReales contains only expenses.
     const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales;
     const balanceNetoMes = ingresosTotales - egresosTotales;
     const balanceAcumulado = prevBalance + balanceNetoMes;
@@ -145,7 +301,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     return {
       mes: format(date, 'MMMM yyyy'),
       ingresosTotales,
-      ingresosSalario,
+      ingresosSalario, // In Past, this is 0, all is in "otrosIngresos"
       interesesAhorro,
       ingresosPrestamos,
       otrosIngresos,
@@ -170,8 +326,8 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const monthlyBreakdown = useMemo(() => {
     let prevBalance = balance_actual;
     let prevSavings: Record<string, number> = {};
-    let prevLoans: Record<string, {saldo: number, cuotasRestantes: number}> = {};
-    let prevCardInstallments: Record<string, {restantes: number, valorCuota: number, interes: number, capital: number}> = {};
+    let prevLoans: Record<string, { saldo: number, cuotasRestantes: number }> = {};
+    let prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = {};
     const arr = [];
     for (let m = 0; m < 12; m++) {
       const d = addMonths(start, m);
@@ -183,7 +339,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       prevCardInstallments = snap.newCardInstallments;
     }
     return arr;
-  }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start]);
+  }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start, futureExpenses, categories]);
 
   // --- Serie para gráfica (compatibilidad) ---
   const cashFlowSeries = monthlyBreakdown.map((row, idx) => ({

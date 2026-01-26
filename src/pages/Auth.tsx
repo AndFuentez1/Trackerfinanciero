@@ -1,14 +1,17 @@
-import { useState, useEffect, forwardRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
+import { WelcomePanel } from '@/features/auth/components/WelcomePanel';
+import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDecisionPanel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Wallet, Mail, Lock, AlertCircle, CheckCircle2, Edit2, Check } from 'lucide-react';
+import { SetPasswordStep } from '@/features/auth/components/SetPasswordStep';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wallet, Mail, Lock, AlertCircle, CheckCircle2, Edit2, Check } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { SetPasswordStep } from '@/components/auth/SetPasswordStep';
 
 const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();

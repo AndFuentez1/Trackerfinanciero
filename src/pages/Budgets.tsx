@@ -4,7 +4,7 @@ import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { SkeletonLoader } from "@/components/common/skeletons/SkeletonLoader";
 import { PieChart, LogOut, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,16 +15,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { InsightsPanel } from "@/components/finance/InsightsPanel";
+import { InsightsPanel } from "@/features/dashboard/components/InsightsPanel";
 
-import { BudgetTotalCard } from "@/components/finance/budgets/BudgetTotalCard";
-import { CategoryBudgetList } from "@/components/finance/budgets/CategoryBudgetList";
-import { IncomeCard } from "@/components/finance/budgets/IncomeCard";
-import { AddBudgetDialog } from '@/components/finance/AddBudgetDialog';
-import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
-import { FutureExpensesList } from "@/components/finance/budgets/FutureExpensesList";
+import { BudgetTotalCard } from "@/features/budgets/components/BudgetTotalCard";
+import { CategoryBudgetList } from "@/features/budgets/components/CategoryBudgetList";
+import { IncomeCard } from "@/features/budgets/components/IncomeCard";
+import { AddBudgetDialog } from '@/features/budgets/components/AddBudgetDialog';
+import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
+import { FutureExpensesList } from "@/features/budgets/components/FutureExpensesList";
 
-import { Sidebar } from '@/components/Sidebar';
+// import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function BudgetsPage() {
     const navigate = useNavigate();
@@ -55,19 +55,12 @@ export default function BudgetsPage() {
     const isLoading = authLoading || budgetsLoading;
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex flex-row">
-                <Sidebar />
-                <div className="flex-1">
-                    <SkeletonLoader tab="budgets" />
-                </div>
-            </div>
-        );
+        return <SkeletonLoader tab="budgets" fullPage withLayoutWrapper />;
     }
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background/30">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -119,6 +112,13 @@ export default function BudgetsPage() {
 
                 <Separator className="my-6" />
 
+                {/* Future Expenses Section */}
+                <div>
+                    <FutureExpensesList />
+                </div>
+
+                <Separator className="my-6" />
+
                 {/* Budget Alerts Section */}
                 {budgetInsights.length > 0 && (
                     <div>
@@ -131,13 +131,6 @@ export default function BudgetsPage() {
                         <InsightsPanel insights={budgetInsights} />
                     </div>
                 )}
-
-                {budgetInsights.length > 0 && <Separator className="my-6" />}
-
-                {/* Future Expenses Section */}
-                <div>
-                    <FutureExpensesList />
-                </div>
             </main>
         </div>
     );

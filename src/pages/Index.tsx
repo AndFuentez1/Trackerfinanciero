@@ -2,13 +2,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemo, useState } from 'react';
 import { useFinanceData } from '@/hooks/useFinanceData';
-import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
-import { AddBudgetDialog } from '@/components/finance/AddBudgetDialog';
+import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
+import { AddBudgetDialog } from '@/features/budgets/components/AddBudgetDialog';
 import { useBudgetsData } from '@/hooks/useBudgetsData';
-import { ImportExcelDialog } from '@/components/finance/ImportExcelDialog';
-import { ExportExcelButton } from '@/components/finance/ExportExcelButton';
-import { SummaryTab } from '@/components/finance/SummaryTab';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { ImportExcelDialog } from '@/features/transactions/components/ImportExcelDialog';
+import { ExportExcelButton } from '@/features/transactions/components/ExportExcelButton';
+import { SummaryTab } from '@/features/dashboard/components/SummaryTab';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { Wallet, AlertCircle, Calendar as CalendarIcon, FilterX, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,8 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { WelcomePanel } from '@/components/WelcomePanel';
-import { OnboardingDecisionPanel } from '@/components/OnboardingDecisionPanel';
+import { WelcomePanel } from '@/features/auth/components/WelcomePanel';
+import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDecisionPanel';
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/hooks/financeUtils';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 
@@ -117,7 +117,7 @@ export default function Index() {
 
   // Loading state (High Fidelity Skeleton Reveal)
   if (isLoading) {
-    return <SkeletonLoader tab="dashboard" />;
+    return <SkeletonLoader tab="dashboard" fullPage />;
   }
 
   if (!user) return null;
@@ -125,27 +125,7 @@ export default function Index() {
   // Empty state
   if (showWelcomePanel) {
     return (
-      <WelcomePanel
-        onConfigureCurrency={async (currencyCode) => {
-          const currConfig = CURRENCIES.find(c => c.code === currencyCode);
-          await updateProfile({
-            currency: currencyCode,
-            decimal_places: currConfig?.decimals ?? 0
-          });
-        }}
-        onAddPaymentMethod={() => {
-          setHighlightedCard('payment-methods');
-          navigate('/configuracion');
-        }}
-        onAddCategory={() => {
-          setHighlightedCard('categories');
-          navigate('/configuracion');
-        }}
-        currencyConfigured={Boolean(statsSummary.currency)}
-        hasPaymentMethods={paymentMethods.length > 0}
-        hasCategories={categories.length > 0}
-        currentCurrency={statsSummary.currency}
-      />
+      <WelcomePanel />
     );
   }
 
@@ -171,7 +151,7 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background/30">
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">

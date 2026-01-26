@@ -13,22 +13,23 @@ export const insertTransactionSchema = z.object({
     date: z.string().refine((val) => {
         // Validar formato yyyy-MM-dd
         if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return false;
-        
+
         // Validar que sea fecha real
         const parsed = parseLocalDate(val);
         if (!parsed) return false;
-        
+
         // Validar rango razonable (10 años atrás, 1 año adelante)
         const now = new Date();
         const minDate = subYears(now, 10);
         const maxDate = addYears(now, 1);
-        
+
         return isWithinInterval(parsed, { start: minDate, end: maxDate });
     }, {
         message: "Fecha inválida o fuera de rango permitido (10 años atrás - 1 año adelante)"
     }),
     payment_method_id: z.string().nullable().optional(),
     to_payment_method_id: z.string().nullable().optional(),
+    installments: z.coerce.number().min(1).default(1),
 });
 
 export type TransactionFormValues = z.infer<typeof insertTransactionSchema>;

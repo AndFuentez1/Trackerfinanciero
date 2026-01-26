@@ -1,196 +1,82 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useFinanceData, CategoryItem, TransactionType, PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
-import { getTodayLocalDate } from '@/lib/dateUtils';
-import { CURRENCIES } from '@/hooks/currencyConstants';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PaymentMethodList } from '@/components/finance/PaymentMethodList';
-import { CategoryRow } from '@/components/finance/CategoryRow';
-import { EditPaymentMethodDialog } from '@/components/finance/EditPaymentMethodDialog';
-import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDialog';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { Sidebar } from '@/components/Sidebar';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-} from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { SetPasswordDialog } from '@/components/auth/SetPasswordDialog';
-import { Shield, Lock, Book } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import {
-    Settings,
-    Pencil,
-    Trash2,
-    TrendingUp,
-    HelpCircle,
-    AlertCircle,
-    Circle,
-    LogOut,
-    Globe,
-    Calendar,
-    Wallet,
-    Banknote,
-    Plus,
-    CreditCard as CreditCardIcon
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ThemeSection } from './settings/sections/ThemeSection';
+import { CategoriesSection } from './settings/sections/CategoriesSection';
+import { PaymentMethodsSection } from './settings/sections/PaymentMethodsSection';
+import { CurrencySection } from './settings/sections/CurrencySection';
+import { SecuritySection } from './settings/sections/SecuritySection';
+import { DangerZone } from './settings/sections/DangerZone';
+import { useFinanceData } from '@/hooks/useFinanceData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
+import { Settings2, Github, Heart } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
-export default function Configuracion() {
-    // Simulación de loading para estructura base
-    const [loading] = useState(false);
+export default function ConfiguracionPage() {
+    const { loading } = useFinanceData();
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex flex-row">
-                <Sidebar />
-                <div className="flex-1">
-                    <SkeletonLoader tab="config" />
-                </div>
-            </div>
-        );
+        return <SkeletonLoader tab="config" fullPage withLayoutWrapper />;
     }
 
-    // Main UI
     return (
-        <div className="min-h-screen flex flex-row">
-            <Sidebar />
-            <div className="flex-1">
-                <div className="container max-w-4xl mx-auto px-4 py-8 space-y-8">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="space-y-1">
-                            <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
-                            <p className="text-muted-foreground">Gestiona tus categorías, métodos de pago, sesión y preferencias.</p>
+        <div className="min-h-screen bg-background/30 pb-20">
+            <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12 animate-in fade-in duration-700">
+
+                {/* Header Section */}
+                <header className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20">
+                            <Settings2 className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Configuración</h1>
+                            <p className="text-muted-foreground font-medium">Gestiona tus preferencias, cuentas y seguridad de la aplicación</p>
                         </div>
                     </div>
+                </header>
 
-                    {/* Card: Tema de la app */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Settings className="h-6 w-6 text-primary" />
-                                Tema de la app
-                            </CardTitle>
-                            <CardDescription>Elige el color base de la aplicación</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...aquí va el selector de tema... */}</CardContent>
-                    </Card>
+                <div className="space-y-8">
+                    <section className="space-y-8">
+                        <ThemeSection />
+                        <CurrencySection />
+                        <div className="flex flex-col gap-10">
+                            <CategoriesSection />
+                            <PaymentMethodsSection />
+                        </div>
+                    </section>
 
-                    {/* Card: Gestión de categorías */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Book className="h-6 w-6 text-primary" />
-                                Gestión de Categorías
-                            </CardTitle>
-                            <CardDescription>Configura tus categorías aquí para completar tu perfil.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...tabs y lista de categorías... */}</CardContent>
-                    </Card>
+                    <Separator className="my-8 opacity-50" />
 
-                    {/* Card: Métodos de pago */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Wallet className="h-6 w-6 text-primary" />
-                                Métodos de Pago
-                            </CardTitle>
-                            <CardDescription>Configura tus cuentas y tarjetas aquí para completar tu perfil.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...lista de métodos de pago... */}</CardContent>
-                    </Card>
+                    <section className="space-y-8">
+                        <SecuritySection />
+                        <DangerZone />
+                    </section>
 
-                    {/* Card: Número de decimales */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Banknote className="h-6 w-6 text-primary" />
-                                Números decimales
-                            </CardTitle>
-                            <CardDescription>Configura cuántos decimales mostrar en moneda</CardDescription>
+                    {/* Information Card - Moved to bottom */}
+                    <Card className="rounded-2xl border-primary/10 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden border-border/50 shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Información</CardTitle>
                         </CardHeader>
-                        <CardContent>{/* ...slider de decimales... */}</CardContent>
-                    </Card>
-
-                    {/* Card: Moneda principal */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Globe className="h-6 w-6 text-primary" />
-                                Moneda Principal
-                            </CardTitle>
-                            <CardDescription>Selecciona la moneda que se usará para tus reportes.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...selector de moneda... */}</CardContent>
-                    </Card>
-
-                    {/* Card: Gestión de contraseña */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <Lock className="h-6 w-6 text-primary" />
-                                Seguridad
-                            </CardTitle>
-                            <CardDescription>Configura una contraseña para proteger tu acceso.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...botón para abrir dialog de contraseña... */}</CardContent>
-                    </Card>
-
-                    {/* Card: Cerrar sesión */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <LogOut className="h-6 w-6 text-destructive" />
-                                Cerrar sesión
-                            </CardTitle>
-                            <CardDescription>Cerrar sesión en este dispositivo.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...botón cerrar sesión... */}</CardContent>
-                    </Card>
-
-                    {/* Card: Zona de peligro (Reinicio de perfil y borrar datos) */}
-                    <Card className="rounded-2xl shadow-lg border-none bg-red-100">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-black">
-                                <AlertCircle className="h-6 w-6 text-red-600" />
-                                Zona de Peligro
-                            </CardTitle>
-                            <CardDescription className="text-black">Acciones irreversibles sobre tu cuenta.</CardDescription>
-                        </CardHeader>
-                        <CardContent>{/* ...botones de reset y borrar datos... */}</CardContent>
+                        <CardContent className="space-y-4 pt-2">
+                            <p className="text-sm text-balance leading-relaxed">
+                                Todos tus datos se guardan de forma segura en la nube y se sincronizan en tiempo real con todos tus dispositivos.
+                            </p>
+                            <div className="space-y-3 pt-2">
+                                <a
+                                    href="https://github.com"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/50 transition-colors border border-transparent hover:border-border/50 group"
+                                >
+                                    <div className="p-1.5 rounded-lg bg-slate-900 text-white shadow-sm">
+                                        <Github className="h-4 w-4" />
+                                    </div>
+                                    <span className="text-sm font-semibold group-hover:text-primary transition-colors">Contribuir en GitHub</span>
+                                </a>
+                                <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground font-medium">
+                                    Hecho con <Heart className="h-3 w-3 text-red-500 fill-current animate-pulse" /> por Joan Fuentes
+                                </div>
+                            </div>
+                        </CardContent>
                     </Card>
                 </div>
             </div>

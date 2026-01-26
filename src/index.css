@@ -240,6 +240,6 @@ select {
 html,
 body,
 #root {
-  background-color: hsl(var(--bg-app));
+  background-color: #f8fafc;
   color: hsl(var(--text-primary));
 }

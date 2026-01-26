@@ -1,11 +1,11 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinanceData } from '@/hooks/useFinanceData';
-import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
-import { AddPaymentMethodDialog } from '@/components/finance/AddPaymentMethodDialog';
-import { ImportExcelDialog } from '@/components/finance/ImportExcelDialog';
-import { ExportExcelButton } from '@/components/finance/ExportExcelButton';
-import { HistoryTab } from '@/components/finance/HistoryTab';
+import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
+import { AddPaymentMethodDialog } from '@/features/payment-methods/components/AddPaymentMethodDialog';
+import { ImportExcelDialog } from '@/features/transactions/components/ImportExcelDialog';
+import { ExportExcelButton } from '@/features/transactions/components/ExportExcelButton';
+import { HistoryTab } from '@/features/transactions/components/HistoryTab';
 import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +16,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { PendingInvoicesPanel } from '@/components/finance/PendingInvoicesPanel';
-import { ImportStatusBar } from '@/components/finance/ImportStatusBar';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { PendingInvoicesPanel } from '@/features/transactions/components/PendingInvoicesPanel';
+import { ImportStatusBar } from '@/features/transactions/components/ImportStatusBar';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
 import { cn } from '@/lib/utils';
-import { Sidebar } from '@/components/Sidebar';
 
 export default function HistoryPage() {
     // ============================================================================
@@ -261,20 +260,13 @@ export default function HistoryPage() {
     // ============================================================================
     // Loading state (High Fidelity Skeleton Reveal)
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex flex-row">
-                <Sidebar />
-                <div className="flex-1">
-                    <SkeletonLoader tab="transactions" />
-                </div>
-            </div>
-        );
+        return <SkeletonLoader tab="transactions" fullPage withLayoutWrapper />;
     }
 
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background/30">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
@@ -330,9 +322,7 @@ export default function HistoryPage() {
 
             <main className="container max-w-6xl mx-auto px-4 py-8">
                 {isLoading && !transactions.length ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="animate-pulse text-muted-foreground">Cargando datos...</div>
-                    </div>
+                    <SkeletonLoader tab="transactions" withLayoutWrapper={false} fullPage={false} />
                 ) : (
                     <div className="flex flex-col gap-6">
                         {/* Barra de estado: Mostrar siempre que haya datos cargados */}

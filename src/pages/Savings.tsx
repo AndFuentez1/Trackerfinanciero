@@ -2,13 +2,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { useSavingsData } from '@/hooks/useSavingsData';
-import { SavingsPerformance } from '@/components/finance/SavingsPerformance';
-import { EditPaymentMethodDialog } from '@/components/finance/EditPaymentMethodDialog';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SavingsPerformance } from '@/features/savings/components/SavingsPerformance';
+import { EditPaymentMethodDialog } from '@/features/payment-methods/components/EditPaymentMethodDialog';
+import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { Sidebar } from '@/components/Sidebar';
+// import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function SavingsPage() {
     const navigate = useNavigate();
@@ -65,14 +65,7 @@ export default function SavingsPage() {
     const isLoading = authLoading || dataLoading || savingsLoading;
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex flex-row">
-                <Sidebar />
-                <div className="flex-1">
-                    <SkeletonLoader tab="savings" />
-                </div>
-            </div>
-        );
+        return <SkeletonLoader tab="savings" fullPage withLayoutWrapper />;
     }
 
     if (!user) return null;
@@ -80,7 +73,7 @@ export default function SavingsPage() {
     const currentEditingPM = paymentMethods.find(pm => pm.id === editingAccount);
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background/30">
             <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">

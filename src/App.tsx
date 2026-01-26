@@ -12,14 +12,13 @@ import SavingsPage from "./pages/Savings";
 import LoansPage from "./pages/Loans";
 import ConfiguracionPage from "./pages/Configuracion";
 import BudgetsPage from "./pages/Budgets";
-import ThemeTestPage from "./pages/ThemeTest";
-import MainLayout from "./components/MainLayout";
+import MainLayout from "@/layouts/MainLayout";
 import CashFlow from "./pages/CashFlow";
 import { FinanceProvider } from "./contexts/FinanceContext";
 import { SavingsProvider } from "./contexts/SavingsContext";
 import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
-import { SkeletonLoader } from "./components/SkeletonLoader";
+import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
 
 const queryClient = new QueryClient();
 
@@ -66,7 +65,6 @@ const AppContent = () => {
           <Route path="/flujo-caja" element={<CashFlow />} />
         </Route>
         <Route path="/auth" element={<Auth />} />
-        <Route path="/theme-test" element={<ThemeTestPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

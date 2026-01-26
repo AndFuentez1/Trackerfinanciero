@@ -21,6 +21,7 @@ export interface Transaction {
     description: string;
     date: string;
     payment_method_id?: string | null;
+    installments?: number;
     created_at?: string;
 }
 
