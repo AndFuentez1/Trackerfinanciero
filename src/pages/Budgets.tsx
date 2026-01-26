@@ -24,6 +24,8 @@ import { AddBudgetDialog } from '@/components/finance/AddBudgetDialog';
 import { AddTransactionDialog } from '@/components/finance/AddTransactionDialog';
 import { FutureExpensesList } from "@/components/finance/budgets/FutureExpensesList";
 
+import { Sidebar } from '@/components/Sidebar';
+
 export default function BudgetsPage() {
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
@@ -53,7 +55,14 @@ export default function BudgetsPage() {
     const isLoading = authLoading || budgetsLoading;
 
     if (isLoading) {
-        return <SkeletonLoader tab="budgets" />;
+        return (
+            <div className="min-h-screen flex flex-row">
+                <Sidebar />
+                <div className="flex-1">
+                    <SkeletonLoader tab="budgets" />
+                </div>
+            </div>
+        );
     }
     if (!user) return null;
 

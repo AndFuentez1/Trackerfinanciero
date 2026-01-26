@@ -5,18 +5,18 @@ import type { Database } from './types';
 // #region agent log
 const SUPABASE_URL_RAW = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY_RAW = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:6',message:'Env vars check',data:{urlType:typeof SUPABASE_URL_RAW,urlLength:SUPABASE_URL_RAW?.length||0,urlValue:SUPABASE_URL_RAW?.substring(0,50)||'undefined',keyType:typeof SUPABASE_KEY_RAW,keyLength:SUPABASE_KEY_RAW?.length||0,allEnvKeys:Object.keys(import.meta.env).filter(k=>k.startsWith('VITE_'))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// fetch('http://127.0.0.1:7242/ingest/...')
 // #endregion
 const SUPABASE_URL = SUPABASE_URL_RAW;
 const SUPABASE_PUBLISHABLE_KEY = SUPABASE_KEY_RAW;
 
 // #region agent log
-fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:15',message:'Before validation check',data:{hasUrl:!!SUPABASE_URL,hasKey:!!SUPABASE_PUBLISHABLE_KEY,urlIsString:typeof SUPABASE_URL==='string',keyIsString:typeof SUPABASE_PUBLISHABLE_KEY==='string',urlEmpty:SUPABASE_URL==='',keyEmpty:SUPABASE_PUBLISHABLE_KEY===''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+// fetch('http://127.0.0.1:7242/ingest/...')
 // #endregion
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:20',message:'Validation failed',data:{urlValue:SUPABASE_URL,keyValue:SUPABASE_PUBLISHABLE_KEY?.substring(0,20)||'undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // fetch('http://127.0.0.1:7242/ingest/...')
   // #endregion
   throw new Error(
     'Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your .env file.'
@@ -33,8 +33,8 @@ const customStorage = localStorage;
 
 // #region agent log
 // Check localStorage for Supabase tokens before creating client
-const supabaseStorageKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('sb-'));
-fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:32',message:'localStorage check',data:{supabaseKeys:supabaseStorageKeys,keysCount:supabaseStorageKeys.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
+// const supabaseStorageKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('sb-'));
+// fetch('http://127.0.0.1:7242/ingest/...')
 // #endregion
 
 // Intercept and suppress refresh token errors during initialization
@@ -50,7 +50,7 @@ const errorInterceptor = (...args: unknown[]) => {
       fullErrorStr.includes('Refresh Token Not Found') ||
       (fullErrorStr.includes('AuthApiError') && fullErrorStr.includes('refresh'))) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:42',message:'Console error intercepted - refresh token',data:{errorMessage:fullErrorStr.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'J'})}).catch(()=>{});
+    // fetch('http://127.0.0.1:7242/ingest/...')
     // #endregion
     // Clear invalid tokens silently
     const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
@@ -93,13 +93,13 @@ try {
   // Set up error handler for refresh token errors - handle silently
   supabaseClient.auth.onAuthStateChange((event, session) => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:48',message:'Auth state change',data:{event,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'G'})}).catch(()=>{});
+    // fetch('http://127.0.0.1:7242/ingest/...')
     // #endregion
     
     // Handle token refresh failures silently
     if (event === 'TOKEN_REFRESHED' && !session) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:52',message:'Token refresh failed - clearing session',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H'})}).catch(()=>{});
+      // fetch('http://127.0.0.1:7242/ingest/...')
       // #endregion
       // Clear invalid session silently
       supabaseClient.auth.signOut().catch(() => {
@@ -112,7 +112,7 @@ try {
   supabaseClient.auth.getSession().then(({ error }) => {
     if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:70',message:'Init refresh token error - clearing',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H'})}).catch(()=>{});
+      // fetch('http://127.0.0.1:7242/ingest/...')
       // #endregion
       // Clear all Supabase-related localStorage items
       const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
@@ -126,8 +126,9 @@ try {
   });
   
   fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:58',message:'createClient succeeded',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+  // fetch('http://127.0.0.1:7242/ingest/...')
 } catch (error) {
-  fetch('http://127.0.0.1:7242/ingest/f76614db-3885-41f4-93dc-9e4c84fe1966',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client.ts:61',message:'createClient error',data:{errorMessage:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'unknown',urlValue:SUPABASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+  // fetch('http://127.0.0.1:7242/ingest/...')
   throw error;
 }
 export const supabase = supabaseClient;

@@ -22,6 +22,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
 import { cn } from '@/lib/utils';
+import { Sidebar } from '@/components/Sidebar';
 
 export default function HistoryPage() {
     // ============================================================================
@@ -260,7 +261,14 @@ export default function HistoryPage() {
     // ============================================================================
     // Loading state (High Fidelity Skeleton Reveal)
     if (isLoading) {
-        return <SkeletonLoader tab="transactions" />;
+        return (
+            <div className="min-h-screen flex flex-row">
+                <Sidebar />
+                <div className="flex-1">
+                    <SkeletonLoader tab="transactions" />
+                </div>
+            </div>
+        );
     }
 
     if (!user) return null;

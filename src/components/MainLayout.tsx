@@ -107,7 +107,7 @@ export default function MainLayout() {
     return (
         <>
             <div
-                className="flex min-h-screen font-sans antialiased"
+                className="flex h-screen w-full overflow-hidden font-sans antialiased"
             >
                 <Sidebar />
                 <main className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative">

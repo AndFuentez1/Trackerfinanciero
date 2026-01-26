@@ -38,6 +38,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { getTodayLocalDate } from '@/lib/dateUtils';
+import { Sidebar } from '@/components/Sidebar';
 
 export default function LoansPage() {
     const navigate = useNavigate();
@@ -339,7 +340,14 @@ export default function LoansPage() {
 
 
     if (loading) {
-        return <SkeletonLoader tab="loans" />;
+        return (
+            <div className="min-h-screen flex flex-row">
+                <Sidebar />
+                <div className="flex-1">
+                    <SkeletonLoader tab="loans" />
+                </div>
+            </div>
+        );
     }
 
     return (

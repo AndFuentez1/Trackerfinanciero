@@ -1,0 +1,17 @@
+/* Design tokens base para fundaciones */
+:root {
+  --color-background: #f8fafc;
+  --color-card: #fff;
+  --color-border: #e5e7eb;
+  --color-muted: #6b7280;
+  --color-primary: #2563eb;
+  --color-danger: #ef4444;
+  --color-warning: #f59e42;
+
+  --font-base: 'Inter', system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+}

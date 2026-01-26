@@ -164,31 +164,25 @@ export function OnboardingDecisionPanel({
                 <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="flex flex-row gap-4 justify-center items-end my-2">
                   {themeOptions.map((theme) => (
-                    <button
-                      key={theme.hex}
-                      onClick={() => {
-                        setSelectedTheme(theme.hex);
-                      }}
-                      className={cn(
-                        "p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-1",
-                        selectedTheme === theme.hex
-                          ? "border-primary ring-2 ring-primary ring-offset-2"
-                          : "border-border hover:border-primary"
-                      )}
-                      style={{ backgroundColor: `${theme.hex}20` }}
-                      title={theme.label}
-                    >
-                      <div
-                        className="w-5 h-5 rounded-full border border-white shadow-md flex items-center justify-center"
-                        style={{ backgroundColor: theme.hex }}
+                    <div key={theme.hex} className="flex flex-col items-center w-24">
+                      <button
+                        type="button"
+                        className={cn(
+                          "w-16 h-16 rounded-xl border-2 flex items-center justify-center transition-all",
+                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-muted"
+                        )}
+                        style={{ background: theme.hex }}
+                        aria-label={theme.label}
+                        onClick={() => setSelectedTheme(theme.hex)}
                       >
                         {selectedTheme === theme.hex && (
-                          <Check className="w-3 h-3 text-white drop-shadow-md" />
+                          <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
                         )}
-                      </div>
-                    </button>
+                      </button>
+                      <span className="text-xs mt-2 text-center break-words w-full" style={{ color: '#222' }}>{theme.label}</span>
+                    </div>
                   ))}
                 </div>
                 <Button

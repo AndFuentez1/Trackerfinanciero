@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useFinance } from "@/contexts/FinanceContext";
 import { CURRENCIES } from "@/hooks/currencyConstants";
 import { useDecimalPlaces } from "@/hooks/useDecimalPlaces";
+import { TrendingDown } from 'lucide-react';
 
 interface BudgetTotalCardProps {
     totalBudget: TotalBudgetState;

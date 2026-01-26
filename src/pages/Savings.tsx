@@ -8,6 +8,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { Sidebar } from '@/components/Sidebar';
 
 export default function SavingsPage() {
     const navigate = useNavigate();
@@ -64,7 +65,14 @@ export default function SavingsPage() {
     const isLoading = authLoading || dataLoading || savingsLoading;
 
     if (isLoading) {
-        return <SkeletonLoader tab="savings" />;
+        return (
+            <div className="min-h-screen flex flex-row">
+                <Sidebar />
+                <div className="flex-1">
+                    <SkeletonLoader tab="savings" />
+                </div>
+            </div>
+        );
     }
 
     if (!user) return null;
