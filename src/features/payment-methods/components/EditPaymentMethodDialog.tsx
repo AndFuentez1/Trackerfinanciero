@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const PAYMENT_METHOD_TYPES = [
@@ -65,6 +66,7 @@ export function EditPaymentMethodDialog({
     isSavingsAccount: false,
     savingsGoal: '',
     estimatedYield: '',
+    franchise: '',
   });
 
   // Update form data when paymentMethod changes
@@ -81,6 +83,7 @@ export function EditPaymentMethodDialog({
         isSavingsAccount: paymentMethod.is_savings_account || false,
         savingsGoal: paymentMethod.savings_goal?.toString() || '',
         estimatedYield: paymentMethod.estimated_yield?.toString() || '',
+        franchise: paymentMethod.franchise || '',
       });
     }
   }, [paymentMethod]);
@@ -115,6 +118,8 @@ export function EditPaymentMethodDialog({
         type: formData.type as any,
         balance: parseFloat(formData.balance) || 0,
         color: formData.color,
+        franchise: (formData.type === 'credit' || formData.type === 'debit') ? formData.franchise : null,
+        last_4_digits: null,
       };
 
       if (formData.type === 'credit') {
@@ -202,6 +207,32 @@ export function EditPaymentMethodDialog({
               <p className="text-xs text-muted-foreground">El tipo no se puede cambiar al editar desde cuentas de ahorro</p>
             )}
           </div>
+
+          {/* Franchise & Last 4 Digits (Credit/Debit) */}
+          {(formData.type === 'credit' || formData.type === 'debit') && (
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="franchise">Franquicia</Label>
+                <Select
+                  value={formData.franchise}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, franchise: value })
+                  }
+                >
+                  <SelectTrigger id="franchise">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="visa">Visa</SelectItem>
+                    <SelectItem value="mastercard">Mastercard</SelectItem>
+                    <SelectItem value="amex">American Express</SelectItem>
+                    <SelectItem value="diners">Diners Club</SelectItem>
+                    <SelectItem value="other">Otra</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           {/* Balance/Debt */}
           <div className="space-y-2">
@@ -310,8 +341,8 @@ export function EditPaymentMethodDialog({
                   key={color}
                   onClick={() => setFormData({ ...formData, color })}
                   className={`w-8 h-8 rounded-lg border-2 transition-all ${formData.color === color
-                      ? 'border-foreground'
-                      : 'border-transparent'
+                    ? 'border-foreground'
+                    : 'border-transparent'
                     }`}
                   style={{ backgroundColor: color }}
                 />

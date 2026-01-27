@@ -1,15 +1,17 @@
 import { Budget, CategoryItem } from '@/hooks/useFinanceData';
-import { Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { AddBudgetDialog } from './AddBudgetDialog';
 
 interface BudgetListProps {
   budgets: Budget[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<any>;
+  onSave: (budget: any) => Promise<any>;
   categories: CategoryItem[];
 }
 
-export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
+export function BudgetList({ budgets, onDelete, onSave, categories }: BudgetListProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -56,14 +58,25 @@ export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
                   )}>
                     {formatCurrency(spent)} / {formatCurrency(budget.amount)}
                   </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all rounded-sm border-primary/80"
-                    onClick={() => onDelete(budget.id)}
+                  <AddBudgetDialog
+                    editingBudget={{
+                      id: budget.id,
+                      category_id: budget.category_id || (categoryItem?.id || ''), // Fallback if category_id missing, though it should exist
+                      categoryName: budget.category,
+                      amount: budget.amount
+                    }}
+                    monthOverride={budget.month}
+                    onAdd={onSave}
+                    onDelete={onDelete}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all rounded-sm border-primary/80"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </AddBudgetDialog>
                 </div>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">

@@ -1,56 +1,21 @@
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { formatLocalDate } from '@/lib/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFinance } from '@/contexts/FinanceContext';
+import { FinanceContext } from '@/contexts/FinanceContextInstance';
 import { CURRENCIES } from './currencyConstants';
 import type { Database } from '@/integrations/supabase/types';
 
-export type TransactionType = 'income' | 'expense' | 'saving' | 'savings' | 'investment' | 'transfer_out' | 'transfer_in' | 'loan' | 'other';
-export type PaymentMethodType = 'cash' | 'debit' | 'credit' | 'savings' | 'investment';
+import {
+  TransactionType, PaymentMethodType, CategoryItem, Transaction,
+  PaymentMethod, PaymentMethodRow, TransactionRow, Budget, Insight,
+  Loan, LoanRow, LoanPaymentRow, FutureExpense
+} from './financeTypes';
+export * from './financeTypes';
 
-// ...existing code...
-
-// ...existing code...
-
-export interface CategoryItem {
-  id: string;
-  name: string;
-  type: TransactionType;
-  color?: string | null;
-  is_default?: boolean;
-  saving_goal?: number | null;
-}
-
-export interface Transaction {
-  id: string;
-  type: TransactionType;
-  category: string | null;
-  category_id?: string | null;
-  amount: number;
-  description: string;
-  date: string;
-  payment_method_id?: string | null;
-  installments?: number;
-  created_at?: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  name: string;
-  type: PaymentMethodType;
-  balance: number;
-  credit_limit?: number | null;
-  is_savings_account?: boolean;
-  savings_goal?: number | null;
-  estimated_yield?: number | null; // Rentabilidad Estimada (%)
-  closing_date?: number | null;
-  payment_day?: number | null;
-  color?: string | null;
-}
 
 export type AppThemeKey = 'rose' | 'gray' | 'blue' | 'emerald';
 
@@ -64,17 +29,17 @@ type ThemePreset = {
 const GRAY_BASE_HEX = '#64748b';
 
 const ORIGINAL_COLOR_MAP: Record<string, { h: number; s: number; l: number }> = {
-  '--primary': { h: 215, s: 11, l: 50 },
-  '--primary-foreground': { h: 0, s: 0, l: 100 },
+  '--color-primary': { h: 215, s: 11, l: 50 },
+  '--color-primary-foreground': { h: 0, s: 0, l: 100 },
   '--secondary': { h: 221, s: 15, l: 81 },
   '--secondary-foreground': { h: 215, s: 11, l: 40 },
-  '--muted': { h: 223, s: 32, l: 91 },
-  '--muted-foreground': { h: 215, s: 11, l: 40 },
+  '--color-muted': { h: 223, s: 32, l: 91 },
+  '--color-muted-foreground': { h: 215, s: 11, l: 40 },
   '--accent': { h: 221, s: 15, l: 81 },
   '--accent-foreground': { h: 215, s: 11, l: 40 },
-  '--card': { h: 220, s: 16, l: 96 },
-  '--card-soft': { h: 220, s: 16, l: 94 },
-  '--card-bg-light': { h: 220, s: 16, l: 96 },
+  '--color-card': { h: 220, s: 16, l: 96 },
+  '--color-card-soft': { h: 220, s: 16, l: 94 },
+  '--color-card-bg-light': { h: 220, s: 16, l: 96 },
   '--border': { h: 215, s: 11, l: 50 },
   '--input': { h: 215, s: 11, l: 50 },
   '--ring': { h: 215, s: 11, l: 50 },
@@ -92,9 +57,9 @@ const ORIGINAL_COLOR_MAP: Record<string, { h: number; s: number; l: number }> = 
 };
 
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  let r = parseInt(hex.slice(1, 3), 16) / 255;
-  let g = parseInt(hex.slice(3, 5), 16) / 255;
-  let b = parseInt(hex.slice(5, 7), 16) / 255;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -128,23 +93,26 @@ function calculateProportionalTheme(baseColorHex: string): Record<string, string
   const themeVars: Record<string, string> = {};
 
   // Fondos y superficies NEUTROS (constantes)
-  themeVars['--background'] = '0 0% 100%'; // blanco
+  themeVars['--color-background'] = '0 0% 100%'; // blanco
   themeVars['--foreground'] = '220 15% 15%';
   themeVars['--container'] = '220 15% 97%';
-  themeVars['--card'] = '0 0% 100%';
-  themeVars['--card-foreground'] = '220 15% 15%';
-  themeVars['--border'] = '220 13% 90%';
-  themeVars['--muted'] = '220 15% 96%';
-  themeVars['--muted-foreground'] = '220 10% 45%';
-  themeVars['--input'] = '0 0% 100%';
+  themeVars['--color-card'] = '220 15% 98%'; // gris muy claro
+  themeVars['--color-card-foreground'] = '220 15% 15%';
+  themeVars['--color-border'] = '220 13% 90%';
+  themeVars['--border'] = themeVars['--color-border'];
+  themeVars['--color-muted'] = '220 15% 96%';
+  themeVars['--color-muted-foreground'] = '220 10% 45%';
+  themeVars['--color-foreground'] = '220 15% 15%';
+  themeVars['--foreground'] = themeVars['--color-foreground'];
+  themeVars['--input'] = '220 15% 98%';
 
   // Accent tokens premium
   // Accent fuerte: para CTA, pill, estado activo
   const accentPrimaryS = Math.min(s, 45);
   const accentPrimaryL = Math.max(l, 48);
   themeVars['--accent-primary'] = `${h} ${accentPrimaryS}% ${accentPrimaryL}%`;
-  themeVars['--primary'] = themeVars['--accent-primary'];
-  themeVars['--primary-foreground'] = '0 0% 100%';
+  themeVars['--color-primary'] = themeVars['--accent-primary'];
+  themeVars['--color-primary-foreground'] = '0 0% 100%';
 
   // Accent soft: para hover, focus, iconos activos, tabs activos
   const accentSoftS = Math.round(accentPrimaryS * 0.4);
@@ -171,22 +139,25 @@ function calculateProportionalTheme(baseColorHex: string): Record<string, string
   themeVars['--ring'] = themeVars['--accent-soft-border'];
 
   // Variables personalizadas del sistema (compatibilidad)
-  themeVars['--bg-app'] = themeVars['--background'];
+  themeVars['--bg-app'] = themeVars['--color-background'];
   themeVars['--bg-container'] = themeVars['--container'];
-  themeVars['--bg-card'] = themeVars['--card'];
-  themeVars['--bg-card-inner'] = themeVars['--card'];
+  themeVars['--bg-card'] = themeVars['--color-card'];
+  themeVars['--bg-card-inner'] = themeVars['--color-card'];
   themeVars['--text-primary'] = themeVars['--foreground'];
   themeVars['--text-secondary'] = '220 10% 45%';
   themeVars['--text-muted'] = '220 10% 45%';
   themeVars['--text-inverse'] = '0 0% 100%';
-  themeVars['--color-primary'] = themeVars['--primary'];
+  themeVars['--color-primary'] = themeVars['--color-primary'];
   themeVars['--color-primary-hover'] = themeVars['--accent-soft'];
   themeVars['--color-primary-active'] = themeVars['--accent-primary'];
-  themeVars['--border-default'] = themeVars['--border'];
+  themeVars['--color-border-default'] = themeVars['--border'];
+  themeVars['--border-default'] = themeVars['--color-border-default'];
+  themeVars['--color-container'] = themeVars['--container'];
+  themeVars['--color-input'] = themeVars['--input'];
   themeVars['--border-soft'] = '220 13% 92%';
 
   // Superficies flotantes (dropdowns, popovers, selects) - NEUTRAS
-  themeVars['--popover'] = '0 0% 100%';
+  themeVars['--popover'] = '220 15% 98%';
   themeVars['--popover-foreground'] = '220 15% 15%';
 
   return themeVars;
@@ -197,8 +168,8 @@ export const THEME_OPTIONS = [
   { label: 'Gris', hex: '#64748b' },
   { label: 'Azul', hex: '#2563eb' },
   { label: 'Esmeralda', hex: '#10b98a' },
-  { label: 'Violeta', hex: '#8b5cf6' },
-  { label: 'Naranja', hex: '#f97316' },
+  { label: 'Cian', hex: '#06b6d4' },
+  { label: 'Morado', hex: '#8b5cf6' },
 ];
 
 /**
@@ -291,17 +262,18 @@ export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
     label: 'Rosa lila',
     swatch: 'hsl(315 75% 60%)',
     vars: {
-      '--primary': 'hsl(315 75% 60%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--color-primary': 'hsl(315 75% 60%)',
+      '--color-primary-foreground': 'hsl(0 0% 100%)',
       '--secondary': 'hsl(315 55% 92%)',
       '--secondary-foreground': 'hsl(315 30% 28%)',
-      '--muted': 'hsl(320 50% 95%)',
-      '--muted-foreground': 'hsl(315 30% 28%)',
+      '--color-muted': 'hsl(320 50% 95%)',
+      '--color-muted-foreground': 'hsl(315 30% 28%)',
       '--accent': 'hsl(310 60% 90%)',
       '--accent-foreground': 'hsl(315 30% 28%)',
-      '--card': 'hsl(320 45% 98%)',
-      '--card-soft': 'hsl(320 50% 96%)',
-      '--card-bg-light': 'hsl(320 45% 98%)',
+      '--color-card': 'hsl(320 45% 98%)',
+      '--color-card-soft': 'hsl(320 50% 96%)',
+      '--color-card-bg-light': 'hsl(320 45% 98%)',
+      '--color-border': 'hsl(315 65% 55%)',
       '--border': 'hsl(315 65% 55%)',
       '--input': 'hsl(315 65% 55%)',
       '--ring': 'hsl(315 65% 55%)',
@@ -322,17 +294,18 @@ export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
     label: 'Gris',
     swatch: 'hsl(215 11% 50%)',
     vars: {
-      '--primary': 'hsl(215 11% 50%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--color-primary': 'hsl(215 11% 50%)',
+      '--color-primary-foreground': 'hsl(0 0% 100%)',
       '--secondary': 'hsl(221 15% 81%)',
       '--secondary-foreground': 'hsl(215 11% 40%)',
-      '--muted': 'hsl(223 32% 91%)',
-      '--muted-foreground': 'hsl(215 11% 40%)',
+      '--color-muted': 'hsl(223 32% 91%)',
+      '--color-muted-foreground': 'hsl(215 11% 40%)',
       '--accent': 'hsl(221 15% 81%)',
       '--accent-foreground': 'hsl(215 11% 40%)',
-      '--card': 'hsl(220 16% 96%)',
-      '--card-soft': 'hsl(220 16% 94%)',
-      '--card-bg-light': 'hsl(220 16% 96%)',
+      '--color-card': 'hsl(220 16% 96%)',
+      '--color-card-soft': 'hsl(220 16% 94%)',
+      '--color-card-bg-light': 'hsl(220 16% 96%)',
+      '--color-border': 'hsl(215 11% 50%)',
       '--border': 'hsl(215 11% 50%)',
       '--input': 'hsl(215 11% 50%)',
       '--ring': 'hsl(215 11% 50%)',
@@ -353,17 +326,18 @@ export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
     label: 'Azul',
     swatch: 'hsl(220 80% 56%)',
     vars: {
-      '--primary': 'hsl(220 80% 56%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--color-primary': 'hsl(220 80% 56%)',
+      '--color-primary-foreground': 'hsl(0 0% 100%)',
       '--secondary': 'hsl(220 65% 90%)',
       '--secondary-foreground': 'hsl(222 35% 28%)',
-      '--muted': 'hsl(220 45% 94%)',
-      '--muted-foreground': 'hsl(222 35% 28%)',
+      '--color-muted': 'hsl(220 45% 94%)',
+      '--color-muted-foreground': 'hsl(222 35% 28%)',
       '--accent': 'hsl(215 70% 88%)',
       '--accent-foreground': 'hsl(222 35% 28%)',
-      '--card': 'hsl(220 45% 97%)',
-      '--card-soft': 'hsl(220 45% 95%)',
-      '--card-bg-light': 'hsl(220 45% 97%)',
+      '--color-card': 'hsl(220 45% 97%)',
+      '--color-card-soft': 'hsl(220 45% 95%)',
+      '--color-card-bg-light': 'hsl(220 45% 97%)',
+      '--color-border': 'hsl(220 70% 50%)',
       '--border': 'hsl(220 70% 50%)',
       '--input': 'hsl(220 70% 50%)',
       '--ring': 'hsl(220 70% 50%)',
@@ -384,17 +358,18 @@ export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
     label: 'Esmeralda',
     swatch: 'hsl(152 65% 45%)',
     vars: {
-      '--primary': 'hsl(152 65% 45%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
+      '--color-primary': 'hsl(152 65% 45%)',
+      '--color-primary-foreground': 'hsl(0 0% 100%)',
       '--secondary': 'hsl(152 50% 88%)',
       '--secondary-foreground': 'hsl(152 30% 26%)',
-      '--muted': 'hsl(150 40% 92%)',
-      '--muted-foreground': 'hsl(152 30% 26%)',
+      '--color-muted': 'hsl(150 40% 92%)',
+      '--color-muted-foreground': 'hsl(152 30% 26%)',
       '--accent': 'hsl(156 55% 86%)',
       '--accent-foreground': 'hsl(152 30% 26%)',
-      '--card': 'hsl(150 45% 97%)',
-      '--card-soft': 'hsl(150 45% 95%)',
-      '--card-bg-light': 'hsl(150 45% 97%)',
+      '--color-card': 'hsl(150 45% 97%)',
+      '--color-card-soft': 'hsl(150 45% 95%)',
+      '--color-card-bg-light': 'hsl(150 45% 97%)',
+      '--color-border': 'hsl(152 55% 40%)',
       '--border': 'hsl(152 55% 40%)',
       '--input': 'hsl(152 55% 40%)',
       '--ring': 'hsl(152 55% 40%)',
@@ -420,29 +395,6 @@ export const APP_THEME_OPTIONS: { key: AppThemeKey; label: string; swatch: strin
     swatch: preset.swatch,
   }));
 
-// Row type returned by Supabase for payment_methods table
-export type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
-export type TransactionRow = Database['public']['Tables']['transactions']['Row'];
-
-export interface Budget {
-  id: string;
-  category: string;
-  category_id?: string;
-  amount: number;
-  month: string;
-  spent?: number;
-  user_id?: string;
-  period?: 'monthly';
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Insight {
-  id: string;
-  type: 'warning' | 'tip' | 'success';
-  title: string;
-  description: string;
-}
 
 
 // Palette of distinct colors for consistent assignment
@@ -521,6 +473,8 @@ const DEFAULT_CATEGORIES = [
 
 // Internal hook for logic, not to be used directly by components
 export function useFinanceDataLogic() {
+
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -530,6 +484,8 @@ export function useFinanceDataLogic() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [futureExpenses, setFutureExpenses] = useState<FutureExpense[]>([]);
   const [currency, setCurrency] = useState('COP');
   const [decimalPlaces, setDecimalPlaces] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -652,49 +608,6 @@ export function useFinanceDataLogic() {
     }
   };
 
-  const resetOperationalData = async () => {
-    if (!user) return { error: 'No autenticado' };
-
-    setLoading(true);
-    try {
-      const tables = [
-        'transactions',
-        'savings_transactions',
-        'budgets',
-        'loans',
-      ];
-
-      for (const table of tables) {
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .eq('user_id', user.id);
-
-        if (error) {
-        }
-      }
-
-      // Reset balances of payment methods to 0
-      const { error: pmError } = await supabase
-        .from('payment_methods')
-        .update({ balance: 0 })
-        .eq('user_id', user.id);
-
-      if (pmError) {
-      }
-
-      toast({ title: 'Éxito', description: 'Tus datos operativos han sido eliminados. Configuración conservada.' });
-
-      await fetchData();
-      return { error: null };
-    } catch (err) {
-      toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos operativos.', variant: 'destructive' });
-      return { error: err };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const calculateDates = useCallback((period: string) => {
     const now = new Date();
     let from: Date | null = null;
@@ -745,21 +658,12 @@ export function useFinanceDataLogic() {
     if (dateFilter.from) paginatedQuery = paginatedQuery.gte('date', dateFilter.from);
     if (dateFilter.to) paginatedQuery = paginatedQuery.lte('date', dateFilter.to);
 
-    // 2. Fetch records for the range to power charts/summaries (NO date filter - need all historical data for charts)
-    let rangeQuery = null;
-    if (!isLoadMore) {
-      rangeQuery = supabase
-        .from('transactions')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .order(sortConfig.column, { ascending: sortConfig.ascending })
-        .limit(50000); // Increased to 50000 to ensure we get all historical data for charts
-      // NOTE: Intentionally NOT applying dateFilter here - charts need all years
-    }
+    // Optimized: Do NOT fetch rangeQuery (50k rows) on every filter change.
+    // rangeTransactions is already populated by the initial fetchData (lines 791-792) and kept in sync.
+    // Re-fetching it here was redundant and slow (ignoring filters anyway).
 
-    const [paginatedRes, rangeRes] = await Promise.all([
-      paginatedQuery,
-      rangeQuery || Promise.resolve({ data: null, error: null })
+    const [paginatedRes] = await Promise.all([
+      paginatedQuery
     ]);
 
     if (paginatedRes.error) {
@@ -778,7 +682,6 @@ export function useFinanceDataLogic() {
       description: t.description,
       date: t.date,
       payment_method_id: t.payment_method_id,
-      installments: (t as any).installments,
       created_at: t.created_at,
     }));
 
@@ -790,23 +693,9 @@ export function useFinanceDataLogic() {
       setTransactions(mappedPaginated);
       // Save total count from paginated query for display
       setTotalTransactionsCount(paginatedRes.count || 0);
-      if (rangeRes.data) {
-        const mappedRange = (rangeRes.data || []).map(t => ({
-          id: t.id,
-          type: t.type === 'transfer'
-            ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
-            : t.type as TransactionType,
-          category: t.category,
-          category_id: (t as any).category_id,
-          amount: Number(t.amount),
-          description: t.description,
-          date: t.date,
-          payment_method_id: t.payment_method_id,
-          installments: (t as any).installments,
-          created_at: t.created_at,
-        }));
-        setRangeTransactions(mappedRange);
-      }
+      setTotalTransactionsCount(paginatedRes.count || 0);
+      // rangeTransactions is no longer updated here to avoid overwriting with potentially wrong sort order or redundant data.
+      // It is handled by initial fetchData and optimistic updates.
     }
 
     return { data: mappedPaginated, total: paginatedRes.count || 0 };
@@ -834,208 +723,218 @@ export function useFinanceDataLogic() {
   }, [calculateDates]);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      return;
+    }
+
 
     setLoading(true);
+
+
     setLastUpdated(new Date());
 
-    // Fetch transactions with filters AND fetch ALL transactions (no date filter) for aggregate stats
-    const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes] = await Promise.all([
-      fetchTransactions(false), // Fetch transactions with current date filter
-      supabase.from('budgets').select('*').eq('user_id', user.id), // Fetch budgets
-      supabase.from('payment_methods').select('*').eq('user_id', user.id), // Fetch payment methods
-      supabase.from('categories').select('*').eq('user_id', user.id), // Fetch categories
-    ]);
-
-    // Fetch ALL transactions for aggregate stats - paginate to get all records
-    const allTxnsData: any[] = [];
-    let allTxnsRes = null;
-    let hasMore = true;
-    let offset = 0;
-    const PAGE_SIZE_ALL = 1000;
-
-    while (hasMore) {
-      const res = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false })
-        .range(offset, offset + PAGE_SIZE_ALL - 1);
-
-      if (res.error) {
-        allTxnsRes = res;
-        hasMore = false;
-      } else if (res.data) {
-        allTxnsData.push(...res.data);
-        if (res.data.length < PAGE_SIZE_ALL) {
-          hasMore = false;
-        } else {
-          offset += PAGE_SIZE_ALL;
-        }
-      }
-    }
-
-    // Map all transactions for summary calculations
-    if (allTxnsData.length > 0) {
-      const mappedAllTxns = allTxnsData.map(t => ({
-        id: t.id,
-        type: t.type === 'transfer'
-          ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
-          : t.type as TransactionType,
-        category: t.category,
-        category_id: (t as any).category_id,
-        amount: Number(t.amount),
-        description: t.description,
-        date: t.date,
-        payment_method_id: t.payment_method_id,
-        created_at: t.created_at,
-      }));
-      setAllTransactions(mappedAllTxns);
-    } else if (allTxnsRes?.error) {
-      toast({ title: 'Error', description: 'No se pudieron cargar todos los registros históricos.', variant: 'destructive' });
-    }
-
-    // Transaction logic is handled inside fetchTransactions now
-
-    if (budgetsRes.error) {
-      toast({ title: 'Error', description: 'No se pudieron cargar los presupuestos. Por favor, intenta de nuevo.', variant: 'destructive' });
-    } else {
-      const mappedBudgets = budgetsRes.data.map(b => ({
-        id: b.id,
-        category: b.category as string,
-        category_id: b.category_id,
-        amount: Number(b.amount),
-        month: b.month,
-        user_id: b.user_id,
-        created_at: b.created_at,
-        updated_at: b.updated_at
-      }));
-      setBudgets(mappedBudgets);
-    }
-
-    if (paymentMethodsRes.error) {
-      toast({ title: 'Error', description: 'No se pudieron cargar los métodos de pago. Por favor, intenta de nuevo.', variant: 'destructive' });
-    } else {
-      setPaymentMethods(paymentMethodsRes.data.map((pm: PaymentMethodRow) => ({
-        id: pm.id,
-        name: pm.name,
-        type: pm.type as PaymentMethodType,
-        balance: Number(pm.balance),
-        credit_limit: pm.credit_limit ? Number(pm.credit_limit) : null,
-        is_savings_account: pm.is_savings_account || false,
-        savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
-        estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
-        closing_date: pm.closing_date || null,
-        payment_day: pm.payment_day || null,
-        color: pm.color || '#475569', // Always include color, fallback to default gray
-      })));
-    }
-
-    // Fetch Profile/Currency using 'id' as the user identifier
-    let profile: any = null;
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
-        .eq('id', user.id)
-        .maybeSingle();
+      // 1. Parallel fetch of all entities (limit 50k for transactions should be enough for most users)
+      const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes, profileRes, loansRes, futureExpensesRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(50000),
+        supabase.from('budgets').select('*').eq('user_id', user.id),
+        supabase.from('payment_methods').select('*').eq('user_id', user.id),
+        supabase.from('categories').select('*').eq('user_id', user.id),
+        supabase.from('profiles')
+          .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase.from('loans' as any).select('*, loan_payments(*)').eq('user_id', user.id),
+        supabase.from('future_expenses' as any).select('*').eq('user_id', user.id).eq('status', 'pending').order('payment_date', { ascending: true })
+      ]);
 
-      if (error) {
-        // If the column doesn't exist yet (migration pending), continue gracefully
-        if (error.code === '42703') {
-          // Column not found
-        } else {
-          // Other error
-        }
+      // 2. Process Transactions
+      if (transactionsRes.error) {
+        toast({ title: 'Error', description: 'No se pudieron cargar las transacciones.', variant: 'destructive' });
       } else {
-        profile = data;
+        const mappedTxns = (transactionsRes.data || []).map(t => ({
+          id: t.id,
+          type: t.type === 'transfer'
+            ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
+            : t.type as TransactionType,
+          category: t.category,
+          category_id: (t as any).category_id,
+          amount: Number(t.amount),
+          description: t.description,
+          date: t.date,
+          payment_method_id: t.payment_method_id,
+          created_at: t.created_at,
+        }));
+
+        // allTransactions used for global stats, rangeTransactions for current view
+        setAllTransactions(mappedTxns);
+        setRangeTransactions(mappedTxns);
+        setTransactions(mappedTxns.slice(0, PAGE_SIZE));
+        setTotalTransactionsCount(mappedTxns.length);
+        setHasMore(mappedTxns.length > PAGE_SIZE);
       }
+
+      // 3. Process Budgets
+      if (budgetsRes.error) {
+        toast({ title: 'Error', description: 'No se pudieron cargar los presupuestos.', variant: 'destructive' });
+      } else {
+        setBudgets((budgetsRes.data || []).map(b => ({
+          id: b.id,
+          category: b.category as string,
+          category_id: b.category_id,
+          amount: Number(b.amount),
+          month: b.month,
+          user_id: b.user_id,
+        })));
+      }
+
+      // 4. Process Payment Methods
+      if (paymentMethodsRes.error) {
+        toast({ title: 'Error', description: 'No se pudieron cargar los métodos de pago.', variant: 'destructive' });
+      } else {
+        setPaymentMethods((paymentMethodsRes.data || []).map((pm: PaymentMethodRow) => ({
+          id: pm.id,
+          name: pm.name,
+          type: pm.type as PaymentMethodType,
+          balance: Number(pm.balance),
+          credit_limit: pm.credit_limit ? Number(pm.credit_limit) : null,
+          is_savings_account: pm.is_savings_account || false,
+          savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
+          estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
+          closing_date: pm.closing_date || null,
+          payment_day: pm.payment_day || null,
+          color: pm.color || '#475569',
+          franchise: (pm as any).franchise || null,
+          last_4_digits: (pm as any).last_4_digits || null,
+        })));
+      }
+
+      // 5. Process Profile
+      const profile = profileRes.data;
+      if (profile) {
+        if (profile.currency) setCurrency(profile.currency);
+        if (profile.base_color) {
+          setBaseColor(profile.base_color);
+          localStorage.setItem('theme-base-color', profile.base_color);
+        }
+        if (profile.decimal_places !== null) {
+          setDecimalPlaces(profile.decimal_places);
+        } else {
+          const currConfig = CURRENCIES.find(c => c.code === profile.currency);
+          setDecimalPlaces(currConfig?.decimals ?? 0);
+        }
+        setOnboardingDecision((profile.onboarding_decision as any) || null);
+        setHasPendingImport(profile.has_pending_import || false);
+        setWelcomeCompleted(Boolean(profile.welcome_completed));
+
+        if (profile.has_pending_import) {
+          setImportProgress({ status: 'completed', progress: 100, message: 'Datos preparados' });
+        }
+      }
+
+      // 6. Process Categories and Fix Colors (Preventing Recursion)
+      if (categoriesRes.error) {
+        // Handle error
+      } else {
+        const loadedCategories = categoriesRes.data.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type as TransactionType,
+          color: c.color,
+        }));
+
+        const usedColors = new Set(loadedCategories.map(c => c.color).filter(Boolean) as string[]);
+        const categoriesToUpdate: { id: string, color: string }[] = [];
+
+        const getUniqueColor = (excludeColors: Set<string>): string => {
+          for (const color of MASTER_PALETTE) {
+            if (!excludeColors.has(color)) return color;
+          }
+          return MASTER_PALETTE[Math.floor(Math.random() * MASTER_PALETTE.length)];
+        };
+
+        const finalCategories = loadedCategories.map(c => {
+          // Only update if color is missing OR is a legacy class (bg-...)
+          if (!c.color || c.color.startsWith('bg-')) {
+            const newColor = getUniqueColor(usedColors);
+            usedColors.add(newColor);
+            categoriesToUpdate.push({ id: c.id, color: newColor });
+            return { ...c, color: newColor };
+          }
+          return c;
+        });
+
+        setCategories(finalCategories);
+
+        if (categoriesToUpdate.length > 0) {
+          // Perform the update but DO NOT wait for it to avoid blocking or triggering infinite loops immediately
+          // The realtime listener should be robust enough or we should ignore color-only updates if possible
+          // For now, we just fire and forget
+          categoriesToUpdate.forEach(update => {
+            supabase.from('categories').update({ color: update.color }).eq('id', update.id).then();
+          });
+        }
+      }
+
+      // 7. Process Loans
+      if (loansRes.error) {
+        // Handle error
+      } else if (loansRes.data) {
+        setLoans((loansRes.data as unknown as LoanRow[]).map((l: LoanRow) => {
+          const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({
+            id: p.id,
+            loan_id: p.loan_id,
+            amount: Number(p.amount || 0),
+            date: p.date,
+            created_at: p.created_at || new Date().toISOString(),
+          }));
+          const paid_amount = payments.reduce((sum: number, p) => sum + Number(p.amount), 0);
+
+          return {
+            id: l.id,
+            name: l.name,
+            total_amount: Number(l.total_amount || 0),
+            paid_amount,
+            interest_rate: Number(l.interest_rate || 0),
+            due_date: l.due_date || null,
+            payment_method_id: l.payment_method_id || null,
+            created_at: l.created_at || new Date().toISOString(),
+            user_id: l.user_id,
+            type: (l.type as 'borrowed' | 'lent') || 'borrowed',
+            payments,
+            is_disbursed: l.is_disbursed,
+            installments: l.installments ? Number(l.installments) : undefined,
+          };
+        }));
+      }
+
+      // 7. Process Future Expenses
+      if (futureExpensesRes.error) {
+        toast({ title: 'Error', description: 'No se pudieron cargar los gastos futuros.', variant: 'destructive' });
+      } else {
+        setFutureExpenses((futureExpensesRes.data || []).map((fe: any) => ({
+          id: fe.id,
+          payment_date: fe.payment_date,
+          amount: Number(fe.amount),
+          description: fe.description,
+          category_id: fe.category_id || null,
+          status: fe.status || 'pending',
+          is_subscription: fe.is_subscription || false,
+          payment_day: fe.payment_day || undefined,
+          start_date: fe.start_date || undefined,
+          end_date: fe.end_date || undefined,
+          frequency: fe.frequency || undefined,
+          user_id: fe.user_id,
+          created_at: fe.created_at,
+        })));
+      }
+
     } catch (err) {
-      // Profile fetch error
+      toast({ title: 'Error crítico', description: 'No se pudieron sincronizar los datos.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-
-    if (profile?.currency) {
-      setCurrency(profile.currency);
-    } else {
-      // Usuario nuevo sin moneda configurada
-      setCurrency('');
-    }
-
-    // Load base color from profile and sync to local cache
-    if (profile?.base_color) {
-      setBaseColor(profile.base_color);
-      localStorage.setItem('theme-base-color', profile.base_color);
-    }
-
-    // Decimal places: usar el valor guardado en perfil, o default basado en moneda
-    if (profile?.decimal_places !== undefined && profile?.decimal_places !== null) {
-      setDecimalPlaces(profile.decimal_places);
-    } else {
-      const currConfig = CURRENCIES.find(c => c.code === profile?.currency);
-      setDecimalPlaces(currConfig?.decimals ?? 0);
-    }
-
-    // Set onboarding decision state
-    setOnboardingDecision((profile?.onboarding_decision as 'pending' | 'from_scratch' | 'imported') || null);
-    const hasPending = profile?.has_pending_import || false;
-    setHasPendingImport(hasPending);
-    setWelcomeCompleted(Boolean(profile?.welcome_completed));
-
-    // If there's a pending import, restore the import progress state to 'completed'
-    if (hasPending) {
-      setImportProgress({
-        status: 'completed',
-        progress: 100,
-        message: 'Datos preparados para confirmar',
-      });
-    }
-
-    if (categoriesRes.error) {
-      // Optional: toast error for categories
-    } else {
-      const loadedCategories = categoriesRes.data.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type as TransactionType,
-        color: c.color,
-      }));
-
-      // --- Color Consistency Logic ---
-      const usedColors = new Set(loadedCategories.map(c => c.color).filter(Boolean) as string[]);
-      const categoriesToUpdate: { id: string, color: string }[] = [];
-
-      const getUniqueColor = (excludeColors: Set<string>): string => {
-        // Find first color in MASTER_PALETTE not in excludeColors
-        for (const color of MASTER_PALETTE) {
-          if (!excludeColors.has(color)) return color;
-        }
-        // Fallback: Return random from palette if all used
-        return MASTER_PALETTE[Math.floor(Math.random() * MASTER_PALETTE.length)];
-      };
-
-      const finalCategories = loadedCategories.map(c => {
-        if (!c.color || c.color.startsWith('bg-')) {
-          // If no color OR using legacy tailwind class, assign new hex color
-          const newColor = getUniqueColor(usedColors);
-          usedColors.add(newColor);
-          categoriesToUpdate.push({ id: c.id, color: newColor });
-          return { ...c, color: newColor };
-        }
-        return c;
-      });
-
-      if (categoriesToUpdate.length > 0) {
-        // Persist color fixes to DB
-        // We do this asynchronously to not block UI rendering
-        Promise.all(categoriesToUpdate.map(update =>
-          supabase.from('categories').update({ color: update.color }).eq('id', update.id)
-        ));
-      }
-      setCategories(finalCategories); // strict: no icons mapped
-    }
-
-    setLoading(false);
-  }, [user, toast, fetchTransactions]);
+  }, [user?.id, toast]);
 
   // Consolidated effect for initial load and filter changes
   useEffect(() => {
@@ -1048,9 +947,12 @@ export function useFinanceDataLogic() {
       return;
     }
 
-    // This fetches everything including transactions for the current dateFilter
-    fetchData();
-  }, [user, dateFilter, fetchData]);
+
+    // This fetches everything including transactions for the current dateFilter (only on user change)
+    if (user?.id) {
+      fetchData();
+    }
+  }, [user?.id, fetchData]);
 
   // Persist welcome completion once the user has configured currency, categories, and payment methods
   useEffect(() => {
@@ -1075,7 +977,7 @@ export function useFinanceDataLogic() {
 
   // Removed the redundant useEffect that called fetchTransactions when loading became false
 
-  const updatePaymentMethodBalance = async (
+  const updatePaymentMethodBalance = useCallback(async (
     paymentMethodId: string,
     amount: number,
     transactionType: TransactionType
@@ -1112,13 +1014,13 @@ export function useFinanceDataLogic() {
         p.id === paymentMethodId ? { ...p, balance: newBalance } : p
       ));
     }
-  };
+  }, [paymentMethods]);
 
   /**
    * Calculate the total accumulated balance for a payment method at the current moment.
    * This includes all deposits and previous interest transactions.
    */
-  const calculateBalanceAtTransaction = async (paymentMethodId: string): Promise<number> => {
+  const calculateBalanceAtTransaction = useCallback(async (paymentMethodId: string): Promise<number> => {
     const { data, error } = await supabase
       .from('transactions')
       .select('amount, type')
@@ -1127,7 +1029,6 @@ export function useFinanceDataLogic() {
       .order('date', { ascending: true });
 
     if (error || !data) {
-
       return 0;
     }
 
@@ -1145,9 +1046,9 @@ export function useFinanceDataLogic() {
     }
 
     return Math.max(0, totalBalance); // Never negative
-  };
+  }, [user]);
 
-  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) return { error: 'No autenticado' };
 
     let resolvedCategoryId = (transaction as any).category_id;
@@ -1263,7 +1164,7 @@ export function useFinanceDataLogic() {
             .single();
 
           if (catError) {
-
+            // Error handling
           } else if (catData) {
             resolvedCategoryId = catData.id;
           }
@@ -1344,7 +1245,6 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-
       toast({
         title: 'Error al crear transacción',
         description: error.message || 'No se pudo agregar la transacción. Por favor, intenta de nuevo.',
@@ -1375,14 +1275,14 @@ export function useFinanceDataLogic() {
 
     setLastUpdated(new Date());
 
-    // Global refresh instead of local setCategories
+    // Global refresh
     fetchData();
 
     toast({ title: 'Éxito', description: 'Transacción agregada' });
     return { error: null };
-  };
+  }, [user, paymentMethods, categories, toast, fetchData, updatePaymentMethodBalance]);
 
-  const addTransactionsBulk = async (transactions: Omit<Transaction, 'id'>[]) => {
+  const addTransactionsBulk = useCallback(async (transactions: Omit<Transaction, 'id'>[]) => {
     if (!user) return { error: 'No autenticado', count: 0 };
 
     // Actualizar estado de progreso: iniciando importación
@@ -1487,9 +1387,9 @@ export function useFinanceDataLogic() {
 
     toast({ title: 'Éxito', description: `${data.length} transacciones importadas` });
     return { error: null, count: data.length };
-  };
+  }, [user, paymentMethods, toast, fetchData]);
 
-  const deleteTransaction = async (id: string) => {
+  const deleteTransaction = useCallback(async (id: string) => {
     const transaction = transactions.find(t => t.id === id);
 
     const { error } = await supabase
@@ -1530,9 +1430,9 @@ export function useFinanceDataLogic() {
 
     setTransactions(prev => prev.filter(t => t.id !== id));
     toast({ title: 'Eliminado', description: 'Transacción eliminada' });
-  };
+  }, [transactions, paymentMethods, toast]);
 
-  const updateTransaction = async (id: string, updates: Partial<Omit<Transaction, 'id'>>) => {
+  const updateTransaction = useCallback(async (id: string, updates: Partial<Omit<Transaction, 'id'>>) => {
     if (!user) return { error: 'No autenticado' };
 
     // 0. Balance Validation (if amount or payment method changes)
@@ -1660,9 +1560,9 @@ export function useFinanceDataLogic() {
     setTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
 
     return { error: null, data };
-  };
+  }, [user, transactions, paymentMethods, toast, updatePaymentMethodBalance]);
 
-  const addPaymentMethod = async (pm: Omit<PaymentMethod, 'id'>) => {
+  const addPaymentMethod = useCallback(async (pm: Omit<PaymentMethod, 'id'>) => {
     if (!user) return { error: 'No autenticado' };
 
     // Check for duplicate name
@@ -1719,9 +1619,9 @@ export function useFinanceDataLogic() {
 
     toast({ title: 'Éxito', description: 'Método de pago creado' });
     return { error: null, data: createdPM };
-  };
+  }, [user, paymentMethods, toast]);
 
-  const addTransfer = async (fromId: string, toId: string, amount: number, description: string, date: string) => {
+  const addTransfer = useCallback(async (fromId: string, toId: string, amount: number, description: string, date: string) => {
     if (!user) return { error: 'No autenticado' };
 
     const transferCategory = categories.find(c => c.name.toLowerCase() === 'transferencia')
@@ -1806,9 +1706,9 @@ export function useFinanceDataLogic() {
     toast({ title: 'Éxito', description: 'Transferencia realizada con éxito' });
     fetchData();
     return { error: null };
-  };
+  }, [user, categories, paymentMethods, toast, fetchData]);
 
-  const updateProfile = async (updates: { currency?: string; display_name?: string; decimal_places?: number; base_color?: string }) => {
+  const updateProfile = useCallback(async (updates: { currency?: string; display_name?: string; decimal_places?: number; base_color?: string }) => {
     if (!user) return { error: 'No autenticado' };
 
     // Primero verificar si existe el perfil usando 'id' como identificador
@@ -1846,7 +1746,6 @@ export function useFinanceDataLogic() {
     const { data, error } = result;
 
     if (error) {
-
       toast({ title: 'Error', description: `No se pudo actualizar el perfil: ${error.message}`, variant: 'destructive' });
       return { error };
     }
@@ -1872,9 +1771,9 @@ export function useFinanceDataLogic() {
     await fetchData();
 
     return { error: null };
-  };
+  }, [user, toast, fetchData]);
 
-  const setOnboardingDecisionFn = async (decision: 'from_scratch' | 'imported') => {
+  const setOnboardingDecisionFn = useCallback(async (decision: 'from_scratch' | 'imported') => {
     if (!user) return { error: 'No autenticado' };
 
     const { error } = await supabase
@@ -1883,7 +1782,6 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-
       toast({ title: 'Error', description: 'No se pudo guardar tu decisión', variant: 'destructive' });
       return { error };
     }
@@ -1899,9 +1797,9 @@ export function useFinanceDataLogic() {
     await fetchData();
 
     return { error: null };
-  };
+  }, [user, toast, fetchData]);
 
-  const confirmPendingImport = async () => {
+  const confirmPendingImport = useCallback(async () => {
     if (!user) return { error: 'No autenticado' };
 
     const { error } = await supabase
@@ -1913,7 +1811,6 @@ export function useFinanceDataLogic() {
       .eq('id', user.id);
 
     if (error) {
-
       toast({ title: 'Error', description: 'No se pudo confirmar la importación', variant: 'destructive' });
       return { error };
     }
@@ -1925,7 +1822,7 @@ export function useFinanceDataLogic() {
     await fetchData();
 
     return { error: null };
-  };
+  }, [user, toast, fetchData]);
 
   const startImport = (data: Omit<Transaction, 'id'>[]) => {
     // Guardar datos pendientes sin aplicar
@@ -1982,7 +1879,16 @@ export function useFinanceDataLogic() {
     await fetchData();
   };
 
-  const confirmImportData = async () => {
+  const recalculatePaymentMethodBalances = useCallback(async () => {
+    // Esta función recalcula los saldos de métodos de pago basado en transacciones importadas
+    // por ahora es un placeholder - la lógica depende de cómo manejes transacciones de importación
+    await fetchData();
+
+    toast({ title: 'Éxito', description: 'Datos aplicados correctamente' });
+    return { error: null };
+  }, [fetchData, toast]);
+
+  const confirmImportData = useCallback(async () => {
     if (pendingImportData.length === 0) return { error: 'No hay datos para confirmar' };
     if (!user) return { error: 'No autenticado' };
 
@@ -2084,22 +1990,10 @@ export function useFinanceDataLogic() {
       });
       return { error };
     }
-  };
+  }, [user, pendingImportData, toast, fetchData, recalculatePaymentMethodBalances]);
 
-  const recalculatePaymentMethodBalances = async () => {
-    // Esta función recalcula los saldos de métodos de pago basado en transacciones importadas
-    // por ahora es un placeholder - la lógica depende de cómo manejes transacciones de importación
-    await fetchData();
-
-    toast({ title: 'Éxito', description: 'Datos aplicados correctamente' });
-    return { error: null };
-  };
-
-  const convertCurrency = async (rate: number, newCurrency: string, dryRun = false) => {
-    if (!user?.id) {
-
-      return { error: 'No autenticado' };
-    }
+  const convertCurrency = useCallback(async (rate: number, newCurrency: string, dryRun = false) => {
+    if (!user?.id) return { error: 'No autenticado' };
 
     try {
       // Fetch user's payment methods and transactions
@@ -2144,9 +2038,6 @@ export function useFinanceDataLogic() {
         return { error: null, preview: { payment_methods: pmPreview, transactions: txPreview } };
       }
 
-      // Debug payloads before sending to Supabase
-      // Debug logs removed
-
       // Apply updates via upsert (use onConflict 'id' to update existing rows)
       if (pmUpdates.length) {
         const { error: upmErr } = await supabase.from('payment_methods').upsert(pmUpdates, { onConflict: 'id' });
@@ -2162,22 +2053,19 @@ export function useFinanceDataLogic() {
       const { error: profErr } = await supabase.from('profiles').update({ currency: newCurrency }).eq('id', user.id);
       if (profErr) throw profErr;
 
-      // Update local state IMMEDIATELY for instant UX (before fetchData)
+      // Update local state IMMEDIATELY for instant UX
       setCurrency(newCurrency);
       setPaymentMethods(prev => prev.map(pm => pm.balance != null ? { ...pm, balance: Math.round(pm.balance * rate * 100) / 100 } : pm));
       setTransactions(prev => prev.map(tx => ({ ...tx, amount: Math.round(tx.amount * rate * 100) / 100 })));
 
-      // Note: fetchData removed to prevent race condition overwriting currency state
-      // The realtime subscription will handle refreshing if needed
       return { error: null };
-    } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
-
+    } catch (err: any) {
       toast({ title: 'Error', description: 'No se pudo aplicar la conversión', variant: 'destructive' });
       return { error: err };
     }
-  };
+  }, [user, toast]);
 
-  const updatePaymentMethod = async (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => {
+  const updatePaymentMethod = useCallback(async (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => {
     if (!user) return { error: 'No autenticado' };
 
     const payload: Partial<PaymentMethodRow> = {
@@ -2209,9 +2097,9 @@ export function useFinanceDataLogic() {
 
     toast({ title: 'Éxito', description: 'Método de pago actualizado' });
     return { error: null };
-  };
+  }, [user, toast]);
 
-  const deletePaymentMethod = async (id: string) => {
+  const deletePaymentMethod = useCallback(async (id: string) => {
     const { error } = await supabase
       .from('payment_methods')
       .delete()
@@ -2224,9 +2112,9 @@ export function useFinanceDataLogic() {
 
     setPaymentMethods(prev => prev.filter(pm => pm.id !== id));
     toast({ title: 'Eliminado', description: 'Método de pago eliminado' });
-  };
+  }, [toast]);
 
-  const addBudget = async (budget: Omit<Budget, 'id'>) => {
+  const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
     if (!user) return { error: 'No autenticado' };
 
     // Use upsert to prevent duplicates for same category
@@ -2244,7 +2132,6 @@ export function useFinanceDataLogic() {
       .single();
 
     if (error) {
-
       toast({
         title: 'Error al manejar presupuesto',
         description: error.message || 'No se pudo guardar el presupuesto.',
@@ -2275,9 +2162,9 @@ export function useFinanceDataLogic() {
 
     toast({ title: 'Éxito', description: '¡Presupuesto actualizado con éxito!' });
     return { error: null };
-  };
+  }, [user, toast]);
 
-  const deleteBudget = async (id: string) => {
+  const deleteBudget = useCallback(async (id: string) => {
     const { error } = await supabase
       .from('budgets')
       .delete()
@@ -2290,7 +2177,7 @@ export function useFinanceDataLogic() {
 
     setBudgets(prev => prev.filter(b => b.id !== id));
     toast({ title: 'Eliminado', description: 'Presupuesto eliminado' });
-  };
+  }, [toast]);
 
   // Real-time synchronization
   useEffect(() => {
@@ -2304,6 +2191,7 @@ export function useFinanceDataLogic() {
         clearTimeout(debounceTimer);
       }
       debounceTimer = setTimeout(() => {
+
         setLoading(true);
         fetchData();
       }, 500); // Wait 500ms after last change before fetching
@@ -2347,6 +2235,54 @@ export function useFinanceDataLogic() {
           handleRealtimeChange();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          handleRealtimeChange();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        () => {
+          handleRealtimeChange();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'loans',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          handleRealtimeChange();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'loan_payments',
+        },
+        () => {
+          handleRealtimeChange();
+        }
+      )
+
       .subscribe();
 
     return () => {
@@ -2357,7 +2293,7 @@ export function useFinanceDataLogic() {
     };
   }, [user]);
 
-  const addCategory = async (category: Omit<CategoryItem, 'id' | 'created_at'>) => {
+  const addCategory = useCallback(async (category: Omit<CategoryItem, 'id' | 'created_at'>) => {
     try {
       // Get current authenticated user
       const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
@@ -2492,7 +2428,6 @@ export function useFinanceDataLogic() {
       toast({ title: 'Éxito', description: 'Categoría creada' });
       return { error: null, data: newCategory };
     } catch (err) {
-
       toast({
         title: 'Error inesperado',
         description: 'Ocurrió un error al crear la categoría',
@@ -2500,9 +2435,9 @@ export function useFinanceDataLogic() {
       });
       return { error: err };
     }
-  };
+  }, [user, toast, categories]);
 
-  const updateCategoryGoal = async (id: string, goal: number) => {
+  const updateCategoryGoal = useCallback(async (id: string, goal: number) => {
     if (!user) return { error: 'No autenticado' };
 
     const { error } = await supabase
@@ -2518,9 +2453,9 @@ export function useFinanceDataLogic() {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, saving_goal: goal } : c));
     toast({ title: 'Éxito', description: 'Meta de ahorro actualizada' });
     return { error: null };
-  };
+  }, [user, toast]);
 
-  const updateCategory = async (id: string, category: Partial<Omit<CategoryItem, 'id'>>) => {
+  const updateCategory = useCallback(async (id: string, category: Partial<Omit<CategoryItem, 'id'>>) => {
     if (!user) return { error: 'No autenticado' };
 
     let finalName = category.name;
@@ -2557,9 +2492,9 @@ export function useFinanceDataLogic() {
     setCategories(prev => prev.map(c => c.id === id ? updated : c));
     toast({ title: 'Éxito', description: 'Categoría actualizada' });
     return { error: null, data: updated };
-  };
+  }, [user, toast]);
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -2572,7 +2507,15 @@ export function useFinanceDataLogic() {
 
     setCategories(prev => prev.filter(c => c.id !== id));
     toast({ title: 'Eliminado', description: 'Categoría eliminada' });
-  };
+  }, [toast]);
+
+  const orphanedTransactions = useMemo(() => {
+    return transactions.filter(t =>
+      (!t.category_id || !t.payment_method_id) &&
+      t.category !== 'Préstamos' &&
+      t.category !== 'Loans'
+    );
+  }, [transactions]);
 
   // Summary calculations - using ALL transactions for aggregate stats (no date filter)
   const summary = useMemo(() => {
@@ -2773,22 +2716,16 @@ export function useFinanceDataLogic() {
     return insights;
   }, [summary, expensesByCategory, budgetsWithSpending, paymentMethods]);
 
-  const orphanedTransactions = useMemo(() => {
-    return transactions.filter(t =>
-      (!t.category_id || !t.payment_method_id) &&
-      t.category !== 'Préstamos' &&
-      t.category !== 'Loans'
-    );
-  }, [transactions]);
 
-  return {
+
+  const memoizedValue = useMemo(() => ({
     transactions,
-    allTransactions, // All transactions (no date filter) used for aggregate stats
+    allTransactions,
     budgets: budgetsWithSpending,
     paymentMethods,
     loading,
     summary,
-    filteredSummary, // Summary that respects date filters
+    filteredSummary,
     expensesByCategory,
     insights,
     yieldStatistics,
@@ -2817,8 +2754,10 @@ export function useFinanceDataLogic() {
     confirmImportData,
     addBudget,
     deleteBudget,
-    refreshData: fetchData, // Consistent name for global refresh
+    refreshData: fetchData,
     categories,
+    loans,
+    futureExpenses,
     addCategory,
     updateCategory,
     deleteCategory,
@@ -2831,22 +2770,42 @@ export function useFinanceDataLogic() {
     updateFilter,
     hasMore,
     rangeTransactions,
-    totalTransactionsCount, // Total count respecting current filter
+    totalTransactionsCount,
     totalBudget: budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
     totalSpentCurrentMonth: budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
     resetProfileData,
-    resetOperationalData,
     lastUpdated,
     updateCategoryGoal,
-    // Theme management
     baseColor,
     themeVars,
     themeOptions: THEME_OPTIONS,
     setAppThemePreference: (color: string) => updateProfile({ base_color: color })
-  };
+  }), [
+    transactions, allTransactions, budgetsWithSpending, paymentMethods, loading,
+    summary, filteredSummary, expensesByCategory, insights, yieldStatistics,
+    currency, decimalPlaces, onboardingDecision, hasPendingImport, welcomeCompleted,
+    importProgress, pendingImportData, addTransaction, addTransactionsBulk,
+    deleteTransaction, addPaymentMethod, updatePaymentMethod, deletePaymentMethod,
+    addTransfer, updateProfile, convertCurrency, setOnboardingDecisionFn,
+    highlightedCard, setHighlightedCard, confirmPendingImport, startImport,
+    cancelImport, confirmImportData, addBudget, deleteBudget, fetchData,
+    categories, addCategory, updateCategory, deleteCategory, updateTransaction,
+    loans,
+    futureExpenses,
+    orphanedTransactions, dateFilter, sortConfig, setSortConfig, loadMore,
+    updateFilter, hasMore, rangeTransactions, totalTransactionsCount,
+    resetProfileData, lastUpdated, updateCategoryGoal, baseColor, themeVars,
+    THEME_OPTIONS
+  ]);
+
+  return memoizedValue;
 }
 
-// Global hook to be used by components
+
 export function useFinanceData() {
-  return useFinance();
+  const context = useContext(FinanceContext);
+  if (context === undefined) {
+    throw new Error('useFinanceData must be used within a FinanceProvider');
+  }
+  return context;
 }

@@ -529,8 +529,8 @@ export function ImportExcelDialog({
         supabase.from('payment_methods').select('*').eq('user_id', user.id)
       ]);
 
-      const catMap = new Map((currentCategories || []).map(c => [c.name.toLowerCase(), c.id]));
-      const pmMap = new Map((currentPaymentMethods || []).map(pm => [pm.name.toLowerCase(), pm.id]));
+      const catMap = new Map<string, string>((currentCategories || []).map((c: any) => [c.name.toLowerCase(), c.id]));
+      const pmMap = new Map<string, string>((currentPaymentMethods || []).map((pm: any) => [pm.name.toLowerCase(), pm.id]));
 
       // Ensure special categories exist
       const specialCategories = [
@@ -771,7 +771,7 @@ export function ImportExcelDialog({
 
 
           // Determinar el mensaje de error específico
-          let errorMsg = e instanceof Error ? e.message : 'Error desconocido';
+          const errorMsg = e instanceof Error ? e.message : 'Error desconocido';
 
           // Registrar todas las filas del batch como fallidas
           batchTransactions.forEach(t => {
@@ -844,9 +844,9 @@ export function ImportExcelDialog({
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
-            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+            className="gap-2 min-w-[140px] text-[15px] py-2 flex items-center justify-center border border-primary hover:bg-primary/90 hover:text-white"
             aria-label="Importar Excel"
             title="Importar Excel"
           >
@@ -875,7 +875,7 @@ export function ImportExcelDialog({
         </DialogHeader>
 
         <div className="space-y-3 sm:space-y-4 mt-4">
-          <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+          <div className="p-4 bg-muted/50 rounded-xl border border-border text-sm space-y-2">
             <p className="font-medium">Formato esperado:</p>
             <p className="text-muted-foreground">
               Columnas: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
@@ -888,7 +888,7 @@ export function ImportExcelDialog({
           <div className="space-y-2">
             <Label className="text-sm">Archivo Excel</Label>
             <div
-              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+              className="border-2 border-dashed border-border rounded-xl p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
               onClick={() => !fileName && fileInputRef.current?.click()}
             >
               <input
@@ -905,7 +905,7 @@ export function ImportExcelDialog({
                   <Button
                     variant="default"
                     size="icon"
-                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10"
+                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10 rounded-xl"
                     onClick={(e) => {
                       e.stopPropagation();
                       setFileName('');
@@ -960,7 +960,7 @@ export function ImportExcelDialog({
           )}
 
           {showMappingStep && (
-            <div className="space-y-4 p-4 border rounded-lg bg-card">
+            <div className="space-y-4 p-4 border border-border rounded-xl bg-card">
               <div className="space-y-2 flex items-center justify-between">
                 <div className="space-y-2 flex-1">
                   <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
@@ -1149,24 +1149,24 @@ export function ImportExcelDialog({
               )}
 
               <div className="max-h-48 overflow-y-auto border rounded-lg overflow-x-auto">
-                <table className="w-full min-w-[600px] text-xs">
-                  <thead className="bg-muted sticky top-0">
+                <table className="premium-table text-xs">
+                  <thead>
                     <tr>
-                      <th className="p-2 text-left">Fecha</th>
-                      <th className="p-2 text-left">Descripción</th>
-                      <th className="p-2 text-left">Categoría</th>
-                      <th className="p-2 text-right">Monto</th>
-                      <th className="p-2 text-center">Estado</th>
+                      <th className="text-left">Fecha</th>
+                      <th className="text-left">Descripción</th>
+                      <th className="text-left">Categoría</th>
+                      <th className="text-right">Monto</th>
+                      <th className="text-center">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {parsedRows.slice(0, 50).map((row, i) => (
                       <tr key={i} className={row.isValid ? '' : 'bg-destructive/10'}>
-                        <td className="p-2">{row.date || '-'}</td>
-                        <td className="p-2 truncate max-w-32">{row.description || '-'}</td>
-                        <td className="p-2">{row.category || '-'}</td>
-                        <td className="p-2 text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
-                        <td className="p-2 text-center">
+                        <td>{row.date || '-'}</td>
+                        <td className="truncate max-w-32">{row.description || '-'}</td>
+                        <td>{row.category || '-'}</td>
+                        <td className="text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
+                        <td className="text-center">
                           {row.isValid ? (
                             <CheckCircle className="h-3 w-3 text-green-600 mx-auto" />
                           ) : (

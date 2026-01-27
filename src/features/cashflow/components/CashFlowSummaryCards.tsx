@@ -44,7 +44,7 @@ export const CashFlowSummaryCards: React.FC<{
   <>
     <SummaryCard title="Ingresos Estimados" value={estimatedIncome} loading={loading} colorVar="--success" />
     <SummaryCard title="Gastos Futuros" value={futureExpenses} loading={loading} colorVar="--destructive" />
-    <SummaryCard title="Compromisos de Deuda" value={debtCommitments} loading={loading} colorVar="--primary" />
-    <SummaryCard title="Balance Proyectado" value={projectedBalance} loading={loading} colorVar="--primary" />
+    <SummaryCard title="Compromisos de Deuda" value={debtCommitments} loading={loading} colorVar="--color-primary" />
+    <SummaryCard title="Balance Proyectado" value={projectedBalance} loading={loading} colorVar="--color-primary" />
   </>
 );

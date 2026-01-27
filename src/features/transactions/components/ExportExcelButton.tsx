@@ -85,7 +85,7 @@ export function ExportExcelButton({ transactions, paymentMethods }: ExportExcelB
     <Button
       variant="default"
       size="sm"
-      className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+      className="gap-2 min-w-[140px] text-[15px] py-2 flex items-center justify-center border border-primary hover:bg-primary/90 hover:text-white"
       onClick={handleExport}
       aria-label="Exportar Excel"
       title="Exportar Excel"

@@ -54,4 +54,33 @@ Se aplican transiciones CSS de **0.3s** (`transition-all duration-300`) en cambi
 -   **Componente Test:** `src/components/ThemePreviewTest.tsx`.
 
 ## 🛠️ Uso
-Para cambiar el tema, se actualiza `baseColor` con un nuevo valor Hex. El `useEffect` asociado recalcula `themeVars` y las aplica.
+
+## 📏 Lineamientos Visuales Estrictos (Strict Design System)
+
+Este proyecto se rige por un **Contexto Global de Diseño** que debe respetarse en cada implementación.
+
+### 1. Sistema de Colores dinámico
+-   **Primary Variable:** El color `primary` es un token, NUNCA un valor fijo.
+-   **Prohibido hardcodear:** No usar colores hex directos para elementos principales. Usar siempre `bg-primary`, `text-primary`, etc.
+-   **Contraste Dinámico (Crítico):**
+    -   El texto sobre fondo `primary` debe calcularse dinámicamente (`foreground`).
+    -   Nunca asumir que el texto debe ser blanco. Si el primary es muy claro, el texto debe ser oscuro.
+    -   **Hover:** El contraste no debe disminuir.
+
+### 2. Formularios (Patrón Visual)
+-   **Contenedor:** Fondo blanco, borde suave, sombra ligera.
+-   **Inputs:** Altura homogénea, fondo blanco, borde neutro. Focus = Borde Primary.
+-   **Botones:**
+    -   **Principal:** Fondo Primary. Texto calculado. Hover variante del primary.
+    -   **Secundario:** Fondo neutro. No competir con primary.
+
+### 3. Tablas (Patrón Visual)
+-   **Contenedor:** Card blanca.
+-   **Encabezados:** Fondo neutro, texto gris oscuro.
+-   **Filas:** Fonde blanco. Hover gris muy claro (sin alterar texto).
+-   **Acciones:** Iconos neutros, hover primary visible.
+
+### 4. Reglas Críticas UI/UX
+-   **Botones Pequeños:** Texto e iconos NUNCA invisibles en hover.
+-   **Fondos:** El fondo general de la app (`bg-muted/30` o similar) debe diferenciarse del fondo de las Cards (`bg-card` / blanco).
+-   **Consistencia:** El cambio de tema no debe romper la jerarquía visual ni la legibilidad.

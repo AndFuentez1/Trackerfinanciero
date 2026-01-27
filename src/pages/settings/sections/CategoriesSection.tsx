@@ -85,12 +85,12 @@ export function CategoriesSection() {
                     />
                 </div>
 
-                <ScrollArea className="flex-1 -mx-2 px-2 max-h-[400px]">
+                <ScrollArea className="flex-1 -mx-2 px-2">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-4 pb-2">
                         {filteredCategories.map((cat) => (
                             <div
                                 key={cat.id}
-                                className="group flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/30 transition-all duration-200 bg-muted/10 h-16"
+                                className="group flex items-center justify-between p-3 rounded-xl border border-slate-300 hover:border-primary/50 hover:bg-muted/30 transition-all duration-200 bg-muted/10 h-16"
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <div

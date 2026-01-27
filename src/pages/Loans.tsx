@@ -38,6 +38,18 @@ import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { getTodayLocalDate } from '@/lib/dateUtils';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { differenceInDays } from 'date-fns';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function LoansPage() {
     const navigate = useNavigate();
@@ -186,6 +198,12 @@ export default function LoansPage() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (formData.is_disbursed && !formData.payment_method_id) {
+            alert("Por favor selecciona una cuenta de origen/destino para el desembolso.");
+            return;
+        }
+
         const { error } = await createLoan({
             name: formData.name,
             total_amount: Number(formData.total_amount),
@@ -203,9 +221,16 @@ export default function LoansPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm('¿Estás seguro de eliminar este préstamo?')) {
-            await deleteLoan(id);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteId) {
+            await deleteLoan(deleteId);
+            setDeleteId(null);
             refetch();
         }
     };
@@ -337,6 +362,24 @@ export default function LoansPage() {
 
     const pendingDisbursementCount = loans.filter(l => !l.is_disbursed && !l.payment_method_id).length;
 
+    const getStatusColor = (dueDate: string | null, isPaid: boolean) => {
+        if (!dueDate || isPaid) return "bg-emerald-500";
+        const days = differenceInDays(parseISO(dueDate), new Date());
+
+        if (days < 7) return "bg-red-500"; // Less than a week (or overdue)
+        if (days < 30) return "bg-orange-500"; // Less than a month
+        return "bg-primary"; // More than a month (Primary/Green)
+    };
+
+    const getStatusText = (dueDate: string | null) => {
+        if (!dueDate) return "";
+        const days = differenceInDays(parseISO(dueDate), new Date());
+        if (days < 0) return "Vencido";
+        if (days < 7) return "Vence pronto";
+        if (days < 30) return "Próximo a vencer";
+        return "En plazo";
+    };
+
 
     if (loading) {
         return <SkeletonLoader tab="loans" fullPage withLayoutWrapper />;
@@ -344,24 +387,21 @@ export default function LoansPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <HandCoins className="h-5 w-5 text-primary" />
-                        </div>
-                        <h1 className="text-xl font-semibold">Préstamos y Deudas</h1>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+                <PageHeader
+                    title="Préstamos y Deudas"
+                    description="Seguimiento de dinero prestado y deudas pendientes"
+                    icon={<HandCoins className="h-6 w-6" />}
+                    actions={
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button
-                                    className="gap-2 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                                    className="gap-2 shadow-sm"
                                     aria-label="Nuevo préstamo"
                                     title="Nuevo préstamo"
                                 >
-                                    <span className="hidden sm:flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
-                                    <span className="sm:hidden flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
+                                    <span className="hidden sm:flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-4 w-4" /></span>
+                                    <span className="sm:hidden flex flex-row items-center gap-2">Nuevo <CheckCircle2 className="h-4 w-4" /></span>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
@@ -473,7 +513,7 @@ export default function LoansPage() {
                                             onValueChange={(val) => setFormData({ ...formData, payment_method_id: val })}
                                             disabled={!formData.is_disbursed}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className={cn(formData.is_disbursed && !formData.payment_method_id && "border-destructive ring-1 ring-destructive")}>
                                                 <SelectValue placeholder="Seleccionar cuenta..." />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -491,186 +531,16 @@ export default function LoansPage() {
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        <p className="text-[10px] text-muted-foreground mt-1">Cuenta donde se registra el movimiento inicial del préstamo.</p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                            {formData.is_disbursed && !formData.payment_method_id ? <span className="text-destructive font-medium">Requerido: Selecciona la cuenta para registrar el desembolso.</span> : "Cuenta donde se registra el movimiento inicial del préstamo."}
+                                        </p>
                                     </div>
                                     <Button type="submit" className="w-full min-w-[140px] flex items-center justify-center gap-2">Guardar <Save className="h-4 w-4" /></Button>
                                 </form>
                             </DialogContent>
                         </Dialog>
-                    </div>
-                </div>
-            </header >
-
-            {/* Payment Dialog */}
-            < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
-            } modal={false}>
-                <DialogContent
-                    className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Registra un abono o pago a este préstamo.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={submitPayment} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Monto del Abono</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                                <Input
-                                    required
-                                    type="number"
-                                    placeholder={getPlaceholderAmount()}
-                                    value={paymentData.amount}
-                                    onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                    step={getStepValue()}
-                                    className={getCurrencyPadding()}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Fecha</label>
-                            <Input
-                                required
-                                type="date"
-                                value={paymentData.date}
-                                onChange={e => setPaymentData({ ...paymentData, date: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Método de Pago (Origen/Destino)</label>
-                            <Select
-                                value={paymentData.methodId}
-                                onValueChange={(val) => setPaymentData({ ...paymentData, methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
-                                                </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-muted-foreground">
-                                {paymentDialog.loan?.type === 'borrowed'
-                                    ? 'Cuenta de donde sale el dinero para pagar.'
-                                    : 'Cuenta donde entra el dinero recibido.'}
-                            </p>
-                        </div>
-                        <Button type="submit" className="w-full border border-primary min-w-[170px] flex items-center justify-center gap-2">Registrar Pago <HandCoins className="h-4 w-4" /></Button>
-                    </form>
-                </DialogContent>
-            </Dialog >
-
-
-            {/* Disbursement Dialog */}
-            <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent
-                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Confirma el desembolso del préstamo y su impacto en la cuenta.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-200">
-                            Al confirmar, el monto de <strong>{formatCurrency(disbursementDialog.loan?.total_amount || 0)}</strong> impactará el saldo de la cuenta seleccionada.
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Fecha de Desembolso</label>
-                            <Input
-                                required
-                                type="date"
-                                value={disbursementData.date}
-                                onChange={e => setDisbursementData({ ...disbursementData, date: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Cuenta de {disbursementDialog.loan?.type === 'borrowed' ? 'Destino (Ingreso)' : 'Origen (Salida)'}</label>
-                            <Select
-                                value={disbursementData.methodId}
-                                onValueChange={(val) => setDisbursementData({ ...disbursementData, methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
-                                                </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={confirmDisbursement} className="w-full min-w-[170px] flex items-center justify-center gap-2" disabled={!disbursementData.methodId}>Confirmar Desembolso <ArrowDownCircle className="h-4 w-4" /></Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Dialog for Orphaned Loans */}
-            <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent
-                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Asocia una cuenta a este préstamo para reclasificarlo.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-200">
-                            Este préstamo no tiene cuenta asociada. Selecciona una cuenta para reclasificarlo.
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Nueva Cuenta Asociada</label>
-                            <Select
-                                value={editData.methodId}
-                                onValueChange={(val) => setEditData({ methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
-                                                </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={confirmEdit} className="w-full" disabled={!editData.methodId}>Reclasificar</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+                    }
+                />
                 {pendingDisbursementCount > 0 && (
                     <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
                         <AlertCircle className="h-5 w-5" />
@@ -809,7 +679,7 @@ export default function LoansPage() {
                                                                 size="sm"
                                                                 variant="default"
                                                                 className="gap-2 shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white min-w-[140px] flex items-center justify-center"
-                                                                onClick={() => handleDelete(loan.id)}
+                                                                onClick={() => handleDeleteClick(loan.id)}
                                                             >
                                                                 Eliminar <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -841,7 +711,7 @@ export default function LoansPage() {
                                                             variant="default"
                                                             size="icon"
                                                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                            onClick={() => handleDelete(loan.id)}
+                                                            onClick={() => handleDeleteClick(loan.id)}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
@@ -859,8 +729,9 @@ export default function LoansPage() {
                                                     indicatorClassName={cn(
                                                         isPendingDisbursement ? "bg-slate-400" :
                                                             isOrphaned ? "bg-red-500" :
-                                                                isDebt ? "bg-destructive" : "bg-emerald-500",
-                                                        overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-500"
+                                                                isDebt ? (loan.due_date ? getStatusColor(loan.due_date, isFullyPaid) : "bg-destructive") : "bg-emerald-500",
+                                                        // Remove overdue override here as we handle it in getStatusColor logic or keep specific override?
+                                                        // Keep simple: if debt, use status color. If Receivable, green.
                                                     )}
                                                 />
                                             </div>
@@ -871,7 +742,142 @@ export default function LoansPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Dialogs rendered at the end */}
+                <Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ ...paymentDialog, open: false })}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Registrar Abono</DialogTitle>
+                            <DialogDescription>Registra un pago para este préstamo.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={submitPayment} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Fecha</Label>
+                                <Input
+                                    type="date"
+                                    value={paymentData.date}
+                                    onChange={e => setPaymentData({ ...paymentData, date: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Monto</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                    <Input
+                                        type="number"
+                                        value={paymentData.amount}
+                                        onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                        className={getCurrencyPadding()}
+                                        step={getStepValue()}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cuenta de Origen/Destino</Label>
+                                <Select
+                                    value={paymentData.methodId}
+                                    onValueChange={(val) => setPaymentData({ ...paymentData, methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit">Registrar Pago</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ ...disbursementDialog, open: false })}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirmar Desembolso</DialogTitle>
+                            <DialogDescription>Selecciona la cuenta y fecha del desembolso real.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Fecha</Label>
+                                <Input
+                                    type="date"
+                                    value={disbursementData.date}
+                                    onChange={e => setDisbursementData({ ...disbursementData, date: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cuenta</Label>
+                                <Select
+                                    value={disbursementData.methodId}
+                                    onValueChange={(val) => setDisbursementData({ ...disbursementData, methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={confirmDisbursement} className="w-full">Confirmar</Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ ...editDialog, open: false })}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reclasificar Préstamo</DialogTitle>
+                            <DialogDescription>Asigna una cuenta para corregir este préstamo.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Cuenta</Label>
+                                <Select
+                                    value={editData.methodId}
+                                    onValueChange={(val) => setEditData({ ...editData, methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={confirmEdit} className="w-full">Guardar</Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará el préstamo y el historial asociado.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Eliminar
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </main>
-        </div >
+        </div>
     );
 }

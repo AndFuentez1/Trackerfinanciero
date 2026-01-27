@@ -63,7 +63,7 @@ export default function MainLayout() {
     }, [user, hasCheckedPassword]);
 
     if (loading) {
-        return <SkeletonLoader fullPage={true} message="Cargando sesión..." />;
+        return <SkeletonLoader fullPage={true} />;
     }
 
     if (!user) return null;
@@ -107,7 +107,7 @@ export default function MainLayout() {
                 className="flex h-screen w-full overflow-hidden font-sans antialiased"
             >
                 <Sidebar />
-                <main className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative">
+                <main className="flex-1 pb-20 lg:pb-0 lg:pl-72 overflow-y-auto h-screen relative w-full">
                     <Outlet />
                 </main>
                 <MobileNav />

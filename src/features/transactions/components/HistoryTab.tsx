@@ -28,7 +28,16 @@ interface HistoryTabProps {
   categoryFilter?: string;
   statusFilter?: 'attention' | 'ok';
   paymentMethodFilter?: string;
+
   setStatusFilter?: (value: 'attention' | 'ok' | undefined) => void;
+
+  setTypeFilter?: (value: string | undefined) => void;
+  setCategoryFilter?: (value: string | undefined) => void;
+  monthFilter?: string;
+  setMonthFilter?: (value: string) => void;
+  yearFilter?: string;
+  setYearFilter?: (value: string) => void;
+  yearOptions?: string[];
 }
 
 
@@ -47,7 +56,16 @@ export function HistoryTab({
   categoryFilter,
   statusFilter,
   paymentMethodFilter,
-  setStatusFilter
+
+  setStatusFilter,
+  setTypeFilter,
+  setCategoryFilter,
+  monthFilter,
+  setMonthFilter,
+  yearFilter,
+
+  setYearFilter,
+  yearOptions
 }: HistoryTabProps) {
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [localTypeFilter, setLocalTypeFilter] = useState<string | undefined>(undefined);
@@ -129,7 +147,18 @@ export function HistoryTab({
         categories={categories}
         highlightOrphaned={highlightOrphaned}
         statusFilter={finalStatusFilter}
-        setStatusFilter={setStatusFilter || (() => {})}
+        setStatusFilter={setStatusFilter || (() => { })}
+
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        monthFilter={monthFilter}
+        setMonthFilter={setMonthFilter}
+        yearFilter={yearFilter}
+
+        setYearFilter={setYearFilter}
+        yearOptions={yearOptions}
       />
     </div>
   );

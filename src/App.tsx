@@ -19,6 +19,8 @@ import { SavingsProvider } from "./contexts/SavingsContext";
 import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
+import { AuthProvider } from "./contexts/AuthContext";
+
 
 const queryClient = new QueryClient();
 
@@ -47,10 +49,13 @@ const AppContent = () => {
     return 'default';
   };
 
-  // Prevent flash of default theme by waiting for data load
-  if (loading) {
-    return <SkeletonLoader tab={getSkeletonType(window.location.pathname) as any} />;
-  }
+  // Prevent flash of default theme by waiting for data load (OPTIONAL: Keep only if critical, but for perf we want to unblock)
+  // For better PERCEIVED performance, we let the app shell render immediately.
+  // The individual pages will handle their own "content" loading state.
+
+  // if (loading) {
+  //   return <SkeletonLoader tab={getSkeletonType(window.location.pathname) as any} />;
+  // }
 
   return (
     <BrowserRouter>
@@ -74,13 +79,15 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <FinanceProvider>
-        <SavingsProvider>
-          <LoansProvider>
-            <AppContent />
-          </LoansProvider>
-        </SavingsProvider>
-      </FinanceProvider>
+      <AuthProvider>
+        <FinanceProvider>
+          <SavingsProvider>
+            <LoansProvider>
+              <AppContent />
+            </LoansProvider>
+          </SavingsProvider>
+        </FinanceProvider>
+      </AuthProvider>
     </TooltipProvider>
     <Toaster />
     <SonnerToaster />

@@ -4,53 +4,8 @@ import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceData } from './useFinanceData';
 
-export interface LoanPayment {
-    id: string;
-    loan_id: string;
-    amount: number;
-    date: string;
-    created_at: string;
-}
+import { Loan, LoanRow, LoanPayment, LoanPaymentRow } from './financeTypes';
 
-export interface Loan {
-    id: string;
-    name: string;
-    total_amount: number;
-    paid_amount: number; // Derived field
-    interest_rate: number;
-    due_date: string | null;
-    payment_method_id: string | null;
-    created_at: string;
-    user_id: string;
-    type: 'borrowed' | 'lent';
-    payments?: LoanPayment[];
-    is_disbursed?: boolean;
-    installments?: number;
-}
-
-// Row types from the database
-export interface LoanPaymentRow {
-    id: string;
-    loan_id: string;
-    amount: number | string;
-    date: string;
-    created_at?: string;
-}
-
-export interface LoanRow {
-    id: string;
-    name: string;
-    total_amount: number | string;
-    interest_rate: number | string;
-    due_date?: string | null;
-    payment_method_id?: string | null;
-    created_at?: string;
-    user_id: string;
-    type?: 'borrowed' | 'lent' | string;
-    loan_payments?: LoanPaymentRow[];
-    is_disbursed?: boolean;
-    installments?: number | null;
-}
 
 export function useLoansDataLogic() {
     const { user } = useAuth();

@@ -130,61 +130,73 @@ export function WelcomePanel() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-12">
-          <div className="p-3 rounded-full bg-primary/20 w-fit mx-auto mb-4">
-            <Wallet className="h-8 w-8 text-primary" />
+    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-xl space-y-8 animate-in fade-in zoom-in-50 duration-500">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-primary/20 mb-6">
+            <Wallet className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">Bienvenido a Tracker Financiero</h1>
-          <p className="text-muted-foreground text-lg">Completa estos pasos para comenzar a gestionar tu dinero</p>
+          <h1 className="text-3xl font-bold tracking-tight">Bienvenido a FinTrack</h1>
+          <p className="text-muted-foreground text-lg max-w-md mx-auto">
+            Configuremos los aspectos básicos de tu cuenta para comenzar a organizar tus finanzas.
+          </p>
         </div>
 
-        <div className="grid gap-4 mb-8">
+        <div className="grid gap-4">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isDisabled = index > 0 && !steps[index - 1].completed;
+            const isActive = !step.completed && !isDisabled;
 
             return (
               <Card
                 key={step.id}
-                className={`overflow-hidden transition-all ${step.completed ? 'bg-primary/5 border-primary/20' : ''
-                  } ${isDisabled ? 'opacity-50' : ''}`}
+                className={cn(
+                  "overflow-hidden transition-all duration-300 border-l-4",
+                  step.completed
+                    ? "bg-card/50 border-l-primary/50 opacity-80"
+                    : isActive
+                      ? "bg-card border-l-primary shadow-lg ring-1 ring-primary/5" // Removed scale-[1.02]
+                      : "bg-card/50 border-l-transparent opacity-50"
+                )}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 px-6 pt-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div
-                        className={`p-2 rounded-lg ${step.completed ? 'bg-primary/20' : 'bg-primary/20'
-                          }`}
+                        className={cn(
+                          "p-2.5 rounded-xl transition-colors",
+                          step.completed ? "bg-primary/10 text-primary" : isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}
                       >
                         {step.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                          <CheckCircle2 className="h-5 w-5" />
                         ) : (
-                          <Icon className="h-5 w-5 text-primary" />
+                          <Icon className="h-5 w-5" />
                         )}
                       </div>
                       <div>
-                        <CardTitle className="text-base">{step.title}</CardTitle>
-                        <CardDescription>{step.description}</CardDescription>
+                        <CardTitle className="text-base font-semibold">{step.title}</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">{step.description}</CardDescription>
                       </div>
                     </div>
-                    {step.completed && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
-                        Completado
-                      </span>
-                    )}
                   </div>
                 </CardHeader>
-                {/* Show action if not disabled. Even if completed, we let them change it (e.g. theme or add more categories) */}
+                {/* Show action if not disabled */}
                 {(!isDisabled) && (
-                  <CardContent>
-                    {step.action}
+                  <CardContent className="px-6 pb-5 pt-0 pl-[4.5rem]">
+                    <div className="mt-2">
+                      {step.action}
+                    </div>
                   </CardContent>
                 )}
               </Card>
             );
           })}
+        </div>
+
+        <div className="text-center text-xs text-muted-foreground pt-4">
+          <p>Tus datos se guardan localmente en tu dispositivo</p>
         </div>
       </div>
 
@@ -193,7 +205,7 @@ export function WelcomePanel() {
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         onAdd={addCategory}
-        trigger={null} // Hide default trigger
+        trigger={null}
       />
       <AddPaymentMethodDialog
         open={paymentDialogOpen}

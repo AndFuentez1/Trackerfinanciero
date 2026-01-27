@@ -48,6 +48,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { AddCategoryDialog } from '@/features/categories/components/AddCategoryDialog';
+import { AddPaymentMethodDialog } from '@/features/payment-methods/components/AddPaymentMethodDialog';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 
 export interface AddTransactionDialogProps {
@@ -87,7 +88,7 @@ export function AddTransactionDialog({
   const [showAlert, setShowAlert] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { categories: contextCategories, paymentMethods: contextPaymentMethods, addCategory, loading } = useFinanceData();
+  const { categories: contextCategories, paymentMethods: contextPaymentMethods, addCategory, addPaymentMethod, loading } = useFinanceData();
   const { currency, decimalPlaces } = useFinance();
 
   const getCurrencySymbol = () => {
@@ -130,7 +131,7 @@ export function AddTransactionDialog({
   useEffect(() => {
     if (transactionToEdit && open) {
       form.reset({
-        type: transactionToEdit.type as TransactionType,
+        type: (transactionToEdit.type === 'savings' ? 'saving' : transactionToEdit.type) as TransactionFormValues['type'],
         category: transactionToEdit.category,
         category_id: transactionToEdit.category_id || '',
         amount: transactionToEdit.amount,
@@ -239,7 +240,7 @@ export function AddTransactionDialog({
     }
 
     // Map transfer types to database storage format
-    let dbType: TransactionType = values.type;
+    const dbType: TransactionType = values.type;
     if (values.type === 'transfer_in') {
       categoryName = 'Transferencia';
     }
@@ -408,7 +409,9 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+          variant="default"
+          size="sm"
+          className="gap-2 min-w-[140px] text-[15px] py-2 flex items-center justify-center border border-primary hover:bg-primary/90 hover:text-white"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >
@@ -429,7 +432,7 @@ export function AddTransactionDialog({
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4 bg-background rounded-xl border border-border p-5">
               <FormField
                 control={control}
                 name="type"
@@ -443,7 +446,7 @@ export function AddTransactionDialog({
                           type="button"
                           onClick={() => field.onChange(option.value)}
                           className={cn(
-                            'px-2 py-2 text-xs sm:text-sm rounded-lg border transition-all',
+                            'px-2 py-2 text-xs sm:text-sm rounded-xl border border-border transition-all',
                             option.value === 'transfer_in' ? 'col-span-8' : 'col-span-4',
                             field.value === option.value
                               ? 'bg-primary text-primary-foreground border-primary'
@@ -571,6 +574,25 @@ export function AddTransactionDialog({
                               </SelectItem>
                             );
                           })}
+                          <div className="border-t border-border/50 px-2 py-2 mt-1">
+                            <AddPaymentMethodDialog
+                              onAdd={addPaymentMethod}
+                              onSuccess={(pm) => {
+                                if (pm?.id) setValue('payment_method_id', pm.id);
+                              }}
+                              trigger={
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="w-full justify-start gap-2 text-xs font-medium rounded-xl transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+                                  style={{ minHeight: 40 }}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Agregar método de pago
+                                </Button>
+                              }
+                            />
+                          </div>
                         </SelectContent>
                       </Select>
                       <FormMessage />

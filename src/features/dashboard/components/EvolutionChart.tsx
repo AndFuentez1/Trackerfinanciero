@@ -150,7 +150,7 @@ export function EvolutionChart({
 
     const dailyData: Record<string, any>[] = [];
 
-    let currentDate = new Date(); // Start from today for back-calc
+    const currentDate = new Date(); // Start from today for back-calc
     // Align current Date to end of day?
     currentDate.setHours(23, 59, 59, 999);
 
@@ -297,10 +297,19 @@ export function EvolutionChart({
     style: 'currency', currency: currency || 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
   }).format(val);
 
+  // Obtener símbolo de moneda
+  const getCurrencySymbol = (cur: string) => {
+    try {
+      return (0).toLocaleString('es-CO', { style: 'currency', currency: cur }).replace(/\d|[.,\s]/g, '');
+    } catch {
+      return '$';
+    }
+  };
+  const symbol = getCurrencySymbol(currency || 'COP');
   const formatLargeCurrency = (val: number) => {
-    if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-    if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-    return `$${val}`;
+    if (Math.abs(val) >= 1000000) return `${symbol}${(val / 1000000).toFixed(1)}M`;
+    if (Math.abs(val) >= 1000) return `${symbol}${(val / 1000).toFixed(0)}k`;
+    return `${symbol}${val}`;
   };
 
   return (
@@ -383,30 +392,45 @@ export function EvolutionChart({
       </div>
 
       {/* Chart */}
-      <div className="w-full h-[350px] mt-4">
+      <div className="w-full h-[420px] px-0.5 md:px-1.5 mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+          <ComposedChart data={chartData} margin={{ top: 30, right: 40, left: 30, bottom: 20 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--color-border))" opacity={0.4} />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-              dy={10}
+              height={20}
+              tick={{ fontSize: 12, fill: 'hsl(var(--color-muted-foreground))' }}
+              tickFormatter={(name) => {
+                // Si el campo es 'MM/YYYY' o 'MM', solo mostrar el mes
+                let monthNum = name;
+                if (typeof name === 'string' && name.includes('/')) {
+                  monthNum = name.split('/')[0];
+                }
+                // Elimina cualquier año del label
+                return isNaN(Number(monthNum)) ? name : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][Number(monthNum) - 1] || name;
+              }}
             />
             <YAxis
               tickFormatter={formatLargeCurrency}
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: 'hsl(var(--color-muted-foreground))' }}
             />
             <Tooltip
-              cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
-              contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--popover))', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+              cursor={{ fill: 'hsl(var(--color-muted)/0.2)' }}
+              contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--color-border))', background: 'hsl(var(--popover))', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
               labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '8px' }}
               formatter={(value: number, name: string) => [formatCurrency(value), name]}
             />
-            <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px' }} />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ paddingTop: '36px', display: 'flex', justifyContent: 'space-evenly', width: '100%', flexWrap: 'wrap', columnGap: 140 }}
+              layout="horizontal"
+              align="center"
+              verticalAlign="bottom"
+            />
 
             {selectedYears.flatMap((year, i) => {
               // Opacity logic if multiple years
@@ -433,10 +457,10 @@ export function EvolutionChart({
                     key={`inc-${year}`}
                     dataKey={`income_${year}`}
                     name={`Ingresos ${year}`}
-                    fill="hsl(var(--success))"
+                    fill="#10b981"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
-                    fillOpacity={opacity * 0.7}
+                    fillOpacity={opacity * 0.8}
                   />
                 ),
                 showExpense && (
@@ -444,7 +468,7 @@ export function EvolutionChart({
                     key={`exp-${year}`}
                     dataKey={`expense_${year}`}
                     name={`Gastos ${year}`}
-                    fill="hsl(var(--destructive))"
+                    fill="#ef4444"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                     fillOpacity={opacity * 0.7}

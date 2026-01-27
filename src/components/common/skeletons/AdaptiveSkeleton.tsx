@@ -27,14 +27,7 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-                {/* Loading Message Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-                    <div className="bg-background/80 backdrop-blur-sm px-6 py-3 rounded-full border border-primary/20 shadow-lg flex items-center gap-3">
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                        <span className="text-sm font-medium text-foreground tracking-tight">Cargando aplicación...</span>
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-75" />
-                    </div>
-                </div>
+                {/* Loading Message Overlay eliminado */}
 
                 {/* Header Skeleton */}
                 <header className="h-16 border-b flex items-center px-6 justify-between bg-card/20 shrink-0">

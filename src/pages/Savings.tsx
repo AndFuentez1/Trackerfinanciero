@@ -9,6 +9,7 @@ import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function SavingsPage() {
     const navigate = useNavigate();
@@ -74,18 +75,12 @@ export default function SavingsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Wallet className="h-5 w-5 text-primary" />
-                        </div>
-                        <h1 className="text-xl font-semibold">Ahorros</h1>
-                    </div>
-                </div>
-            </header>
-
             <main className="container max-w-6xl mx-auto px-4 py-8">
+                <PageHeader
+                    title="Ahorros e Inversiones"
+                    description="Gestiona tus metas de ahorro y cuentas de inversión"
+                    icon={<Wallet className="h-6 w-6" />}
+                />
                 {isLoading ? (
                     <div className="flex items-center justify-center py-20">
                         <div className="animate-pulse text-muted-foreground">Cargando datos...</div>

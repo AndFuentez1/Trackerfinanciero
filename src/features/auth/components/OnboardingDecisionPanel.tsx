@@ -146,116 +146,82 @@ export function OnboardingDecisionPanel({
 
   // Main decision panel
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">¿Cómo deseas comenzar?</h1>
-          <p className="text-muted-foreground">
-            Elige entre empezar desde cero o importar tus datos
+    <div className="min-h-screen bg-muted/20 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">¡Todo listo para empezar!</h1>
+          <p className="text-muted-foreground text-lg max-w-md mx-auto">
+            Solo una decisión más: ¿Cómo quieres poblar tu tablero financiero?
           </p>
         </div>
 
-        <div className="grid gap-4">
-          {/* Theme selector - Optional for onboarding */}
-          {themeOptions && themeOptions.length > 0 && (
-            <Card className="border-dashed">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Elige un tema</CardTitle>
-                <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-row gap-4 justify-center items-end my-2">
-                  {themeOptions.map((theme) => (
-                    <div key={theme.hex} className="flex flex-col items-center w-24">
-                      <button
-                        type="button"
-                        className={cn(
-                          "w-16 h-16 rounded-xl border-2 flex items-center justify-center transition-all",
-                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-muted"
-                        )}
-                        style={{ background: theme.hex }}
-                        aria-label={theme.label}
-                        onClick={() => setSelectedTheme(theme.hex)}
-                      >
-                        {selectedTheme === theme.hex && (
-                          <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
-                        )}
-                      </button>
-                      <span className="text-xs mt-2 text-center break-words w-full" style={{ color: '#222' }}>{theme.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  className="w-full mt-4"
-                  variant="default"
-                  onClick={() => onSelectTheme?.(selectedTheme)}
-                >
-                  Aplicar color
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
+        <div className="grid md:grid-cols-2 gap-4 pt-4">
           {/* Start from scratch */}
-          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-3">
-              <div className="flex items-start gap-3">
-                <Plus className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div className="flex-1">
-                  <CardTitle className="text-base">Comenzar desde cero</CardTitle>
-                  <CardDescription className="text-xs">
-                    Crea transacciones nuevas desde ahora
-                  </CardDescription>
-                </div>
+          <Card
+            className="cursor-pointer group hover:border-primary hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+            onClick={handleStartFromScratch}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardHeader>
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Plus className="h-6 w-6 text-primary" />
               </div>
+              <CardTitle>Comenzar desde cero</CardTitle>
+              <CardDescription>
+                Inicia con un tablero limpio y agrega tus transacciones manualmente a medida que ocurren.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
-                onClick={handleStartFromScratch}
+                variant="outline"
+                className="w-full group-hover:bg-primary group-hover:text-primary-foreground border-primary/20"
                 disabled={isLoading}
-                className="w-full"
-                size="sm"
               >
-                {isLoading ? 'Cargando...' : 'Comenzar'}
+                {isLoading ? 'Cargando...' : 'Seleccionar'}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Import data - COMENTADO */}
-          {/* 
-          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-3">
-              <div className="flex items-start gap-3">
-                <Upload className="h-5 w-5 text-success mt-1 flex-shrink-0" />
-                <div className="flex-1">
-                  <CardTitle className="text-base">Importar datos</CardTitle>
-                  <CardDescription className="text-xs">
-                    Carga un archivo Excel con tus datos
-                  </CardDescription>
-                </div>
+          {/* Import data */}
+          <Card
+            className="cursor-pointer group hover:border-primary hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+            onClick={() => setShowImportDialog(true)}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardHeader>
+              <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Upload className="h-6 w-6 text-emerald-600" />
               </div>
+              <CardTitle>Importar Excel</CardTitle>
+              <CardDescription>
+                Si ya tienes un historial, carga tu archivo Excel para poblar tu tablero instantáneamente.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
-                onClick={() => setShowImportDialog(true)}
-                variant="default"
-                className="w-full"
-                size="sm"
+                variant="outline"
+                className="w-full group-hover:bg-emerald-600 group-hover:text-white border-primary/20"
               >
-                Seleccionar archivo
+                Subir archivo
               </Button>
             </CardContent>
           </Card>
-          */}
+        </div>
+
+        <div className="text-center text-xs text-muted-foreground pt-8">
+          <p>Podrás importar datos más tarde desde la configuración</p>
         </div>
 
         {/* Import Dialog - integrated */}
         {showImportDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md relative">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md relative shadow-2xl animate-in zoom-in-95 duration-200">
               <button
                 onClick={() => setShowImportDialog(false)}
-                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded-full transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>

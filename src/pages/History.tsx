@@ -22,6 +22,7 @@ import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { useState, useMemo, useEffect } from 'react';
 import { Transaction } from '@/hooks/useFinanceData';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function HistoryPage() {
     // ============================================================================
@@ -267,60 +268,56 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Wallet className="h-5 w-5 text-primary" />
-                        </div>
-                        <h1 className="text-xl font-semibold">Historial</h1>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
-                        <AddTransactionDialog
-                            onAdd={addTransaction}
-                            onAddTransfer={addTransfer}
-                            categories={categories}
-                            paymentMethods={paymentMethods}
-                        />
-                        <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
-                        <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-                    </div>
-                </div>
-            </header>
-
-            {/* Instance 2: Controlled Edit Transaction Dialog (hidden trigger, opens via state) */}
-            <AddTransactionDialog
-                transactionToEdit={editingTransaction}
-                open={isEditDialogOpen}
-                onOpenChange={(open) => {
-                    setIsEditDialogOpen(open);
-                    if (!open) setEditingTransaction(null);
-                }}
-                onAddTransfer={addTransfer}
-                categories={categories}
-                paymentMethods={paymentMethods}
-                onUpdateTransaction={async (id, updates) => {
-                    await updateTransaction(id, updates);
-                    setIsEditDialogOpen(false);
-                    setEditingTransaction(null);
-                }}
-            />
-
-            <AddPaymentMethodDialog
-                open={!!creatingPMFor}
-                onOpenChange={(open) => { if (!open) { setCreatingPMFor(null); setPendingTx(null); } }}
-                initialName={creatingPMFor ? reclassifyDrafts[creatingPMFor]?.payment_method_name || '' : ''}
-                onAdd={addPaymentMethod}
-                onSuccess={() => {
-                    setCreatingPMFor(null);
-                    if (pendingTx) {
-                        handleReclassifySave(pendingTx);
-                        setPendingTx(null);
-                    }
-                }}
-            />
-
             <main className="container max-w-6xl mx-auto px-4 py-8">
+                {/* Instance 2: Controlled Edit Transaction Dialog (hidden trigger, opens via state) */}
+                <AddTransactionDialog
+                    transactionToEdit={editingTransaction}
+                    open={isEditDialogOpen}
+                    onOpenChange={(open) => {
+                        setIsEditDialogOpen(open);
+                        if (!open) setEditingTransaction(null);
+                    }}
+                    onAddTransfer={addTransfer}
+                    categories={categories}
+                    paymentMethods={paymentMethods}
+                    onUpdateTransaction={async (id, updates) => {
+                        await updateTransaction(id, updates);
+                        setIsEditDialogOpen(false);
+                        setEditingTransaction(null);
+                    }}
+                />
+
+                <AddPaymentMethodDialog
+                    open={!!creatingPMFor}
+                    onOpenChange={(open) => { if (!open) { setCreatingPMFor(null); setPendingTx(null); } }}
+                    initialName={creatingPMFor ? reclassifyDrafts[creatingPMFor]?.payment_method_name || '' : ''}
+                    onAdd={addPaymentMethod}
+                    onSuccess={() => {
+                        setCreatingPMFor(null);
+                        if (pendingTx) {
+                            handleReclassifySave(pendingTx);
+                            setPendingTx(null);
+                        }
+                    }}
+                />
+
+                <PageHeader
+                    title="Historial"
+                    description="Registro completo de todos tus movimientos financieros"
+                    icon={<Wallet className="h-6 w-6" />}
+                    actions={
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
+                            <AddTransactionDialog
+                                onAdd={addTransaction}
+                                onAddTransfer={addTransfer}
+                                categories={categories}
+                                paymentMethods={paymentMethods}
+                            />
+                            <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
+                            <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+                        </div>
+                    }
+                />
                 {isLoading && !transactions.length ? (
                     <SkeletonLoader tab="transactions" withLayoutWrapper={false} fullPage={false} />
                 ) : (
@@ -372,7 +369,7 @@ export default function HistoryPage() {
                                         const hasValidAmount = tx.amount !== null && tx.amount !== undefined && tx.amount !== 0;
 
                                         return (
-                                            <div key={tx.id} className="bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm" style={{ fontStyle: 'normal' }}>
+                                            <div key={tx.id} className="bg-card/50 backdrop-blur-sm rounded-lg border border-border/50 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm" style={{ fontStyle: 'normal' }}>
                                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
                                                     {/* Fecha (Date) - 1st */}
                                                     <div className="space-y-1">
@@ -695,7 +692,14 @@ export default function HistoryPage() {
                             highlightOrphaned={highlightOrphaned}
                             searchTerm={searchTerm}
                             typeFilter={typeFilter}
+                            setTypeFilter={setTypeFilter}
                             categoryFilter={categoryFilter}
+                            setCategoryFilter={setCategoryFilter}
+                            monthFilter={monthFilter}
+                            setMonthFilter={setMonthFilter}
+                            yearFilter={yearFilter}
+                            setYearFilter={setYearFilter}
+                            yearOptions={yearOptions}
                             statusFilter={statusFilter as "attention" | "ok" | undefined}
                             paymentMethodFilter={paymentMethodFilter}
                             setStatusFilter={setStatusFilter}

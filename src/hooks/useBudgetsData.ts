@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useFinanceData, Transaction, TransactionType } from './useFinanceData';
+import { useFinanceData } from './useFinanceData';
+import { Transaction, TransactionType } from './financeTypes';
 import { useAuth } from './useAuth';
 import { startOfMonth, parseISO } from 'date-fns';
 import { formatLocalDate } from '@/lib/dateUtils';
@@ -84,44 +85,17 @@ export function useBudgetsData() {
         }
     }, [availableYears, budgetYear]);
 
-    // Subscribe to changes to refresh finance data (which contains budgets)
-    useEffect(() => {
-        if (!user) return;
 
-        const channel = supabase
-            .channel('budgets_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'budgets',
-                    filter: `user_id=eq.${user.id}`,
-                },
-                () => {
-                    refreshData();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user, refreshData]);
 
     // Derived state calculation
     const budgetsStats = useMemo(() => {
         const stats: BudgetState[] = [];
 
-        const filteredBudgets = budgets.filter(b => {
-            const year = Number(b.month?.substring(0, 4));
-            const month = Number(b.month?.substring(5, 7));
-            if (budgetYear !== 'all' && !Number.isNaN(year) && year !== budgetYear) return false;
-            if (budgetMonth !== 'all' && !Number.isNaN(month) && month !== budgetMonth) return false;
-            return true;
-        });
-
-        filteredBudgets.forEach(budget => {
+        // FIX: Do not filter budgets by date. 
+        // Since `upsert` is based on category_id, we only maintain the "Current Active Budget" for each category.
+        // Therefore, the budget amount applies to ANY selected month we are viewing.
+        // We iterate over ALL available budgets.
+        budgets.forEach(budget => {
             // 1. Find category info - Robust matching
             let category = categories.find(c => c.id === budget.category_id);
             if (!category && budget.category) {
@@ -139,6 +113,7 @@ export function useBudgetsData() {
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
                 const tMonth = tDate.getMonth() + 1;
+
                 if (budgetYear !== 'all' && tYear !== budgetYear) return false;
                 if (budgetMonth !== 'all' && tMonth !== budgetMonth) return false;
 
@@ -167,7 +142,9 @@ export function useBudgetsData() {
             });
         });
 
-        return stats;
+        // Filter out budgets that have 0 amount if desired, or keep them to show "Unbudgeted" categories? 
+        // For now, keep all explicitly defined budgets.
+        return stats.sort((a, b) => b.percentage - a.percentage); // Sort by highest usage
     }, [budgets, transactions, categories, budgetYear, budgetMonth]);
 
     const totalBudgetStats = useMemo((): TotalBudgetState => {

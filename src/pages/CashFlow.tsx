@@ -7,6 +7,8 @@ import { CashFlowSummaryCards } from '@/features/cashflow/components/CashFlowSum
 import { CashFlowChart } from '@/features/cashflow/components/CashFlowChart';
 import { CashFlowTimeline } from "@/features/cashflow/components/CashFlowTimeline";
 import { Wallet, BarChart3 } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { cn } from '@/lib/utils';
 
 export default function CashFlow() {
   // Filtros de año/mes/rango
@@ -27,7 +29,7 @@ export default function CashFlow() {
 
   // Datos para tarjetas
   const estimatedIncome = proyeccion_ingresos;
-  const futureExpenses = 0; // Implementar si hay gastos fijos
+  const futureExpenses = monthlyBreakdown.length > 0 ? monthlyBreakdown[0].gastosFuturos : 0;
   const debtCommitments = compromisos_deuda;
   const projectedBalance = (cashFlowSeries && cashFlowSeries.length > 0) ? cashFlowSeries[cashFlowSeries.length - 1].balanceProyectado : 0;
 
@@ -41,18 +43,12 @@ export default function CashFlow() {
 
   return (
     <div className="min-h-screen bg-background/30">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Wallet className="h-5 w-5 text-primary" />
-            </div>
-            <h1 className="text-xl font-semibold">Flujo de Caja</h1>
-          </div>
-        </div>
-      </header>
-
       <main className="container max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <PageHeader
+          title="Flujo de Caja"
+          description="Análisis y proyección de tu flujo de efectivo mensual"
+          icon={<Wallet className="h-6 w-6" />}
+        />
         {/* Removed internal heading h2 since we have a header now */}
         <CashFlowFilters
           year={year}
@@ -79,27 +75,27 @@ export default function CashFlow() {
         <div className="w-full">
           <h3 className="text-lg font-semibold mb-2 text-foreground">Desglose Mensual</h3>
           <div className="overflow-x-auto rounded-xl border border-input bg-card">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/40">
+            <table className="premium-table">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left">Mes/Año</th>
-                  <th className="px-3 py-2 text-right text-success">Ingresos Totales</th>
-                  <th className="px-3 py-2 text-right text-destructive">Gastos & Deudas</th>
-                  <th className="px-3 py-2 text-right">Balance Neto</th>
-                  <th className="px-3 py-2 text-right">Balance Acumulado</th>
-                  <th className="px-3 py-2 text-center">Detalle</th>
+                  <th className="text-left">Mes/Año</th>
+                  <th className="text-right text-success">Ingresos Totales</th>
+                  <th className="text-right text-destructive">Gastos & Deudas</th>
+                  <th className="text-right">Balance Neto</th>
+                  <th className="text-right">Balance Acumulado</th>
+                  <th className="text-center">Detalle</th>
                 </tr>
               </thead>
               <tbody>
                 {monthlyBreakdown.map((row, i) => (
                   <React.Fragment key={i}>
-                    <tr className="border-b last:border-0 hover:bg-muted/20 group">
-                      <td className="px-3 py-2 font-medium">{row.mes}</td>
-                      <td className="px-3 py-2 text-right text-success">{formatCOP(row.ingresosTotales)}</td>
-                      <td className="px-3 py-2 text-right text-destructive">{formatCOP(row.egresosTotales)}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceNetoMes)}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceAcumulado)}</td>
-                      <td className="px-3 py-2 text-center">
+                    <tr className={cn("hover:bg-muted/20 group", expandedRow === i && "bg-muted/10")}>
+                      <td className="font-medium">{row.mes}</td>
+                      <td className="text-right text-success">{formatCOP(row.ingresosTotales)}</td>
+                      <td className="text-right text-destructive">{formatCOP(row.egresosTotales)}</td>
+                      <td className="text-right font-semibold">{formatCOP(row.balanceNetoMes)}</td>
+                      <td className="text-right font-semibold">{formatCOP(row.balanceAcumulado)}</td>
+                      <td className="text-center">
                         <button
                           type="button"
                           className="text-xs underline text-primary hover:text-primary-foreground focus:outline-none"
