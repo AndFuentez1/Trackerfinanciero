@@ -99,8 +99,8 @@ export default function Index() {
   );
 
   const isEmptyState = useMemo(
-    () => !statsSummary.currency || paymentMethods.length === 0 || categories.length === 0,
-    [statsSummary.currency, paymentMethods.length, categories.length]
+    () => !currency || paymentMethods.length === 0 || categories.length === 0,
+    [currency, paymentMethods.length, categories.length]
   );
 
   const showWelcomePanel = useMemo(
@@ -139,14 +139,12 @@ export default function Index() {
     return (
       <OnboardingDecisionPanel
         onStartFromScratch={async () => { await setOnboardingDecision('from_scratch'); }}
-        onImportData={() => {/* open file selector */ }}
+        onImportData={() => {/* no longer used */ }}
         hasPendingImport={hasPendingImport}
         onConfirmImport={async () => { await confirmImportData(); }}
         pendingImportCount={pendingImportData.length}
         importProgress={importProgress as any}
         onCancelImport={async () => { await cancelImport(); }}
-        paymentMethods={paymentMethods}
-        onImportComplete={(data) => startImport(data)}
         showCompletionCard={showCompletionCard}
         baseColor={baseColor}
         themeOptions={themeOptions}

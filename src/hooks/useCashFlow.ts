@@ -15,7 +15,7 @@ function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: num
 
 export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año') {
 
-  const { transactions, paymentMethods, categories, futureExpenses } = useFinance();
+  const { allTransactions: transactions, paymentMethods, categories, futureExpenses } = useFinance();
   const { loans } = useLoans();
   const { budgets } = useBudgetsData();
   const { savingsAccounts } = useSavingsData();
@@ -216,34 +216,46 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
     // 1. Detectar nuevas compras a cuotas activas este mes
     transactions
-      .filter(tx => tx.type === 'expense' && (tx as any).installments && (tx as any).installments > 1)
+      .filter(tx => tx.type === 'expense' && tx.payment_method_id)
       .forEach(tx => {
+        const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
+        if (pm?.type !== 'credit') return;
+
+        // FIXED: Include 1-quota transactions too!
+        const installments = (tx as any).installments || 1;
+
         const key = tx.id;
         // Si ya existe en el estado acumulado, sigue su curso.
         // Si NO existe, verificamos "temporalmente" si debería existir hoy.
-        // Esto es importante para el primer mes de la proyección (mes actual),
-        // donde el "prevCardInstallments" viene vacío.
         if (!newCardInstallments[key]) {
           const txDate = new Date(tx.date);
-          const totalInstallments = (tx as any).installments;
 
           // Meses que han pasado desde la compra hasta la fecha actual del loop 'date'
           const monthsSincePurchase = (date.getFullYear() - txDate.getFullYear()) * 12 + (date.getMonth() - txDate.getMonth());
 
-          // Si la compra fue en el pasado (months >= 0) Y aún quedan cuotas
-          if (monthsSincePurchase >= 0 && monthsSincePurchase < totalInstallments) {
-            const pm = paymentMethods.find(pm => pm.id === tx.payment_method_id);
-            // Si la tarjeta tiene tasa, calculamos. (Simplificado flat rate para MVP)
-            const tasa = pm && pm.type === 'credit' && pm.estimated_yield ? pm.estimated_yield : 0;
+          // FIXED LOGIC:
+          // A purchase made in Month M usually starts paying in Month M+1 (standard credit card logic).
+          // If I buy today (Jan), I pay in Feb.
+          // Limit: We verify if we are in the "active payment window".
+          // Window starts at M+1. Ends at M+installments.
 
-            // Calcular cuántas quedan matemáticamente
-            const remaining = totalInstallments - monthsSincePurchase;
+          // Exception: If user specifically configured Immediate Payment? (Not supported yet)
+          // Standard Assumption: Credit Card = Pay Next Month.
+
+          const startPaymentMonthOffset = 1; // Start paying next month
+          const paymentWindowIndex = monthsSincePurchase - startPaymentMonthOffset;
+
+          if (paymentWindowIndex >= 0 && paymentWindowIndex < installments) {
+            // Si la tarjeta tiene tasa, calculamos. (Simplificado flat rate para MVP)
+            const tasa = pm.estimated_yield || 0;
+
+            const remaining = installments - paymentWindowIndex;
 
             newCardInstallments[key] = {
               restantes: remaining,
-              valorCuota: tx.amount / totalInstallments,
-              interes: 0, // Simplificación para MVP: cuota fija sin interés complejo aquí, o usar lógica similar a préstamos
-              capital: tx.amount / totalInstallments
+              valorCuota: tx.amount / installments,
+              interes: 0,
+              capital: tx.amount / installments
             };
           }
         }

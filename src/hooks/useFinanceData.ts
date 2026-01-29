@@ -502,7 +502,7 @@ export function useFinanceDataLogic() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [futureExpenses, setFutureExpenses] = useState<FutureExpense[]>([]);
-  const [currency, setCurrency] = useState('COP');
+  const [currency, setCurrency] = useState<string | null>(null);
   const [decimalPlaces, setDecimalPlaces] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -670,7 +670,15 @@ export function useFinanceDataLogic() {
       }
 
       // Clear local states
-      setCurrency('');
+      setTransactions([]);
+      setAllTransactions([]);
+      setRangeTransactions([]);
+      setBudgets([]);
+      setPaymentMethods([]);
+      setCategories([]);
+      setLoans([]);
+      setFutureExpenses([]);
+      setCurrency(null);
       setOnboardingDecision(null);
       setHasPendingImport(false);
       setImportProgress({
@@ -920,7 +928,7 @@ export function useFinanceDataLogic() {
       // 5. Process Profile
       const profile = profileRes.data;
       if (currentFetchId === fetchIdRef.current && isMounted.current && profile) {
-        if (profile.currency) setCurrency(profile.currency);
+        setCurrency(profile.currency || null);
         if (profile.base_color) {
           setBaseColor(profile.base_color);
           localStorage.setItem('theme-base-color', profile.base_color);
@@ -1125,7 +1133,8 @@ export function useFinanceDataLogic() {
     const { error } = await supabase
       .from('payment_methods')
       .update({ balance: newBalance })
-      .eq('id', paymentMethodId);
+      .eq('id', paymentMethodId)
+      .eq('user_id', user?.id);
 
     if (!error) {
       setPaymentMethods(prev => prev.map(p =>
@@ -2205,7 +2214,8 @@ export function useFinanceDataLogic() {
     const { error } = await supabase
       .from('payment_methods')
       .update(payload)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
 
     if (error) {
       toast({ title: 'Error', description: 'No se pudo actualizar el método de pago', variant: 'destructive' });
@@ -2564,7 +2574,8 @@ export function useFinanceDataLogic() {
     const { error } = await supabase
       .from('categories')
       .update({ saving_goal: goal } as any)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
 
     if (error) {
       toast({ title: 'Error', description: 'No se pudo guardar la meta', variant: 'destructive' });
@@ -2595,6 +2606,7 @@ export function useFinanceDataLogic() {
         color: category.color,
       })
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
 
@@ -2619,7 +2631,8 @@ export function useFinanceDataLogic() {
     const { error } = await supabase
       .from('categories')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user?.id);
 
     if (error) {
       toast({ title: 'Error', description: 'No se pudo eliminar la categoría. Asegúrate de que no tenga transacciones asociadas.', variant: 'destructive' });

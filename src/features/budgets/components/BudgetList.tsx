@@ -20,7 +20,7 @@ interface BudgetListProps {
   categories: CategoryItem[];
 }
 
-export function BudgetList({ budgets, onDelete, onSave, categories }: BudgetListProps) {
+export function BudgetList({ budgets = [], onDelete, onSave, categories }: BudgetListProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -71,7 +71,7 @@ export function BudgetList({ budgets, onDelete, onSave, categories }: BudgetList
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-secondary rounded-lg text-primary">
+                      <div className="p-2 bg-secondary rounded-xl text-primary">
                         <ReceiptText className="h-4 w-4" />
                       </div>
                       <span className="font-bold text-sm">
@@ -96,12 +96,10 @@ export function BudgetList({ budgets, onDelete, onSave, categories }: BudgetList
                         </Button>
                       </AddBudgetDialog>
                       <AccordionTrigger
-                        className="p-0 hover:no-underline"
+                        className="p-0 hover:no-underline w-8 h-8 flex items-center justify-center rounded-full bg-muted/50"
                         onClick={() => trackEvent('view_feature', { feature_name: 'budget_detail', category: categoryName })}
                       >
-                        <div className="h-8 w-8 flex items-center justify-center rounded-full bg-muted/50">
-                          <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                        </div>
+                        {/* Chevron is automatic in AccordionTrigger */}
                       </AccordionTrigger>
                     </div>
                   </div>
@@ -132,7 +130,7 @@ export function BudgetList({ budgets, onDelete, onSave, categories }: BudgetList
                   {transactions && transactions.length > 0 ? (
                     <div className="space-y-2">
                       {transactions.map((t: any) => (
-                        <div key={t.id} className="flex justify-between items-center text-sm bg-background p-2 rounded-md border shadow-sm">
+                        <div key={t.id} className="flex justify-between items-center text-sm bg-background p-2 rounded-xl border shadow-sm">
                           <div className="flex flex-col">
                             <span className="font-medium capitalize">{t.description || 'Sin descripción'}</span>
                             <span className="text-[10px] text-muted-foreground">{new Date(t.date).toLocaleDateString()}</span>

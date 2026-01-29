@@ -57,7 +57,7 @@ export function DangerZone() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-full sm:w-auto text-destructive border-destructive/30 hover:bg-destructive/10 font-medium"
+                                className="w-full sm:w-auto font-medium"
                             >
                                 Borrar transacciones
                             </Button>
@@ -97,7 +97,7 @@ export function DangerZone() {
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button
-                                variant="destructive"
+                                variant="outline"
                                 size="sm"
                                 className="w-full sm:w-auto font-medium"
                             >

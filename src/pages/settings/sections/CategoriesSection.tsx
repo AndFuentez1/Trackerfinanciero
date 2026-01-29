@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tags, Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ import {
 
 export function CategoriesSection() {
     const { categories, addCategory, updateCategory, deleteCategory } = useSettingsCategories();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
@@ -41,11 +44,17 @@ export function CategoriesSection() {
     };
 
     const handleSave = async (category: Omit<CategoryItem, 'id'>, id?: string) => {
+        let result;
         if (id) {
-            await updateCategory(id, category);
+            result = await updateCategory(id, category);
         } else {
-            await addCategory(category);
+            result = await addCategory(category);
         }
+
+        if (!result.error && searchParams.get('section')) {
+            navigate('/');
+        }
+        return result;
     };
 
     const typeLabels: Record<string, string> = {

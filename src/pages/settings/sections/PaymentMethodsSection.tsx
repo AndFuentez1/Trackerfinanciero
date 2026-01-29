@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet } from 'lucide-react';
 import { useSettingsPaymentMethods } from '../hooks/useSettingsPaymentMethods';
@@ -10,6 +11,8 @@ import { PaymentMethodList } from '@/features/payment-methods/components/Payment
 
 export function PaymentMethodsSection() {
     const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } = useSettingsPaymentMethods();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [selectedPM, setSelectedPM] = useState<PaymentMethod | null>(null);
@@ -17,6 +20,22 @@ export function PaymentMethodsSection() {
     const handleEdit = (pm: PaymentMethod) => {
         setSelectedPM(pm);
         setIsEditOpen(true);
+    };
+
+    const handleAddPaymentMethod = async (pm: any) => {
+        const result = await addPaymentMethod(pm);
+        if (!result.error && searchParams.get('section')) {
+            navigate('/');
+        }
+        return result;
+    };
+
+    const handleUpdatePaymentMethod = async (id: string, pm: any) => {
+        const result = await updatePaymentMethod(id, pm);
+        if (!result.error && searchParams.get('section')) {
+            navigate('/');
+        }
+        return result;
     };
 
     return (
@@ -46,7 +65,7 @@ export function PaymentMethodsSection() {
                 <AddPaymentMethodDialog
                     open={isAddOpen}
                     onOpenChange={setIsAddOpen}
-                    onAdd={addPaymentMethod}
+                    onAdd={handleAddPaymentMethod}
                 />
 
                 {selectedPM && (
@@ -54,7 +73,7 @@ export function PaymentMethodsSection() {
                         open={isEditOpen}
                         onOpenChange={setIsEditOpen}
                         paymentMethod={selectedPM}
-                        onSave={updatePaymentMethod}
+                        onSave={handleUpdatePaymentMethod}
                     />
                 )}
             </CardContent>

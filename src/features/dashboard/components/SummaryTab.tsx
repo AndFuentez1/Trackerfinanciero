@@ -380,7 +380,7 @@ export const SummaryTab = memo(function SummaryTab({
               />
             </div>
             <div className="lg:col-span-1 bg-card/50 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-border/50 shadow-md">
-              <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
+              <ExpenseChart transactions={filteredChartTransactions} selectedYears={selectedYears.map(Number)} />
             </div>
           </div>
         </div>

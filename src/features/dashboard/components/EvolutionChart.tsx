@@ -98,15 +98,15 @@ export function EvolutionChart({
     selectedYears.forEach((year, index) => {
       config[`balance_${year}`] = {
         label: `Balance ${year}`,
-        color: COLORS[index % COLORS.length],
+        color: "#9ca3af", // Gray for balance
       };
       config[`income_${year}`] = {
         label: `Ingresos ${year}`,
-        color: "hsl(var(--success))",
+        color: "#10b981", // Emerald green for income
       };
       config[`expense_${year}`] = {
         label: `Gastos ${year}`,
-        color: "hsl(var(--destructive))", // Keep distinct red for expenses
+        color: "#f87171", // Light red for expenses
       };
     });
     return config;
@@ -422,8 +422,10 @@ export function EvolutionChart({
             accessibilityLayer
             data={chartData}
             margin={{
-              left: 12,
+              left: 20,
               right: 12,
+              top: 10,
+              bottom: 0,
             }}
           >
             <CartesianGrid vertical={false} />
@@ -442,7 +444,7 @@ export function EvolutionChart({
               tickFormatter={formatLargeCurrency}
               axisLine={false}
               tickLine={false}
-              width={40}
+              width={60}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
             />
             <ChartTooltip
@@ -461,7 +463,7 @@ export function EvolutionChart({
                     key={`inc-${year}`}
                     dataKey={`income_${year}`}
                     name={`Ingresos ${year}`}
-                    fill="hsl(var(--success))"
+                    fill="#10b981"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                     fillOpacity={opacity * 0.8}
@@ -473,7 +475,7 @@ export function EvolutionChart({
                     key={`exp-${year}`}
                     dataKey={`expense_${year}`}
                     name={`Gastos ${year}`}
-                    fill="hsl(var(--destructive))"
+                    fill="#f87171"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                     fillOpacity={opacity * 0.8}
@@ -486,11 +488,11 @@ export function EvolutionChart({
                     type="monotone"
                     dataKey={`balance_${year}`}
                     name={`Balance ${year}`}
-                    stroke={yearColor}
+                    stroke="#9ca3af"
                     strokeWidth={2}
                     dot={{
                       r: 4,
-                      fill: yearColor,
+                      fill: "#9ca3af",
                       strokeWidth: 2,
                       stroke: "hsl(var(--background))"
                     }}

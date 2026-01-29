@@ -121,8 +121,11 @@ export function useBudgetsData() {
                 return t.category_id === budget.category_id;
             }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+            // Deduplicate transactions by ID
+            const uniqueTransactions = Array.from(new Map(budgetTransactions.map(t => [t.id, t])).values());
+
             // 3. Calculate metrics
-            const spent = budgetTransactions.reduce((sum, t) => sum + t.amount, 0);
+            const spent = uniqueTransactions.reduce((sum, t) => sum + t.amount, 0);
             const remaining = Math.max(0, budget.amount - spent);
             const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
 
@@ -138,7 +141,7 @@ export function useBudgetsData() {
                 remaining,
                 percentage,
                 status,
-                transactions: budgetTransactions
+                transactions: uniqueTransactions
             });
         });
 

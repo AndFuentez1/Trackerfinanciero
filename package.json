@@ -11,8 +11,8 @@
     "lint": "eslint .",
     "preview": "npx vite preview",
     "postinstall": "echo postinstall script skipped",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "predeploy": "npm run build && echo > dist_deploy/.nojekyll && copy dist_deploy\\index.html dist_deploy\\404.html",
+    "deploy": "gh-pages -d dist_deploy --dotfiles"
   },
   "engines": {
     "node": "24.x"

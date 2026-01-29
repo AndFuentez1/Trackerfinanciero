@@ -678,7 +678,7 @@ export default function LoansPage() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="default"
-                                                                className="gap-2 shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white min-w-[140px] flex items-center justify-center"
+                                                                className="gap-2 shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white min-w-[140px] flex items-center justify-center hover:border-primary hover:bg-primary hover:text-primary-foreground"
                                                                 onClick={() => handleDeleteClick(loan.id)}
                                                             >
                                                                 Eliminar <Trash2 className="h-4 w-4" />
@@ -697,7 +697,7 @@ export default function LoansPage() {
                                                                 <Button
                                                                     size="sm"
                                                                     variant="default"
-                                                                    className="gap-2 shadow-sm border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                                                                    className="gap-2 shadow-sm border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:border-primary hover:bg-primary hover:text-primary-foreground"
                                                                     onClick={() => handleOpenPayment(loan)}
                                                                 >
                                                                     <span className="hidden sm:flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>

@@ -7,12 +7,34 @@ import { DangerZone } from './settings/sections/DangerZone';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
-import { Settings2, Github, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings2, Github, Heart, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 
 export default function ConfiguracionPage() {
     const { loading } = useFinanceData();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const section = searchParams.get('section');
+
+    useEffect(() => {
+        if (section) {
+            const element = document.getElementById(section);
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('ring-2', 'ring-primary', 'ring-offset-8', 'rounded-2xl', 'transition-all', 'duration-1000');
+                    setTimeout(() => {
+                        element.classList.remove('ring-2', 'ring-primary', 'ring-offset-8');
+                    }, 3000);
+                }, 100);
+            }
+        }
+    }, [section]);
 
     if (loading) {
         return <SkeletonLoader tab="config" fullPage withLayoutWrapper />;
@@ -33,8 +55,12 @@ export default function ConfiguracionPage() {
                         <ThemeSection />
                         <CurrencySection />
                         <div className="flex flex-col gap-10">
-                            <CategoriesSection />
-                            <PaymentMethodsSection />
+                            <div id="categories" className="scroll-mt-20">
+                                <CategoriesSection />
+                            </div>
+                            <div id="payment-methods" className="scroll-mt-20">
+                                <PaymentMethodsSection />
+                            </div>
                         </div>
                     </section>
 
@@ -46,7 +72,7 @@ export default function ConfiguracionPage() {
                     </section>
 
                     {/* Information Card - Moved to bottom */}
-                    <Card className="rounded-2xl border-[color-primary]/10 bg-gradient-to-br from-[color-primary]/5 to-transparent overflow-hidden border-[color-border]/50 shadow-sm">
+                    <Card className="rounded-2xl shadow-sm border-destructive/20 bg-destructive/5 overflow-hidden">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Información</CardTitle>
                         </CardHeader>

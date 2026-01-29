@@ -208,7 +208,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
               </>
             )}
 
-            <ChartLegend cursor={true} content={<ChartLegendContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
           </ComposedChart>
         </ChartContainer>
       </CardContent>

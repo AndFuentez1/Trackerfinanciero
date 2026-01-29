@@ -1,19 +1,19 @@
 import { useMemo } from 'react';
-import { Cell, Pie, PieChart } from 'recharts';
-import { CategoryItem } from '@/hooks/useFinanceData';
+import { Bar, Line, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Transaction } from '@/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/line-charts-1';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge-2';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ExpenseChartProps {
-  data: { category: string; category_id?: string | null; amount: number }[];
-  categories: CategoryItem[]
+  transactions: Transaction[];
+  selectedYears: number[];
 }
 
-export function ExpenseChart({ data, categories }: ExpenseChartProps) {
+export function ExpenseChart({ transactions = [], selectedYears = [] }: ExpenseChartProps) {
   const decimalPlaces = useDecimalPlaces();
   const { currency } = useFinance();
 
@@ -24,50 +24,44 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
 
   const symbol = getCurrencySymbol(currency || 'COP');
 
-  const { chartData, chartConfig } = useMemo(() => {
-    if (data.length === 0) return { chartData: [], chartConfig: {} };
+  const chartData = useMemo(() => {
+    if (transactions.length === 0) return [];
 
-    // Sort by amount descending
-    const sortedData = [...data].sort((a, b) => b.amount - a.amount);
-    let finalData = [];
+    // Filter transactions by selected years
+    const filteredTransactions = selectedYears.length > 0
+      ? transactions.filter(t => {
+        const year = new Date(t.date).getFullYear();
+        return selectedYears.includes(year);
+      })
+      : transactions;
 
-    if (sortedData.length <= 5) {
-      finalData = sortedData.map(item => ({
-        name: item.category,
-        value: item.amount,
-        color: categories.find(c => c.id === item.category_id || c.name === item.category)?.color || '#94a3b8'
-      }));
-    } else {
-      const top5 = sortedData.slice(0, 5);
-      const others = sortedData.slice(5).reduce((sum, item) => sum + item.amount, 0);
+    // Aggregate by month (Jan-Dec) across all selected years
+    const monthlyData: Record<string, { income: number; expenses: number }> = {};
 
-      finalData = top5.map(item => ({
-        name: item.category,
-        value: item.amount,
-        color: categories.find(c => c.id === item.category_id || c.name === item.category)?.color || '#94a3b8'
-      }));
+    filteredTransactions.forEach(transaction => {
+      const date = parseISO(transaction.date);
+      const monthKey = format(date, 'MMM', { locale: es }); // "Ene", "Feb", etc.
 
-      finalData.push({
-        name: 'Otros',
-        value: others,
-        color: '#cbd5e1' // slate-300 for others
-      });
-    }
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { income: 0, expenses: 0 };
+      }
 
-    const config: ChartConfig = {};
-    finalData.forEach((item, index) => {
-      const key = item.name.replace(/\s+/g, '_').toLowerCase();
-      // We map the loop data to expected recharts keys if needed or just use name as key
-      config[item.name] = {
-        label: item.name,
-        color: item.color,
-      };
+      if (transaction.type === 'income') {
+        monthlyData[monthKey].income += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        monthlyData[monthKey].expenses += transaction.amount;
+      }
     });
 
-    return { chartData: finalData, chartConfig: config };
-  }, [data, categories]);
-
-  const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
+    // Convert to array and ensure all 12 months exist
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return months.map(month => ({
+      month,
+      income: monthlyData[month]?.income || 0,
+      expenses: monthlyData[month]?.expenses || 0,
+      balance: (monthlyData[month]?.income || 0) - (monthlyData[month]?.expenses || 0),
+    }));
+  }, [transactions, selectedYears]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -79,11 +73,10 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
     }).format(value).replace('COP', symbol).trim();
   };
 
-
-  if (data.length === 0) {
+  if (transactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground p-6 border border-dashed border-border/50 rounded-xl bg-muted/5">
-        <p className="text-sm font-medium">No hay gastos registrados para este periodo.</p>
+        <p className="text-sm font-medium">No hay transacciones registradas para este periodo.</p>
       </div>
     );
   }
@@ -91,54 +84,89 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   return (
     <div className="flex flex-col h-full w-full">
       <div className="mb-4">
-        <h3 className="text-base font-semibold text-foreground">Distribución de Gastos</h3>
-        <p className="text-sm text-muted-foreground">Top categorías del periodo</p>
+        <h3 className="text-base font-semibold text-foreground">Ingresos vs Gastos</h3>
+        <p className="text-sm text-muted-foreground">
+          {selectedYears.length > 0
+            ? `Agregado por mes (${selectedYears.join(', ')})`
+            : 'Agregado por mes (todos los años)'}
+        </p>
       </div>
 
-      <ChartContainer
-        config={chartConfig}
-        className="mx-auto aspect-square max-h-[300px] w-full"
-      >
-        <PieChart>
-          <ChartTooltip
-            cursor={false}
-            content={<ChartTooltipContent hideLabel nameKey="name" formatter={(value, name) => [formatCurrency(Number(value)), name]} />}
+      <ResponsiveContainer width="100%" height={350}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+          <XAxis
+            dataKey="month"
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
           />
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={65}
-            outerRadius={95}
-            paddingAngle={2}
-            strokeWidth={0}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-        </PieChart>
-      </ChartContainer>
-
-      <div className="mt-6 space-y-3">
-        {chartData.map((item, index) => {
-          const percentage = ((item.value / total) * 100).toFixed(1);
-          return (
-            <div key={index} className="flex items-center justify-between text-sm group">
-              <div className="flex items-center gap-2.5">
-                <span className="flex size-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold tabular-nums text-foreground">{formatCurrency(item.value)}</span>
-                <Badge variant="secondary" className="w-[52px] justify-center text-[10px] h-5 px-0 font-bold bg-muted text-muted-foreground border-transparent">
-                  {percentage}%
-                </Badge>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+          <YAxis
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => {
+              if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+              if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+              return value.toString();
+            }}
+          />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload || payload.length === 0) return null;
+              return (
+                <div className="rounded-lg border bg-background p-3 shadow-lg">
+                  <p className="text-sm font-semibold mb-2">{payload[0].payload.month}</p>
+                  {payload.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between gap-4 text-xs">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        {entry.name}:
+                      </span>
+                      <span className="font-semibold tabular-nums">
+                        {formatCurrency(Number(entry.value))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            }}
+          />
+          <Legend
+            wrapperStyle={{ paddingTop: '20px' }}
+            iconType="circle"
+            formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
+          />
+          <Bar
+            dataKey="income"
+            name="Ingresos"
+            fill="#10b981"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={40}
+          />
+          <Bar
+            dataKey="expenses"
+            name="Gastos"
+            fill="#f87171"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={40}
+          />
+          <Line
+            type="monotone"
+            dataKey="balance"
+            name="Balance"
+            stroke="#9ca3af"
+            strokeWidth={2}
+            dot={{ fill: '#9ca3af', r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   );
 }

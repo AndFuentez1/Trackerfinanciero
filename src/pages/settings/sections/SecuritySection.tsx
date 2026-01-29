@@ -10,7 +10,7 @@ export function SecuritySection() {
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-destructive/20 bg-destructive/5 overflow-hidden">
             <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-xl font-bold">
                     <Shield className="h-5 w-5 text-primary" />
@@ -50,10 +50,10 @@ export function SecuritySection() {
                         </div>
                     </div>
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => signOut()}
-                        className="w-full sm:w-auto text-destructive hover:bg-destructive/10 hover:text-destructive font-medium"
+                        className="w-full sm:w-auto font-medium"
                     >
                         Cerrar sesión ahora
                     </Button>

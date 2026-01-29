@@ -1,5 +1,6 @@
 import { useLoans as useLoansContext } from '@/contexts/LoansContext';
 import { Loan, LoanRow } from './financeTypes';
+export type { Loan, LoanRow };
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceData } from './useFinanceData';

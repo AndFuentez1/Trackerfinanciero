@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { InsightsPanel } from "@/features/dashboard/components/InsightsPanel";
 
-import { BudgetTotalCard } from "@/features/budgets/components/BudgetTotalCard";
+
 import { CategoryBudgetList } from "@/features/budgets/components/CategoryBudgetList";
 import { BudgetList } from "@/features/budgets/components/BudgetList";
 import { IncomeCard } from "@/features/budgets/components/IncomeCard";
@@ -39,7 +39,7 @@ export default function BudgetsPage() {
 
     const { user, loading: authLoading } = useAuth();
     const {
-        totalBudget,
+
         budgets,
         loading: budgetsLoading,
         refreshBudgets,
@@ -91,14 +91,9 @@ export default function BudgetsPage() {
                     }
                 />
 
-                {/* Top Section: Budget Cards (Side by Side on desktop) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    <div className="flex h-full flex-col space-y-4">
-                        <BudgetTotalCard budgets={budgets} />
-                    </div>
-                    <div className="flex h-full flex-col space-y-4">
-                        <IncomeCard />
-                    </div>
+                {/* Top Section: Income Card */}
+                <div className="w-full">
+                    <IncomeCard />
                 </div>
 
                 <Separator className="my-6" />

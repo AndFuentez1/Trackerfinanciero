@@ -53,7 +53,7 @@ export const Sidebar = memo(function Sidebar() {
                     <Wallet className="w-7 h-7 text-primary-foreground" />
                 </div>
                 <div>
-                    <h1 className="font-display font-bold text-2xl leading-none tracking-tight">FinTrack</h1>
+                    <h1 className="font-display font-bold text-2xl leading-none tracking-tight">Trackfinance</h1>
                     <p className="text-sm text-muted-foreground mt-1.5 font-medium">Minimalist Finance</p>
                 </div>
             </div>

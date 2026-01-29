@@ -8,18 +8,20 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-  hmr: {
-    overlay: false,
+    hmr: {
+      overlay: false,
+    },
   },
-},
-plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-base: '/Trackerfinanciero/',
+  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  base: '/Trackerfinanciero/',
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
+    outDir: 'dist_deploy',
+    emptyOutDir: false,
     chunkSizeWarningLimit: 1800,
     rollupOptions: {
       output: {

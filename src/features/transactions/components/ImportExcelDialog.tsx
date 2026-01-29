@@ -619,32 +619,67 @@ export function ImportExcelDialog({
           finalCategoryId = catMap.get('rendimientos') || undefined;
         }
 
-        // --- CATEGORY RESOLUTION & DYNAMIC CREATION ---
+        // --- CATEGORY RESOLUTION & DYNAMIC CREATION (WITH DOS PROTECTION) ---
         if (!finalCategoryId) {
           let categoryId = catMap.get(finalCategory.toLowerCase());
           if (!categoryId) {
-            // Create new category
-            const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
-            const catType = finalType;
+            // SECURITY: Limit new category creation to prevent DoS
+            const MAX_NEW_CATEGORIES_PER_IMPORT = 10;
+            const newCategoriesCreated = Array.from(catMap.values()).length - (currentCategories?.length || 0);
 
-            const { data: newCat, error: catErr } = await supabase
-              .from('categories')
-              .insert({
-                user_id: user.id,
-                name: finalCategory,
-                type: catType as any,
-                color: colorToUse
-              })
-              .select()
-              .single();
+            if (newCategoriesCreated >= MAX_NEW_CATEGORIES_PER_IMPORT) {
+              // Fallback to "Por Clasificar" category to prevent abuse
+              const fallbackCategoryName = 'Por Clasificar';
+              let fallbackCategoryId = catMap.get(fallbackCategoryName.toLowerCase());
 
-            if (catErr) {
+              if (!fallbackCategoryId) {
+                // Create the fallback category if it doesn't exist
+                const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
+                const { data: fallbackCat, error: fallbackErr } = await supabase
+                  .from('categories')
+                  .insert({
+                    user_id: user.id,
+                    name: fallbackCategoryName,
+                    type: 'expense',
+                    color: colorToUse
+                  })
+                  .select()
+                  .single();
 
-              errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
-              continue;
+                if (!fallbackErr && fallbackCat) {
+                  fallbackCategoryId = fallbackCat.id;
+                  catMap.set(fallbackCategoryName.toLowerCase(), fallbackCategoryId);
+                }
+              }
+
+              categoryId = fallbackCategoryId || undefined;
+
+              // Log warning for user awareness
+              errors.push(`Fila ${i + 1}: Límite de categorías alcanzado. Asignada a "Por Clasificar"`);
+            } else {
+              // Create new category (within limit)
+              const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
+              const catType = finalType;
+
+              const { data: newCat, error: catErr } = await supabase
+                .from('categories')
+                .insert({
+                  user_id: user.id,
+                  name: finalCategory,
+                  type: catType as any,
+                  color: colorToUse
+                })
+                .select()
+                .single();
+
+              if (catErr) {
+
+                errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
+                continue;
+              }
+              categoryId = newCat.id;
+              catMap.set(finalCategory.toLowerCase(), categoryId);
             }
-            categoryId = newCat.id;
-            catMap.set(finalCategory.toLowerCase(), categoryId);
           }
           finalCategoryId = categoryId || undefined;
         }
