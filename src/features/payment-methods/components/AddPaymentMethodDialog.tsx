@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
@@ -110,6 +111,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
     setIsSubmitting(false);
 
     if (!result.error && result.data) {
+      trackEvent('payment_method_added', {
+        type,
+        color_preset: color
+      });
+      trackEvent('onboarding_step_completed', {
+        step_name: 'payment_method_added'
+      });
       onSuccess?.(result.data);
       // Reset form
       setName('');

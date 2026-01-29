@@ -9,8 +9,14 @@ import { CashFlowTimeline } from "@/features/cashflow/components/CashFlowTimelin
 import { Wallet, BarChart3 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
+import { trackFeatureView } from '@/lib/analytics';
 
 export default function CashFlow() {
+  useEffect(() => {
+    trackFeatureView('CashFlow');
+  }, []);
+
   // Filtros de año/mes/rango
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [month, setMonth] = useState<number | 'all'>('all');
@@ -112,7 +118,8 @@ export default function CashFlow() {
                             {/* INGRESOS */}
                             <div>
                               <div className="font-semibold mb-1 text-success">Ingresos</div>
-                              <div><span className="font-semibold">Salario:</span> {formatCOP(row.ingresosSalario)}</div>
+                              <div><span className="font-semibold">Salario (Pendiente):</span> {formatCOP(row.ingresosSalario)}</div>
+                              <div><span className="font-semibold">Ingresos Reales:</span> {formatCOP(row.ingresosReales)}</div>
                               <div><span className="font-semibold">Intereses Ahorro:</span> {formatCOP(row.interesesAhorro)}</div>
                               <div><span className="font-semibold">Préstamos que me deben:</span> {formatCOP(row.ingresosPrestamos)}</div>
                             </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics'; // Analytics Import
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -357,6 +358,18 @@ export function AddTransactionDialog({
           title: 'Éxito',
           description: 'Transacción agregada correctamente.',
         });
+
+        // Analytics
+        trackEvent('transaction_created', {
+          type: transactionData.type,
+          amount: transactionData.amount,
+          category: transactionData.category,
+          source_type: 'manual',
+          installments: transactionData.installments,
+          has_installments: (transactionData.installments || 1) > 1
+        });
+        trackEvent('onboarding_step_completed', { step_name: 'transaction_created' });
+
         reset({
           type: 'expense',
           category: availableCategories[0]?.label || '',

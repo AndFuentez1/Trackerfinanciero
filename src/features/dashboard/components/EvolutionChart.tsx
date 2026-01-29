@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { cn } from '@/lib/utils';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { useFinance } from '@/contexts/FinanceContext';
-import { CURRENCIES } from '@/hooks/currencyConstants';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Filter, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,16 +17,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { format, parseISO, isSameMonth, subMonths, isAfter, isBefore } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const COLORS = [
-  '#0ea5e9', // sky-500 (Primary-ish blue)
-  '#8b5cf6', // violet-500
-  '#f59e0b', // amber-500
-  '#10b981', // emerald-500
-  '#ec4899', // pink-500
-  '#f43f5e', // rose-500
+  'hsl(var(--primary))',
+  'hsl(var(--secondary))',
+  'hsl(var(--accent))',
+  'hsl(var(--destructive))',
+  'hsl(var(--success))',
+  'hsl(var(--info))',
 ];
 
 interface Transaction {
@@ -89,6 +91,26 @@ export function EvolutionChart({
     setInternalYears(normalized);
     onSelectedYearsChange?.(normalized);
   };
+
+  // --- Dynamic Chart Config ---
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    selectedYears.forEach((year, index) => {
+      config[`balance_${year}`] = {
+        label: `Balance ${year}`,
+        color: COLORS[index % COLORS.length],
+      };
+      config[`income_${year}`] = {
+        label: `Ingresos ${year}`,
+        color: "hsl(var(--success))",
+      };
+      config[`expense_${year}`] = {
+        label: `Gastos ${year}`,
+        color: "hsl(var(--destructive))", // Keep distinct red for expenses
+      };
+    });
+    return config;
+  }, [selectedYears]);
 
   const availableMonths = useMemo(() => ([
     { value: 'all', label: 'Todo el año' },
@@ -313,154 +335,137 @@ export function EvolutionChart({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Evolución Histórica</h3>
-          <p className="text-sm text-muted-foreground">Comportamiento de ingresos, gastos y balance neto</p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Toggles */}
-          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2">
-            <Button
-              variant={showIncome ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-xs gap-1.5", showIncome && "bg-emerald-100 text-emerald-700 hover:bg-emerald-200")}
-            >
-              {showIncome && <Check className="h-3 w-3" />} Ingresos
-            </Button>
-            <Button
-              variant={showExpense ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-xs gap-1.5", showExpense && "bg-rose-100 text-rose-700 hover:bg-rose-200")}
-            >
-              {showExpense && <Check className="h-3 w-3" />} Gastos
-            </Button>
-            <Button
-              variant={showBalance ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-xs gap-1.5", showBalance && "bg-primary/15 text-primary hover:bg-primary/25")}
-            >
-              {showBalance && <Check className="h-3 w-3" />} Balance
-            </Button>
+    <Card className="shadow-sm border-border bg-card/50 backdrop-blur-sm">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg font-semibold text-foreground">Evolución Histórica</CardTitle>
+            <CardDescription>Comportamiento de ingresos, gastos y balance neto</CardDescription>
           </div>
 
-          {/* Month/Year Selectors (Existing Logic) */}
-          <Select value={selectedMonth} onValueChange={setMonth}>
-            <SelectTrigger className="w-[130px] h-9 bg-background/50 border-input"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {availableMonths.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1 bg-background/50 border-input">
-                {selectedYears.length > 1 ? 'Años' : selectedYears[0]} <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Años visibles</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={selectedYears.length === years.length}
-                onCheckedChange={() => onSelectAllYears ? onSelectAllYears() : setYears([...years])}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Toggles */}
+            <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2">
+              <Button
+                variant={showIncome ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowIncome(!showIncome)}
+                className={cn("h-7 text-xs gap-1.5", showIncome && "bg-emerald-100 text-emerald-700 hover:bg-emerald-200")}
               >
-                Ver todos
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {years.map(y => (
-                <DropdownMenuCheckboxItem
-                  key={y}
-                  checked={selectedYears.includes(y)}
-                  onCheckedChange={() => {
-                    const newSet = selectedYears.includes(y) ? selectedYears.filter(x => x !== y) : [...selectedYears, y];
-                    setYears(newSet);
-                  }}
-                >
-                  {y}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                {showIncome && <Check className="h-3 w-3" />} Ingresos
+              </Button>
+              <Button
+                variant={showExpense ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowExpense(!showExpense)}
+                className={cn("h-7 text-xs gap-1.5", showExpense && "bg-rose-100 text-rose-700 hover:bg-rose-200")}
+              >
+                {showExpense && <Check className="h-3 w-3" />} Gastos
+              </Button>
+              <Button
+                variant={showBalance ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowBalance(!showBalance)}
+                className={cn("h-7 text-xs gap-1.5", showBalance && "bg-primary/15 text-primary hover:bg-primary/25")}
+              >
+                {showBalance && <Check className="h-3 w-3" />} Balance
+              </Button>
+            </div>
 
-      {/* Chart */}
-      <div className="w-full h-[420px] px-0.5 md:px-1.5 mt-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 30, right: 40, left: 30, bottom: 20 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--color-border))" opacity={0.4} />
+            {/* Month/Year Selectors (Existing Logic) */}
+            <Select value={selectedMonth} onValueChange={setMonth}>
+              <SelectTrigger className="w-[130px] h-9 bg-background/50 border-input"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {availableMonths.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1 bg-background/50 border-input">
+                  {selectedYears.length > 1 ? 'Años' : selectedYears[0]} <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Años visibles</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={selectedYears.length === years.length}
+                  onCheckedChange={() => onSelectAllYears ? onSelectAllYears() : setYears([...years])}
+                >
+                  Ver todos
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                {years.map(y => (
+                  <DropdownMenuCheckboxItem
+                    key={y}
+                    checked={selectedYears.includes(y)}
+                    onCheckedChange={() => {
+                      const newSet = selectedYears.includes(y) ? selectedYears.filter(x => x !== y) : [...selectedYears, y];
+                      setYears(newSet);
+                    }}
+                  >
+                    {y}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+
+      </CardHeader>
+
+      <CardContent className="p-4 pt-2">
+        <ChartContainer config={chartConfig} className="h-[420px] w-full">
+          <ComposedChart
+            accessibilityLayer
+            data={chartData}
+            margin={{
+              left: 12,
+              right: 12,
+            }}
+          >
+            <CartesianGrid vertical={false} />
             <XAxis
               dataKey="name"
-              axisLine={false}
               tickLine={false}
-              height={20}
-              tick={{ fontSize: 12, fill: 'hsl(var(--color-muted-foreground))' }}
-              tickFormatter={(name) => {
-                // Si el campo es 'MM/YYYY' o 'MM', solo mostrar el mes
-                let monthNum = name;
-                if (typeof name === 'string' && name.includes('/')) {
-                  monthNum = name.split('/')[0];
-                }
-                // Elimina cualquier año del label
-                return isNaN(Number(monthNum)) ? name : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][Number(monthNum) - 1] || name;
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => {
+                // Formatting logic (simplified)
+                if (typeof value === 'string' && value.includes('/')) return value.split('/')[0];
+                return value;
               }}
             />
             <YAxis
               tickFormatter={formatLargeCurrency}
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--color-muted-foreground))' }}
+              width={40}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
             />
-            <Tooltip
-              cursor={{ fill: 'hsl(var(--color-muted)/0.2)' }}
-              contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--color-border))', background: 'hsl(var(--popover))', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-              labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '8px' }}
-              formatter={(value: number, name: string) => [formatCurrency(value), name]}
-            />
-            <Legend
-              iconType="circle"
-              wrapperStyle={{ paddingTop: '36px', display: 'flex', justifyContent: 'space-evenly', width: '100%', flexWrap: 'wrap', columnGap: 140 }}
-              layout="horizontal"
-              align="center"
-              verticalAlign="bottom"
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="dot" />}
             />
 
             {selectedYears.flatMap((year, i) => {
-              // Opacity logic if multiple years
               const isCurrent = year === String(currentYear);
               const opacity = selectedYears.length > 1 && !isCurrent ? 0.6 : 1;
               const yearColor = COLORS[i % COLORS.length];
 
               return [
-                showBalance && (
-                  <Line
-                    key={`bal-${year}`}
-                    type="monotone"
-                    dataKey={`balance_${year}`}
-                    name={`Balance ${year}`}
-                    stroke={yearColor}
-                    strokeWidth={3}
-                    dot={false}
-                    strokeOpacity={opacity}
-                    activeDot={{ r: 6, strokeWidth: 0, fill: yearColor }}
-                  />
-                ),
                 showIncome && (
                   <Bar
                     key={`inc-${year}`}
                     dataKey={`income_${year}`}
                     name={`Ingresos ${year}`}
-                    fill="#10b981"
+                    fill="hsl(var(--success))"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                     fillOpacity={opacity * 0.8}
+                    stackId={selectedYears.length > 1 ? undefined : "stack"}
                   />
                 ),
                 showExpense && (
@@ -468,17 +473,39 @@ export function EvolutionChart({
                     key={`exp-${year}`}
                     dataKey={`expense_${year}`}
                     name={`Gastos ${year}`}
-                    fill="#ef4444"
+                    fill="hsl(var(--destructive))"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
-                    fillOpacity={opacity * 0.7}
+                    fillOpacity={opacity * 0.8}
+                    stackId={selectedYears.length > 1 ? undefined : "stack"}
                   />
-                )
+                ),
+                showBalance && (
+                  <Line
+                    key={`bal-${year}`}
+                    type="monotone"
+                    dataKey={`balance_${year}`}
+                    name={`Balance ${year}`}
+                    stroke={yearColor}
+                    strokeWidth={2}
+                    dot={{
+                      r: 4,
+                      fill: yearColor,
+                      strokeWidth: 2,
+                      stroke: "hsl(var(--background))"
+                    }}
+                    activeDot={{
+                      r: 6,
+                    }}
+                    strokeOpacity={opacity}
+                  />
+                ),
               ];
             })}
+            <ChartLegend content={<ChartLegendContent />} />
           </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+        </ChartContainer>
+      </CardContent>
+    </Card >
   );
 }

@@ -104,7 +104,7 @@ export default function Index() {
   );
 
   const showWelcomePanel = useMemo(
-    () => !welcomeCompleted && isEmptyState,
+    () => welcomeCompleted === false && isEmptyState,
     [welcomeCompleted, isEmptyState]
   );
 

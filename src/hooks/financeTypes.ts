@@ -56,6 +56,7 @@ export interface Budget {
     period?: 'monthly';
     created_at?: string;
     updated_at?: string;
+    transactions?: Transaction[];
 }
 
 export interface Insight {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
@@ -168,6 +169,13 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       });
 
       if (!isUpdate) {
+        trackEvent('budget_created', {
+          category: values.category,
+          amount: values.amount
+        });
+        trackEvent('onboarding_step_completed', {
+          step_name: 'budget_created'
+        });
         reset();
       }
       setOpen(false);

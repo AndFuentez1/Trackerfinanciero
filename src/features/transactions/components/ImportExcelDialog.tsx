@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { Transaction, TransactionType, PaymentMethod, MASTER_PALETTE } from '@/hooks/useFinanceData';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -815,6 +816,18 @@ export function ImportExcelDialog({
         toast({
           title: '✅ Importación exitosa',
           description: `Se importaron ${successCount} transacciones correctamente.`
+        });
+
+        trackEvent('excel_import_completed', {
+          transaction_count: successCount,
+          source_type: 'excel_import',
+        });
+
+        // Track as bulk transaction creation for volume analysis
+        trackEvent('transaction_created', {
+          source_type: 'excel_import',
+          bulk_count: successCount,
+          batch_id: `batch_${Date.now()}`
         });
       }
 

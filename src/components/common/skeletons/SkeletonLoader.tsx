@@ -93,14 +93,14 @@ const PageHeaderSkeleton = ({ label }: { label?: string }) => (
 
 const SidebarSkeleton = () => (
     <div
-        className="hidden lg:flex flex-col border-r h-screen p-6 fixed top-0 left-0 bottom-0 z-0 pt-12"
+        className="hidden lg:flex flex-col border-r h-screen p-6 fixed top-0 left-0 bottom-0 z-0"
         style={{
             width: '18rem', // w-72 (18rem)
             backgroundColor: 'hsl(var(--container))',
             borderRight: '1px solid var(--color-border)',
         }}
     >
-        <div className="flex items-center gap-4 mb-10 px-3 mt-1">
+        <div className="flex items-center gap-4 mb-10 px-3 pt-8">
             <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
             <div className="flex flex-col gap-2">
                 <PulseBlock height="1.75rem" width="100px" />

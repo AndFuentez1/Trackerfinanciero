@@ -1,13 +1,15 @@
 
-import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { formatLocalDate } from '@/lib/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { FinanceContext } from '@/contexts/FinanceContextInstance';
+import { useDebugInfo } from './useDebugInfo';
 import { CURRENCIES } from './currencyConstants';
 import type { Database } from '@/integrations/supabase/types';
+import { setUserProperties, trackEvent } from '@/lib/analytics';
 
 import {
   TransactionType, PaymentMethodType, CategoryItem, Transaction,
@@ -477,6 +479,20 @@ export function useFinanceDataLogic() {
 
   const { user } = useAuth();
   const { toast } = useToast();
+
+
+
+  // --- QA AUDIT FIX: Race Conditions & Memory Leaks ---
+  const isMounted = useRef(true);
+  const fetchIdRef = useRef(0);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // All transactions (no filters) for aggregate stats
   const [rangeTransactions, setRangeTransactions] = useState<Transaction[]>([]);
@@ -494,7 +510,8 @@ export function useFinanceDataLogic() {
   const [hasMore, setHasMore] = useState(true);
   const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
   const [hasPendingImport, setHasPendingImport] = useState(false);
-  const [welcomeCompleted, setWelcomeCompleted] = useState(false);
+  // Tri-state boolean: null = loading/unknown, false = show welcome, true = done
+  const [welcomeCompleted, setWelcomeCompleted] = useState<boolean | null>(null);
   const [highlightedCard, setHighlightedCard] = useState<'categories' | 'payment-methods' | null>(null);
   const [importProgress, setImportProgress] = useState<{
     status: 'idle' | 'loading' | 'completed' | 'failed' | 'cancelled';
@@ -528,6 +545,9 @@ export function useFinanceDataLogic() {
   }>({ column: 'date', ascending: false });
   const queryClient = useQueryClient();
 
+  // --- SURVIVAL LOGGING: Tracker Hook ---
+  useDebugInfo('useFinanceDataLogic', { userId: user?.id, loading, lastUpdated });
+
   // Compute theme variables based on base color
   useEffect(() => {
     const theme = calculateProportionalTheme(baseColor);
@@ -535,7 +555,78 @@ export function useFinanceDataLogic() {
     localStorage.setItem('theme-base-color', baseColor);
   }, [baseColor]);
 
-  const PAGE_SIZE = 50000;
+  // --- ANALYTICS: User Profile & Health Checks ---
+  useEffect(() => {
+    if (loading || !user || transactions.length === 0) return;
+
+    // 1. Savings Goals
+    const hasSavingsGoal = paymentMethods.some(pm => pm.type === 'savings' && (pm.savings_goal || 0) > 0);
+
+    // 2. Installments User
+    const hasInstallments = transactions.some(t => (t.installments || 1) > 1);
+
+    // 3. Net Flow Status (Last 30 days)
+    const now = new Date();
+    const last30Days = new Date(now.setDate(now.getDate() - 30));
+    const recentTxns = transactions.filter(t => new Date(t.date) >= last30Days);
+    const income = recentTxns.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = recentTxns.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const netFlowStatus = income > expense ? 'positive' : (income === expense ? 'neutral' : 'negative');
+
+    // 4. Financial Health Cohort (Savings Rate)
+    // Simple heuristic: if income > 0, savings rate = (income - expense) / income
+    // If negative savings, 'Spender'. If > 20%, 'Saver'. Else 'Balanced'.
+    let cohort = 'Unknown';
+    if (income > 0) {
+      const savingsRate = (income - expense) / income;
+      if (savingsRate < 0) cohort = 'Spender';
+      else if (savingsRate > 0.2) cohort = 'Saver';
+      else cohort = 'Balanced';
+    }
+
+    // Set Properties
+    setUserProperties({
+      has_savings_goal: hasSavingsGoal,
+      has_installments_usage: hasInstallments,
+      net_flow_status: netFlowStatus,
+      financial_health_cohort: cohort,
+      payment_methods_count: paymentMethods.length,
+      budgets_count: budgets.length
+    });
+
+    // 5. Budget Burn Check
+    budgets.forEach(b => {
+      // Calculate spent for this budget in current month (Assuming budget.spent is populated from backend or we calc it)
+      // Note: backend 'budgets' table usually doesn't have 'spent'. 'useBudgetsData' does.
+      // But here we are in 'useFinanceData'. We don't have 'spent' pre-calculated in strict 'Budget' type from DB.
+      // We need to calculate it or rely on 'useBudgetsData' which calls this hook.
+      // BUT 'useFinanceData' is the source. 
+      // Let's do a quick local calc for analytics purposes if possible, or skip if too complex.
+      // Given we have 'transactions' loaded (limit 3000), we can check.
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+      const categoryTxns = transactions.filter(t => t.category_id === b.category_id && t.date >= startOfMonth && t.type === 'expense');
+      const spent = categoryTxns.reduce((sum, t) => sum + t.amount, 0);
+
+      if (b.amount > 0) {
+        const burnRate = spent / b.amount;
+        if (burnRate >= 0.8) {
+          trackEvent('budget_burn_check', {
+            budget_category: b.category,
+            burn_percentage: Math.round(burnRate * 100),
+            burn_status: burnRate >= 1 ? 'overspent' : 'critical'
+          });
+        }
+      }
+    });
+
+  }, [loading, user, transactions, paymentMethods, budgets]);
+
+  // --- QA AUDIT FIX: Race Conditions & Memory Leaks ---
+  /* 
+     OPTIMIZATION: Reduced PAGE_SIZE to 50 for list virtualization. 
+     Initial fetch limited to 3000 to prevent "death spiral".
+  */
+  const PAGE_SIZE = 50;
 
   const resetProfileData = async () => {
     if (!user) return { error: 'No autenticado' };
@@ -600,7 +691,6 @@ export function useFinanceDataLogic() {
       return { error: null };
     } catch (err) {
       // Error resetting data
-
       toast({ title: 'Error', description: 'Ocurrió un error al resetear los datos.', variant: 'destructive' });
       return { error: err };
     } finally {
@@ -699,7 +789,7 @@ export function useFinanceDataLogic() {
     }
 
     return { data: mappedPaginated, total: paginatedRes.count || 0 };
-  }, [user, dateFilter, sortConfig, toast]); // Removed transactions.length dependency
+  }, [user, transactions.length, dateFilter, sortConfig, toast]); // Re-added transactions.length dependency but careful with loops
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loading) return;
@@ -709,6 +799,7 @@ export function useFinanceDataLogic() {
 
   // Re-fetch when sort configuration changes to ensure ordering uses full dataset
   useEffect(() => {
+    // Debounce this slightly to avoid double-fetch on mount if not handled
     fetchTransactions(false);
   }, [fetchTransactions]);
 
@@ -730,13 +821,21 @@ export function useFinanceDataLogic() {
 
     setLoading(true);
 
-
+    const currentFetchId = ++fetchIdRef.current;
     setLastUpdated(new Date());
+    const startTime = performance.now();
 
     try {
-      // 1. Parallel fetch of all entities (limit 50k for transactions should be enough for most users)
+      /* 
+         CRITICAL FIX: Limit the initial fetch to Avoid "Death Spiral".
+         Fetching 50,000 rows causes Main Thread Block.
+         Restricting to 3000 provides enough history for:
+          - Recent spending charts (last ~6 months)
+          - Cash Flow projection (current debts)
+         Legacy data > 3000 rows is accessible via Filters/Pagination but not loaded into memory initially.
+      */
       const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes, profileRes, loansRes, futureExpensesRes] = await Promise.all([
-        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(50000),
+        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(3000),
         supabase.from('budgets').select('*').eq('user_id', user.id),
         supabase.from('payment_methods').select('*').eq('user_id', user.id),
         supabase.from('categories').select('*').eq('user_id', user.id),
@@ -748,9 +847,11 @@ export function useFinanceDataLogic() {
         supabase.from('future_expenses' as any).select('*').eq('user_id', user.id).eq('status', 'pending').order('payment_date', { ascending: true })
       ]);
 
+      console.log(`[Performance] fetchData took ${(performance.now() - startTime).toFixed(2)}ms`);
+
       // 2. Process Transactions
       if (transactionsRes.error) {
-        toast({ title: 'Error', description: 'No se pudieron cargar las transacciones.', variant: 'destructive' });
+        if (isMounted.current) toast({ title: 'Error', description: 'No se pudieron cargar las transacciones.', variant: 'destructive' });
       } else {
         const mappedTxns = (transactionsRes.data || []).map(t => ({
           id: t.id,
@@ -758,60 +859,67 @@ export function useFinanceDataLogic() {
             ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
             : t.type as TransactionType,
           category: t.category,
-          category_id: (t as any).category_id,
-          amount: Number(t.amount),
-          description: t.description,
+          category_id: (t as any).category_id || null,
+          amount: Number(t.amount || 0),
+          description: t.description || '',
           date: t.date,
-          payment_method_id: t.payment_method_id,
+          payment_method_id: t.payment_method_id || null,
           created_at: t.created_at,
         }));
 
-        // allTransactions used for global stats, rangeTransactions for current view
-        setAllTransactions(mappedTxns);
-        setRangeTransactions(mappedTxns);
-        setTransactions(mappedTxns.slice(0, PAGE_SIZE));
-        setTotalTransactionsCount(mappedTxns.length);
-        setHasMore(mappedTxns.length > PAGE_SIZE);
+        // CHECK RACE CONDITION BEFORE SETTING STATE
+        if (currentFetchId === fetchIdRef.current && isMounted.current) {
+          // allTransactions used for global stats, rangeTransactions for current view
+          setAllTransactions(mappedTxns);
+          setRangeTransactions(mappedTxns);
+          // Correctly initialize the PAGINATED view (first 50 items)
+          setTransactions(mappedTxns.slice(0, PAGE_SIZE));
+          setHasMore(mappedTxns.length >= PAGE_SIZE); // Initial guess
+        }
       }
 
       // 3. Process Budgets
-      if (budgetsRes.error) {
-        toast({ title: 'Error', description: 'No se pudieron cargar los presupuestos.', variant: 'destructive' });
-      } else {
-        setBudgets((budgetsRes.data || []).map(b => ({
-          id: b.id,
-          category: b.category as string,
-          category_id: b.category_id,
-          amount: Number(b.amount),
-          month: b.month,
-          user_id: b.user_id,
-        })));
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        if (budgetsRes.error) {
+          toast({ title: 'Error', description: 'No se pudieron cargar los presupuestos.', variant: 'destructive' });
+        } else {
+          setBudgets((budgetsRes.data || []).map(b => ({
+            id: b.id,
+            category: (b.category as string) || 'Uncategorized',
+            category_id: b.category_id || null,
+            amount: Number(b.amount || 0),
+            month: b.month,
+            user_id: b.user_id,
+          })));
+        }
       }
 
       // 4. Process Payment Methods
-      if (paymentMethodsRes.error) {
-        toast({ title: 'Error', description: 'No se pudieron cargar los métodos de pago.', variant: 'destructive' });
-      } else {
-        setPaymentMethods((paymentMethodsRes.data || []).map((pm: PaymentMethodRow) => ({
-          id: pm.id,
-          name: pm.name,
-          type: pm.type as PaymentMethodType,
-          balance: Number(pm.balance),
-          credit_limit: pm.credit_limit ? Number(pm.credit_limit) : null,
-          is_savings_account: pm.is_savings_account || false,
-          savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
-          estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
-          closing_date: pm.closing_date || null,
-          payment_day: pm.payment_day || null,
-          color: pm.color || '#475569',
-          franchise: (pm as any).franchise || null,
-          last_4_digits: (pm as any).last_4_digits || null,
-        })));
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        if (paymentMethodsRes.error) {
+          toast({ title: 'Error', description: 'No se pudieron cargar los métodos de pago.', variant: 'destructive' });
+        } else {
+          setPaymentMethods((paymentMethodsRes.data || []).map((pm: PaymentMethodRow) => ({
+            id: pm.id,
+            name: pm.name || 'Sin Nombre',
+            type: (pm.type as PaymentMethodType) || 'other',
+            balance: Number(pm.balance || 0),
+            credit_limit: pm.credit_limit ? Number(pm.credit_limit) : null,
+            is_savings_account: pm.is_savings_account || false,
+            savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
+            estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
+            closing_date: pm.closing_date || null,
+            payment_day: pm.payment_day || null,
+            color: pm.color || '#475569',
+            franchise: (pm as any).franchise || null,
+            last_4_digits: (pm as any).last_4_digits || null,
+          })));
+        }
       }
 
       // 5. Process Profile
       const profile = profileRes.data;
-      if (profile) {
+      if (currentFetchId === fetchIdRef.current && isMounted.current && profile) {
         if (profile.currency) setCurrency(profile.currency);
         if (profile.base_color) {
           setBaseColor(profile.base_color);
@@ -833,106 +941,116 @@ export function useFinanceDataLogic() {
       }
 
       // 6. Process Categories and Fix Colors (Preventing Recursion)
-      if (categoriesRes.error) {
-        // Handle error
-      } else {
-        const loadedCategories = categoriesRes.data.map(c => ({
-          id: c.id,
-          name: c.name,
-          type: c.type as TransactionType,
-          color: c.color,
-        }));
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        if (categoriesRes.error) {
+          // Handle error
+        } else {
+          const loadedCategories = categoriesRes.data.map(c => ({
+            id: c.id,
+            name: c.name,
+            type: c.type as TransactionType,
+            color: c.color,
+          }));
 
-        const usedColors = new Set(loadedCategories.map(c => c.color).filter(Boolean) as string[]);
-        const categoriesToUpdate: { id: string, color: string }[] = [];
+          const usedColors = new Set(loadedCategories.map(c => c.color).filter(Boolean) as string[]);
+          const categoriesToUpdate: { id: string, color: string }[] = [];
 
-        const getUniqueColor = (excludeColors: Set<string>): string => {
-          for (const color of MASTER_PALETTE) {
-            if (!excludeColors.has(color)) return color;
-          }
-          return MASTER_PALETTE[Math.floor(Math.random() * MASTER_PALETTE.length)];
-        };
+          const getUniqueColor = (excludeColors: Set<string>): string => {
+            for (const color of MASTER_PALETTE) {
+              if (!excludeColors.has(color)) return color;
+            }
+            return MASTER_PALETTE[Math.floor(Math.random() * MASTER_PALETTE.length)];
+          };
 
-        const finalCategories = loadedCategories.map(c => {
-          // Only update if color is missing OR is a legacy class (bg-...)
-          if (!c.color || c.color.startsWith('bg-')) {
-            const newColor = getUniqueColor(usedColors);
-            usedColors.add(newColor);
-            categoriesToUpdate.push({ id: c.id, color: newColor });
-            return { ...c, color: newColor };
-          }
-          return c;
-        });
-
-        setCategories(finalCategories);
-
-        if (categoriesToUpdate.length > 0) {
-          // Perform the update but DO NOT wait for it to avoid blocking or triggering infinite loops immediately
-          // The realtime listener should be robust enough or we should ignore color-only updates if possible
-          // For now, we just fire and forget
-          categoriesToUpdate.forEach(update => {
-            supabase.from('categories').update({ color: update.color }).eq('id', update.id).then();
+          const finalCategories = loadedCategories.map(c => {
+            // Only update if color is missing OR is a legacy class (bg-...)
+            if (!c.color || c.color.startsWith('bg-')) {
+              const newColor = getUniqueColor(usedColors);
+              usedColors.add(newColor);
+              categoriesToUpdate.push({ id: c.id, color: newColor });
+              return { ...c, color: newColor };
+            }
+            return c;
           });
+
+          setCategories(finalCategories);
+
+          if (categoriesToUpdate.length > 0) {
+            // Perform the update but DO NOT wait for it to avoid blocking or triggering infinite loops immediately
+            // The realtime listener should be robust enough or we should ignore color-only updates if possible
+            // For now, we just fire and forget
+            categoriesToUpdate.forEach(update => {
+              supabase.from('categories').update({ color: update.color }).eq('id', update.id).then();
+            });
+          }
         }
       }
 
       // 7. Process Loans
-      if (loansRes.error) {
-        // Handle error
-      } else if (loansRes.data) {
-        setLoans((loansRes.data as unknown as LoanRow[]).map((l: LoanRow) => {
-          const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({
-            id: p.id,
-            loan_id: p.loan_id,
-            amount: Number(p.amount || 0),
-            date: p.date,
-            created_at: p.created_at || new Date().toISOString(),
-          }));
-          const paid_amount = payments.reduce((sum: number, p) => sum + Number(p.amount), 0);
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        if (loansRes.error) {
+          // Handle error
+        } else if (loansRes.data) {
+          setLoans((loansRes.data as unknown as LoanRow[]).map((l: LoanRow) => {
+            const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({
+              id: p.id,
+              loan_id: p.loan_id,
+              amount: Number(p.amount || 0),
+              date: p.date,
+              created_at: p.created_at || new Date().toISOString(),
+            }));
+            const paid_amount = payments.reduce((sum: number, p) => sum + Number(p.amount), 0);
 
-          return {
-            id: l.id,
-            name: l.name,
-            total_amount: Number(l.total_amount || 0),
-            paid_amount,
-            interest_rate: Number(l.interest_rate || 0),
-            due_date: l.due_date || null,
-            payment_method_id: l.payment_method_id || null,
-            created_at: l.created_at || new Date().toISOString(),
-            user_id: l.user_id,
-            type: (l.type as 'borrowed' | 'lent') || 'borrowed',
-            payments,
-            is_disbursed: l.is_disbursed,
-            installments: l.installments ? Number(l.installments) : undefined,
-          };
-        }));
+            return {
+              id: l.id,
+              name: l.name,
+              total_amount: Number(l.total_amount || 0),
+              paid_amount,
+              interest_rate: Number(l.interest_rate || 0),
+              due_date: l.due_date || null,
+              payment_method_id: l.payment_method_id || null,
+              created_at: l.created_at || new Date().toISOString(),
+              user_id: l.user_id,
+              type: (l.type as 'borrowed' | 'lent') || 'borrowed',
+              payments,
+              is_disbursed: l.is_disbursed,
+              installments: l.installments ? Number(l.installments) : undefined,
+            };
+          }));
+        }
       }
 
       // 7. Process Future Expenses
-      if (futureExpensesRes.error) {
-        toast({ title: 'Error', description: 'No se pudieron cargar los gastos futuros.', variant: 'destructive' });
-      } else {
-        setFutureExpenses((futureExpensesRes.data || []).map((fe: any) => ({
-          id: fe.id,
-          payment_date: fe.payment_date,
-          amount: Number(fe.amount),
-          description: fe.description,
-          category_id: fe.category_id || null,
-          status: fe.status || 'pending',
-          is_subscription: fe.is_subscription || false,
-          payment_day: fe.payment_day || undefined,
-          start_date: fe.start_date || undefined,
-          end_date: fe.end_date || undefined,
-          frequency: fe.frequency || undefined,
-          user_id: fe.user_id,
-          created_at: fe.created_at,
-        })));
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        if (futureExpensesRes.error) {
+          toast({ title: 'Error', description: 'No se pudieron cargar los gastos futuros.', variant: 'destructive' });
+        } else {
+          setFutureExpenses((futureExpensesRes.data || []).map((fe: any) => ({
+            id: fe.id,
+            payment_date: fe.payment_date,
+            amount: Number(fe.amount || 0),
+            description: fe.description || '',
+            category_id: fe.category_id || null,
+            status: fe.status || 'pending',
+            is_subscription: fe.is_subscription || false,
+            payment_day: fe.payment_day || undefined,
+            start_date: fe.start_date || undefined,
+            end_date: fe.end_date || undefined,
+            frequency: fe.frequency || undefined,
+            user_id: fe.user_id,
+            created_at: fe.created_at,
+          })));
+        }
       }
 
     } catch (err) {
-      toast({ title: 'Error crítico', description: 'No se pudieron sincronizar los datos.', variant: 'destructive' });
+      if (isMounted.current) {
+        toast({ title: 'Error crítico', description: 'No se pudieron sincronizar los datos.', variant: 'destructive' });
+      }
     } finally {
-      setLoading(false);
+      if (currentFetchId === fetchIdRef.current && isMounted.current) {
+        setLoading(false);
+      }
     }
   }, [user?.id, toast]);
 
@@ -1552,6 +1670,9 @@ export function useFinanceDataLogic() {
       payment_method_id: data.payment_method_id,
       created_at: data.created_at,
     };
+
+    // Ensure payment method ID is valid string or null before assignment
+    updatedTx.payment_method_id = updatedTx.payment_method_id || null;
 
     if (updatedTx.payment_method_id) {
       await updatePaymentMethodBalance(updatedTx.payment_method_id, updatedTx.amount, updatedTx.type);

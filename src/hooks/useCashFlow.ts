@@ -32,6 +32,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   function calculateMonthlySnapshot(date: Date, prevBalance: number, prevSavings: Record<string, number>, prevLoans: Record<string, { saldo: number, cuotasRestantes: number }>, prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }>) {
     // Ingresos
     let ingresosSalario = 0;
+    let ingresosReales = 0; // RE-ADDED: Actual income from transactions
     let interesesAhorro = 0;
     const otrosIngresos = 0; // Se puede extender futura implementación
     // Egresos
@@ -55,6 +56,13 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
         newSavings[acc.id] = prev + interes;
       } else {
         newSavings[acc.id] = prev;
+      }
+    });
+
+    // --- 1. Calcular Ingresos Reales (Transactions) ---
+    transactions.forEach(tx => {
+      if (tx.type === 'income' && isSameMonth(new Date(tx.date), date)) {
+        ingresosReales += tx.amount;
       }
     });
 
@@ -294,7 +302,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     });
 
     // Totales
-    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos;
+    const ingresosTotales = ingresosSalario + ingresosReales + interesesAhorro + otrosIngresos;
     const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales;
     const balanceNetoMes = ingresosTotales - egresosTotales;
     const balanceAcumulado = prevBalance + balanceNetoMes;
@@ -303,6 +311,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       mes: format(date, 'MMMM yyyy'),
       ingresosTotales,
       ingresosSalario,
+      ingresosReales, // ADDED to export
       interesesAhorro,
       egresosTotales,
       gastosFuturos,

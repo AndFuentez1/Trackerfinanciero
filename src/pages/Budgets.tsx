@@ -25,11 +25,18 @@ import { AddBudgetDialog } from '@/features/budgets/components/AddBudgetDialog';
 import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
 import { FutureExpensesList } from "@/features/budgets/components/FutureExpensesList";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useEffect } from "react";
+import { trackFeatureView } from "@/lib/analytics";
 
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function BudgetsPage() {
     const navigate = useNavigate();
+
+    useEffect(() => {
+        trackFeatureView('Budgets');
+    }, []);
+
     const { user, loading: authLoading } = useAuth();
     const {
         totalBudget,
@@ -87,7 +94,7 @@ export default function BudgetsPage() {
                 {/* Top Section: Budget Cards (Side by Side on desktop) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                     <div className="flex h-full flex-col space-y-4">
-                        <BudgetTotalCard totalBudget={totalBudget} />
+                        <BudgetTotalCard budgets={budgets} />
                     </div>
                     <div className="flex h-full flex-col space-y-4">
                         <IncomeCard />
@@ -96,15 +103,15 @@ export default function BudgetsPage() {
 
                 <Separator className="my-6" />
 
-                                {/* Tarjeta de presupuestos del mes (idéntica a dashboard) */}
-                                <div className="my-8">
-                                    <BudgetList
-                                        budgets={budgets}
-                                        onDelete={async (id) => { await refreshBudgets(); }}
-                                        onSave={async (budget) => { await refreshBudgets(); }}
-                                        categories={categories}
-                                    />
-                                </div>
+                {/* Tarjeta de presupuestos del mes (idéntica a dashboard) */}
+                <div className="my-8">
+                    <BudgetList
+                        budgets={budgets}
+                        onDelete={async (id) => { await refreshBudgets(); }}
+                        onSave={async (budget) => { await refreshBudgets(); }}
+                        categories={categories}
+                    />
+                </div>
 
                 <Separator className="my-6" />
 

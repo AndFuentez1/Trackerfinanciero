@@ -20,6 +20,7 @@ import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
 import { AuthProvider } from "./contexts/AuthContext";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 
 const queryClient = new QueryClient();
@@ -58,7 +59,7 @@ const AppContent = () => {
   // }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Index />} />
@@ -77,21 +78,23 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <FinanceProvider>
-          <SavingsProvider>
-            <LoansProvider>
-              <AppContent />
-            </LoansProvider>
-          </SavingsProvider>
-        </FinanceProvider>
-      </AuthProvider>
-    </TooltipProvider>
-    <Toaster />
-    <SonnerToaster />
-  </QueryClientProvider>
+  <GlobalErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <FinanceProvider>
+            <SavingsProvider>
+              <LoansProvider>
+                <AppContent />
+              </LoansProvider>
+            </SavingsProvider>
+          </FinanceProvider>
+        </AuthProvider>
+      </TooltipProvider>
+      <Toaster />
+      <SonnerToaster />
+    </QueryClientProvider>
+  </GlobalErrorBoundary>
 );
 
 export default App;

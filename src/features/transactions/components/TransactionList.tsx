@@ -332,7 +332,7 @@ export function TransactionList({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden shadow-md transition-all duration-300">
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto no-scrollbar">
           <table className="premium-table">
             <thead className="bg-muted/30">
               <tr>
