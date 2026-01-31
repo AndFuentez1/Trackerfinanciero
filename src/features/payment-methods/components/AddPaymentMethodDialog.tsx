@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { trackEvent } from '@/lib/analytics';
 import { PaymentMethod, PaymentMethodType } from '@/hooks/useFinanceData';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
@@ -12,10 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard } from 'lucide-react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +21,6 @@ interface AddPaymentMethodDialogProps {
   onOpenChange?: (open: boolean) => void;
   initialName?: string;
   onSuccess?: (pm: PaymentMethod) => void;
-  trigger?: React.ReactNode;
 }
 
 const typeOptions: { value: PaymentMethodType; label: string }[] = [
@@ -49,7 +44,7 @@ const PRESET_COLORS = [
   { value: '#ec4899', label: 'Rosa' },
 ];
 
-export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess, trigger }: AddPaymentMethodDialogProps) {
+export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess }: AddPaymentMethodDialogProps) {
   const { currency, decimalPlaces } = useFinance();
 
   const getCurrencySymbol = () => {
@@ -81,7 +76,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const [estimatedYield, setEstimatedYield] = useState('');
   const [closingDate, setClosingDate] = useState('');
   const [color, setColor] = useState('#4f46e5');
-  const [franchise, setFranchise] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -102,22 +96,12 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       savings_goal: type === 'savings' && savingsGoal ? parseFloat(savingsGoal) : null,
       estimated_yield: type === 'savings' && estimatedYield ? parseFloat(estimatedYield) : null,
       closing_date: type === 'credit' && closingDate ? parseInt(closingDate) : null,
-
       color,
-      franchise: (type === 'credit' || type === 'debit') ? franchise : null,
-      last_4_digits: null,
     });
 
     setIsSubmitting(false);
 
     if (!result.error && result.data) {
-      trackEvent('payment_method_added', {
-        type,
-        color_preset: color
-      });
-      trackEvent('onboarding_step_completed', {
-        step_name: 'payment_method_added'
-      });
       onSuccess?.(result.data);
       // Reset form
       setName('');
@@ -127,16 +111,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       setSavingsGoal('');
       setEstimatedYield('');
       setClosingDate('');
-
       setColor('#4f46e5');
-      setFranchise('');
     }
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
@@ -214,27 +195,6 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
               ))}
             </div>
           </div>
-
-
-          {(type === 'credit' || type === 'debit') && (
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="franchise" className="text-sm">Franquicia</Label>
-                <Select value={franchise} onValueChange={setFranchise}>
-                  <SelectTrigger id="franchise" className="h-11 md:h-9 text-sm">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="visa">Visa</SelectItem>
-                    <SelectItem value="mastercard">Mastercard</SelectItem>
-                    <SelectItem value="amex">American Express</SelectItem>
-                    <SelectItem value="diners">Diners Club</SelectItem>
-                    <SelectItem value="other">Otra</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
 
           {type === 'credit' ? (
             <div className="space-y-3 sm:space-y-4">

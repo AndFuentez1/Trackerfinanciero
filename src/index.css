@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import './styles/tokens.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,11 +7,6 @@
 @layer base {
   :root {
     --button-border: 220 13% 82%;
-    --destructive-foreground: oklch(1 0 0);
-  }
-
-  .dark {
-    --destructive-foreground: oklch(1 0 0);
   }
 
   html {
@@ -21,8 +17,8 @@
 
   body {
     font-weight: 400;
-    background-color: hsl(var(--color-background));
-    color: hsl(var(--color-foreground));
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   h1,
@@ -61,9 +57,9 @@
 [data-radix-select-content],
 [data-radix-dropdown-menu-content],
 [data-radix-popover-content] {
-  background-color: hsl(var(--color-card));
-  color: hsl(var(--color-foreground));
-  border: 1px solid hsl(var(--color-border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
   border-radius: 0.75rem;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   z-index: 50;
@@ -72,12 +68,12 @@
 /* Hover / highlighted option */
 [data-radix-select-item][data-highlighted],
 [data-radix-dropdown-menu-item][data-highlighted] {
-  background-color: hsl(var(--color-muted));
+  background-color: hsl(var(--muted));
 }
 
 /* Selected option */
 [data-radix-select-item][data-state='checked'] {
-  color: hsl(var(--color-primary));
+  color: hsl(var(--primary));
 }
 
 /* Dropdowns / Select / Popovers premium Radix */
@@ -85,9 +81,9 @@
 [data-radix-dropdown-menu-content],
 [data-radix-select-content],
 [data-radix-popover-content] {
-  background-color: hsl(var(--color-card));
-  color: hsl(var(--color-foreground));
-  border: 1px solid hsl(var(--color-border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
   border-radius: 0.75rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
@@ -95,11 +91,11 @@
 /* Hover y selección premium */
 [data-radix-select-item][data-highlighted],
 [data-radix-dropdown-menu-item][data-highlighted] {
-  background-color: hsl(var(--color-muted));
+  background-color: hsl(var(--muted));
 }
 
 [data-radix-select-item][data-state='checked'] {
-  color: hsl(var(--color-primary));
+  color: hsl(var(--primary));
 }
 
 /* Fondos y bordes semánticos para inputs */
@@ -130,7 +126,7 @@ select {
 @layer components {
   .finance-card {
     background-color: var(--bg-card);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     @apply rounded-xl p-6 shadow-md;
     transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
   }
@@ -141,7 +137,7 @@ select {
 
   .summary-card {
     background-color: var(--bg-card);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     @apply rounded-xl p-5 shadow-md relative flex flex-col justify-between h-full;
     transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
   }
@@ -190,52 +186,6 @@ select {
   .category-pill {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-300;
   }
-
-  /* Premium Table Styles */
-  .premium-table {
-    border-collapse: separate;
-    border-spacing: 0;
-    width: 100%;
-    background: #fff;
-  }
-
-  .premium-table th {
-    @apply py-4 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider bg-muted/30;
-    border-right: 1px solid hsl(var(--color-border));
-    border-bottom: 1px solid hsl(var(--color-border));
-  }
-
-  .premium-table td {
-    @apply py-3 px-4 text-sm align-middle;
-    border-right: 1px solid hsl(var(--color-border));
-  }
-
-  .premium-table th:last-child,
-  .premium-table td:last-child {
-    border-right: none;
-  }
-
-  .premium-table tr {
-    position: relative;
-    background-image: linear-gradient(to right, transparent, hsl(var(--color-border)) 15%, hsl(var(--color-border)) 85%, transparent);
-    background-position: bottom;
-    background-size: 100% 1px;
-    background-repeat: no-repeat;
-    transition: background-color 0.2s ease;
-  }
-
-  .premium-table tr:hover {
-    @apply bg-muted/30;
-  }
-
-  .premium-table thead tr {
-    background-image: none;
-    border-bottom: 2px solid hsl(var(--color-border));
-  }
-
-  .premium-table tbody tr:last-child {
-    background-image: none;
-  }
 }
 
 @layer utilities {
@@ -265,7 +215,7 @@ select {
     appearance: none;
     width: 22px;
     height: 22px;
-    background: hsl(var(--color-primary));
+    background: hsl(var(--primary));
     border-radius: 50%;
     border: 3px solid #ffffff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -274,36 +224,23 @@ select {
 
   .premium-slider::-webkit-slider-thumb:hover {
     transform: scale(1.15);
-    box-shadow: 0 0 15px hsl(var(--color-primary) / 0.5);
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.5);
   }
 
   .premium-slider::-moz-range-thumb {
     width: 20px;
     height: 20px;
-    background: hsl(var(--color-primary));
+    background: hsl(var(--primary));
     border-radius: 50%;
     border: 3px solid #ffffff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     cursor: pointer;
-  }
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
   }
 }
 
 html,
 body,
 #root {
-  background-color: hsl(var(--bg-app));
+  background-color: #f8fafc;
   color: hsl(var(--text-primary));
 }

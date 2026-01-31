@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { trackEvent } from '@/lib/analytics';
 import { Transaction, TransactionType, PaymentMethod, MASTER_PALETTE } from '@/hooks/useFinanceData';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -530,8 +529,8 @@ export function ImportExcelDialog({
         supabase.from('payment_methods').select('*').eq('user_id', user.id)
       ]);
 
-      const catMap = new Map<string, string>((currentCategories || []).map((c: any) => [c.name.toLowerCase(), c.id]));
-      const pmMap = new Map<string, string>((currentPaymentMethods || []).map((pm: any) => [pm.name.toLowerCase(), pm.id]));
+      const catMap = new Map((currentCategories || []).map(c => [c.name.toLowerCase(), c.id]));
+      const pmMap = new Map((currentPaymentMethods || []).map(pm => [pm.name.toLowerCase(), pm.id]));
 
       // Ensure special categories exist
       const specialCategories = [
@@ -619,67 +618,32 @@ export function ImportExcelDialog({
           finalCategoryId = catMap.get('rendimientos') || undefined;
         }
 
-        // --- CATEGORY RESOLUTION & DYNAMIC CREATION (WITH DOS PROTECTION) ---
+        // --- CATEGORY RESOLUTION & DYNAMIC CREATION ---
         if (!finalCategoryId) {
           let categoryId = catMap.get(finalCategory.toLowerCase());
           if (!categoryId) {
-            // SECURITY: Limit new category creation to prevent DoS
-            const MAX_NEW_CATEGORIES_PER_IMPORT = 10;
-            const newCategoriesCreated = Array.from(catMap.values()).length - (currentCategories?.length || 0);
+            // Create new category
+            const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
+            const catType = finalType;
 
-            if (newCategoriesCreated >= MAX_NEW_CATEGORIES_PER_IMPORT) {
-              // Fallback to "Por Clasificar" category to prevent abuse
-              const fallbackCategoryName = 'Por Clasificar';
-              let fallbackCategoryId = catMap.get(fallbackCategoryName.toLowerCase());
+            const { data: newCat, error: catErr } = await supabase
+              .from('categories')
+              .insert({
+                user_id: user.id,
+                name: finalCategory,
+                type: catType as any,
+                color: colorToUse
+              })
+              .select()
+              .single();
 
-              if (!fallbackCategoryId) {
-                // Create the fallback category if it doesn't exist
-                const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
-                const { data: fallbackCat, error: fallbackErr } = await supabase
-                  .from('categories')
-                  .insert({
-                    user_id: user.id,
-                    name: fallbackCategoryName,
-                    type: 'expense',
-                    color: colorToUse
-                  })
-                  .select()
-                  .single();
+            if (catErr) {
 
-                if (!fallbackErr && fallbackCat) {
-                  fallbackCategoryId = fallbackCat.id;
-                  catMap.set(fallbackCategoryName.toLowerCase(), fallbackCategoryId);
-                }
-              }
-
-              categoryId = fallbackCategoryId || undefined;
-
-              // Log warning for user awareness
-              errors.push(`Fila ${i + 1}: Límite de categorías alcanzado. Asignada a "Por Clasificar"`);
-            } else {
-              // Create new category (within limit)
-              const colorToUse = MASTER_PALETTE[catMap.size % MASTER_PALETTE.length];
-              const catType = finalType;
-
-              const { data: newCat, error: catErr } = await supabase
-                .from('categories')
-                .insert({
-                  user_id: user.id,
-                  name: finalCategory,
-                  type: catType as any,
-                  color: colorToUse
-                })
-                .select()
-                .single();
-
-              if (catErr) {
-
-                errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
-                continue;
-              }
-              categoryId = newCat.id;
-              catMap.set(finalCategory.toLowerCase(), categoryId);
+              errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
+              continue;
             }
+            categoryId = newCat.id;
+            catMap.set(finalCategory.toLowerCase(), categoryId);
           }
           finalCategoryId = categoryId || undefined;
         }
@@ -807,7 +771,7 @@ export function ImportExcelDialog({
 
 
           // Determinar el mensaje de error específico
-          const errorMsg = e instanceof Error ? e.message : 'Error desconocido';
+          let errorMsg = e instanceof Error ? e.message : 'Error desconocido';
 
           // Registrar todas las filas del batch como fallidas
           batchTransactions.forEach(t => {
@@ -852,18 +816,6 @@ export function ImportExcelDialog({
           title: '✅ Importación exitosa',
           description: `Se importaron ${successCount} transacciones correctamente.`
         });
-
-        trackEvent('excel_import_completed', {
-          transaction_count: successCount,
-          source_type: 'excel_import',
-        });
-
-        // Track as bulk transaction creation for volume analysis
-        trackEvent('transaction_created', {
-          source_type: 'excel_import',
-          bulk_count: successCount,
-          batch_id: `batch_${Date.now()}`
-        });
       }
 
       // Cerrar el diálogo siempre después de importar
@@ -892,9 +844,9 @@ export function ImportExcelDialog({
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
-            variant="default"
+            variant="outline"
             size="sm"
-            className="gap-2 min-w-[140px] text-[15px] py-2 flex items-center justify-center border border-primary hover:bg-primary/90 hover:text-white"
+            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Importar Excel"
             title="Importar Excel"
           >
@@ -923,7 +875,7 @@ export function ImportExcelDialog({
         </DialogHeader>
 
         <div className="space-y-3 sm:space-y-4 mt-4">
-          <div className="p-4 bg-muted/50 rounded-xl border border-border text-sm space-y-2">
+          <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
             <p className="font-medium">Formato esperado:</p>
             <p className="text-muted-foreground">
               Columnas: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
@@ -936,7 +888,7 @@ export function ImportExcelDialog({
           <div className="space-y-2">
             <Label className="text-sm">Archivo Excel</Label>
             <div
-              className="border-2 border-dashed border-border rounded-xl p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
               onClick={() => !fileName && fileInputRef.current?.click()}
             >
               <input
@@ -953,7 +905,7 @@ export function ImportExcelDialog({
                   <Button
                     variant="default"
                     size="icon"
-                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10 rounded-xl"
+                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       setFileName('');
@@ -1008,7 +960,7 @@ export function ImportExcelDialog({
           )}
 
           {showMappingStep && (
-            <div className="space-y-4 p-4 border border-border rounded-xl bg-card">
+            <div className="space-y-4 p-4 border rounded-lg bg-card">
               <div className="space-y-2 flex items-center justify-between">
                 <div className="space-y-2 flex-1">
                   <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
@@ -1197,24 +1149,24 @@ export function ImportExcelDialog({
               )}
 
               <div className="max-h-48 overflow-y-auto border rounded-lg overflow-x-auto">
-                <table className="premium-table text-xs">
-                  <thead>
+                <table className="w-full min-w-[600px] text-xs">
+                  <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="text-left">Fecha</th>
-                      <th className="text-left">Descripción</th>
-                      <th className="text-left">Categoría</th>
-                      <th className="text-right">Monto</th>
-                      <th className="text-center">Estado</th>
+                      <th className="p-2 text-left">Fecha</th>
+                      <th className="p-2 text-left">Descripción</th>
+                      <th className="p-2 text-left">Categoría</th>
+                      <th className="p-2 text-right">Monto</th>
+                      <th className="p-2 text-center">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {parsedRows.slice(0, 50).map((row, i) => (
                       <tr key={i} className={row.isValid ? '' : 'bg-destructive/10'}>
-                        <td>{row.date || '-'}</td>
-                        <td className="truncate max-w-32">{row.description || '-'}</td>
-                        <td>{row.category || '-'}</td>
-                        <td className="text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
-                        <td className="text-center">
+                        <td className="p-2">{row.date || '-'}</td>
+                        <td className="p-2 truncate max-w-32">{row.description || '-'}</td>
+                        <td className="p-2">{row.category || '-'}</td>
+                        <td className="p-2 text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
+                        <td className="p-2 text-center">
                           {row.isValid ? (
                             <CheckCircle className="h-3 w-3 text-green-600 mx-auto" />
                           ) : (

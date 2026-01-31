@@ -1,11 +1,10 @@
 import { useLoans as useLoansContext } from '@/contexts/LoansContext';
-import { Loan, LoanRow } from './financeTypes';
-export type { Loan, LoanRow };
+import { Loan, LoanRow } from './useLoansLogic';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceData } from './useFinanceData';
 import { getTodayLocalDate } from '@/lib/dateUtils';
-import { supabase } from '@/integrations/supabase/client';
 
 export * from './useLoansLogic';
 

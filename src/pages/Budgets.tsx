@@ -17,29 +17,20 @@ import {
 } from "@/components/ui/select";
 import { InsightsPanel } from "@/features/dashboard/components/InsightsPanel";
 
-
+import { BudgetTotalCard } from "@/features/budgets/components/BudgetTotalCard";
 import { CategoryBudgetList } from "@/features/budgets/components/CategoryBudgetList";
-import { BudgetList } from "@/features/budgets/components/BudgetList";
 import { IncomeCard } from "@/features/budgets/components/IncomeCard";
 import { AddBudgetDialog } from '@/features/budgets/components/AddBudgetDialog';
 import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
 import { FutureExpensesList } from "@/features/budgets/components/FutureExpensesList";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { useEffect } from "react";
-import { trackFeatureView } from "@/lib/analytics";
 
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function BudgetsPage() {
     const navigate = useNavigate();
-
-    useEffect(() => {
-        trackFeatureView('Budgets');
-    }, []);
-
     const { user, loading: authLoading } = useAuth();
     const {
-
+        totalBudget,
         budgets,
         loading: budgetsLoading,
         refreshBudgets,
@@ -70,45 +61,54 @@ export default function BudgetsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
-                <PageHeader
-                    title="Presupuesto Mensual"
-                    description="Planifica y controla tus gastos por categoría"
-                    icon={<PieChart className="h-6 w-6" />}
-                    actions={
-                        <div className="z-20 flex gap-2 flex-wrap justify-center sm:justify-start">
-                            <AddTransactionDialog
-                                onAdd={addTransaction}
-                                categories={categories}
-                                paymentMethods={paymentMethods}
-                                onAddTransfer={addTransfer}
-                            />
-                            <AddBudgetDialog
-                                onAdd={saveBudget}
-                                monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
-                            />
+            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                            <PieChart className="h-5 w-5 text-primary" />
                         </div>
-                    }
-                />
+                        <h1 className="text-xl font-semibold">Presupuesto Mensual</h1>
+                    </div>
+                    <div className="z-20 flex gap-2 flex-wrap justify-center sm:justify-start">
+                        <AddTransactionDialog
+                            onAdd={addTransaction}
+                            categories={categories}
+                            paymentMethods={paymentMethods}
+                            onAddTransfer={addTransfer}
+                        />
+                        <AddBudgetDialog
+                            onAdd={saveBudget}
+                            monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                        />
+                    </div>
+                </div>
+            </header>
 
-                {/* Top Section: Income Card */}
-                <div className="w-full">
-                    <IncomeCard />
+            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+                {/* Top Section: Budget Cards (Side by Side on desktop) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                    <div className="flex h-full flex-col space-y-4">
+                        <BudgetTotalCard totalBudget={totalBudget} />
+                    </div>
+
+                    <div className="flex h-full flex-col space-y-4">
+                        <IncomeCard />
+                    </div>
                 </div>
 
                 <Separator className="my-6" />
 
-                {/* Tarjeta de presupuestos del mes (idéntica a dashboard) */}
-                <div className="my-8">
-                    <BudgetList
-                        budgets={budgets}
-                        onDelete={async (id) => { await refreshBudgets(); }}
-                        onSave={async (budget) => { await refreshBudgets(); }}
-                        categories={categories}
-                    />
-                </div>
+                {/* Category Budgets Grid */}
+                <div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold flex items-center gap-2">
+                            <Wallet className="h-5 w-5 text-muted-foreground" />
+                            Presupuestos por Categoría
+                        </h2>
+                    </div>
 
-                <Separator className="my-6" />
+                    <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
+                </div>
 
                 <Separator className="my-6" />
 

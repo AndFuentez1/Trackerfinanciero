@@ -177,7 +177,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsGoogleSubmitting(true);
 
     try {
-      const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}auth`;
+      const redirectTo = `${window.location.origin}/auth`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -317,7 +317,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
+      const redirectUrl = window.location.origin;
 
       const { error } = await supabase.auth.signUp({
         email,
@@ -396,7 +396,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           data: {
             display_name: userName.trim(),
           },
-          emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}auth?mode=confirm-signup`,
+          emailRedirectTo: `${window.location.origin}/auth?mode=confirm-signup`,
         }
       });
 

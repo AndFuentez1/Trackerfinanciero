@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { Plus, CheckCircle2, AlertCircle, Check } from 'lucide-react';
+import { Upload, Plus, CheckCircle2, AlertCircle, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ImportExcelDialog } from '@/features/transactions/components/ImportExcelDialog';
+import { PaymentMethod, Transaction } from '@/hooks/useFinanceData';
 import { cn } from '@/lib/utils';
+
+interface ThemeOption {
+  label: string;
+  hex: string;
+}
 
 interface ImportProgress {
   status: 'idle' | 'loading' | 'completed' | 'failed';
@@ -11,11 +18,6 @@ interface ImportProgress {
   message: string;
   error?: string;
   recordsProcessed?: number;
-}
-
-interface ThemeOption {
-  label: string;
-  hex: string;
 }
 
 interface OnboardingDecisionPanelProps {
@@ -26,25 +28,32 @@ interface OnboardingDecisionPanelProps {
   pendingImportCount: number;
   importProgress: ImportProgress;
   onCancelImport: () => void;
+  paymentMethods: PaymentMethod[];
+  onImportComplete: (data: Omit<Transaction, 'id'>[]) => void;
   showCompletionCard: boolean;
-  baseColor: string;
-  themeOptions: ThemeOption[];
-  onSelectTheme: (hex: string) => void;
+  baseColor?: string;
+  themeOptions?: ThemeOption[];
+  onSelectTheme?: (hex: string) => void;
 }
 
 export function OnboardingDecisionPanel({
   onStartFromScratch,
+  onImportData,
   hasPendingImport,
   onConfirmImport,
   pendingImportCount,
   importProgress,
   onCancelImport,
+  paymentMethods,
+  onImportComplete,
   showCompletionCard,
-  baseColor,
-  themeOptions,
+  baseColor = '#64748b',
+  themeOptions = [],
   onSelectTheme,
 }: OnboardingDecisionPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState(baseColor);
 
   const handleStartFromScratch = async () => {
     setIsLoading(true);
@@ -59,15 +68,13 @@ export function OnboardingDecisionPanel({
   if (showCompletionCard) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md border rounded-xl shadow-sm bg-card overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/30">
-          <CardContent className="pt-8 pb-8 text-center space-y-6">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-            </div>
+        <Card className="w-full max-w-md border-success/20 bg-success/5">
+          <CardContent className="pt-6 text-center space-y-4">
+            <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
             <div>
-              <h2 className="text-2xl font-bold tracking-tight mb-2">¡Datos importados!</h2>
-              <p className="text-muted-foreground">
-                Se han procesado {pendingImportCount} transacciones correctamente.
+              <h2 className="text-xl font-semibold mb-1">¡Datos importados!</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Se han procesado {pendingImportCount} transacciones
               </p>
             </div>
             <Button
@@ -80,7 +87,7 @@ export function OnboardingDecisionPanel({
                 }
               }}
               disabled={isLoading}
-              className="w-full h-11 rounded-xl shadow-sm"
+              className="w-full"
             >
               {isLoading ? 'Confirmando...' : 'Ir al dashboard'}
             </Button>
@@ -94,21 +101,19 @@ export function OnboardingDecisionPanel({
   if (hasPendingImport && importProgress.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md border rounded-xl shadow-sm bg-card overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/30">
-          <CardContent className="pt-8 pb-8 space-y-6">
-            <div className="space-y-2 text-center">
-              <h2 className="text-xl font-bold tracking-tight">Importando datos...</h2>
-              <p className="text-sm text-muted-foreground">{importProgress.message}</p>
-            </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 space-y-4">
+            <h2 className="text-lg font-semibold">Importando datos...</h2>
+            <p className="text-sm text-muted-foreground">{importProgress.message}</p>
 
-            <div className="space-y-4">
-              <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+            <div className="space-y-2">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-primary h-full transition-all duration-500 ease-out"
+                  className="bg-primary h-full transition-all duration-300"
                   style={{ width: `${importProgress.progress}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-center font-medium">
+              <p className="text-xs text-muted-foreground text-right">
                 {importProgress.recordsProcessed || 0} registros procesados
               </p>
             </div>
@@ -122,16 +127,15 @@ export function OnboardingDecisionPanel({
   if (hasPendingImport && importProgress.status === 'failed') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="w-full max-w-md space-y-6">
-          <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/10">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle className="font-bold">Error en la importación</AlertTitle>
+        <div className="w-full max-w-md space-y-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error en la importación</AlertTitle>
             <AlertDescription>{importProgress.error || 'Ocurrió un error desconocido'}</AlertDescription>
           </Alert>
           <Button
             onClick={onCancelImport}
-            variant="outline"
-            className="w-full h-11 rounded-xl border-primary/20"
+            className="w-full"
           >
             Volver atrás
           </Button>
@@ -142,77 +146,130 @@ export function OnboardingDecisionPanel({
 
   // Main decision panel
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-transform hover:rotate-12 duration-300">
-            <Check className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">¡Todo listo para empezar!</h1>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Comienza a registrar tus transacciones y toma control de tus finanzas ahora mismo.
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-lg space-y-6">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold mb-2">¿Cómo deseas comenzar?</h1>
+          <p className="text-muted-foreground">
+            Elige entre empezar desde cero o importar tus datos
           </p>
         </div>
 
-        <div className="space-y-4">
-          {/* Theme Selection Section */}
-          <Card className="border rounded-xl shadow-sm bg-card overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/30">
-            <CardHeader className="pb-4 px-6 pt-6">
-              <CardTitle className="text-lg font-bold">Personalizar tema</CardTitle>
-              <CardDescription className="text-sm mt-1">Elige el color principal que prefieras para tu tablero</CardDescription>
-            </CardHeader>
-            <CardContent className="px-6 pb-6 pt-0">
-              <div className="flex flex-wrap gap-3 justify-center">
-                {themeOptions.map((theme) => (
-                  <button
-                    key={theme.hex}
-                    onClick={() => onSelectTheme(theme.hex)}
-                    className={cn(
-                      "h-10 w-10 rounded-full transition-all border-2 flex items-center justify-center relative",
-                      baseColor === theme.hex
-                        ? "border-primary ring-4 ring-primary/20 scale-110 shadow-lg"
-                        : "border-transparent hover:scale-110 hover:shadow-md"
-                    )}
-                    style={{ backgroundColor: theme.hex }}
-                    title={theme.label}
-                  >
-                    {baseColor === theme.hex && (
-                      <CheckCircle2 className="h-5 w-5 text-white drop-shadow-md" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4">
+          {/* Theme selector - Optional for onboarding */}
+          {themeOptions && themeOptions.length > 0 && (
+            <Card className="border-dashed">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Elige un tema</CardTitle>
+                <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-row gap-4 justify-center items-end my-2">
+                  {themeOptions.map((theme) => (
+                    <div key={theme.hex} className="flex flex-col items-center w-24">
+                      <button
+                        type="button"
+                        className={cn(
+                          "w-16 h-16 rounded-xl border-2 flex items-center justify-center transition-all",
+                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-muted"
+                        )}
+                        style={{ background: theme.hex }}
+                        aria-label={theme.label}
+                        onClick={() => setSelectedTheme(theme.hex)}
+                      >
+                        {selectedTheme === theme.hex && (
+                          <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
+                        )}
+                      </button>
+                      <span className="text-xs mt-2 text-center break-words w-full" style={{ color: '#222' }}>{theme.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className="w-full mt-4"
+                  variant="default"
+                  onClick={() => onSelectTheme?.(selectedTheme)}
+                >
+                  Aplicar color
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Start from scratch */}
-          <Card
-            className="group transition-all duration-300 border rounded-xl shadow-sm bg-card overflow-hidden hover:shadow-md hover:border-primary/30"
-          >
-            <CardHeader className="px-6 pt-6">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <Plus className="h-6 w-6 text-primary" />
+          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-3">
+              <div className="flex items-start gap-3">
+                <Plus className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <CardTitle className="text-base">Comenzar desde cero</CardTitle>
+                  <CardDescription className="text-xs">
+                    Crea transacciones nuevas desde ahora
+                  </CardDescription>
+                </div>
               </div>
-              <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">Comenzar desde cero</CardTitle>
-              <CardDescription className="text-sm mt-2 font-medium">
-                Inicia con un tablero limpio y agrega tus transacciones manualmente a medida que ocurren.
-              </CardDescription>
             </CardHeader>
-            <CardContent className="px-6 pb-6 pt-4">
+            <CardContent>
               <Button
                 onClick={handleStartFromScratch}
-                className="w-full h-12 rounded-xl text-lg font-semibold shadow-sm transition-all hover:translate-y-[-2px] active:translate-y-0"
                 disabled={isLoading}
+                className="w-full"
+                size="sm"
               >
-                {isLoading ? 'Cargando...' : 'Comenzar ahora'}
+                {isLoading ? 'Cargando...' : 'Comenzar'}
               </Button>
             </CardContent>
           </Card>
+
+          {/* Import data - COMENTADO */}
+          {/* 
+          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-3">
+              <div className="flex items-start gap-3">
+                <Upload className="h-5 w-5 text-success mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <CardTitle className="text-base">Importar datos</CardTitle>
+                  <CardDescription className="text-xs">
+                    Carga un archivo Excel con tus datos
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => setShowImportDialog(true)}
+                variant="default"
+                className="w-full"
+                size="sm"
+              >
+                Seleccionar archivo
+              </Button>
+            </CardContent>
+          </Card>
+          */}
         </div>
 
-        <div className="text-center text-xs text-muted-foreground pt-4 pb-8">
-          <p>Podrás importar datos masivamente más tarde desde la configuración de tu perfil</p>
-        </div>
+        {/* Import Dialog - integrated */}
+        {showImportDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md relative">
+              <button
+                onClick={() => setShowImportDialog(false)}
+                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <ImportExcelDialog
+                paymentMethods={paymentMethods}
+                onImport={async (transactions) => {
+                  onImportComplete(transactions);
+                  setShowImportDialog(false);
+                  return { error: null, count: transactions.length };
+                }}
+              />
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

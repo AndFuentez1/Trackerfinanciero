@@ -41,7 +41,7 @@ export function DangerZone() {
                 <CardDescription className="text-destructive/80 font-medium">Acciones irreversibles sobre tus datos</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-destructive/20 bg-card/50 backdrop-blur-sm gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-destructive/10 bg-white/50 backdrop-blur-sm gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-destructive/10">
                             <RefreshCcw className="h-5 w-5 text-destructive" />
@@ -57,7 +57,7 @@ export function DangerZone() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-full sm:w-auto font-medium"
+                                className="w-full sm:w-auto text-destructive border-destructive/30 hover:bg-destructive/10 font-medium"
                             >
                                 Borrar transacciones
                             </Button>
@@ -83,7 +83,7 @@ export function DangerZone() {
                     </AlertDialog>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-destructive/20 bg-card/50 backdrop-blur-sm gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-destructive/10 bg-white/50 backdrop-blur-sm gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-destructive/10 text-destructive">
                             <Trash2 className="h-5 w-5" />
@@ -97,7 +97,7 @@ export function DangerZone() {
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button
-                                variant="outline"
+                                variant="destructive"
                                 size="sm"
                                 className="w-full sm:w-auto font-medium"
                             >

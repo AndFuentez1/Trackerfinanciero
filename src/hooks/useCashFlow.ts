@@ -1,10 +1,17 @@
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useLoans } from '@/contexts/LoansContext';
 import { useBudgetsData } from './useBudgetsData';
 import { useSavingsData } from './useSavingsData';
-import { addMonths, startOfMonth, format, isBefore, isAfter, isSameMonth, parseISO } from 'date-fns';
+import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth, setDate, getDate } from 'date-fns';
+import { CashFlowPoint } from '@/components/cashflow/cashflow.types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import { isTransferTransaction } from '@/lib/cashflowUtils';
+
+// Helper: Redondeo seguro a 2 decimales para evitar errores de punto flotante
+const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 // Helper: calcular cuota mensual de préstamo (sistema francés)
 function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: number) {
@@ -13,30 +20,74 @@ function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: num
   return principal * (tasaMensual * Math.pow(1 + tasaMensual, nMeses)) / (Math.pow(1 + tasaMensual, nMeses) - 1);
 }
 
-export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año') {
+interface FutureExpense {
+  id: string;
+  payment_date: string;
+  amount: number;
+  description: string;
+  category_id: string | null;
+  status: 'pending' | 'paid';
+  is_subscription?: boolean;
+  payment_day?: number;
+  start_date?: string;
+  end_date?: string;
+  frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
+}
 
-  const { allTransactions: transactions, paymentMethods, categories, futureExpenses } = useFinance();
+export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año') {
+  // ... (hooks remain same)
+  const { user } = useAuth();
+  const { transactions, paymentMethods, categories } = useFinance();
   const { loans } = useLoans();
   const { budgets } = useBudgetsData();
   const { savingsAccounts } = useSavingsData();
+  const [futureExpenses, setFutureExpenses] = useState<FutureExpense[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchFE = async () => {
+      const { data } = await supabase
+        .from('future_expenses' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .neq('status', 'paid');
+      if (data) setFutureExpenses(data as any[]);
+    };
+    fetchFE();
+    const channel = supabase
+      .channel('cf_future_expenses')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` }, fetchFE)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // Balance actual por cuentas
   const balance_actual = useMemo(() => {
-    return paymentMethods.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+    return round(paymentMethods.reduce((sum, acc) => sum + (acc.balance || 0), 0));
   }, [paymentMethods]);
 
   // Fechas de proyección
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now);
   const start = startOfMonth(new Date(year, 0, 1));
+  const monthsCount = range === 'mes' ? 1 : range === '6m' ? 6 : 12;
+  const monthStart = month === 'all' ? 0 : (Number(month) - 1);
+
+  // Importante: para calculo de diferencias de meses
+  const differenceInCalendarMonths = (dateLeft: Date, dateRight: Date) => {
+    return (dateLeft.getFullYear() - dateRight.getFullYear()) * 12 + (dateLeft.getMonth() - dateRight.getMonth());
+  };
 
   // --- Cálculo detallado mensual avanzado ---
   function calculateMonthlySnapshot(date: Date, prevBalance: number, prevSavings: Record<string, number>, prevLoans: Record<string, { saldo: number, cuotasRestantes: number }>, prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }>) {
+    const isPastMonth = isBefore(endOfMonth(date), currentMonthStart);
+
     // Ingresos
     let ingresosSalario = 0;
-    let ingresosReales = 0; // RE-ADDED: Actual income from transactions
     let interesesAhorro = 0;
-    const otrosIngresos = 0; // Se puede extender futura implementación
+    let otrosIngresos = 0;
     // Egresos
-    let gastosFuturos = 0;
+    let gastosFuturos = 0; // Presupuestos + Future Expenses
     let egresosPrestamos = 0;
     let egresosPrestamosInteres = 0;
     let egresosPrestamosCapital = 0;
@@ -59,148 +110,101 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- 1. Calcular Ingresos Reales (Transactions) ---
-    transactions.forEach(tx => {
-      if (tx.type === 'income' && isSameMonth(new Date(tx.date), date)) {
-        ingresosReales += tx.amount;
-      }
-    });
+    // --- Ingresos proyectados (Budgets de tipo Income) ---
+    if (!isPastMonth) {
+      budgets.forEach(b => {
+        const cat = categories.find(c => c.id === b.budget.category_id);
+        const isIncome = cat?.type === 'income' || b.categoryName === 'Ingresos' || b.categoryName === 'Salario';
 
-    // --- Ingresos por presupuesto (FIXED) ---
-    budgets.forEach(b => {
-      const cat = categories.find(c => c.id === b.budget.category_id);
+        if (b.budget.period === 'monthly' && b.budget.amount > 0 && isIncome) {
+          ingresosSalario += b.budget.amount;
+        }
+      });
+    }
 
-      // FIX 1: Robust Income Categorization
-      // Check both database type AND name conventions for fallback
-      const type = cat?.type?.toLowerCase();
-      const name = cat?.name?.toLowerCase() || '';
-      const budgetCategoryName = b.categoryName?.toLowerCase() || '';
+    // --- Gastos presupuestados (Budgets) ---
+    if (!isPastMonth) {
+      budgets.forEach(b => {
+        const cat = categories.find(c => c.id === b.budget.category_id);
+        // Exclude income
+        if (cat?.type === 'income') return;
 
-      const isIncome = type === 'income' ||
-        name.includes('ingres') ||
-        name.includes('salar') ||
-        budgetCategoryName.includes('ingres') ||
-        budgetCategoryName.includes('salar');
-
-      if (isIncome && b.budget.amount > 0) {
-        // FIX 2: Persistence for Monthly Budgets
-        // If monthly, it applies to ALL months. If it has a specific month set (rare for recurring), check date.
-        if (b.budget.period === 'monthly') {
-          if (b.budget.month) {
-            // Specific month budget
-            if (isSameMonth(parseISO(b.budget.month), date)) {
-              ingresosSalario += b.budget.amount;
-            }
+        if (b.budget.period === 'monthly' && b.budget.amount > 0) {
+          // Check if already spent in THIS month (for current month accuracy)
+          if (format(date, 'yyyy-MM') === format(now, 'yyyy-MM')) {
+            gastosFuturos += b.remaining;
           } else {
-            // Recurring monthly budget (applies always)
-            ingresosSalario += b.budget.amount;
+            // Future month: add full budget
+            gastosFuturos += b.budget.amount;
           }
         }
-      }
-    });
+      });
+    }
 
-    // --- Gastos presupuestados y Double Counting Logic (FIXED) ---
-    budgets.forEach(b => {
-      const cat = categories.find(c => c.id === b.budget.category_id);
+    // --- Future Expenses & Subscriptions ---
+    if (!isPastMonth) {
+      futureExpenses.forEach(fe => {
+        let matchesMonth = false;
 
-      // Determine if it's an expense
-      const type = cat?.type?.toLowerCase();
-      const isExpense = (type === 'expense' || !type) && b.categoryName !== 'Ingresos'; // Default unsafe to expense
+        if (fe.is_subscription) {
+          const startD = fe.start_date ? new Date(fe.start_date) : null;
+          const endD = fe.end_date ? new Date(fe.end_date) : null;
 
-      if (b.budget.period === 'monthly' && b.budget.amount > 0 && isExpense) {
-        const budgetDate = b.budget.month ? parseISO(b.budget.month) : null;
+          // Check validity range
+          if (startD && isBefore(endOfMonth(date), startOfMonth(startD))) return;
+          if (endD && isAfter(startOfMonth(date), endOfMonth(endD))) return;
 
-        // Check if this budget applies to the current loop date
-        const appliesToThisMonth = budgetDate ? isSameMonth(budgetDate, date) : true;
+          // Check Frequency
+          const freq = fe.frequency || 'monthly';
+          const monthDiff = startD ? differenceInCalendarMonths(date, startD) : 0;
 
-        if (appliesToThisMonth) {
-          // FIX 3: Double Counting Prevention (Real Transactions vs Budget)
-          // Si estamos en el mes actual (o pasado), 'Transactions' ya tiene los gastos reales.
-          // Si ya gasté $300 de un presupuesto $500, solo proyecto $200 restantes.
-          // Si ya gasté $600 de un presupuesto $500, proyecto $0 adicionales (ya se sumó en reales).
-
-          let spentThisMonth = 0;
-
-          // Verificamos si hay transacciones reales para esta categoría en este mes del loop
-          // NOTA: Esto solo funciona si 'transactions' tiene datos del mes que estamos proyectando (usualmente Mes Actual).
-          // Para meses futuros, spentThisMonth será 0.
-          transactions.forEach(tx => {
-            if (tx.category_id === b.budget.category_id &&
-              isSameMonth(new Date(tx.date), date) &&
-              tx.type === 'expense') {
-              const isInstallment = (tx as any).installments && (tx as any).installments > 1;
-              // No contamos cuotas de tarjeta aquí para evitar conflictos con el motor de amortización
-              if (!isInstallment) {
-                spentThisMonth += tx.amount;
-              }
-            }
-          });
-
-          // Solo sumamos el remanente positivo
-          const remainingBudget = Math.max(0, b.budget.amount - spentThisMonth);
-          gastosFuturos += remainingBudget;
-        }
-      }
-    });
-
-    // --- Gastos Futuros y Suscripciones (FIXED) ---
-    futureExpenses.forEach(fe => {
-      if (fe.is_subscription) {
-        // Suscripción recurrente (FIX 4: Infinite Projection)
-        const startDate = fe.start_date ? parseISO(fe.start_date) : null;
-        const endDate = fe.end_date ? parseISO(fe.end_date) : null;
-
-        if (startDate && isBefore(date, startDate)) return; // Aún no empieza
-        if (endDate && isAfter(date, endDate)) return; // Ya terminó
-
-        // Calcular coincidencia de frecuencia
-        if (startDate) {
-          // Diferencia en meses desde inicio
-          const monthsSinceStart = (date.getFullYear() - startDate.getFullYear()) * 12 + (date.getMonth() - startDate.getMonth());
-
-          let shouldApply = false;
-          // El usuario paga en fechas específicas relative al start date
-          // Simplificación: si start es Enero, monthly aplica Ene, Feb...
-          // bimonthly aplica Ene (0), Mar (2)...
-          if (monthsSinceStart >= 0) {
-            switch (fe.frequency) {
-              case 'monthly': shouldApply = true; break;
-              case 'bimonthly': shouldApply = monthsSinceStart % 2 === 0; break;
-              case 'quarterly': shouldApply = monthsSinceStart % 3 === 0; break;
-              case 'semiannual': shouldApply = monthsSinceStart % 6 === 0; break;
-              case 'yearly': shouldApply = monthsSinceStart % 12 === 0; break;
-              default: shouldApply = true;
-            }
+          switch (freq) {
+            case 'monthly':
+              matchesMonth = true;
+              break;
+            case 'bimonthly':
+              matchesMonth = monthDiff % 2 === 0;
+              break;
+            case 'quarterly':
+              matchesMonth = monthDiff % 3 === 0;
+              break;
+            case 'semiannual':
+              matchesMonth = monthDiff % 6 === 0;
+              break;
+            case 'yearly':
+              matchesMonth = monthDiff % 12 === 0;
+              break;
+            default:
+              matchesMonth = true;
           }
-
-          if (shouldApply) {
-            gastosFuturos += fe.amount;
+        } else {
+          // One-time expense
+          const payDate = new Date(fe.payment_date);
+          if (format(payDate, 'yyyy-MM') === format(date, 'yyyy-MM')) {
+            matchesMonth = true;
           }
         }
-      } else {
-        // Gasto Puntual (FIX 5: Distinct Month Check)
-        const paymentDate = parseISO(fe.payment_date);
-        // Solo sumar si es EXACTAMENTE el mes del loop
-        if (isSameMonth(paymentDate, date)) {
+
+        if (matchesMonth) {
           gastosFuturos += fe.amount;
         }
-      }
-    });
+      });
+    }
 
     // --- Préstamos: amortización francesa real ---
     const newLoans: Record<string, { saldo: number, cuotasRestantes: number }> = { ...prevLoans };
     loans.forEach(loan => {
       const prev = prevLoans[loan.id] ?? { saldo: loan.total_amount - (loan.paid_amount || 0), cuotasRestantes: loan.installments || 12 };
-
-      // Si el prestamo ya fue desembolsado y aun se debe
-      if (prev.saldo > 100 && prev.cuotasRestantes > 0) { // Tolerancia de 100 pesos
+      if (prev.saldo > 0 && prev.cuotasRestantes > 0) {
         const tasa = loan.interest_rate;
         const cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
         const interes = prev.saldo * tasa / 12;
 
-        egresosPrestamos += cuota;
-        egresosPrestamosInteres += interes;
-        egresosPrestamosCapital += cuota - interes;
+        if (!isPastMonth) {
+          egresosPrestamos += cuota;
+          egresosPrestamosInteres += interes;
+          egresosPrestamosCapital += cuota - interes;
+        }
 
         newLoans[loan.id] = {
           saldo: prev.saldo - (cuota - interes),
@@ -211,146 +215,123 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- Tarjetas de crédito: Motor de Amortización (FIXED) ---
+    // --- Tarjetas de crédito ---
     const newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = { ...prevCardInstallments };
 
-    // 1. Detectar nuevas compras a cuotas activas este mes
-    transactions
-      .filter(tx => tx.type === 'expense' && tx.payment_method_id)
-      .forEach(tx => {
-        const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
-        if (pm?.type !== 'credit') return;
+    transactions.filter(tx => tx.type === 'expense' && (tx.installments || 1) > 1).forEach(tx => {
+      const txDate = new Date(tx.date);
+      const cuotas = tx.installments || 1;
 
-        // FIXED: Include 1-quota transactions too!
-        const installments = (tx as any).installments || 1;
+      // Calculate active range using calendar months difference
+      // Installment 1 is in txDate month (month 0)
+      // Installment N is in month N-1
+      const diffMonths = differenceInCalendarMonths(date, txDate);
 
-        const key = tx.id;
-        // Si ya existe en el estado acumulado, sigue su curso.
-        // Si NO existe, verificamos "temporalmente" si debería existir hoy.
-        if (!newCardInstallments[key]) {
-          const txDate = new Date(tx.date);
-
-          // Meses que han pasado desde la compra hasta la fecha actual del loop 'date'
-          const monthsSincePurchase = (date.getFullYear() - txDate.getFullYear()) * 12 + (date.getMonth() - txDate.getMonth());
-
-          // FIXED LOGIC:
-          // A purchase made in Month M usually starts paying in Month M+1 (standard credit card logic).
-          // If I buy today (Jan), I pay in Feb.
-          // Limit: We verify if we are in the "active payment window".
-          // Window starts at M+1. Ends at M+installments.
-
-          // Exception: If user specifically configured Immediate Payment? (Not supported yet)
-          // Standard Assumption: Credit Card = Pay Next Month.
-
-          const startPaymentMonthOffset = 1; // Start paying next month
-          const paymentWindowIndex = monthsSincePurchase - startPaymentMonthOffset;
-
-          if (paymentWindowIndex >= 0 && paymentWindowIndex < installments) {
-            // Si la tarjeta tiene tasa, calculamos. (Simplificado flat rate para MVP)
-            const tasa = pm.estimated_yield || 0;
-
-            const remaining = installments - paymentWindowIndex;
-
-            newCardInstallments[key] = {
-              restantes: remaining,
-              valorCuota: tx.amount / installments,
-              interes: 0,
-              capital: tx.amount / installments
-            };
+      // If we are in the transaction month or later, AND within the quota count
+      if (diffMonths >= 0 && diffMonths < cuotas) {
+        // This is a much safer check than day comparison
+        const pm = paymentMethods.find(pm => pm.id === tx.payment_method_id);
+        if (pm && pm.type === 'credit') {
+          const valorCuota = tx.amount / cuotas;
+          if (!isPastMonth) {
+            egresosTarjeta += valorCuota;
           }
         }
-      });
-
-    // 2. Procesar pagos y decrementar saldo
-    Object.keys(newCardInstallments).forEach(key => {
-      const item = newCardInstallments[key];
-      if (item.restantes > 0) {
-        egresosTarjeta += item.valorCuota;
-        egresosTarjetaInteres += item.interes;
-        egresosTarjetaCapital += item.capital;
-
-        // FIX 6: Decrement Logic
-        // Modificamos el objeto 'item' directamente en el record para que pase al siguiente mes
-        // Pero... CUIDADO: Javascript objects are references. 
-        // En la línea 226 hicimos spread {...prev}, so newCardInstallments es shallow copy.
-        // Pero los items internos SI son nuevos objetos creados en el paso 1 o copiados.
-        // Necesitamos asegurar que no mutamos el 'prev' state accidentalmente si referenciaba el mismo objeto.
-        // Como en el paso 1 creamos nuevos objetos literal {}, estamos seguros.
-        // Si vino del spread, referencia al anterior. 
-
-        newCardInstallments[key] = {
-          ...item,
-          restantes: item.restantes - 1
-        };
-      } else {
-        // Ya no se cobra
-        delete newCardInstallments[key];
       }
     });
 
 
-    // --- Gastos reales del mes (Transactions) ---
-    // Solo sumamos los reales si ESTÁN en este mes
+    // --- Gastos reales del mes (Historical) ---
+    // Excluir transferencias entre cuentas propias para no inflar flujo neto (mismo criterio que Dashboard)
     transactions.forEach(tx => {
-      if (tx.type === 'expense' && isSameMonth(new Date(tx.date), date)) {
-        // Las cuotas NO se suman aquí porque ya se manejan en el motor de arriba o en el futuro
-        // EXCEPCION: La primera cuota de una compra hecha HOY, ¿se paga hoy?
-        // Generalmente las TC se pagan al mes siguiente.
-        // AQUI asumimos "Cash Flow" = salida de dinero.
-        // Si pagó con TC, la salida de dinero es CUANDO PAGA LA TARJETA.
-        // Por tanto, las compras con TC NO son egresosReales de efectivo HOY.
-        // EgresosReales = efectivo, debito, transferencia.
+      if (isTransferTransaction(tx)) return;
+      const txDate = new Date(tx.date);
+      const isSameMonth = month === 'all' ? true : (tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM'));
+      const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
 
-        const pm = paymentMethods.find(pm => pm.id === tx.payment_method_id);
-        const isCredit = pm?.type === 'credit';
+      const isMultiCuotaCC = pm?.type === 'credit' && ((tx as any).installments || 1) > 1;
 
-        if (!isCredit) {
+      if (isSameMonth && !isMultiCuotaCC) {
+        if (tx.type === 'expense') {
           egresosReales += tx.amount;
-        } else {
-          // Si es crédito, NO es salida de efectivo hoy. Es deuda.
-          // Se pagará cuando el motor de tarjetas diga (prox mes o cuotas).
+        } else if (tx.type === 'income') {
+          if (isPastMonth) {
+            otrosIngresos += tx.amount;
+          }
         }
       }
     });
 
-    // Totales
-    const ingresosTotales = ingresosSalario + ingresosReales + interesesAhorro + otrosIngresos;
+    // Cleaning up Income logic:
+    // Past: `ingresosSalario` (0), `otrosIngresos` (Real Sum).
+    // Future: `ingresosSalario` (Budget), `otrosIngresos` (0).
+    // Current: `ingresosSalario` (Budget), `otrosIngresos` (0)? 
+    // If I have extra income in current month? 
+    // Let's add real income to `otrosIngresos` if it's NOT the salary category? 
+    // Too complex to match strings.
+    // Simplification:
+    // Past: Ingresos = Sum(Real Transactions type income).
+    // Future: Ingresos = Sum(Budgets type income).
+    // Current: Max(Sum(Budgets), Sum(Real))? Or just Budget?
+    // Let's go with:
+    // Past:
+    if (isPastMonth) {
+      ingresosSalario = 0;
+      otrosIngresos = 0;
+      transactions.forEach(tx => {
+        if (isTransferTransaction(tx)) return;
+        const txDate = new Date(tx.date);
+        if (format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM') && tx.type === 'income') {
+          otrosIngresos += tx.amount;
+        }
+      });
+    }
+
+    // --- Préstamos que me deben (ingresos por cobrar) ---
+    let ingresosPrestamos = 0;
+
+    // Calcular totales y balances antes de usarlos
+    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos;
+    // Note: egresosReales contains only expenses.
     const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales;
     const balanceNetoMes = ingresosTotales - egresosTotales;
     const balanceAcumulado = prevBalance + balanceNetoMes;
 
     return {
       mes: format(date, 'MMMM yyyy'),
-      ingresosTotales,
-      ingresosSalario,
-      ingresosReales, // ADDED to export
-      interesesAhorro,
-      egresosTotales,
-      gastosFuturos,
-      egresosPrestamos,
-      egresosTarjeta,
-      egresosReales,
-      balanceNetoMes,
-      balanceAcumulado,
+      ingresosTotales: round(ingresosTotales),
+      ingresosSalario: round(ingresosSalario),
+      interesesAhorro: round(interesesAhorro),
+      ingresosPrestamos: round(ingresosPrestamos),
+      otrosIngresos: round(otrosIngresos),
+      egresosTotales: round(egresosTotales),
+      gastosFuturos: round(gastosFuturos),
+      egresosPrestamos: round(egresosPrestamos),
+      egresosPrestamosInteres: round(egresosPrestamosInteres),
+      egresosPrestamosCapital: round(egresosPrestamosCapital),
+      egresosTarjeta: round(egresosTarjeta),
+      egresosTarjetaInteres: round(egresosTarjetaInteres),
+      egresosTarjetaCapital: round(egresosTarjetaCapital),
+      egresosReales: round(egresosReales),
+      balanceNetoMes: round(balanceNetoMes),
+      balanceAcumulado: round(balanceAcumulado),
       newSavings,
       newLoans,
       newCardInstallments,
     };
   }
 
-  // --- Mapear los próximos 12 meses ---
+  // --- Mapear los próximos 12 meses con estado acumulado ---
   const monthlyBreakdown = useMemo(() => {
     let prevBalance = balance_actual;
     let prevSavings: Record<string, number> = {};
     let prevLoans: Record<string, { saldo: number, cuotasRestantes: number }> = {};
     let prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = {};
-
     const arr = [];
     for (let m = 0; m < 12; m++) {
       const d = addMonths(start, m);
       const snap = calculateMonthlySnapshot(d, prevBalance, prevSavings, prevLoans, prevCardInstallments);
       arr.push(snap);
-
       prevBalance = snap.balanceAcumulado;
       prevSavings = snap.newSavings;
       prevLoans = snap.newLoans;
@@ -359,14 +340,20 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     return arr;
   }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start, futureExpenses, categories]);
 
-  // --- Serie compatible para gráficas ---
+  // --- Serie para gráfica (compatibilidad) ---
   const cashFlowSeries = monthlyBreakdown.map((row, idx) => ({
     name: row.mes,
     ingresos: row.ingresosTotales,
+    ingresosSalario: row.ingresosSalario,
+    interesesAhorro: row.interesesAhorro,
     egresos: row.egresosTotales,
+    gastosFuturos: row.gastosFuturos,
+    egresosPrestamos: row.egresosPrestamos,
+    egresosTarjeta: row.egresosTarjeta,
+    egresosReales: row.egresosReales,
     balanceReal: idx === 0 ? balance_actual : null,
     balanceProyectado: row.balanceAcumulado,
-    breakdown: row
+    breakdown: row,
   }));
 
   return {
@@ -374,6 +361,6 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     balance_actual,
     monthlyBreakdown,
     proyeccion_ingresos: cashFlowSeries.length > 0 ? cashFlowSeries[0].ingresos : 0,
-    compromisos_deuda: cashFlowSeries.length > 0 ? (monthlyBreakdown[0].egresosPrestamos + monthlyBreakdown[0].egresosTarjeta) : 0,
+    compromisos_deuda: cashFlowSeries.length > 0 ? (cashFlowSeries[0].egresosPrestamos + cashFlowSeries[0].egresosTarjeta) : 0,
   };
 }

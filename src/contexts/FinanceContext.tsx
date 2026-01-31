@@ -1,16 +1,12 @@
-import React, { useContext, ReactNode } from 'react';
-import { useFinanceDataLogic } from '../hooks/useFinanceData';
-import { FinanceContext } from './FinanceContextInstance';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useFinanceDataLogic } from '../hooks/useFinanceDataLogic';
 
-export { FinanceContext };
+const FinanceContext = createContext<ReturnType<typeof useFinanceDataLogic> | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-
     const financeData = useFinanceDataLogic();
-    const memoizedData = React.useMemo(() => financeData, [financeData]);
-
     return (
-        <FinanceContext.Provider value={memoizedData}>
+        <FinanceContext.Provider value={financeData}>
             {children}
         </FinanceContext.Provider>
     );

@@ -16,26 +16,18 @@ export function ThemeSection() {
                 <CardDescription>Personaliza el color principal de la interfaz</CardDescription>
             </CardHeader>
             <CardContent>
-                <div
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center"
-                >
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center">
                     {themeOptions.map((option) => (
                         <button
                             key={option.hex}
                             onClick={() => setAppThemePreference(option.hex)}
                             className={cn(
                                 "group relative flex flex-col items-center gap-2 p-2 rounded-xl transition-all duration-200 hover:bg-muted/50 w-full",
-                                baseColor === option.hex ? "border-2 border-primary" : "border border-border",
                                 baseColor === option.hex && "bg-muted shadow-inner"
                             )}
                         >
                             <div
-                                className={cn(
-                                    "h-10 w-10 md:h-12 md:w-12 rounded-xl shadow-sm flex items-center justify-center transition-transform group-hover:scale-110",
-                                    baseColor === option.hex
-                                        ? "border-2 border-primary"
-                                        : "border border-border"
-                                )}
+                                className="h-10 w-10 md:h-12 md:w-12 rounded-xl shadow-sm flex items-center justify-center transition-transform group-hover:scale-110"
                                 style={{ backgroundColor: option.hex }}
                             >
                                 {baseColor === option.hex && (
@@ -45,7 +37,11 @@ export function ThemeSection() {
                             <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 {option.label}
                             </span>
-                            {/* Punto indicador eliminado */}
+                            {baseColor === option.hex && (
+                                <div
+                                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary"
+                                />
+                            )}
                         </button>
                     ))}
                 </div>

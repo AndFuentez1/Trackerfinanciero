@@ -10,7 +10,7 @@ export const WARNING_COLOR = '#f59e42';
 export const GRAYS = {
   background: '#f8fafc',
   card: '#fff',
-  border: '#92969c',
+  border: '#e5e7eb',
   muted: '#6b7280',
 };
 

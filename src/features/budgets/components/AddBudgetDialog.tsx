@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { trackEvent } from '@/lib/analytics';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
@@ -21,16 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { AddCategoryDialog } from '@/features/categories/components/AddCategoryDialog';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -70,12 +59,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const typeOptions = [
-    { value: 'expense', label: 'Gasto' },
-    { value: 'income', label: 'Ingreso' },
-  ];
-  const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
-
   const getCurrencySymbol = () => {
     const curr = CURRENCIES.find(c => c.code === currency);
     return curr?.symbol || currency || '$';
@@ -106,13 +89,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
 
   const watchedCategoryId = useWatch({ control, name: 'category_id' });
 
-  // Filtrar categorías según el tipo seleccionado
-  const filteredCategories = useMemo(() =>
-    categories
-      .filter(c => c.type === selectedType)
-      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
-    [categories, selectedType]);
-
   const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
   const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
 
@@ -124,13 +100,15 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         category: editingBudget.categoryName,
         amount: editingBudget.amount,
       });
-      // Si la categoría editada es de ingreso, setear tipo
-      const cat = categories.find(c => c.id === editingBudget.category_id);
-      if (cat && (cat.type === 'income' || cat.type === 'expense')) {
-        setSelectedType(cat.type);
-      }
     }
-  }, [editingBudget, reset, categories]);
+  }, [editingBudget, reset]);
+
+  // Filter only expense categories for budgets
+  const expenseCategories = useMemo(() =>
+    categories
+      .filter(c => c.type === 'expense')
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
+    [categories]);
 
   const onFormSubmit = async (values: BudgetFormValues) => {
     const now = new Date();
@@ -169,13 +147,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       });
 
       if (!isUpdate) {
-        trackEvent('budget_created', {
-          category: values.category,
-          amount: values.amount
-        });
-        trackEvent('onboarding_step_completed', {
-          step_name: 'budget_created'
-        });
         reset();
       }
       setOpen(false);
@@ -183,19 +154,14 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     }
   };
 
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-
-  const handleDeleteClick = () => {
-    setShowDeleteAlert(true);
-  };
-
-  const confirmDelete = async () => {
+  const handleDelete = async () => {
     if (!editingBudget?.id || !onDelete) return;
 
-    const result = await onDelete(editingBudget.id);
-    if (!result?.error) {
-      setOpen(false);
-      setShowDeleteAlert(false);
+    if (confirm('¿Estás seguro de que deseas eliminar este presupuesto?')) {
+      const result = await onDelete(editingBudget.id);
+      if (!result?.error) {
+        setOpen(false);
+      }
     }
   };
 
@@ -215,9 +181,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       <DialogTrigger asChild>
         {children || (
           <Button
-            variant="default"
-            size="sm"
-            className="gap-2 min-w-[140px] text-[15px] py-2 flex items-center justify-center border border-primary hover:bg-primary/90 hover:text-white"
+            className="gap-2 shadow-lg shadow-primary/20 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
             onClick={(e) => {
@@ -252,30 +216,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
 
         <Form {...form}>
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
-            {/* Dropdown de tipo (Gasto/Ingreso) */}
-            <div className="space-y-2">
-              <Label className="text-sm">Tipo</Label>
-              <Select
-                value={selectedType}
-                onValueChange={(val) => {
-                  setSelectedType(val as 'expense' | 'income');
-                  // Limpiar categoría seleccionada al cambiar tipo
-                  setValue('category_id', '');
-                  setValue('category', '');
-                }}
-                disabled={!!editingBudget}
-              >
-                <SelectTrigger className="h-11 md:h-9 text-sm border-[hsl(var(--color-primary)/0.8)] bg-white hover:bg-primary hover:text-primary-foreground transition-all duration-300 rounded-xl">
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {typeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <FormField
               control={control}
               name="category_id"
@@ -287,21 +227,22 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                       <Select
                         onValueChange={(val) => {
                           field.onChange(val);
-                          const cat = filteredCategories.find(c => c.id === val);
+                          const cat = expenseCategories.find(c => c.id === val);
                           if (cat) {
                             setValue('category', cat.name);
+
                           }
                         }}
                         value={field.value}
                         disabled={!!editingBudget}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 md:h-9 text-sm border-[hsl(var(--color-primary)/0.8)] bg-white hover:bg-primary hover:text-primary-foreground transition-all duration-300 rounded-xl">
+                          <SelectTrigger className="h-11 md:h-9 text-sm">
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredCategories.map((c) => (
+                          {expenseCategories.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
                             </SelectItem>
@@ -311,15 +252,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                     </div>
                     {!editingBudget && (
                       <div className="flex-shrink-0">
-                        <AddCategoryDialog type={selectedType} onAdd={addCategory} trigger={
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-11 md:h-9 border-[hsl(var(--color-primary)/0.8)] rounded-xl hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                          >
-                            Nueva categoría
-                          </Button>
-                        } />
+                        <AddCategoryDialog type="expense" onAdd={addCategory} />
                       </div>
                     )}
                   </div>
@@ -371,7 +304,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                   type="button"
                   variant="default"
                   className="w-full h-11 md:h-9 text-sm font-medium text-destructive hover:bg-destructive/10 border-destructive/20"
-                  onClick={handleDeleteClick}
+                  onClick={handleDelete}
                   disabled={isSubmitting}
                 >
                   Eliminar
@@ -381,23 +314,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
           </form>
         </Form>
       </DialogContent>
-
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará el presupuesto para esta categoría. No afecta las transacciones existentes.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Dialog >
+    </Dialog>
   );
 }

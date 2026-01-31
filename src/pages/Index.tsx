@@ -22,9 +22,6 @@ import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDe
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/hooks/financeUtils';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 
-
-import { PageHeader } from '@/components/layout/PageHeader';
-
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -63,7 +60,7 @@ export default function Index() {
     setHighlightedCard,
   } = useFinanceData();
 
-  const { lastModification: budgetLastUpdated, loading: budgetsLoading, saveBudget } = useBudgetsData();
+  const { lastModification: budgetLastUpdated, loading: budgetsLoading } = useBudgetsData();
 
   // --- Derived calculations ---
   const statsSummary = useMemo(() => {
@@ -99,12 +96,12 @@ export default function Index() {
   );
 
   const isEmptyState = useMemo(
-    () => !currency || paymentMethods.length === 0 || categories.length === 0,
-    [currency, paymentMethods.length, categories.length]
+    () => !statsSummary.currency || paymentMethods.length === 0 || categories.length === 0,
+    [statsSummary.currency, paymentMethods.length, categories.length]
   );
 
   const showWelcomePanel = useMemo(
-    () => welcomeCompleted === false && isEmptyState,
+    () => !welcomeCompleted && isEmptyState,
     [welcomeCompleted, isEmptyState]
   );
 
@@ -119,10 +116,8 @@ export default function Index() {
   );
 
   // Loading state (High Fidelity Skeleton Reveal)
-  // Loading state (High Fidelity Skeleton Reveal)
-  // MOVED: Internal render to avoid unmounting layout
   if (isLoading) {
-    return <SkeletonLoader tab="dashboard" fullPage={false} withLayoutWrapper={true} loading={true} />;
+    return <SkeletonLoader tab="dashboard" fullPage />;
   }
 
   if (!user) return null;
@@ -139,12 +134,14 @@ export default function Index() {
     return (
       <OnboardingDecisionPanel
         onStartFromScratch={async () => { await setOnboardingDecision('from_scratch'); }}
-        onImportData={() => {/* no longer used */ }}
+        onImportData={() => {/* open file selector */ }}
         hasPendingImport={hasPendingImport}
         onConfirmImport={async () => { await confirmImportData(); }}
         pendingImportCount={pendingImportData.length}
         importProgress={importProgress as any}
         onCancelImport={async () => { await cancelImport(); }}
+        paymentMethods={paymentMethods}
+        onImportComplete={(data) => startImport(data)}
         showCompletionCard={showCompletionCard}
         baseColor={baseColor}
         themeOptions={themeOptions}
@@ -155,19 +152,20 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background/30">
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold">Resumen</h1>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
+            <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
+            <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
+            <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+          </div>
+        </div>
+      </header>
+
       <main className="container max-w-6xl mx-auto px-4 py-8">
-        <PageHeader
-          title="Resumen"
-          description="Visión general de tu estado financiero actual"
-          icon={<BarChart3 className="h-6 w-6" />}
-          actions={
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
-              <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
-              <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
-              <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-            </div>
-          }
-        />
         <div className="space-y-6">
           <SummaryTab
             transactions={chartTransactions}
@@ -184,7 +182,6 @@ export default function Index() {
             onUpdateTransaction={updateTransaction}
             dateFilter={{ period: 'all', from: null, to: null }}
             updateFilter={() => { }}
-            onSaveBudget={saveBudget}
           />
         </div>
         {lastUpdated && (

@@ -97,7 +97,7 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
                         </div>
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--color-primary),0.4)]"
+                                className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.4)]"
                                 style={{ width: `${Math.min(footer.value, 100)}%` }}
                             />
                         </div>

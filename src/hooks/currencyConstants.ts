@@ -9,9 +9,9 @@ export interface CurrencyConfig {
 export const CURRENCIES: CurrencyConfig[] = [
   { code: 'USD', name: 'Dólar estadounidense ($)', symbol: '$', decimals: 2 },
   { code: 'EUR', name: 'Euro (€)', symbol: '€', decimals: 2 },
-  { code: 'COP', name: 'Peso colombiano', symbol: 'COP', decimals: 0 },
-  { code: 'MXN', name: 'Peso mexicano', symbol: 'MXN', decimals: 2 },
-  { code: 'ARS', name: 'Peso argentino', symbol: 'ARS', decimals: 2 },
+  { code: 'COP', name: 'Peso colombiano (COP)', symbol: 'COP', decimals: 0 },
+  { code: 'MXN', name: 'Peso mexicano (Mex$)', symbol: 'Mex$', decimals: 2 },
+  { code: 'ARS', name: 'Peso argentino (ARS)', symbol: 'ARS', decimals: 2 },
   { code: 'BRL', name: 'Real brasileño (R$)', symbol: 'R$', decimals: 2 },
   { code: 'CLP', name: 'Peso chileno (CLP)', symbol: 'CLP', decimals: 0 },
   { code: 'PEN', name: 'Sol peruano (S/)', symbol: 'S/', decimals: 2 },

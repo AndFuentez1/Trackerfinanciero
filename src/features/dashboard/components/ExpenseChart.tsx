@@ -1,172 +1,181 @@
+import { CategoryItem } from '@/hooks/useFinanceData';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
-import { Bar, Line, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Transaction } from '@/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/line-charts-1';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 interface ExpenseChartProps {
-  transactions: Transaction[];
-  selectedYears: number[];
+  data: { category: string; category_id?: string | null; amount: number }[];
+  categories: CategoryItem[]
 }
 
-export function ExpenseChart({ transactions = [], selectedYears = [] }: ExpenseChartProps) {
+export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   const decimalPlaces = useDecimalPlaces();
   const { currency } = useFinance();
+  const chartData = useMemo(() => {
+    if (data.length === 0) return [];
+
+    // Sort by amount descending
+    const sortedData = [...data].sort((a, b) => b.amount - a.amount);
+
+    if (sortedData.length <= 5) {
+      return sortedData.map(item => ({
+        name: item.category,
+        value: item.amount,
+        color: categories.find(c => c.id === item.category_id || c.name === item.category)?.color || '#94a3b8'
+      }));
+    }
+
+    const top5 = sortedData.slice(0, 5);
+    const others = sortedData.slice(5).reduce((sum, item) => sum + item.amount, 0);
+
+    const result = top5.map(item => ({
+      name: item.category,
+      value: item.amount,
+      color: categories.find(c => c.id === item.category_id || c.name === item.category)?.color || '#94a3b8'
+    }));
+
+    result.push({
+      name: 'Otros',
+      value: others,
+      color: '#cbd5e1' // slate-300 for others
+    });
+
+    return result;
+  }, [data, categories]);
+
+  const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
 
   const getCurrencySymbol = (currencyCode: string): string => {
     const curr = CURRENCIES.find(c => c.code === currencyCode);
     return curr?.symbol || currencyCode;
   };
 
-  const symbol = getCurrencySymbol(currency || 'COP');
+  const formatCurrencyString = (value: number) => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+    
+    return formatted.replace(currency || 'COP', symbol);
+  };
 
-  const chartData = useMemo(() => {
-    if (transactions.length === 0) return [];
+  const formatCurrencyForLegend = (value: number): { symbol: string; amount: string } => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currency || 'COP',
+      currencyDisplay: 'code',
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(value);
+    
+    formatted = formatted.replace(currency || 'COP', symbol);
+    
+    // Split symbol and amount
+    const symbolMatch = formatted.match(/^[^\d]+/);
+    const displaySymbol = symbolMatch ? symbolMatch[0].trim() : symbol;
+    const amount = formatted.replace(/^[^\d]+/, '').trim();
+    
+    return { symbol: displaySymbol, amount };
+  };
 
-    // Filter transactions by selected years
-    const filteredTransactions = selectedYears.length > 0
-      ? transactions.filter(t => {
-        const year = new Date(t.date).getFullYear();
-        return selectedYears.includes(year);
-      })
-      : transactions;
-
-    // Aggregate by month (Jan-Dec) across all selected years
-    const monthlyData: Record<string, { income: number; expenses: number }> = {};
-
-    filteredTransactions.forEach(transaction => {
-      const date = parseISO(transaction.date);
-      const monthKey = format(date, 'MMM', { locale: es }); // "Ene", "Feb", etc.
-
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { income: 0, expenses: 0 };
-      }
-
-      if (transaction.type === 'income') {
-        monthlyData[monthKey].income += transaction.amount;
-      } else if (transaction.type === 'expense') {
-        monthlyData[monthKey].expenses += transaction.amount;
-      }
-    });
-
-    // Convert to array and ensure all 12 months exist
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return months.map(month => ({
-      month,
-      income: monthlyData[month]?.income || 0,
-      expenses: monthlyData[month]?.expenses || 0,
-      balance: (monthlyData[month]?.income || 0) - (monthlyData[month]?.expenses || 0),
-    }));
-  }, [transactions, selectedYears]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-CO', {
+  // Formatter for axis: must return string only
+  const formatCurrencyAxis = (value: number) => {
+    const symbol = getCurrencySymbol(currency || 'COP');
+    let formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: currency || 'COP',
       currencyDisplay: 'symbol',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
-    }).format(value).replace('COP', symbol).trim();
+    }).format(value);
+    return formatted; // Only string, no JSX
   };
 
-  if (transactions.length === 0) {
+  if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground p-6 border border-dashed border-border/50 rounded-xl bg-muted/5">
-        <p className="text-sm font-medium">No hay transacciones registradas para este periodo.</p>
+      <div className="bg-card rounded-xl border border-arquitectura-2/30 p-6 h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+        <p>No hay gastos registrados para este periodo.</p>
       </div>
     );
   }
 
+  const CustomLegend = ({ payload }: any) => {
+    return (
+      <div className="flex flex-col gap-1 mt-6 w-full px-2">
+        {payload.map((entry: any, index: number) => {
+          const { symbol, amount } = formatCurrencyForLegend(entry.payload.value);
+          const [integerPart, decimalPart] = amount.split(',');
+          
+          return (
+            <div key={`item-${index}`} className="flex items-center justify-between py-1.5 border-b border-slate-100/50 last:border-0">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div
+                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-xs font-semibold text-slate-700 truncate">{entry.value}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                  <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{symbol}</span> {integerPart}
+                  {decimalPart && <span style={{ fontSize: '0.8em', opacity: 0.6 }}>,{decimalPart}</span>}
+                </span>
+                <span className="text-[10px] font-black text-primary/70 bg-primary/5 px-1.5 py-0.5 rounded">
+                  {((entry.payload.value / total) * 100).toFixed(decimalPlaces)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="mb-4">
-        <h3 className="text-base font-semibold text-foreground">Ingresos vs Gastos</h3>
-        <p className="text-sm text-muted-foreground">
-          {selectedYears.length > 0
-            ? `Agregado por mes (${selectedYears.join(', ')})`
-            : 'Agregado por mes (todos los años)'}
-        </p>
+      <div className="mb-2">
+        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Distribución de Gastos</h3>
+        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Top categorías del periodo</p>
       </div>
 
-      <ResponsiveContainer width="100%" height={350}>
-        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-          <XAxis
-            dataKey="month"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => {
-              if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-              if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-              return value.toString();
-            }}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload || payload.length === 0) return null;
-              return (
-                <div className="rounded-lg border bg-background p-3 shadow-lg">
-                  <p className="text-sm font-semibold mb-2">{payload[0].payload.month}</p>
-                  {payload.map((entry, index) => (
-                    <div key={index} className="flex items-center justify-between gap-4 text-xs">
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: entry.color }}
-                        />
-                        {entry.name}:
-                      </span>
-                      <span className="font-semibold tabular-nums">
-                        {formatCurrency(Number(entry.value))}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              );
-            }}
-          />
-          <Legend
-            wrapperStyle={{ paddingTop: '20px' }}
-            iconType="circle"
-            formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
-          />
-          <Bar
-            dataKey="income"
-            name="Ingresos"
-            fill="#10b981"
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
-          />
-          <Bar
-            dataKey="expenses"
-            name="Gastos"
-            fill="#f87171"
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
-          />
-          <Line
-            type="monotone"
-            dataKey="balance"
-            name="Balance"
-            stroke="#9ca3af"
-            strokeWidth={2}
-            dot={{ fill: '#9ca3af', r: 4 }}
-            activeDot={{ r: 6 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+      <div className="flex-1 min-h-[450px] flex flex-col items-center">
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={65}
+              outerRadius={90}
+              paddingAngle={4}
+              dataKey="value"
+              animationDuration={1500}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) => formatCurrencyAxis(value)}
+              contentStyle={{
+                borderRadius: '12px',
+                border: 'none',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <CustomLegend payload={chartData.map(d => ({ value: d.name, color: d.color, payload: d }))} />
+      </div>
     </div>
   );
 }

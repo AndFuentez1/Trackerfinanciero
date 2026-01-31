@@ -7,7 +7,6 @@
   --color-primary: #2563eb;
   --color-danger: #ef4444;
   --color-warning: #f59e42;
-  
 
   --font-base: 'Inter', system-ui, sans-serif;
 
@@ -15,4 +14,17 @@
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
+
+  /* Semantic Colors */
+  --income: #10b981; /* emerald-500 */
+  --expense: #ef4444; /* red-500 */
+  --savings: #3b82f6; /* blue-500 */
+  --investment: #8b5cf6; /* violet-500 */
+
+  /* Architectural Palette (Greys/Blues) */
+  --arquitectura-1: #f3f4f6;
+  --arquitectura-2: #e5e7eb;
+  --arquitectura-3: #d1d5db;
+  --arquitectura-4: #9ca3af;
+  --arquitectura-5: #6b7280;
 }

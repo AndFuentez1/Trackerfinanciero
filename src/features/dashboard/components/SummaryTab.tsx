@@ -1,9 +1,9 @@
-import { useMemo, useState, useEffect, memo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
 import { ExpenseChart } from './ExpenseChart';
 import { InsightsPanel } from './InsightsPanel';
-import { BudgetList } from '@/features/budgets/components/BudgetList';
+import { BudgetList } from './BudgetList';
 import { PaymentMethodList } from '@/features/payment-methods/components/PaymentMethodList';
 import { EditPaymentMethodDialog } from '@/features/payment-methods/components/EditPaymentMethodDialog';
 import { AddPaymentMethodDialog } from '@/features/payment-methods/components/AddPaymentMethodDialog';
@@ -43,10 +43,9 @@ interface SummaryTabProps {
   onUpdateTransaction: (id: string, updates: any) => Promise<any>;
   dateFilter: { period: string; from: string | null; to: string | null };
   updateFilter: (period: string, from?: string, to?: string) => void;
-  onSaveBudget: (budget: any) => Promise<any>;
 }
 
-export const SummaryTab = memo(function SummaryTab({
+export function SummaryTab({
   transactions,
   allTransactions,
   budgets,
@@ -60,8 +59,7 @@ export const SummaryTab = memo(function SummaryTab({
   onUpdateCategoryGoal,
   onUpdateTransaction,
   dateFilter,
-  updateFilter,
-  onSaveBudget
+  updateFilter
 }: SummaryTabProps) {
   // Get current date values first
   const currentMonth = new Date().getMonth();
@@ -273,7 +271,6 @@ export const SummaryTab = memo(function SummaryTab({
             setEditingPM(pm);
             setIsEditPMOpen(true);
           }}
-          onDelete={onDeletePaymentMethod}
           onAdd={() => setIsAddPMOpen(true)}
         />
 
@@ -296,7 +293,6 @@ export const SummaryTab = memo(function SummaryTab({
 
       {/* SECCIÓN 2: Disponibilidad y Ahorro */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Tarjeta de presupuestos del mes removida del dashboard principal, solo visible en la pestaña de Presupuestos */}
         <SummaryCard
           title="Saldo Disponible"
           amount={accumulatedData.availableBalance}
@@ -368,7 +364,7 @@ export const SummaryTab = memo(function SummaryTab({
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-card/50 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-border/50 shadow-md overflow-x-auto">
+            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md overflow-x-auto">
               <EvolutionChart
                 transactions={allTransactions}
                 selectedYears={selectedYears}
@@ -379,8 +375,8 @@ export const SummaryTab = memo(function SummaryTab({
                 currentBalance={currentTotalBalance}
               />
             </div>
-            <div className="lg:col-span-1 bg-card/50 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-border/50 shadow-md">
-              <ExpenseChart transactions={filteredChartTransactions} selectedYears={selectedYears.map(Number)} />
+            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md">
+              <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
             </div>
           </div>
         </div>
@@ -397,4 +393,4 @@ export const SummaryTab = memo(function SummaryTab({
       </div>
     </div>
   );
-});
+}

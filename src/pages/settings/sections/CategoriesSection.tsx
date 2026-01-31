@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tags, Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +22,6 @@ import {
 
 export function CategoriesSection() {
     const { categories, addCategory, updateCategory, deleteCategory } = useSettingsCategories();
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
@@ -44,17 +41,11 @@ export function CategoriesSection() {
     };
 
     const handleSave = async (category: Omit<CategoryItem, 'id'>, id?: string) => {
-        let result;
         if (id) {
-            result = await updateCategory(id, category);
+            await updateCategory(id, category);
         } else {
-            result = await addCategory(category);
+            await addCategory(category);
         }
-
-        if (!result.error && searchParams.get('section')) {
-            navigate('/');
-        }
-        return result;
     };
 
     const typeLabels: Record<string, string> = {
@@ -94,12 +85,12 @@ export function CategoriesSection() {
                     />
                 </div>
 
-                <ScrollArea className="flex-1 -mx-2 px-2">
+                <ScrollArea className="flex-1 -mx-2 px-2 max-h-[400px]">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-4 pb-2">
                         {filteredCategories.map((cat) => (
                             <div
                                 key={cat.id}
-                                className="group flex items-center justify-between p-3 rounded-xl border border-slate-300 hover:border-primary/50 hover:bg-muted/30 transition-all duration-200 bg-muted/10 h-16"
+                                className="group flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/30 transition-all duration-200 bg-muted/10 h-16"
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <div

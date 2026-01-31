@@ -20,37 +20,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu";
-import { Filter, ListFilter } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 // ICON_MAP removed as part of color-only system transition
 
@@ -65,16 +39,6 @@ interface TransactionListProps {
   highlightOrphaned?: boolean;
   statusFilter?: 'attention' | 'ok';
   setStatusFilter: (value: 'attention' | 'ok' | undefined) => void;
-  // New props for filters
-  typeFilter?: string;
-  setTypeFilter?: (value: string | undefined) => void;
-  categoryFilter?: string;
-  setCategoryFilter?: (value: string | undefined) => void;
-  monthFilter?: string;
-  setMonthFilter?: (value: string) => void;
-  yearFilter?: string;
-  setYearFilter?: (value: string) => void;
-  yearOptions?: string[];
   currency?: string;
 }
 
@@ -113,20 +77,8 @@ export function TransactionList({
   highlightOrphaned = false,
   statusFilter,
   setStatusFilter,
-  typeFilter,
-  setTypeFilter,
-  categoryFilter,
-  setCategoryFilter,
-  monthFilter,
-  setMonthFilter,
-  yearFilter,
-  setYearFilter,
-  yearOptions = [],
   currency = 'COP',
 }: TransactionListProps) {
-
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
   const decimalPlaces = useDecimalPlaces();
   const { formatCurrencySmall } = useFormatCurrency();
 
@@ -158,19 +110,6 @@ export function TransactionList({
   const cancelEdit = () => {
     setEditingId(null);
     setDraft(null);
-  };
-
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const handleDeleteClick = (id: string) => {
-    setDeleteId(id);
-  };
-
-  const confirmDelete = () => {
-    if (deleteId) {
-      onDelete(deleteId);
-      setDeleteId(null);
-    }
   };
 
   const toInputDate = (iso: string) => {
@@ -313,7 +252,7 @@ export function TransactionList({
         className="rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center animate-in fade-in duration-500 transition-all shadow-sm"
         style={{
           backgroundColor: 'var(--bg-card)',
-          border: '1px dashed var(--color-border)',
+          border: '1px dashed var(--border)',
           color: 'var(--text-muted)'
         }}
       >
@@ -332,215 +271,67 @@ export function TransactionList({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden shadow-md transition-all duration-300">
-        <div className="w-full overflow-x-auto no-scrollbar">
-          <table className="premium-table">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[600px] table-auto">
             <thead className="bg-muted/30">
               <tr>
-
                 <th
-                  className="w-[120px] p-2"
+                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border"
+                  onClick={() => handleSort('date')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  <div className="relative flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide px-8">Fecha</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 h-6 w-6 hover:bg-muted/50"
-                        >
-                          <ListFilter className={cn("h-3 w-3", (monthFilter || yearFilter) ? "text-primary" : "")} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-[180px]">
-                        <DropdownMenuLabel>Ordenar</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleSort('date')}>
-                          {sortConfig.key === 'date' && sortConfig.direction === 'asc' ? 'Ascendente (Antiguo)' : 'Ascendente'}
-                          {sortConfig.key === 'date' && sortConfig.direction === 'asc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSort('date')}>
-                          {sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'Descendente (Reciente)' : 'Descendente'}
-                          {sortConfig.key === 'date' && sortConfig.direction === 'desc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Filtros</DropdownMenuLabel>
-
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Año: {yearFilter || 'Todos'}</DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup value={yearFilter} onValueChange={setYearFilter}>
-                              <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
-                              {yearOptions.map(year => (
-                                <DropdownMenuRadioItem key={year} value={year}>{year}</DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Mes: {monthFilter && monthFilter !== 'all' ? monthNames[parseInt(monthFilter)] : 'Todos'}</DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="max-h-[200px] overflow-y-auto">
-                            <DropdownMenuRadioGroup value={monthFilter || 'all'} onValueChange={setMonthFilter}>
-                              <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
-                              {monthNames.map((month, index) => (
-                                <DropdownMenuRadioItem key={index} value={index.toString()}>{month}</DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div className="flex items-center justify-center gap-1">
+                    Fecha
+                    <span>{getSortIcon('date')}</span>
                   </div>
                 </th>
-                <th className="w-[180px] p-2" style={{ fontStyle: 'normal' }}>
-                  <div className="flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide">Descripción</span>
-                  </div>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border" style={{ fontStyle: 'normal' }}>
+                  Descripción
                 </th>
-                <th className="w-[100px] p-2" style={{ fontStyle: 'normal' }}>
-                  <div className="relative flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide px-6">Tipo</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 h-6 w-6 hover:bg-muted/50"
-                        >
-                          <ListFilter className={cn("h-3 w-3", typeFilter ? "text-primary" : "")} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[150px]">
-                        <DropdownMenuLabel>Ordenar</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setSortConfig({ key: 'category', direction: 'asc' })}>
-                          Ascendente {sortConfig.key === 'category' && sortConfig.direction === 'asc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortConfig({ key: 'category', direction: 'desc' })}>
-                          Descendente {sortConfig.key === 'category' && sortConfig.direction === 'desc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Filtrar</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup value={typeFilter || 'all'} onValueChange={(v) => setTypeFilter && setTypeFilter(v === 'all' ? undefined : v)}>
-                          <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="income">Ingresos</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="expense">Gastos</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="transfer">Transferencias</DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
+                  Tipo
                 </th>
                 <th
-                  className="w-[170px] p-2"
+                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors max-w-[80px] border-r border-border"
+                  onClick={() => handleSort('category')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  <div className="relative flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide px-8">Categoría</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 h-6 w-6 hover:bg-muted/50"
-                        >
-                          <ListFilter className={cn("h-3 w-3", categoryFilter ? "text-primary" : "")} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[200px]">
-                        <DropdownMenuLabel>Ordenar</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleSort('category')}>
-                          Ascendente {sortConfig.key === 'category' && sortConfig.direction === 'asc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSort('category')}>
-                          Descendente {sortConfig.key === 'category' && sortConfig.direction === 'desc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Filtrar</DropdownMenuLabel>
-                        <ScrollArea className="h-[200px]">
-                          <DropdownMenuRadioGroup value={categoryFilter || 'all'} onValueChange={(v) => setCategoryFilter && setCategoryFilter(v === 'all' ? undefined : v)}>
-                            <DropdownMenuRadioItem value="all">Todas</DropdownMenuRadioItem>
-                            {categories.map(cat => (
-                              <DropdownMenuRadioItem key={cat.id} value={cat.id}>{cat.name}</DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                        </ScrollArea>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div className="flex items-center justify-center gap-1">
+                    Categoría
+                    <span>{getSortIcon('category')}</span>
                   </div>
                 </th>
-                <th className="w-[140px] p-2" style={{ fontStyle: 'normal' }}>
-                  <div className="flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide">Método</span>
-                  </div>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
+                  Método de Pago
                 </th>
                 <th
-                  className="w-[120px] p-2"
+                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary transition-colors border-r border-border"
+                  onClick={() => handleSort('amount')}
                   style={{ fontStyle: 'normal' }}
                 >
-                  <div className="relative flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide px-6">Monto</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 h-6 w-6 hover:bg-transparent"
-                      onClick={() => handleSort('amount')}
-                    >
-                      {getSortIcon('amount')}
-                    </Button>
+                  <div className="flex items-center justify-center gap-1">
+                    Monto
+                    <span>{getSortIcon('amount')}</span>
                   </div>
                 </th>
-                <th className="w-[70px] p-2" style={{ fontStyle: 'normal' }}>
-                  <div className="relative flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide px-6">Estado</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 h-6 w-6 hover:bg-muted/50"
-                        >
-                          <ListFilter className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[150px]">
-                        <DropdownMenuLabel>Ordenar</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setSortConfig({ key: 'status', direction: 'asc' })}>
-                          Ascendente {sortConfig.key === 'status' && sortConfig.direction === 'asc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortConfig({ key: 'status', direction: 'desc' })}>
-                          Descendente {sortConfig.key === 'status' && sortConfig.direction === 'desc' && <Check className="ml-auto h-3 w-3" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Filtrar</DropdownMenuLabel>
-                        <DropdownMenuCheckboxItem
-                          checked={!statusFilter || statusFilter === 'all' as any}
-                          onCheckedChange={() => setStatusFilter(undefined)}
-                        >
-                          Todos
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={statusFilter === 'attention'}
-                          onCheckedChange={() => setStatusFilter('attention')}
-                        >
-                          Atención
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={statusFilter === 'ok'}
-                          onCheckedChange={() => setStatusFilter('ok')}
-                        >
-                          OK
-                        </DropdownMenuCheckboxItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                  <div className="flex items-center justify-center gap-1">
+                    <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
+                      <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="attention">Atención</SelectItem>
+                        <SelectItem value="ok">OK</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <button onClick={() => handleSort('status')} className="hover:text-primary transition-colors p-0 border-none bg-transparent">
+                      {getSortIcon('status')}
+                    </button>
                   </div>
                 </th>
-                <th className="w-[100px] p-2" style={{ fontStyle: 'normal' }}>
-                  <div className="flex items-center justify-center w-full">
-                    <span className="font-semibold text-xs uppercase tracking-wide">Acciones</span>
-                  </div>
-                </th>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -555,20 +346,20 @@ export function TransactionList({
                   <tr
                     key={transaction.id}
                     className={cn(
-                      'transition-all duration-200 group hover:bg-muted/30',
-                      isEditing && 'bg-primary/5',
-                      isOrphan && 'bg-destructive/5',
+                      'border-b border-border transition-all duration-200 group hover:bg-muted/30',
+                      isEditing && 'bg-primary/5 hover:bg-primary/10',
+                      isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
                       highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
                       'animate-fade-in'
                     )}
                     style={{ animationDelay: `${index * 20}ms` }}
                   >
                     {/* Date */}
-                    <td style={{ fontStyle: 'normal' }} className="text-center">
+                    <td className="py-3 px-4 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <input
                           type="date"
-                          className="h-8 px-2 text-xs bg-background/50 border border-border rounded-xl w-full mx-auto"
+                          className="h-8 px-2 text-xs bg-background/50 border rounded-md w-[9rem]"
                           value={toInputDate(draft?.date || transaction.date)}
                           onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value } : d)}
                         />
@@ -580,12 +371,12 @@ export function TransactionList({
                     </td>
 
                     {/* Description */}
-                    <td className="max-w-[180px] text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           value={draft?.description ?? transaction.description}
                           onChange={(e) => setDraft(d => d ? { ...d, description: e.target.value } : d)}
-                          className="h-8 text-sm w-full text-center mx-auto border border-border rounded-xl"
+                          className="h-8 text-sm max-w-[180px] text-center"
                         />
                       ) : (
                         <div className="flex items-center justify-center gap-2">
@@ -603,9 +394,9 @@ export function TransactionList({
                     </td>
 
                     {/* Type */}
-                    <td style={{ fontStyle: 'normal' }} className="text-center">
+                    <td className="py-2.5 px-2 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                       <span className={cn(
-                        'inline-flex items-center justify-center h-8 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl',
+                        'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         typeStyles[transaction.type]
                       )} style={{ fontStyle: 'normal' }}>
                         {typeLabels[transaction.type]}
@@ -613,14 +404,14 @@ export function TransactionList({
                     </td>
 
                     {/* Category */}
-                    <td className="max-w-[170px] text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-2 align-middle text-center max-w-[120px] border-r border-border" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
-                        <div className="mx-auto w-full">
+                        <div className="mx-auto max-w-[120px]">
                           <Select
                             onValueChange={(v) => setDraft(d => d ? { ...d, category_id: v } : d)}
                             value={draft?.category_id || ''}
                           >
-                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold bg-background/50 hover:bg-background justify-center text-center border border-border rounded-xl relative [&>svg]:absolute [&>svg]:right-2">
+                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold bg-background/50 hover:bg-background">
                               <SelectValue placeholder="Cat." />
                             </SelectTrigger>
                             <SelectContent>
@@ -631,7 +422,7 @@ export function TransactionList({
                           </Select>
                         </div>
                       ) : onUpdate && (!transaction.category && !transaction.category_id) ? (
-                        <div className="mx-auto w-full">
+                        <div className="mx-auto max-w-[120px]">
                           <Select
                             onValueChange={(v) => {
                               const cat = categories.find(c => c.id === v);
@@ -642,7 +433,7 @@ export function TransactionList({
                             }}
                             value=""
                           >
-                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background justify-center text-center rounded-xl relative [&>svg]:absolute [&>svg]:right-2">
+                            <SelectTrigger className="h-8 text-[9px] uppercase font-bold border-destructive/30 bg-background/50 hover:bg-background">
                               <SelectValue placeholder="Cat." />
                             </SelectTrigger>
                             <SelectContent>
@@ -653,9 +444,9 @@ export function TransactionList({
                           </Select>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center max-w-[170px] mx-auto">
+                        <div className="flex items-center justify-center max-w-[120px] mx-auto">
                           <span
-                            className="inline-flex items-center justify-center w-full h-8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider line-clamp-2 text-center leading-tight rounded-xl"
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider line-clamp-2 text-center leading-tight"
                             style={{
                               backgroundColor: (categoryDisplay.color || '#3b82f6') + '20',
                               color: categoryDisplay.color || '#3b82f6',
@@ -669,14 +460,14 @@ export function TransactionList({
                     </td>
 
                     {/* Payment Method */}
-                    <td className="min-w-[140px] text-center">
+                    <td className="py-2.5 px-3 align-middle text-center border-r border-border min-w-[140px]">
                       {isEditing ? (
-                        <div className="mx-auto w-full max-w-[130px]">
+                        <div className="mx-auto max-w-[160px]">
                           <Select
                             onValueChange={(v) => setDraft(d => d ? { ...d, payment_method_id: v } : d)}
                             value={draft?.payment_method_id || ''}
                           >
-                            <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background justify-center text-center border border-border rounded-xl relative [&>svg]:absolute [&>svg]:right-2">
+                            <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background">
                               <SelectValue placeholder="Método" />
                             </SelectTrigger>
                             <SelectContent>
@@ -687,22 +478,9 @@ export function TransactionList({
                           </Select>
                         </div>
                       ) : pmName ? (
-                        <div className="flex items-center justify-center max-w-[120px] mx-auto">
-                          <span
-
-                            style={{
-                              backgroundColor: (() => {
-                                const pm = paymentMethods.find(p => p.id === transaction.payment_method_id);
-                                return (pm?.color || '#3b82f6') + '20';
-                              })(),
-                              color: (() => {
-                                const pm = paymentMethods.find(p => p.id === transaction.payment_method_id);
-                                return pm?.color || '#3b82f6';
-                              })(),
-                              fontStyle: 'normal'
-                            }}
-                            className="inline-flex items-center justify-center w-full h-8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider line-clamp-2 text-center leading-tight rounded-xl"
-                          >
+                        <div className="flex items-center justify-center gap-1.5 overflow-hidden">
+                          <CreditCard className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate text-center font-bold" style={{ fontStyle: 'normal', minWidth: '100px', display: 'inline-block' }}>
                             {(() => {
                               const pm = paymentMethods.find(p => p.id === transaction.payment_method_id);
                               let suffix = '';
@@ -721,12 +499,12 @@ export function TransactionList({
                         </div>
                       ) : (
                         onUpdate ? (
-                          <div className="mx-auto w-full max-w-[130px]">
+                          <div className="mx-auto max-w-[140px]">
                             <Select
                               onValueChange={(v) => onUpdate(transaction.id, { payment_method_id: v })}
                               value=""
                             >
-                              <SelectTrigger className="h-8 text-[10px] bg-background/50 hover:bg-background justify-center text-center border border-border rounded-xl relative [&>svg]:absolute [&>svg]:right-2">
+                              <SelectTrigger className="h-8 text-[10px] border-destructive/30 bg-background/50 hover:bg-background">
                                 <SelectValue placeholder="Método" />
                               </SelectTrigger>
                               <SelectContent>
@@ -743,11 +521,11 @@ export function TransactionList({
                     </td>
 
                     {/* Amount */}
-                    <td className="whitespace-nowrap min-w-[120px] text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                       {isEditing ? (
                         <Input
                           type="number"
-                          className="h-8 text-sm w-full mx-auto text-center border border-border rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="h-8 text-sm w-[10rem] ml-auto text-right"
                           value={draft?.amount ?? transaction.amount}
                           onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) } : d)}
                         />
@@ -761,7 +539,7 @@ export function TransactionList({
                             const currCode = typeof currency === 'string' ? currency : 'COP';
                             const symbol = getCurrencySymbol(currCode);
                             const decimals = decimalPlaces;
-                            const formatted = new Intl.NumberFormat('es-CO', {
+                            let formatted = new Intl.NumberFormat('es-CO', {
                               style: 'currency',
                               currency: currCode,
                               minimumFractionDigits: decimals,
@@ -795,9 +573,9 @@ export function TransactionList({
                     </td>
 
                     {/* Status */}
-                    <td className="text-center" style={{ fontStyle: 'normal' }}>
+                    <td className="py-2.5 px-3 align-middle text-center" style={{ fontStyle: 'normal' }}>
                       <span className={cn(
-                        'inline-flex items-center justify-center w-[70px] h-8 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl',
+                        'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         isOrphan ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'
                       )} style={{ fontStyle: 'normal' }}>
                         {isOrphan ? 'Atención' : 'OK'}
@@ -805,51 +583,49 @@ export function TransactionList({
                     </td>
 
                     {/* Actions */}
-                    <td className="text-center">
+                    <td className="py-2.5 px-2 align-middle text-center">
                       <div className="flex items-center justify-center gap-1">
                         {isEditing ? (
                           <>
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="icon"
-                              className="h-8 w-8 rounded-xl border" style={{ border: '1px solid hsl(var(--color-border))' }}
+                              className="h-8 w-8 hover:bg-primary/10 transition-colors"
                               onClick={() => saveEdit(transaction)}
                               title="Guardar cambios"
                             >
-                              <Check className="h-4 w-4" />
+                              <Check className="h-4 w-4 text-primary" />
                             </Button>
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="icon"
-                              className="h-8 w-8 rounded-xl border" style={{ border: '1px solid hsl(var(--color-border))' }}
+                              className="h-8 w-8 hover:bg-muted/50 transition-colors"
                               onClick={cancelEdit}
                               title="Cancelar edición"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-4 w-4 text-slate-400" />
                             </Button>
                           </>
                         ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-xl border border-border"
-                              onClick={() => startEdit(transaction)}
-                              title="Editar transacción"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-xl border border-border"
-                              onClick={() => handleDeleteClick(transaction.id)}
-                              title="Eliminar transacción"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-sm border-primary/80"
+                            onClick={() => startEdit(transaction)}
+                            title="Editar transacción"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 rounded-sm border-primary/80"
+                          onClick={() => onDelete(transaction.id)}
+                          title="Eliminar transacción"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -926,8 +702,7 @@ export function TransactionList({
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 p-0 rounded-sm border-primary/80"
-
-                      onClick={() => handleDeleteClick(transaction.id)}
+                      onClick={() => onDelete(transaction.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -937,24 +712,7 @@ export function TransactionList({
             );
           })
         }
-
       </div>
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará la transacción permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

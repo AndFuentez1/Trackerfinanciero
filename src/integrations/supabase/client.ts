@@ -15,10 +15,7 @@ const SUPABASE_PUBLISHABLE_KEY = SUPABASE_KEY_RAW;
 // #endregion
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  // #region agent log
-  // fetch('http://127.0.0.1:7242/ingest/...')
-  // #endregion
-  throw new Error(
+  console.warn(
     'Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your .env file.'
   );
 }
@@ -80,13 +77,16 @@ setTimeout(() => {
 // #region agent log
 let supabaseClient;
 try {
-  supabaseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      storage: customStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    }
-  });
+  supabaseClient = createClient<Database>(
+    SUPABASE_URL || 'https://placeholder.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY || 'placeholder',
+    {
+      auth: {
+        storage: customStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
 
   // Set up error handler for refresh token errors - handle silently
   supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -125,8 +125,15 @@ try {
 
 
 } catch (error) {
-  // fetch('http://127.0.0.1:7242/ingest/...')
-  throw error;
+  // Prevent app crash on invalid env vars
+  console.warn('Supabase client failed to initialize:', error);
+  // Fallback to a dummy client structure to satisfy TS/imports, preventing white screen
+  // This allows the app to render the Auth screen (which deals with the missing logic gracefully)
+  supabaseClient = createClient(
+    'https://placeholder.supabase.co',
+    'placeholder',
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
 }
 export const supabase = supabaseClient;
 // #endregion

@@ -13,6 +13,7 @@ export function useSavingsDataLogic() {
   const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>([]);
   const [savingsTransactions, setSavingsTransactions] = useState<SavingsTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Calculate previous balance for yield percentage calculation
   const calculatePreviousSavingsBalance = useCallback(async (paymentMethodId: string, beforeDate: string): Promise<number> => {
@@ -39,8 +40,8 @@ export function useSavingsDataLogic() {
     if (!user) return;
 
     setLoading(true);
+    setError(null);
 
-    // Fetch payment methods that are marked as savings accounts
     const { data: accountsData, error: accountsError } = await supabase
       .from('payment_methods')
       .select('*')
@@ -48,7 +49,11 @@ export function useSavingsDataLogic() {
       .eq('is_savings_account', true);
 
     if (accountsError) {
-      toast({ title: 'Error', description: 'No se pudieron cargar las cuentas de ahorro', variant: 'destructive' });
+      const msg = accountsError.message ?? 'No se pudieron cargar las cuentas de ahorro';
+      setError(msg);
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+      setSavingsAccounts([]);
+      setSavingsTransactions([]);
       setLoading(false);
       return;
     }
@@ -75,8 +80,11 @@ export function useSavingsDataLogic() {
         .order('date', { ascending: false });
 
       if (transactionsError) {
-        toast({ title: 'Error', description: 'No se pudieron cargar las transacciones de ahorro', variant: 'destructive' });
+        const msg = transactionsError.message ?? 'No se pudieron cargar las transacciones de ahorro';
+        setError(msg);
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
       } else {
+        setError(null);
         const mappedTransactions = transactionsData.map((t: any) => ({
           id: t.id,
           payment_method_id: t.payment_method_id,
@@ -91,6 +99,7 @@ export function useSavingsDataLogic() {
       }
     } else {
       setSavingsTransactions([]);
+      setError(null);
     }
 
     setLoading(false);
@@ -486,6 +495,7 @@ export function useSavingsDataLogic() {
     savingsAccounts,
     savingsTransactions,
     loading,
+    error,
     addSavingsAccount,
     deleteSavingsAccount,
     addSavingsTransaction,
