@@ -92,18 +92,11 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
 
     return (
         <Dialog open={open} onOpenChange={setOpen} modal={false}>
-            {trigger ? (
-                <DialogTrigger asChild>
-                    {trigger}
-                </DialogTrigger>
+            {trigger !== undefined ? (
+                trigger
             ) : (
                 <DialogTrigger asChild>
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        className="w-full justify-start gap-2 text-xs font-medium rounded-xl transition-colors focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground"
-                        style={{ minHeight: 40 }}
-                    >
+                    <Button variant="default" size="sm" className="w-full justify-start gap-2 text-xs font-medium text-primary hover:text-primary">
                         <Plus className="h-4 w-4" />
                         Nueva categoría
                     </Button>

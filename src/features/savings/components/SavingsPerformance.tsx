@@ -14,16 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { AddSavingsAccountDialog } from './AddSavingsAccountDialog';
 import { AddSavingsTransactionDialog } from './AddSavingsTransactionDialog';
@@ -207,26 +197,6 @@ export function SavingsPerformance({
     );
   };
 
-
-
-  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
-  const [deleteTxId, setDeleteTxId] = useState<string | null>(null);
-
-  const confirmDeleteAccount = async () => {
-    if (deleteAccountId) {
-      await onDeleteAccount(deleteAccountId);
-      setDeleteAccountId(null);
-    }
-  };
-
-  const confirmDeleteTx = async () => {
-    if (deleteTxId) {
-      await onDeleteTransaction(deleteTxId);
-      setDeleteTxId(null);
-    }
-  };
-
-
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
     amount: number;
@@ -320,7 +290,7 @@ export function SavingsPerformance({
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-md">
+      <Card className="bg-card border border-arquitectura-2/30 shadow-md">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -360,20 +330,18 @@ export function SavingsPerformance({
                 </div>
                 <div className="flex gap-1">
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="icon"
-                    className="h-8 w-8 rounded-xl border border-border"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
                     onClick={() => onEdit(account.id)}
-                    title="Editar cuenta"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="icon"
-                    className="h-8 w-8 rounded-xl border border-border"
-                    onClick={() => setDeleteAccountId(account.id)}
-                    title="Eliminar cuenta"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDeleteAccount(account.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -391,21 +359,21 @@ export function SavingsPerformance({
               )}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Depósitos</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalDeposits)}</p>
                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Retiros</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalWithdrawals)}</p>
                     <TrendingDown className="h-4 w-4 text-red-500" />
                   </div>
                 </div>
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Intereses</p>
                   <p className="text-lg font-bold text-primary tracking-tight">{formatCurrencyAccount80(account.totalInterest)}</p>
                 </div>
@@ -418,7 +386,7 @@ export function SavingsPerformance({
       </div>
 
       {accounts.length === 0 && (
-        <Card className="bg-card/30 border-2 border-dashed border-border/30 backdrop-blur-sm">
+        <Card className="bg-card border-2 border-dashed border-arquitectura-2/30">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
@@ -431,21 +399,21 @@ export function SavingsPerformance({
 
       {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-md">
+        <div className="bg-gradient-to-b from-card to-card/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
-            <table className="premium-table">
-              <thead>
+            <table className="w-full table-auto">
+              <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
                 <tr>
-                  <th className="text-center">Fecha</th>
-                  <th className="text-center">Descripción</th>
-                  <th className="text-center">Tipo</th>
-                  <th className="text-center">Método de Pago</th>
-                  <th className="text-center">Monto</th>
-                  <th className="text-center">% Rendimiento</th>
-                  <th className="text-center">Acciones</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Fecha</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Descripción</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Tipo</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Método de Pago</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Monto</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">% Rendimiento</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-arquitectura-2/30">
                 {transactions.slice(0, 20).map((tx, index) => {
                   const account = accounts.find(a => a.id === tx.payment_method_id);
                   const isEditing = editingTxId === tx.id;
@@ -467,11 +435,11 @@ export function SavingsPerformance({
                       style={{ animationDelay: `${index * 20}ms` }}
                     >
                       {/* Date */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-2 align-middle text-center">
                         {isEditing ? (
                           <input
                             type="date"
-                            className="h-8 px-2 text-sm bg-background/50 border border-border/50 rounded-md"
+                            className="h-8 px-2 text-sm bg-background/50 border rounded-md"
                             value={toInputDate(draft?.date || tx.date)}
                             onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value ?? '' } : d)}
                           />
@@ -483,7 +451,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Description */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
                             value={draft?.description ?? tx.description ?? ''}
@@ -500,7 +468,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Type */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Select
                             value={draft?.type || tx.type}
@@ -523,7 +491,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Método de Pago */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <div className="mx-auto max-w-[140px]">
                             <Select
@@ -548,7 +516,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Amount */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
                             type="number"
@@ -569,7 +537,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Yield/Rendimiento */}
-                      <td className="text-center">
+                      <td className="py-2.5 px-3 align-middle text-center">
                         {(() => {
                           const depositsAccumulated = getDepositsAccumulated(tx.payment_method_id, tx.date);
                           const balanceData = getBalanceBeforeInterest(tx.payment_method_id, tx.date);
@@ -593,7 +561,7 @@ export function SavingsPerformance({
                       </td>
 
                       {/* Actions */}
-                      <td>
+                      <td className="py-2.5 px-2 align-middle text-center">
                         <div className="flex items-center justify-center gap-1">
                           {isEditing ? (
                             <>
@@ -619,22 +587,22 @@ export function SavingsPerformance({
                           ) : (
                             <>
                               <Button
-                                variant="outline"
+                                variant="default"
                                 size="icon"
-                                className="h-8 w-8 rounded-xl border border-border"
+                                className="h-8 w-8 hover:bg-primary/10 transition-colors group/edit"
                                 onClick={() => handleStartEdit(tx)}
                                 title="Editar movimiento"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-4 w-4 text-slate-400 group-hover/edit:text-primary transition-colors" />
                               </Button>
                               <Button
-                                variant="outline"
+                                variant="default"
                                 size="icon"
-                                className="h-8 w-8 rounded-xl border border-border"
-                                onClick={() => setDeleteTxId(tx.id)}
+                                className="h-8 w-8 hover:bg-destructive/10 transition-colors group/del"
+                                onClick={() => onDeleteTransaction(tx.id)}
                                 title="Eliminar movimiento"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 text-slate-400 group-hover/del:text-destructive transition-colors" />
                               </Button>
                             </>
                           )}
@@ -653,43 +621,6 @@ export function SavingsPerformance({
           )}
         </div>
       )}
-
-
-      {/* Delete Account Alert */}
-      <AlertDialog open={!!deleteAccountId} onOpenChange={(open) => !open && setDeleteAccountId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar cuenta de ahorro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará la cuenta y TODO su historial de movimientos. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Transaction Alert */}
-      <AlertDialog open={!!deleteTxId} onOpenChange={(open) => !open && setDeleteTxId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar movimiento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará este registro permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteTx} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

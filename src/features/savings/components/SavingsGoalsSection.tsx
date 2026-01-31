@@ -32,7 +32,7 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
     if (savingsCategories.length === 0) return null;
 
     return (
-        <div className="finance-card bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm">
+        <div className="finance-card bg-white">
             <div className="flex items-center gap-2 mb-4">
                 <Target className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-semibold text-foreground">Metas de Ahorro</h3>
@@ -50,7 +50,7 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
                                     <div className="flex items-center gap-2">
                                         <div
                                             className="w-2 h-2 rounded-full"
-                                            style={{ backgroundColor: category.color || 'hsl(var(--color-primary))' }}
+                                            style={{ backgroundColor: category.color || '#3b82f6' }}
                                         />
                                         <p className="text-sm font-medium text-foreground">{category.name === 'Loans' ? 'Préstamos' : category.name}</p>
                                     </div>

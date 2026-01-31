@@ -4,25 +4,75 @@ import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceData } from './useFinanceData';
 
-import { Loan, LoanRow, LoanPayment, LoanPaymentRow } from './financeTypes';
+export interface LoanPayment {
+    id: string;
+    loan_id: string;
+    amount: number;
+    date: string;
+    created_at: string;
+}
 
+export interface Loan {
+    id: string;
+    name: string;
+    total_amount: number;
+    paid_amount: number; // Derived field
+    interest_rate: number;
+    due_date: string | null;
+    payment_method_id: string | null;
+    created_at: string;
+    user_id: string;
+    type: 'borrowed' | 'lent';
+    payments?: LoanPayment[];
+    is_disbursed?: boolean;
+    installments?: number;
+}
+
+// Row types from the database
+export interface LoanPaymentRow {
+    id: string;
+    loan_id: string;
+    amount: number | string;
+    date: string;
+    created_at?: string;
+}
+
+export interface LoanRow {
+    id: string;
+    name: string;
+    total_amount: number | string;
+    interest_rate: number | string;
+    due_date?: string | null;
+    payment_method_id?: string | null;
+    created_at?: string;
+    user_id: string;
+    type?: 'borrowed' | 'lent' | string;
+    loan_payments?: LoanPaymentRow[];
+    is_disbursed?: boolean;
+    installments?: number | null;
+}
 
 export function useLoansDataLogic() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [loans, setLoans] = useState<Loan[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         if (!user) return;
 
         setLoading(true);
-        const { data, error } = await supabase
+        setError(null);
+        const { data, error: err } = await supabase
             .from('loans' as any)
             .select('*, loan_payments(*)')
             .eq('user_id', user.id);
 
-        if (error) {
-
+        if (err) {
+            setError(err.message ?? 'No se pudieron cargar los préstamos');
+            toast({ title: 'Error', description: err.message ?? 'No se pudieron cargar los préstamos. Revisa tu conexión.', variant: 'destructive' });
+            setLoans([]);
         } else if (data) {
             setLoans((data as unknown as LoanRow[]).map((l: LoanRow) => {
                 const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({
@@ -52,13 +102,13 @@ export function useLoansDataLogic() {
             }));
         }
         setLoading(false);
-    }, [user]);
+    }, [user, toast]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    return { loans, loading, refetch: fetchData };
+    return { loans, loading, error, refetch: fetchData };
 }
 
 

@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signInWithOtp = useCallback(async (email: string, rememberMe: boolean = true) => {
         localStorage.setItem('sb_remember_me', rememberMe.toString());
-        const origin = window.location.origin;
+        const origin = `${window.location.origin}${import.meta.env.BASE_URL}`;
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: { emailRedirectTo: origin },

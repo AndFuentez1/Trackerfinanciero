@@ -24,18 +24,23 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
     - Futuro: Se basa en presupuestos y gastos programados.
     - Mes Actual: Híbrido (Real + Restante de Presupuesto).
 
-### 3. UI/UX y Diseño
+### 3. Analítica e Insights
+- **Integración Mixpanel:** Rastreo de eventos clave para métricas de retención y salud financiera.
+- **Insights Financieros:** Panel de sugerencias basado en patrones de gasto.
+
+### 4. UI/UX y Diseño
 - **Diseño Premium:** Estética limpia, sombras suaves, bordes sutiles.
-- **Sistema de Colores:** Pool interno de 40 colores, limitado a 10 opciones visibles para el usuario para mantener consistencia.
+- **Gráficos Unificados:** Estilos visuales consistentes (colores, ejes, grids) en todos los gráficos (Evolución, Flujo de Caja, Gastos).
+- **Sistema de Colores:** Pool interno de 40 colores, limitado a 10 opciones visibles para el usuario.
 - **Componentes:**
     - Tablas con alineación perfecta.
     - Botones con estados interactivos claros.
     - Skeletons personalizados para evitar saltos visuales (Layout Shift).
 
-### 4. Presupuestos
+### 5. Presupuestos
 - Creación de presupuestos mensuales por categoría.
 - Alertas automáticas de desvío.
-- Tarjetas de resumen de ingresos.
+- Lista detallada de seguimiento de ejecución presupuestal.
 
 ## Solicitudes Cumplidas (Historial de Cambios)
 
@@ -47,6 +52,11 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
     - Futura: Proyección continua desde saldo real.
 - **Responsividad:** Adaptable a Móvil (Barra de navegación inferior) y Desktop (Sidebar lateral).
 - **Orden Visual:** Tarjetas de presupuesto ordenadas lógicamente.
+
+### ✅ Actualizaciones Recientes
+- **Importación Excel:** Mecanismo robusto con validación de tipos y manejo de errores.
+- **Optimización de UI:** Eliminación de componentes redundantes en Presupuestos para mejorar UX.
+- **Fixes de Tipado:** Corrección estricta de errores TypeScript en gráficos y contextos.
 
 ## Estructura del Código
 

@@ -19,7 +19,7 @@ const Checkbox = React.forwardRef<
       "transition-all duration-200", 
       "hover:border-primary", // Asegura que el borde se ilumine
       "hover:ring-[3px] hover:ring-primary/30", // Crea el aura concentrada de 3mm
-      "hover:shadow-[0_0_10px_-2px_rgba(var(--color-primary),0.5)]", // Un ligero glow extra para que 'brille'
+      "hover:shadow-[0_0_10px_-2px_rgba(var(--primary),0.5)]", // Un ligero glow extra para que 'brille'
       className
     )}
     {...props}

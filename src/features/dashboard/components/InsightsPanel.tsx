@@ -24,7 +24,7 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
   }
 
   return (
-    <div className="finance-card border border-border bg-card rounded-xl p-6 shadow-md">
+    <div className="finance-card">
       <h3 className="text-xl font-bold mb-6">Recomendaciones</h3>
       <div className="space-y-4">
         {insights.map((insight, index) => {
@@ -33,7 +33,7 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
             <div
               key={insight.id}
               className={cn(
-                'p-5 rounded-xl border border-border bg-white/80 animate-fade-in',
+                'p-5 rounded-lg border animate-fade-in',
                 styleMap[insight.type]
               )}
               style={{ animationDelay: `${index * 100}ms` }}

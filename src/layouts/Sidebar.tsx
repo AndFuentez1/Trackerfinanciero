@@ -5,7 +5,7 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useMemo, memo } from "react";
+import { useMemo } from "react";
 
 const items = [
     { name: "Panel", icon: LayoutDashboard, href: "/" },
@@ -17,7 +17,7 @@ const items = [
     { name: "Configuración", icon: Settings, href: "/configuracion" },
 ];
 
-export const Sidebar = memo(function Sidebar() {
+export function Sidebar() {
     const location = useLocation();
     const pathname = location.pathname;
     const { lastUpdated: financeLastUpdated } = useFinanceData();
@@ -32,10 +32,10 @@ export const Sidebar = memo(function Sidebar() {
 
     return (
         <div
-            className="hidden lg:flex flex-col w-72 border-r h-screen p-6 fixed top-0 left-0 bottom-0 z-40 bg-background"
+            className="hidden lg:flex flex-col w-64 border-r h-screen p-6 sticky top-0 flex-shrink-0"
             style={{
                 backgroundColor: 'hsl(var(--container))',
-                color: 'hsl(var(--color-muted-foreground))',
+                color: 'hsl(var(--muted-foreground))',
                 boxShadow: '1px 0 0 rgba(0,0,0,0.08)',
                 overflow: 'hidden', // Evita que el contenedor padre genere scroll
             }}
@@ -47,19 +47,19 @@ export const Sidebar = memo(function Sidebar() {
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}} />
 
-            {/* Header / Logo - Adjusted top padding to align with PageHeader title (approx 3.5rem from top: 24px + 32px = 56px) */}
-            <div className="flex items-center gap-4 mb-10 px-3 flex-shrink-0 pt-8">
-                <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Wallet className="w-7 h-7 text-primary-foreground" />
+            {/* Header / Logo */}
+            <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
+                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                    <Wallet className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div>
-                    <h1 className="font-display font-bold text-2xl leading-none tracking-tight">FinTrack</h1>
-                    <p className="text-sm text-muted-foreground mt-1.5 font-medium">Minimalist Finance</p>
+                    <h1 className="font-display font-bold text-xl leading-none">FinTrack</h1>
+                    <p className="text-xs text-muted-foreground mt-1">Minimalist Finance</p>
                 </div>
             </div>
 
             {/* Navegación con Scroll Invisible */}
-            <nav className="space-y-3 flex-1 overflow-y-auto no-scrollbar">
+            <nav className="space-y-2 flex-1 overflow-y-auto no-scrollbar">
                 {items.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -67,14 +67,14 @@ export const Sidebar = memo(function Sidebar() {
                             key={item.name}
                             to={item.href}
                             className={cn(
-                                "flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 group font-medium text-[15px]",
+                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium",
                                 isActive
-                                    ? "bg-primary text-primary-foreground shadow-xl shadow-primary/25 scale-[1.02]"
-                                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:translate-x-1"
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
+                                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:translate-x-1"
                             )}
                         >
                             <item.icon className={cn(
-                                "w-6 h-6 stroke-[2px]",
+                                "w-5 h-5",
                                 isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
                             )} />
                             {item.name}
@@ -102,4 +102,4 @@ export const Sidebar = memo(function Sidebar() {
             </div>
         </div>
     );
-});
+}

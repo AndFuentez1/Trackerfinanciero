@@ -25,7 +25,14 @@ export function PremiumSkeleton() {
                 <div className="mt-auto h-8 w-full bg-muted/20 animate-pulse rounded-xl" />
             </div>
 
-            {/* Loading Message Overlay eliminado */}
+            {/* Loading Message Overlay */}
+            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                <div className="bg-background/80 backdrop-blur-sm px-6 py-3 rounded-full border border-primary/20 shadow-lg flex items-center gap-3">
+                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                    <span className="text-sm font-medium text-foreground tracking-tight">Cargando aplicación...</span>
+                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-75" />
+                </div>
+            </div>
 
             {/* Main Content Skeleton */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">

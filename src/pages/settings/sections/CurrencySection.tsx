@@ -95,7 +95,7 @@ export function CurrencySection() {
                 {/* Currency Selection */}
                 <div className="flex flex-col sm:flex-row items-end gap-4">
                     <div className="flex-1 space-y-2 w-full">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest pl-1">Moneda actual:</label>
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest pl-1">Moneda actual: {currency}</label>
                         <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
                             <SelectTrigger className="h-11 rounded-xl">
                                 <SelectValue placeholder="Selecciona una moneda" />
@@ -104,8 +104,8 @@ export function CurrencySection() {
                                 {CURRENCIES.map(c => (
                                     <SelectItem key={c.code} value={c.code} className="rounded-lg">
                                         <span className="flex items-center gap-2">
-                                            <span className="font-mono font-bold text-xs bg-muted px-1.5 py-0.5 rounded uppercase">{c.code}</span>
-                                            <span className="capitalize">{c.name.split('(')[0].trim()}</span>
+                                            <span className="font-mono font-bold text-xs bg-muted px-1.5 py-0.5 rounded">{c.code}</span>
+                                            {c.name} ({c.symbol})
                                         </span>
                                     </SelectItem>
                                 ))}
