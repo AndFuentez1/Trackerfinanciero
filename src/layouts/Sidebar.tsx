@@ -49,17 +49,17 @@ export function Sidebar() {
 
             {/* Header / Logo */}
             <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Wallet className="w-6 h-6 text-primary-foreground" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border border-border bg-primary/10">
+                    <Wallet className="w-6 h-6 text-primary" />
                 </div>
-                <div>
+                <div className="flex flex-col justify-center">
                     <h1 className="font-display font-bold text-xl leading-none">FinTrack</h1>
                     <p className="text-xs text-muted-foreground mt-1">Minimalist Finance</p>
                 </div>
             </div>
 
             {/* Navegación con Scroll Invisible */}
-            <nav className="space-y-2 flex-1 overflow-y-auto no-scrollbar">
+            <nav className="space-y-3 flex-1 overflow-y-auto no-scrollbar">
                 {items.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -69,13 +69,13 @@ export function Sidebar() {
                             className={cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium",
                                 isActive
-                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
-                                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:translate-x-1"
+                                    ? "bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]"
+                                    : "text-muted-foreground hover:bg-primary hover:text-white hover:shadow-md hover:translate-x-1"
                             )}
                         >
                             <item.icon className={cn(
                                 "w-5 h-5",
-                                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
+                                isActive ? "text-white" : "text-muted-foreground group-hover:text-white"
                             )} />
                             {item.name}
                         </Link>

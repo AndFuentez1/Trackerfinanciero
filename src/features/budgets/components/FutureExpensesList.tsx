@@ -188,7 +188,7 @@ export function FutureExpensesList() {
 
             // Calculate next payment date based on today AND frequency
             const today = new Date();
-            let nextDate = new Date(today.getFullYear(), today.getMonth(), parseInt(newExpense.payment_day));
+            const nextDate = new Date(today.getFullYear(), today.getMonth(), parseInt(newExpense.payment_day));
 
             // If today is past the payment day, move to next cycle
             if (nextDate < today) {

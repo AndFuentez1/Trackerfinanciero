@@ -1,5 +1,5 @@
 import { PaymentMethod } from '@/hooks/useFinanceData';
-import { Plus } from 'lucide-react';
+import { Plus, CreditCard, Wallet, Banknote, PiggyBank, Landmark, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
@@ -40,8 +40,14 @@ const getAccountType = (type: string, isSavings: boolean): string => {
   }
 };
 
-const getInitial = (name: string): string => {
-  return name.charAt(0).toUpperCase();
+const getIconForType = (type: string) => {
+  switch (type) {
+    case 'credit': return <CreditCard className="w-5 h-5" />;
+    case 'cash': return <Banknote className="w-5 h-5" />;
+    case 'savings': return <PiggyBank className="w-5 h-5" />;
+    case 'investment': return <Landmark className="w-5 h-5" />;
+    default: return <Wallet className="w-5 h-5" />;
+  }
 };
 
 export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdit, onDelete, onAdd, highlighted }: PaymentMethodListProps) {
@@ -72,24 +78,24 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         return (
           <div
             key={pm.id}
-            className="relative h-48 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
+            className="relative h-48 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between group"
             style={{ backgroundColor: bgColor }}
           >
             {/* Icono círculo sólido */}
-            <div className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/30 flex items-center justify-center shadow-md">
-              <span className="text-lg font-bold" style={{ color: textColor }}>{getInitial(pm.name)}</span>
+            <div className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/30 flex items-center justify-center shadow-md text-inherit">
+              <span style={{ color: textColor }}>{getIconForType(pm.type)}</span>
             </div>
 
             {/* Top Level: Name (Left) + Account Type (Right) */}
-            <div className="relative z-10 flex items-center justify-between">
-              <p className="text-base font-semibold" style={{ color: textColor }}>{pm.name}</p>
-              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: textColor }}>{accountType}</span>
+            <div className="relative z-10 flex items-center justify-between pl-12">
+              <p className="text-base font-semibold ml-2" style={{ color: textColor }}>{pm.name}</p>
+              <span className="text-xs font-bold uppercase tracking-wide opacity-90" style={{ color: textColor }}>{accountType}</span>
             </div>
 
             {/* Middle Level: Balance (Prominent, Centered) */}
             <div className="relative z-10 flex flex-col items-start">
               <p className="text-xs font-normal mb-2 opacity-90" style={{ color: textColor }}>
-                {pm.type === 'credit' ? '' : 'Balance'}
+                {pm.type === 'credit' ? 'Disponible' : 'Saldo en débito'}
               </p>
               <div className="text-3xl font-semibold" style={{ color: textColor }}>
                 {pm.is_savings_account || pm.type === 'debit' || pm.type === 'cash'
@@ -104,23 +110,31 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
             <div className="relative z-10 flex items-center justify-between">
               <p className="text-xs opacity-75" style={{ color: textColor }}>Principal</p>
               {(onEdit || onDelete) && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {onEdit && (
                     <button
                       title="Editar"
-                      onClick={() => onEdit(pm)}
-                      className="h-9 w-9 rounded-xl bg-white/80 hover:bg-blue-100 text-blue-600 shadow-none border-none flex items-center justify-center transition-all duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(pm);
+                      }}
+                      className="h-8 w-8 rounded-lg bg-white/20 hover:bg-white/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
+                      style={{ color: textColor }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                      <Pencil className="h-4 w-4" />
                     </button>
                   )}
                   {onDelete && (
                     <button
                       title="Eliminar"
-                      onClick={() => onDelete(pm)}
-                      className="h-9 w-9 rounded-xl bg-white/80 hover:bg-red-100 text-red-600 shadow-none border-none flex items-center justify-center transition-all duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(pm);
+                      }}
+                      className="h-8 w-8 rounded-lg bg-white/20 hover:bg-red-500/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
+                      style={{ color: textColor }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -135,15 +149,15 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         variant="default"
         onClick={onAdd}
         className={cn(
-          "h-48 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50 hover:border-blue-400 flex flex-col items-center justify-center gap-2 text-blue-600 font-semibold transition-all duration-500 text-base shadow-md",
+          "h-48 rounded-2xl border-2 border-dashed border-border/60 bg-background/50 hover:bg-primary/5 hover:border-primary/40 flex flex-col items-center justify-center gap-2 text-primary font-semibold transition-all duration-500 text-base shadow-md",
           highlighted && [
             "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
             "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
-            "bg-white text-primary border-primary font-bold z-10"
+            "bg-white text-primary border-white font-bold z-10"
           ]
         )}
       >
-        <Plus className={cn("h-7 w-7", highlighted && "animate-pulse")}/>
+        <Plus className={cn("h-7 w-7", highlighted && "animate-pulse")} />
         <span>Agregar método</span>
       </Button>
     </div>

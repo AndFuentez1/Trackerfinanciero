@@ -12,7 +12,7 @@ interface CategoryDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     categoryToEdit?: CategoryItem | null;
-    onSave: (category: Omit<CategoryItem, 'id'>, id?: string) => Promise<any>;
+    onSave: (category: Omit<CategoryItem, 'id'>, id?: string) => Promise<{ error?: any }>;
 }
 
 export function CategoryDialog({ open, onOpenChange, categoryToEdit, onSave }: CategoryDialogProps) {
@@ -64,7 +64,7 @@ export function CategoryDialog({ open, onOpenChange, categoryToEdit, onSave }: C
                 setVisibleOptions(availablePool.slice(0, 10));
             }
         }
-    }, [categoryToEdit, open]); // Intentionally not depending on availablePool to avoid reshuffling during interaction
+    }, [categoryToEdit, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleColorClick = (color: string) => {
         setSelectedColor(color);

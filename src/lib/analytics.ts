@@ -1,4 +1,4 @@
-import mixpanel, { Dict, Query } from 'mixpanel-browser';
+import mixpanel, { Dict, Query } from './mixpanel-shim';
 
 // Constants
 const MIXPANEL_TOKEN = 'ed2dc14829d7b4d24069695b97131c0d';

@@ -361,15 +361,18 @@ export default function LoansPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <HandCoins className="h-5 w-5 text-primary" />
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+                <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                            <HandCoins className="h-6 w-6" />
                         </div>
-                        <h1 className="text-xl font-semibold">Préstamos y Deudas</h1>
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Préstamos y Deudas</h1>
+                            <p className="text-muted-foreground font-medium">Gestiona tus préstamos personales y deudas</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end">
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button
@@ -463,7 +466,7 @@ export default function LoansPage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-4 py-2 px-1 bg-secondary/10 rounded-xl border border-secondary/20">
+                                    <div className="space-y-4 py-2 px-1 bg-secondary/5 rounded-xl border border-border/30">
                                         <div className="flex items-center justify-between">
                                             <div className="space-y-0.5">
                                                 <Label className="text-sm font-semibold flex items-center gap-2">
@@ -515,181 +518,180 @@ export default function LoansPage() {
                             </DialogContent>
                         </Dialog>
                     </div>
-                </div>
-            </header >
+                </header>
 
-            {/* Payment Dialog */}
-            < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
-            } modal={false}>
-                <DialogContent
-                    className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Registra un abono o pago a este préstamo.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={submitPayment} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Monto del Abono</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                {/* Payment Dialog */}
+                < Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })
+                } modal={false}>
+                    <DialogContent
+                        className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto"
+                        onInteractOutside={(e) => e.preventDefault()}
+                    >
+                        <DialogHeader>
+                            <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
+                            <DialogDescription className="sr-only">Registra un abono o pago a este préstamo.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={submitPayment} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Monto del Abono</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                    <Input
+                                        required
+                                        type="number"
+                                        placeholder={getPlaceholderAmount()}
+                                        value={paymentData.amount}
+                                        onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                        step={getStepValue()}
+                                        className={getCurrencyPadding()}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Fecha</label>
                                 <Input
                                     required
-                                    type="number"
-                                    placeholder={getPlaceholderAmount()}
-                                    value={paymentData.amount}
-                                    onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                    step={getStepValue()}
-                                    className={getCurrencyPadding()}
+                                    type="date"
+                                    value={paymentData.date}
+                                    onChange={e => setPaymentData({ ...paymentData, date: e.target.value })}
                                 />
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Fecha</label>
-                            <Input
-                                required
-                                type="date"
-                                value={paymentData.date}
-                                onChange={e => setPaymentData({ ...paymentData, date: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Método de Pago (Origen/Destino)</label>
-                            <Select
-                                value={paymentData.methodId}
-                                onValueChange={(val) => setPaymentData({ ...paymentData, methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Método de Pago (Origen/Destino)</label>
+                                <Select
+                                    value={paymentData.methodId}
+                                    onValueChange={(val) => setPaymentData({ ...paymentData, methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>
+                                                <span className="flex items-center justify-between w-full gap-2">
+                                                    <span className="truncate">{pm.name}</span>
+                                                    <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                        <span className="opacity-80">(</span>
+                                                        {formatBalanceOption(pm.balance)}
+                                                        <span className="opacity-80">)</span>
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-muted-foreground">
-                                {paymentDialog.loan?.type === 'borrowed'
-                                    ? 'Cuenta de donde sale el dinero para pagar.'
-                                    : 'Cuenta donde entra el dinero recibido.'}
-                            </p>
-                        </div>
-                        <Button type="submit" className="w-full border border-primary min-w-[170px] flex items-center justify-center gap-2">Registrar Pago <HandCoins className="h-4 w-4" /></Button>
-                    </form>
-                </DialogContent>
-            </Dialog >
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[10px] text-muted-foreground">
+                                    {paymentDialog.loan?.type === 'borrowed'
+                                        ? 'Cuenta de donde sale el dinero para pagar.'
+                                        : 'Cuenta donde entra el dinero recibido.'}
+                                </p>
+                            </div>
+                            <Button type="submit" className="w-full border border-primary min-w-[170px] flex items-center justify-center gap-2">Registrar Pago <HandCoins className="h-4 w-4" /></Button>
+                        </form>
+                    </DialogContent>
+                </Dialog >
 
 
-            {/* Disbursement Dialog */}
-            <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent
-                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Confirma el desembolso del préstamo y su impacto en la cuenta.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-200">
-                            Al confirmar, el monto de <strong>{formatCurrency(disbursementDialog.loan?.total_amount || 0)}</strong> impactará el saldo de la cuenta seleccionada.
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Fecha de Desembolso</label>
-                            <Input
-                                required
-                                type="date"
-                                value={disbursementData.date}
-                                onChange={e => setDisbursementData({ ...disbursementData, date: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Cuenta de {disbursementDialog.loan?.type === 'borrowed' ? 'Destino (Ingreso)' : 'Origen (Salida)'}</label>
-                            <Select
-                                value={disbursementData.methodId}
-                                onValueChange={(val) => setDisbursementData({ ...disbursementData, methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
+                {/* Disbursement Dialog */}
+                <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
+                    <DialogContent
+                        className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                        onInteractOutside={(e) => e.preventDefault()}
+                    >
+                        <DialogHeader>
+                            <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
+                            <DialogDescription className="sr-only">Confirma el desembolso del préstamo y su impacto en la cuenta.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
+                                Al confirmar, el monto de <strong>{formatCurrency(disbursementDialog.loan?.total_amount || 0)}</strong> impactará el saldo de la cuenta seleccionada.
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Fecha de Desembolso</label>
+                                <Input
+                                    required
+                                    type="date"
+                                    value={disbursementData.date}
+                                    onChange={e => setDisbursementData({ ...disbursementData, date: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Cuenta de {disbursementDialog.loan?.type === 'borrowed' ? 'Destino (Ingreso)' : 'Origen (Salida)'}</label>
+                                <Select
+                                    value={disbursementData.methodId}
+                                    onValueChange={(val) => setDisbursementData({ ...disbursementData, methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>
+                                                <span className="flex items-center justify-between w-full gap-2">
+                                                    <span className="truncate">{pm.name}</span>
+                                                    <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                        <span className="opacity-80">(</span>
+                                                        {formatBalanceOption(pm.balance)}
+                                                        <span className="opacity-80">)</span>
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={confirmDisbursement} className="w-full min-w-[170px] flex items-center justify-center gap-2" disabled={!disbursementData.methodId}>Confirmar Desembolso <ArrowDownCircle className="h-4 w-4" /></Button>
                         </div>
-                        <Button onClick={confirmDisbursement} className="w-full min-w-[170px] flex items-center justify-center gap-2" disabled={!disbursementData.methodId}>Confirmar Desembolso <ArrowDownCircle className="h-4 w-4" /></Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
 
-            {/* Edit Dialog for Orphaned Loans */}
-            <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
-                <DialogContent
-                    className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
-                        <DialogDescription className="sr-only">Asocia una cuenta a este préstamo para reclasificarlo.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-200">
-                            Este préstamo no tiene cuenta asociada. Selecciona una cuenta para reclasificarlo.
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Nueva Cuenta Asociada</label>
-                            <Select
-                                value={editData.methodId}
-                                onValueChange={(val) => setEditData({ methodId: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <span className="flex items-center justify-between w-full gap-2">
-                                                <span className="truncate">{pm.name}</span>
-                                                <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                    <span className="opacity-80">(</span>
-                                                    {formatBalanceOption(pm.balance)}
-                                                    <span className="opacity-80">)</span>
+                {/* Edit Dialog for Orphaned Loans */}
+                <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
+                    <DialogContent
+                        className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
+                        onInteractOutside={(e) => e.preventDefault()}
+                    >
+                        <DialogHeader>
+                            <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
+                            <DialogDescription className="sr-only">Asocia una cuenta a este préstamo para reclasificarlo.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-100">
+                                Este préstamo no tiene cuenta asociada. Selecciona una cuenta para reclasificarlo.
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Nueva Cuenta Asociada</label>
+                                <Select
+                                    value={editData.methodId}
+                                    onValueChange={(val) => setEditData({ methodId: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>
+                                                <span className="flex items-center justify-between w-full gap-2">
+                                                    <span className="truncate">{pm.name}</span>
+                                                    <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                        <span className="opacity-80">(</span>
+                                                        {formatBalanceOption(pm.balance)}
+                                                        <span className="opacity-80">)</span>
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={confirmEdit} className="w-full" disabled={!editData.methodId}>Reclasificar</Button>
                         </div>
-                        <Button onClick={confirmEdit} className="w-full" disabled={!editData.methodId}>Reclasificar</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
 
-            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+                {/* content continues */}
                 {pendingDisbursementCount > 0 && (
-                    <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
+                    <Alert variant="destructive" className="bg-destructive/5 border-destructive/10 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
                         <AlertCircle className="h-5 w-5" />
                         <AlertTitle className="font-bold">Acción requerida</AlertTitle>
                         <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
@@ -730,7 +732,7 @@ export default function LoansPage() {
 
                     <div className="flex flex-col gap-4">
                         {loans.length === 0 ? (
-                            <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed border-border">
+                            <div className="text-center py-10 text-muted-foreground bg-secondary/10 rounded-xl border border-dashed border-border/50">
                                 No tienes préstamos registrados.
                             </div>
                         ) : (
@@ -744,11 +746,11 @@ export default function LoansPage() {
 
                                 return (
                                     <Card key={loan.id} className={cn(
-                                        "overflow-hidden border-l-4 transition-all hover:shadow-md",
+                                        "overflow-hidden border-l-4 transition-all hover:shadow-md border-border", // Added border-border
                                         isPendingDisbursement ? "border-l-slate-300 opacity-90" :
-                                            isOrphaned ? "border-l-red-500 opacity-90" :
-                                                isDebt ? "border-l-destructive border-border/50" : "border-l-emerald-500 border-border/50",
-                                        overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-50/30 border-l-orange-500"
+                                            isOrphaned ? "border-l-red-400 opacity-90" :
+                                                isDebt ? "border-l-destructive/60" : "border-l-emerald-500/60", // Reduced opacity
+                                        overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-50/30 border-l-orange-400"
                                     )}>
                                         <CardContent className="p-6">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -844,7 +846,7 @@ export default function LoansPage() {
                                                                 <Button
                                                                     size="sm"
                                                                     variant="default"
-                                                                    className="gap-2 shadow-sm border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+                                                                    className="gap-2 shadow-sm border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
                                                                     onClick={() => handleOpenPayment(loan)}
                                                                 >
                                                                     <span className="hidden sm:flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>

@@ -65,6 +65,7 @@ export default function HistoryPage() {
     const [savingId, setSavingId] = useState<string | null>(null);
     const [creatingPMFor, setCreatingPMFor] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // Debounced state for filtering
     const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
     const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
@@ -76,13 +77,21 @@ export default function HistoryPage() {
     // Computed values (not hooks, safe to compute here)
     const isLoading = authLoading || dataLoading;
 
+    // Debounce search term
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
     // Get current date values FIRST
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
 
     const filtersApplied = useMemo(() => Boolean(
-        searchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter.period !== 'all'
-    ), [searchTerm, typeFilter, categoryFilter, paymentMethodFilter, statusFilter, dateFilter]);
+        debouncedSearchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter.period !== 'all'
+    ), [debouncedSearchTerm, typeFilter, categoryFilter, paymentMethodFilter, statusFilter, dateFilter]);
 
     const yearOptions = useMemo(() => {
         const setYears = new Set<number>();
@@ -137,6 +146,7 @@ export default function HistoryPage() {
 
     const clearAllFilters = () => {
         setSearchTerm('');
+        setDebouncedSearchTerm('');
         setTypeFilter(undefined);
         setCategoryFilter(undefined);
         setPaymentMethodFilter(undefined);
@@ -267,15 +277,18 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Wallet className="h-5 w-5 text-primary" />
+            <main className="container max-w-6xl mx-auto px-4 py-8">
+                <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border/40 pb-6">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                            <Wallet className="h-6 w-6" />
                         </div>
-                        <h1 className="text-xl font-semibold">Historial</h1>
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Historial</h1>
+                            <p className="text-muted-foreground font-medium">Gestiona y consulta tus transacciones</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
                         <AddTransactionDialog
                             onAdd={addTransaction}
                             onAddTransfer={addTransfer}
@@ -285,42 +298,7 @@ export default function HistoryPage() {
                         <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
                         <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
                     </div>
-                </div>
-            </header>
-
-            {/* Instance 2: Controlled Edit Transaction Dialog (hidden trigger, opens via state) */}
-            <AddTransactionDialog
-                transactionToEdit={editingTransaction}
-                open={isEditDialogOpen}
-                onOpenChange={(open) => {
-                    setIsEditDialogOpen(open);
-                    if (!open) setEditingTransaction(null);
-                }}
-                onAddTransfer={addTransfer}
-                categories={categories}
-                paymentMethods={paymentMethods}
-                onUpdateTransaction={async (id, updates) => {
-                    await updateTransaction(id, updates);
-                    setIsEditDialogOpen(false);
-                    setEditingTransaction(null);
-                }}
-            />
-
-            <AddPaymentMethodDialog
-                open={!!creatingPMFor}
-                onOpenChange={(open) => { if (!open) { setCreatingPMFor(null); setPendingTx(null); } }}
-                initialName={creatingPMFor ? reclassifyDrafts[creatingPMFor]?.payment_method_name || '' : ''}
-                onAdd={addPaymentMethod}
-                onSuccess={() => {
-                    setCreatingPMFor(null);
-                    if (pendingTx) {
-                        handleReclassifySave(pendingTx);
-                        setPendingTx(null);
-                    }
-                }}
-            />
-
-            <main className="container max-w-6xl mx-auto px-4 py-8">
+                </header>
                 {isLoading && !transactions.length ? (
                     <SkeletonLoader tab="transactions" withLayoutWrapper={false} fullPage={false} />
                 ) : (
@@ -693,7 +671,7 @@ export default function HistoryPage() {
                             onEditTransaction={handleEdit}
                             categories={categories}
                             highlightOrphaned={highlightOrphaned}
-                            searchTerm={searchTerm}
+                            searchTerm={debouncedSearchTerm}
                             typeFilter={typeFilter}
                             categoryFilter={categoryFilter}
                             statusFilter={statusFilter as "attention" | "ok" | undefined}

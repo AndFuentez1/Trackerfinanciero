@@ -54,7 +54,7 @@ export default function SavingsPage() {
         await deleteSavingsTransaction(id);
     };
 
-    const handleUpdatePaymentMethod = async (id: string, updates: any) => {
+    const handleUpdatePaymentMethod = async (id: string, updates: Partial<PaymentMethod>) => {
         const result = await updatePaymentMethod(id, updates);
         // Refetch savings accounts in case is_savings_account changed
         if (!result?.error) {
@@ -94,18 +94,18 @@ export default function SavingsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Wallet className="h-5 w-5 text-primary" />
-                        </div>
-                        <h1 className="text-xl font-semibold">Ahorros</h1>
-                    </div>
-                </div>
-            </header>
-
             <main className="container max-w-6xl mx-auto px-4 py-8">
+                <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border/40 pb-6">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                            <Wallet className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Ahorros</h1>
+                            <p className="text-muted-foreground font-medium">Metas y seguimiento de ahorros</p>
+                        </div>
+                    </div>
+                </header>
                 {isLoading ? (
                     <div className="flex items-center justify-center py-20">
                         <div className="animate-pulse text-muted-foreground">Cargando datos...</div>

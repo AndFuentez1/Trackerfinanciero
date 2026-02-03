@@ -181,7 +181,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       <DialogTrigger asChild>
         {children || (
           <Button
-            className="gap-2 shadow-lg shadow-primary/20 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+            className="gap-2 shadow-sm border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
             onClick={(e) => {

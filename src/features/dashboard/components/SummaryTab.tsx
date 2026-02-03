@@ -3,7 +3,6 @@ import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
 import { ExpenseChart } from './ExpenseChart';
 import { InsightsPanel } from './InsightsPanel';
-import { BudgetList } from './BudgetList';
 import { PaymentMethodList } from '@/features/payment-methods/components/PaymentMethodList';
 import { EditPaymentMethodDialog } from '@/features/payment-methods/components/EditPaymentMethodDialog';
 import { AddPaymentMethodDialog } from '@/features/payment-methods/components/AddPaymentMethodDialog';
@@ -11,6 +10,16 @@ import { useFinanceData } from '@/hooks/useFinanceData';
 import { calculateExpensesByCategory } from '@/hooks/financeUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
 import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/hooks/useFinanceData';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLoans } from '@/hooks/useLoans';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -109,6 +118,8 @@ export function SummaryTab({
   const [isAddPMOpen, setIsAddPMOpen] = useState(false);
   const [editingPM, setEditingPM] = useState<PaymentMethod | null>(null);
   const [isEditPMOpen, setIsEditPMOpen] = useState(false);
+  const [pmToDelete, setPmToDelete] = useState<PaymentMethod | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Estado compartido entre la gráfica de evolución y el donut
   const [selectedYears, setSelectedYears] = useState<string[]>(() => availableYears.length ? availableYears : [currentYear.toString()]);
@@ -271,6 +282,10 @@ export function SummaryTab({
             setEditingPM(pm);
             setIsEditPMOpen(true);
           }}
+          onDelete={(pm) => {
+            setPmToDelete(pm);
+            setIsDeleteConfirmOpen(true);
+          }}
           onAdd={() => setIsAddPMOpen(true)}
         />
 
@@ -289,6 +304,34 @@ export function SummaryTab({
           open={isAddPMOpen}
           onOpenChange={setIsAddPMOpen}
         />
+
+        {/* Modal de Confirmación de Eliminación */}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar este método de pago?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se eliminará <strong>{pmToDelete?.name}</strong>.
+                Las transacciones asociadas podrían quedar sin método de pago asignado. Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (pmToDelete) {
+                    await onDeletePaymentMethod(pmToDelete.id);
+                    setIsDeleteConfirmOpen(false);
+                    setPmToDelete(null);
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+              >
+                Sí, eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* SECCIÓN 2: Disponibilidad y Ahorro */}

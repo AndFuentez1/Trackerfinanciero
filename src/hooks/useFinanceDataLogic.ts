@@ -20,7 +20,7 @@ import type {
 // Re-export domain types for consumers that import from this hook
 export type { TransactionType, PaymentMethodType, CategoryItem, PaymentMethod, Transaction, Budget, Insight };
 
-export type AppThemeKey = 'rose' | 'gray' | 'blue' | 'emerald';
+export type AppThemeKey = 'gray' | 'teal' | 'blue' | 'indigo' | 'violet' | 'rose';
 
 type ThemePreset = {
   label: string;
@@ -60,9 +60,13 @@ const ORIGINAL_COLOR_MAP: Record<string, { h: number; s: number; l: number }> = 
 };
 
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  let r = parseInt(hex.slice(1, 3), 16) / 255;
-  let g = parseInt(hex.slice(3, 5), 16) / 255;
-  let b = parseInt(hex.slice(5, 7), 16) / 255;
+  // Enforce valid hex format
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) {
+    return { h: 220, s: 10, l: 40 }; // Fallback to gray
+  }
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -136,38 +140,263 @@ function calculateProportionalTheme(baseColorHex: string): Record<string, string
 
   // Accent general para compatibilidad
   themeVars['--accent'] = themeVars['--accent-soft'];
-  themeVars['--ring'] = themeVars['--accent-soft-border'];
+  themeVars['--accent-foreground'] = '220 15% 15%';
+  themeVars['--ring'] = themeVars['--accent-primary'];
 
-  // Variables personalizadas del sistema (compatibilidad)
-  themeVars['--bg-app'] = themeVars['--background'];
-  themeVars['--bg-container'] = themeVars['--container'];
-  themeVars['--bg-card'] = themeVars['--card'];
-  themeVars['--bg-card-inner'] = themeVars['--card'];
-  themeVars['--text-primary'] = themeVars['--foreground'];
-  themeVars['--text-secondary'] = '220 10% 45%';
-  themeVars['--text-muted'] = '220 10% 45%';
-  themeVars['--text-inverse'] = '0 0% 100%';
-  themeVars['--color-primary'] = themeVars['--primary'];
-  themeVars['--color-primary-hover'] = themeVars['--accent-soft'];
-  themeVars['--color-primary-active'] = themeVars['--accent-primary'];
-  themeVars['--border-default'] = themeVars['--border'];
-  themeVars['--border-soft'] = '220 13% 92%';
-
-  // Superficies flotantes (dropdowns, popovers, selects) - NEUTRAS
+  // Secondary, Destructive, Popover
+  themeVars['--secondary'] = '220 15% 96%';
+  themeVars['--secondary-foreground'] = '220 15% 15%';
+  themeVars['--destructive'] = '0 84% 60%';
+  themeVars['--destructive-foreground'] = '0 0% 100%';
   themeVars['--popover'] = '0 0% 100%';
   themeVars['--popover-foreground'] = '220 15% 15%';
+
+  // Variables personalizadas del sistema
+  themeVars['--bg-app'] = themeVars['--background'];
+  themeVars['--bg-container'] = themeVars['--container'];
+
+  // Semantic Layers
+  themeVars['--border-card'] = themeVars['--border'];
+  themeVars['--border-form'] = themeVars['--border'];
+  themeVars['--border-table'] = themeVars['--border'];
+  themeVars['--border-button'] = themeVars['--border'];
+  themeVars['--border-container'] = themeVars['--border'];
+
+  // Backgrounds
+  themeVars['--bg-card'] = themeVars['--card'];
+  themeVars['--bg-card-inner'] = themeVars['--card'];
+  themeVars['--bg-input'] = themeVars['--input'];
+
+  // --- ALIASES FOR TAILWIND CONFIG COMPATIBILITY ---
+  themeVars['--color-background'] = themeVars['--background'];
+  themeVars['--color-foreground'] = themeVars['--foreground'];
+  themeVars['--color-primary'] = themeVars['--primary'];
+  themeVars['--color-primary-foreground'] = themeVars['--primary-foreground'];
+  themeVars['--color-secondary'] = themeVars['--secondary'];
+  themeVars['--color-secondary-foreground'] = themeVars['--secondary-foreground'];
+  themeVars['--color-muted'] = themeVars['--muted'];
+  themeVars['--color-muted-foreground'] = themeVars['--muted-foreground'];
+  themeVars['--color-accent'] = themeVars['--accent'];
+  themeVars['--color-accent-foreground'] = themeVars['--accent-foreground'];
+  themeVars['--color-popover'] = themeVars['--popover'];
+  themeVars['--color-popover-foreground'] = themeVars['--popover-foreground'];
+  themeVars['--color-card'] = themeVars['--card'];
+  themeVars['--color-card-foreground'] = themeVars['--card-foreground'];
+  themeVars['--color-border'] = themeVars['--border'];
+  themeVars['--color-input'] = themeVars['--input'];
+
+  // Income/Expense/Savings
+  themeVars['--income'] = '152 60% 42%';
+  themeVars['--expense'] = '0 84% 60%';
+  themeVars['--savings'] = themeVars['--primary'];
 
   return themeVars;
 }
 
-export const THEME_OPTIONS = [
-  { label: 'Rosa lila', hex: '#d946ef' },
-  { label: 'Gris', hex: '#64748b' },
-  { label: 'Azul', hex: '#2563eb' },
-  { label: 'Esmeralda', hex: '#10b98a' },
-  { label: 'Violeta', hex: '#8b5cf6' },
-  { label: 'Naranja', hex: '#f97316' },
-];
+// Theme presets - moved and consolidated
+export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
+  gray: {
+    label: 'Gris',
+    swatch: '220 10% 60%',
+    vars: {
+      '--primary': '220 10% 60%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '220 10% 96%',
+      '--secondary-foreground': '220 10% 10%',
+      '--muted': '220 5% 96%',
+      '--muted-foreground': '220 5% 45%',
+      '--accent': '220 10% 94%',
+      '--accent-foreground': '220 10% 10%',
+      '--card': '0 0% 100%',
+      '--card-soft': '220 5% 98%',
+      '--card-bg-light': '220 5% 99%',
+      '--border': '220 10% 90%',
+      '--input': '220 10% 92%',
+      '--ring': '220 10% 60%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '220 5% 40%',
+      '--sidebar-primary': '220 10% 60%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '220 10% 94%',
+      '--sidebar-accent-foreground': '220 10% 10%',
+      '--sidebar-border': '220 10% 90%',
+      '--sidebar-ring': '220 10% 60%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '220 10% 60%',
+    },
+  },
+  teal: {
+    label: 'Teal',
+    swatch: '175 75% 40%',
+    vars: {
+      '--primary': '175 75% 40%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '175 25% 96%',
+      '--secondary-foreground': '175 40% 20%',
+      '--muted': '175 15% 96%',
+      '--muted-foreground': '175 10% 45%',
+      '--accent': '175 20% 94%',
+      '--accent-foreground': '175 40% 20%',
+      '--card': '0 0% 100%',
+      '--card-soft': '175 15% 98%',
+      '--card-bg-light': '175 10% 99%',
+      '--border': '175 20% 90%',
+      '--input': '175 20% 92%',
+      '--ring': '175 75% 45%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '175 15% 35%',
+      '--sidebar-primary': '175 75% 40%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '175 15% 94%',
+      '--sidebar-accent-foreground': '175 40% 20%',
+      '--sidebar-border': '175 20% 90%',
+      '--sidebar-ring': '175 75% 45%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '175 75% 40%',
+    },
+  },
+  blue: {
+    label: 'Azul',
+    swatch: '220 85% 55%',
+    vars: {
+      '--primary': '220 85% 55%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '220 20% 96%',
+      '--secondary-foreground': '220 50% 20%',
+      '--muted': '220 10% 96%',
+      '--muted-foreground': '220 10% 45%',
+      '--accent': '220 20% 94%',
+      '--accent-foreground': '220 50% 20%',
+      '--card': '0 0% 100%',
+      '--card-soft': '220 10% 98%',
+      '--card-bg-light': '220 10% 99%',
+      '--border': '220 15% 90%',
+      '--input': '220 15% 92%',
+      '--ring': '220 85% 55%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '220 10% 40%',
+      '--sidebar-primary': '220 85% 55%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '220 15% 94%',
+      '--sidebar-accent-foreground': '220 50% 20%',
+      '--sidebar-border': '220 15% 90%',
+      '--sidebar-ring': '220 85% 55%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '220 85% 55%',
+    },
+  },
+  indigo: {
+    label: 'Índigo',
+    swatch: '245 80% 60%',
+    vars: {
+      '--primary': '245 80% 60%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '245 20% 96%',
+      '--secondary-foreground': '245 40% 20%',
+      '--muted': '245 10% 96%',
+      '--muted-foreground': '245 10% 45%',
+      '--accent': '245 20% 94%',
+      '--accent-foreground': '245 40% 20%',
+      '--card': '0 0% 100%',
+      '--card-soft': '245 10% 98%',
+      '--card-bg-light': '245 10% 99%',
+      '--border': '245 15% 90%',
+      '--input': '245 15% 92%',
+      '--ring': '245 80% 60%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '245 10% 40%',
+      '--sidebar-primary': '245 80% 60%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '245 15% 94%',
+      '--sidebar-accent-foreground': '245 40% 20%',
+      '--sidebar-border': '245 15% 90%',
+      '--sidebar-ring': '245 80% 60%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '245 80% 60%',
+    },
+  },
+  violet: {
+    label: 'Violeta',
+    swatch: '265 85% 60%',
+    vars: {
+      '--primary': '265 85% 60%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '265 20% 96%',
+      '--secondary-foreground': '265 40% 20%',
+      '--muted': '265 10% 96%',
+      '--muted-foreground': '265 10% 45%',
+      '--accent': '265 20% 94%',
+      '--accent-foreground': '265 40% 20%',
+      '--card': '0 0% 100%',
+      '--card-soft': '265 10% 98%',
+      '--card-bg-light': '265 10% 99%',
+      '--border': '265 15% 90%',
+      '--input': '265 15% 92%',
+      '--ring': '265 85% 60%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '265 10% 40%',
+      '--sidebar-primary': '265 85% 60%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '265 15% 94%',
+      '--sidebar-accent-foreground': '265 40% 20%',
+      '--sidebar-border': '265 15% 90%',
+      '--sidebar-ring': '265 85% 60%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '265 85% 60%',
+    },
+  },
+  rose: {
+    label: 'Rosa',
+    swatch: '330 80% 60%',
+    vars: {
+      '--primary': '330 80% 60%',
+      '--primary-foreground': '0 0% 100%',
+      '--secondary': '330 20% 96%',
+      '--secondary-foreground': '330 40% 20%',
+      '--muted': '330 10% 96%',
+      '--muted-foreground': '330 5% 45%',
+      '--accent': '330 20% 94%',
+      '--accent-foreground': '330 40% 20%',
+      '--card': '0 0% 100%',
+      '--card-soft': '330 10% 98%',
+      '--card-bg-light': '330 10% 99%',
+      '--border': '330 10% 90%',
+      '--input': '330 10% 92%',
+      '--ring': '330 80% 60%',
+      '--sidebar-background': '0 0% 98%',
+      '--sidebar-foreground': '330 5% 40%',
+      '--sidebar-primary': '330 80% 60%',
+      '--sidebar-primary-foreground': '0 0% 100%',
+      '--sidebar-accent': '330 10% 94%',
+      '--sidebar-accent-foreground': '330 40% 20%',
+      '--sidebar-border': '330 10% 90%',
+      '--sidebar-ring': '330 80% 60%',
+      '--income': '152 60% 42%',
+      '--expense': '0 84% 60%',
+      '--savings': '330 80% 60%',
+    },
+  },
+};
+
+export const APP_THEME_OPTIONS: { key: AppThemeKey; label: string; swatch: string }[] =
+  (Object.entries(APP_THEME_PRESETS) as [AppThemeKey, ThemePreset][]).map(([key, preset]) => ({
+    key,
+    label: preset.label,
+    swatch: preset.swatch,
+  }));
+
+export const THEME_OPTIONS = APP_THEME_OPTIONS.map(opt => {
+  const { h, s, l } = parseHSLString(opt.swatch);
+  return {
+    label: opt.label,
+    hex: hslToHex(h, s, l),
+  };
+});
 
 /**
  * Calculate relative luminance for WCAG contrast calculation
@@ -221,12 +450,14 @@ export function getContrastRatio(
 
 const WCAG_AA_RATIO = 4.5;
 
-/** Parse "H S% L%" to { h, s, l } (0-360, 0-100, 0-100) */
+/** Parse "H S% L%" or "hsl(H S% L%)" to { h, s, l } (0-360, 0-100, 0-100) */
 function parseHSLString(hsl: string): { h: number; s: number; l: number } {
-  const parts = hsl.trim().split(/\s+/);
+  // Remove hsl() wrapper and commas if present
+  const clean = hsl.replace(/hsl\(|\)|%/g, '').replace(/,/g, ' ');
+  const parts = clean.trim().split(/\s+/);
   const h = parseInt(parts[0] ?? '0', 10);
-  const s = parseInt((parts[1] ?? '0%').replace('%', ''), 10);
-  const l = parseInt((parts[2] ?? '0%').replace('%', ''), 10);
+  const s = parseInt(parts[1] ?? '0', 10);
+  const l = parseInt(parts[2] ?? '0', 10);
   return { h, s, l };
 }
 
@@ -362,139 +593,7 @@ export function getThemeAccessibilityReport() {
   }));
 }
 
-export const APP_THEME_PRESETS: Record<AppThemeKey, ThemePreset> = {
-  rose: {
-    label: 'Rosa lila',
-    swatch: 'hsl(315 75% 60%)',
-    vars: {
-      '--primary': 'hsl(315 75% 60%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
-      '--secondary': 'hsl(315 55% 92%)',
-      '--secondary-foreground': 'hsl(315 30% 28%)',
-      '--muted': 'hsl(320 50% 95%)',
-      '--muted-foreground': 'hsl(315 30% 28%)',
-      '--accent': 'hsl(310 60% 90%)',
-      '--accent-foreground': 'hsl(315 30% 28%)',
-      '--card': 'hsl(320 45% 98%)',
-      '--card-soft': 'hsl(320 50% 96%)',
-      '--card-bg-light': 'hsl(320 45% 98%)',
-      '--border': 'hsl(315 65% 55%)',
-      '--input': 'hsl(315 65% 55%)',
-      '--ring': 'hsl(315 65% 55%)',
-      '--sidebar-background': 'hsl(320 40% 96%)',
-      '--sidebar-foreground': 'hsl(315 30% 32%)',
-      '--sidebar-primary': 'hsl(315 75% 60%)',
-      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
-      '--sidebar-accent': 'hsl(315 55% 85%)',
-      '--sidebar-accent-foreground': 'hsl(315 30% 28%)',
-      '--sidebar-border': 'hsl(315 35% 55%)',
-      '--sidebar-ring': 'hsl(315 75% 60%)',
-      '--income': 'hsl(152 60% 42%)',
-      '--expense': 'hsl(0 84% 60%)',
-      '--savings': 'hsl(315 75% 60%)',
-    },
-  },
-  gray: {
-    label: 'Gris',
-    swatch: 'hsl(215 11% 50%)',
-    vars: {
-      '--primary': 'hsl(215 11% 50%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
-      '--secondary': 'hsl(221 15% 81%)',
-      '--secondary-foreground': 'hsl(215 11% 40%)',
-      '--muted': 'hsl(223 32% 91%)',
-      '--muted-foreground': 'hsl(215 11% 40%)',
-      '--accent': 'hsl(221 15% 81%)',
-      '--accent-foreground': 'hsl(215 11% 40%)',
-      '--card': 'hsl(220 16% 96%)',
-      '--card-soft': 'hsl(220 16% 94%)',
-      '--card-bg-light': 'hsl(220 16% 96%)',
-      '--border': 'hsl(215 11% 50%)',
-      '--input': 'hsl(215 11% 50%)',
-      '--ring': 'hsl(215 11% 50%)',
-      '--sidebar-background': 'hsl(220 16% 96%)',
-      '--sidebar-foreground': 'hsl(215 11% 40%)',
-      '--sidebar-primary': 'hsl(215 11% 50%)',
-      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
-      '--sidebar-accent': 'hsl(209 17% 30%)',
-      '--sidebar-accent-foreground': 'hsl(223 32% 91%)',
-      '--sidebar-border': 'hsl(209 17% 30%)',
-      '--sidebar-ring': 'hsl(215 11% 50%)',
-      '--income': 'hsl(152 60% 42%)',
-      '--expense': 'hsl(0 84% 60%)',
-      '--savings': 'hsl(215 11% 50%)',
-    },
-  },
-  blue: {
-    label: 'Azul',
-    swatch: 'hsl(220 80% 56%)',
-    vars: {
-      '--primary': 'hsl(220 80% 56%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
-      '--secondary': 'hsl(220 65% 90%)',
-      '--secondary-foreground': 'hsl(222 35% 28%)',
-      '--muted': 'hsl(220 45% 94%)',
-      '--muted-foreground': 'hsl(222 35% 28%)',
-      '--accent': 'hsl(215 70% 88%)',
-      '--accent-foreground': 'hsl(222 35% 28%)',
-      '--card': 'hsl(220 45% 97%)',
-      '--card-soft': 'hsl(220 45% 95%)',
-      '--card-bg-light': 'hsl(220 45% 97%)',
-      '--border': 'hsl(220 70% 50%)',
-      '--input': 'hsl(220 70% 50%)',
-      '--ring': 'hsl(220 70% 50%)',
-      '--sidebar-background': 'hsl(220 50% 96%)',
-      '--sidebar-foreground': 'hsl(222 35% 32%)',
-      '--sidebar-primary': 'hsl(220 80% 56%)',
-      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
-      '--sidebar-accent': 'hsl(220 40% 80%)',
-      '--sidebar-accent-foreground': 'hsl(222 35% 28%)',
-      '--sidebar-border': 'hsl(220 50% 60%)',
-      '--sidebar-ring': 'hsl(220 80% 56%)',
-      '--income': 'hsl(152 60% 42%)',
-      '--expense': 'hsl(0 84% 60%)',
-      '--savings': 'hsl(220 80% 56%)',
-    },
-  },
-  emerald: {
-    label: 'Esmeralda',
-    swatch: 'hsl(152 65% 45%)',
-    vars: {
-      '--primary': 'hsl(152 65% 45%)',
-      '--primary-foreground': 'hsl(0 0% 100%)',
-      '--secondary': 'hsl(152 50% 88%)',
-      '--secondary-foreground': 'hsl(152 30% 26%)',
-      '--muted': 'hsl(150 40% 92%)',
-      '--muted-foreground': 'hsl(152 30% 26%)',
-      '--accent': 'hsl(156 55% 86%)',
-      '--accent-foreground': 'hsl(152 30% 26%)',
-      '--card': 'hsl(150 45% 97%)',
-      '--card-soft': 'hsl(150 45% 95%)',
-      '--card-bg-light': 'hsl(150 45% 97%)',
-      '--border': 'hsl(152 55% 40%)',
-      '--input': 'hsl(152 55% 40%)',
-      '--ring': 'hsl(152 55% 40%)',
-      '--sidebar-background': 'hsl(150 40% 95%)',
-      '--sidebar-foreground': 'hsl(152 35% 30%)',
-      '--sidebar-primary': 'hsl(152 65% 45%)',
-      '--sidebar-primary-foreground': 'hsl(0 0% 100%)',
-      '--sidebar-accent': 'hsl(152 45% 80%)',
-      '--sidebar-accent-foreground': 'hsl(152 30% 26%)',
-      '--sidebar-border': 'hsl(152 45% 45%)',
-      '--sidebar-ring': 'hsl(152 65% 45%)',
-      '--income': 'hsl(152 60% 42%)',
-      '--expense': 'hsl(0 84% 60%)',
-      '--savings': 'hsl(152 65% 45%)',
-    },
-  },
-};
-
-export const APP_THEME_OPTIONS: { key: AppThemeKey; label: string; swatch: string }[] =
-  (Object.entries(APP_THEME_PRESETS) as [AppThemeKey, ThemePreset][]).map(([key, preset]) => ({
-    key,
-    label: preset.label,
-    swatch: preset.swatch,
-  }));
+// APP_THEME_PRESETS moved to top
 
 // Row type returned by Supabase for payment_methods table
 export type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
@@ -535,41 +634,41 @@ export const MASTER_PALETTE = [
 ];
 
 const DEFAULT_CATEGORIES = [
-  { name: 'Salario', type: 'income', color: '#10B98A' },
-  { name: 'Otros ingresos', type: 'income', color: '#34D399' },
-  { name: 'Alimentación', type: 'expense', color: '#F97316' },
-  { name: 'Arriendo y mudanzas', type: 'expense', color: '#B45309' },
-  { name: 'Aseo y limpieza', type: 'expense', color: '#38BDF8' },
-  { name: 'Cuidado personal y estética', type: 'expense', color: '#FB7185' },
-  { name: 'Teléfono', type: 'expense', color: '#60A5FA' },
-  { name: 'Restaurantes', type: 'expense', color: '#FB923C' },
-  { name: 'Mecato y bebidas', type: 'expense', color: '#EC4899' },
-  { name: 'Educación', type: 'expense', color: '#4F46E5' },
-  { name: 'Gym', type: 'expense', color: '#EF4444' },
-  { name: 'Oficina y trabajo', type: 'expense', color: '#64748B' },
-  { name: 'Salidas, hospedajes y ocio', type: 'expense', color: '#06B6D4' },
-  { name: 'Aplicativos, libros y gadgets', type: 'expense', color: '#8B5CF6' },
-  { name: 'Ropa, calzado y accesorios', type: 'expense', color: '#D946EF' },
-  { name: 'Farmacia y Salud', type: 'expense', color: '#F87171' },
-  { name: 'Salud y pensión', type: 'expense', color: '#F43F5E' },
-  { name: 'Seguro de vida', type: 'expense', color: '#DC2626' },
-  { name: 'Seguro moto', type: 'expense', color: '#2563EB' },
-  { name: 'Civica', type: 'expense', color: '#1E40AF' },
-  { name: 'Transporte', type: 'expense', color: '#3B82F6' },
-  { name: 'Gasolina', type: 'expense', color: '#EAB308' }, // Corrected from yellow-600 which is more like amber
-  { name: 'Parqueadero', type: 'expense', color: '#94A3B8' },
+  { name: 'Salario', type: 'income', color: '#3B82F6' }, // blue-500
+  { name: 'Otros ingresos', type: 'income', color: '#6366F1' }, // indigo-500
+  { name: 'Alimentación', type: 'expense', color: '#06B6D4' }, // cyan-500
+  { name: 'Arriendo y mudanzas', type: 'expense', color: '#4F46E5' }, // indigo-600
+  { name: 'Aseo y limpieza', type: 'expense', color: '#38BDF8' }, // sky-400
+  { name: 'Cuidado personal y estética', type: 'expense', color: '#FB7185' }, // rose-400
+  { name: 'Teléfono', type: 'expense', color: '#60A5FA' }, // blue-400
+  { name: 'Restaurantes', type: 'expense', color: '#2563EB' }, // blue-600
+  { name: 'Mecato y bebidas', type: 'expense', color: '#EC4899' }, // pink-500
+  { name: 'Educación', type: 'expense', color: '#4F46E5' }, // indigo-600
+  { name: 'Gym', type: 'expense', color: '#EF4444' }, // red-500
+  { name: 'Oficina y trabajo', type: 'expense', color: '#64748B' }, // slate-500
+  { name: 'Salidas, hospedajes y ocio', type: 'expense', color: '#06B6D4' }, // cyan-500
+  { name: 'Aplicativos, libros y gadgets', type: 'expense', color: '#8B5CF6' }, // violet-500
+  { name: 'Ropa, calzado y accesorios', type: 'expense', color: '#D946EF' }, // fuchsia-500
+  { name: 'Farmacia y Salud', type: 'expense', color: '#F87171' }, // red-400
+  { name: 'Salud y pensión', type: 'expense', color: '#F43F5E' }, // rose-500
+  { name: 'Seguro de vida', type: 'expense', color: '#DC2626' }, // red-600
+  { name: 'Seguro moto', type: 'expense', color: '#2563EB' }, // blue-600
+  { name: 'Civica', type: 'expense', color: '#1E40AF' }, // blue-800
+  { name: 'Transporte', type: 'expense', color: '#3B82F6' }, // blue-500
+  { name: 'Gasolina', type: 'expense', color: '#EAB308' }, // amber-500
+  { name: 'Parqueadero', type: 'expense', color: '#94A3B8' }, // slate-400
   { name: 'Moto', type: 'expense', color: '#404040' },
-  { name: 'Regalos', type: 'expense', color: '#F472B6' },
-  { name: 'Utilería hogar y decoración', type: 'expense', color: '#9A3412' },
-  { name: 'Utilería oficina', type: 'expense', color: '#475569' },
-  { name: 'Documentos y papelería', type: 'expense', color: '#A1A1AA' },
-  { name: 'Grandes activos', type: 'expense', color: '#312E81' },
+  { name: 'Regalos', type: 'expense', color: '#F472B6' }, // pink-400
+  { name: 'Utilería hogar y decoración', type: 'expense', color: '#9A3412' }, // orange-dark (keep some variety or change to cooler?)
+  { name: 'Utilería oficina', type: 'expense', color: '#475569' }, // slate-600
+  { name: 'Documentos y papelería', type: 'expense', color: '#A1A1AA' }, // zinc-400
+  { name: 'Grandes activos', type: 'expense', color: '#312E81' }, // indigo-900
   { name: 'Reparaciones', type: 'expense', color: '#7C2D12' },
   { name: 'Préstamos', type: 'expense', color: '#B91C1C' },
   { name: 'Impuestos y multas', type: 'expense', color: '#57534E' },
-  { name: 'Ahorro', type: 'saving', color: '#059669' },
-  { name: 'CDT', type: 'saving', color: '#7C3AED' },
-  { name: 'Acciones', type: 'investment', color: '#6366F1' },
+  { name: 'Ahorro', type: 'saving', color: '#0D9488' }, // teal-600
+  { name: 'CDT', type: 'saving', color: '#7C3AED' }, // violet-600
+  { name: 'Acciones', type: 'investment', color: '#6366F1' }, // indigo-500
   { name: 'Transferencia', type: 'transfer_out', color: '#6B7280' },
   { name: 'Otros', type: 'other', color: '#9CA3AF' },
 ];
@@ -1334,9 +1433,16 @@ export function useFinanceDataLogic() {
             .single();
 
           if (catError) {
-
+            // Handle error if needed
           } else if (catData) {
             resolvedCategoryId = catData.id;
+            // Update local categories state immediately
+            setCategories(prev => [...prev, {
+              id: catData.id,
+              name: catData.name,
+              type: catData.type as TransactionType,
+              color: catData.color
+            }]);
           }
         }
       } else if (existingCat) {
@@ -1444,14 +1550,28 @@ export function useFinanceDataLogic() {
       payment_method_id: data.payment_method_id,
     }, ...prev]);
 
+    // Update local states for charts and totals
+    setRangeTransactions(prev => [{
+      id: data.id,
+      type: data.type as TransactionType,
+      category: finalCategoryForDB,
+      category_id: (data as any).category_id,
+      amount: Number(data.amount),
+      description: data.description,
+      date: data.date,
+      payment_method_id: data.payment_method_id,
+      created_at: data.created_at,
+    }, ...prev]);
+
+    setTotalTransactionsCount(prev => prev + 1);
     setLastUpdated(new Date());
 
-    // Global refresh instead of local setCategories
-    fetchData();
+    // Removed global refresh (fetchData) to prevent unnecessary re-renders
+    // fetchData();
 
     toast({ title: 'Éxito', description: 'Transacción agregada' });
     return { error: null };
-  }, [user, toast, paymentMethods, categories, fetchData]);
+  }, [user, toast, paymentMethods, categories]);
 
   const addTransactionsBulk = async (transactions: Omit<Transaction, 'id'>[]) => {
     if (!user) return { error: 'No autenticado', count: 0 };
@@ -1600,6 +1720,10 @@ export function useFinanceDataLogic() {
     }
 
     setTransactions(prev => prev.filter(t => t.id !== id));
+    setRangeTransactions(prev => prev.filter(t => t.id !== id));
+    setTotalTransactionsCount(prev => Math.max(0, prev - 1));
+    setLastUpdated(new Date());
+
     toast({ title: 'Eliminado', description: 'Transacción eliminada' });
   };
 
@@ -1729,6 +1853,8 @@ export function useFinanceDataLogic() {
     }
 
     setTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
+    setRangeTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
+    setLastUpdated(new Date());
 
     return { error: null, data };
   };
@@ -1879,13 +2005,19 @@ export function useFinanceDataLogic() {
     return { error: null };
   };
 
-  const updateProfile = async (updates: { currency?: string; display_name?: string; decimal_places?: number; base_color?: string }) => {
+  const updateProfile = async (updates: {
+    currency?: string;
+    display_name?: string;
+    decimal_places?: number;
+    base_color?: string;
+    welcome_completed?: boolean;
+  }) => {
     if (!user) return { error: 'No autenticado' };
 
     // Primero verificar si existe el perfil usando 'id' como identificador
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('id, currency')
+      .select('id, currency, welcome_completed, base_color')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -1935,6 +2067,11 @@ export function useFinanceDataLogic() {
     // Actualizar decimal_places local si cambió
     if (updates.decimal_places !== undefined) {
       setDecimalPlaces(updates.decimal_places);
+    }
+
+    // Actualizar welcome_completed local si cambió
+    if (updates.welcome_completed !== undefined) {
+      setWelcomeCompleted(updates.welcome_completed);
     }
 
     toast({ title: 'Éxito', description: 'Perfil actualizado' });
@@ -2154,6 +2291,42 @@ export function useFinanceDataLogic() {
         variant: 'destructive'
       });
       return { error };
+    }
+  };
+
+  const initializeDefaultCategories = async () => {
+    if (!user) return { error: 'No autenticado' };
+
+    setLoading(true);
+    try {
+      const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
+        ...cat,
+        user_id: user.id
+      }));
+
+      const { data, error } = await supabase
+        .from('categories')
+        .upsert(categoriesToInsert, { onConflict: 'user_id, name' })
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setCategories(data.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          type: cat.type as TransactionType,
+          color: cat.color
+        })));
+      }
+
+      toast({ title: 'Éxito', description: 'Categorías iniciales creadas' });
+      return { error: null };
+    } catch (err) {
+      toast({ title: 'Error', description: 'No se pudieron crear las categorías', variant: 'destructive' });
+      return { error: err };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2880,6 +3053,7 @@ export function useFinanceDataLogic() {
     deletePaymentMethod,
     addTransfer,
     updateProfile,
+    initializeDefaultCategories,
     convertCurrency,
     setOnboardingDecision: setOnboardingDecisionFn,
     highlightedCard,

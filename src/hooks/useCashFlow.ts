@@ -5,10 +5,11 @@ import { useLoans } from '@/contexts/LoansContext';
 import { useBudgetsData } from './useBudgetsData';
 import { useSavingsData } from './useSavingsData';
 import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth, setDate, getDate } from 'date-fns';
-import { CashFlowPoint } from '@/components/cashflow/cashflow.types';
+import { CashFlowPoint } from '@/features/cashflow/components/cashflow.types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { isTransferTransaction } from '@/lib/cashflowUtils';
+import { es } from 'date-fns/locale';
 
 // Helper: Redondeo seguro a 2 decimales para evitar errores de punto flotante
 const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -69,7 +70,9 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   // Fechas de proyección
   const now = new Date();
   const currentMonthStart = startOfMonth(now);
-  const start = startOfMonth(new Date(year, 0, 1));
+  const start = month === 'all'
+    ? startOfMonth(new Date(year, 0, 1))
+    : startOfMonth(new Date(year, Number(month) - 1, 1));
   const monthsCount = range === 'mes' ? 1 : range === '6m' ? 6 : 12;
   const monthStart = month === 'all' ? 0 : (Number(month) - 1);
 
@@ -92,8 +95,8 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     let egresosPrestamosInteres = 0;
     let egresosPrestamosCapital = 0;
     let egresosTarjeta = 0;
-    let egresosTarjetaInteres = 0;
-    let egresosTarjetaCapital = 0;
+    const egresosTarjetaInteres = 0;
+    const egresosTarjetaCapital = 0;
     let egresosReales = 0;
 
     // --- Saldo de ahorros e intereses compuestos ---
@@ -110,36 +113,11 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- Ingresos proyectados (Budgets de tipo Income) ---
-    if (!isPastMonth) {
-      budgets.forEach(b => {
-        const cat = categories.find(c => c.id === b.budget.category_id);
-        const isIncome = cat?.type === 'income' || b.categoryName === 'Ingresos' || b.categoryName === 'Salario';
+    // --- Ingresos proyectados (Removido: Solo transacciones reales o FE) ---
+    // (Anteriormente usaba budgets para proyecciones de ingresos)
 
-        if (b.budget.period === 'monthly' && b.budget.amount > 0 && isIncome) {
-          ingresosSalario += b.budget.amount;
-        }
-      });
-    }
-
-    // --- Gastos presupuestados (Budgets) ---
-    if (!isPastMonth) {
-      budgets.forEach(b => {
-        const cat = categories.find(c => c.id === b.budget.category_id);
-        // Exclude income
-        if (cat?.type === 'income') return;
-
-        if (b.budget.period === 'monthly' && b.budget.amount > 0) {
-          // Check if already spent in THIS month (for current month accuracy)
-          if (format(date, 'yyyy-MM') === format(now, 'yyyy-MM')) {
-            gastosFuturos += b.remaining;
-          } else {
-            // Future month: add full budget
-            gastosFuturos += b.budget.amount;
-          }
-        }
-      });
-    }
+    // --- Gastos presupuestados (Removido: No proyectar metas, solo obligaciones) ---
+    // (Anteriormente usaba budgets para proyecciones de gastos)
 
     // --- Future Expenses & Subscriptions ---
     if (!isPastMonth) {
@@ -246,7 +224,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     transactions.forEach(tx => {
       if (isTransferTransaction(tx)) return;
       const txDate = new Date(tx.date);
-      const isSameMonth = month === 'all' ? true : (tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM'));
+      const isSameMonth = tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM');
       const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
 
       const isMultiCuotaCC = pm?.type === 'credit' && ((tx as any).installments || 1) > 1;
@@ -288,7 +266,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     }
 
     // --- Préstamos que me deben (ingresos por cobrar) ---
-    let ingresosPrestamos = 0;
+    const ingresosPrestamos = 0;
 
     // Calcular totales y balances antes de usarlos
     const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos;
@@ -342,7 +320,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
   // --- Serie para gráfica (compatibilidad) ---
   const cashFlowSeries = monthlyBreakdown.map((row, idx) => ({
-    name: row.mes,
+    name: format(addMonths(start, idx), 'MMM', { locale: es }).replace('.', ''),
     ingresos: row.ingresosTotales,
     ingresosSalario: row.ingresosSalario,
     interesesAhorro: row.interesesAhorro,

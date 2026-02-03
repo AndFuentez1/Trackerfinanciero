@@ -138,7 +138,7 @@ export default function Index() {
         hasPendingImport={hasPendingImport}
         onConfirmImport={async () => { await confirmImportData(); }}
         pendingImportCount={pendingImportData.length}
-        importProgress={importProgress as any}
+        importProgress={importProgress}
         onCancelImport={async () => { await cancelImport(); }}
         paymentMethods={paymentMethods}
         onImportComplete={(data) => startImport(data)}
@@ -152,20 +152,23 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background/30">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold">Resumen</h1>
+      <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+        <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">Panel Principal</h1>
+              <p className="text-muted-foreground font-medium">Resumen general de tus finanzas</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center sm:justify-end">
+          <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
             <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
             <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
             <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
           </div>
-        </div>
-      </header>
-
-      <main className="container max-w-6xl mx-auto px-4 py-8">
+        </header>
         <div className="space-y-6">
           <SummaryTab
             transactions={chartTransactions}

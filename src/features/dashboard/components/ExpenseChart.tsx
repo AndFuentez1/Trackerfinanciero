@@ -54,7 +54,7 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
 
   const formatCurrencyString = (value: number) => {
     const symbol = getCurrencySymbol(currency || 'COP');
-    let formatted = new Intl.NumberFormat('es-CO', {
+    const formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: currency || 'COP',
       currencyDisplay: 'code',
@@ -88,7 +88,7 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   // Formatter for axis: must return string only
   const formatCurrencyAxis = (value: number) => {
     const symbol = getCurrencySymbol(currency || 'COP');
-    let formatted = new Intl.NumberFormat('es-CO', {
+    const formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: currency || 'COP',
       currencyDisplay: 'symbol',

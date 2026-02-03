@@ -61,15 +61,18 @@ export default function BudgetsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <PieChart className="h-5 w-5 text-primary" />
+            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+                <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                            <PieChart className="h-6 w-6" />
                         </div>
-                        <h1 className="text-xl font-semibold">Presupuesto Mensual</h1>
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight">Presupuestos</h1>
+                            <p className="text-muted-foreground font-medium">Controla tus gastos mensuales</p>
+                        </div>
                     </div>
-                    <div className="z-20 flex gap-2 flex-wrap justify-center sm:justify-start">
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
                         <AddTransactionDialog
                             onAdd={addTransaction}
                             categories={categories}
@@ -81,10 +84,7 @@ export default function BudgetsPage() {
                             monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
                         />
                     </div>
-                </div>
-            </header>
-
-            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+                </header>
                 {/* Top Section: Budget Cards (Side by Side on desktop) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                     <div className="flex h-full flex-col space-y-4">

@@ -131,13 +131,29 @@ const MobileNavSkeleton = () => (
     </div>
 );
 
+const StandardHeaderSkeleton = () => (
+    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 w-full animate-in fade-in duration-700">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+            <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
+            <div className="space-y-2">
+                <PulseBlock height="2rem" width="200px" />
+                <PulseBlock height="1rem" width="300px" />
+            </div>
+        </div>
+        <div className="flex gap-2 w-full md:w-auto justify-start md:justify-end">
+            <PulseBlock height="2.5rem" width="100px" />
+            <PulseBlock height="2.5rem" width="100px" />
+        </div>
+    </div>
+);
+
 // ---------------------------------------------------------------------
 // Tab Layouts
 // ---------------------------------------------------------------------
 
 const DashboardSkeleton = () => (
     <div className="space-y-8 animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1 mb-4">Cargando Dashboard...</h2>
+        <StandardHeaderSkeleton />
         {/* Header - usually handled by PageHeaderSkeleton but some pages have their own */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
@@ -179,7 +195,7 @@ const DashboardSkeleton = () => (
 
 const HistorySkeleton = () => (
     <div className="space-y-6 animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1 mb-2">Cargando Historial...</h2>
+        <StandardHeaderSkeleton />
         {/* Status Bar */}
         <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-border bg-muted/20">
             <div className="flex items-center gap-3">
@@ -230,7 +246,7 @@ const HistorySkeleton = () => (
 
 const BudgetsSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1">Cargando Presupuestos...</h2>
+        <StandardHeaderSkeleton />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <CardSkeleton height="140px">
                 <PulseBlock height="1rem" width="120px" className="mb-4" />
@@ -271,7 +287,7 @@ const BudgetsSkeleton = () => (
 
 const LoansSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1">Cargando Préstamos...</h2>
+        <StandardHeaderSkeleton />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <CardSkeleton height="100px" padding="1.5rem" className="flex flex-col justify-center">
                 <PulseBlock height="0.75rem" width="100px" className="mb-2" />
@@ -303,7 +319,7 @@ const LoansSkeleton = () => (
 
 const SavingsSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1">Cargando Ahorros...</h2>
+        <StandardHeaderSkeleton />
         <CardSkeleton height="120px" padding="2rem" className="flex items-center justify-between">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <PulseBlock height="1rem" width="120px" />
@@ -338,65 +354,67 @@ const SavingsSkeleton = () => (
 );
 
 const ConfigSkeleton = () => (
-    <div className="container max-w-5xl mx-auto space-y-12 py-10 animate-in fade-in duration-700">
+    <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12 animate-in fade-in duration-700">
+        {/* Header Section */}
         <div className="space-y-4">
             <div className="flex items-center gap-3">
                 <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
                 <div className="space-y-2">
                     <PulseBlock height="2rem" width="200px" />
-                    <PulseBlock height="1rem" width="350px" />
+                    <PulseBlock height="1rem" width="300px" />
                 </div>
             </div>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1 pt-4">Cargando Configuración...</h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 space-y-8">
-                <CardSkeleton height="180px" className="mb-6" />
-                <CardSkeleton height="200px" className="mb-6" />
-                <div className="flex flex-col gap-6">
-                    {/* Categories Skeleton */}
-                    <CardSkeleton height="450px" padding="2rem">
-                        <div className="flex justify-between items-center mb-6">
-                            <PulseBlock height="1.5rem" width="150px" />
-                            <PulseBlock height="2.5rem" width="100px" />
-                        </div>
-                        {/* 3-column grid for categories to match real UI */}
+        <div className="space-y-8">
+            <section className="space-y-8">
+                {/* Theme Section */}
+                <CardSkeleton height="200px">
+                    <PulseBlock height="1.5rem" width="180px" className="mb-6" />
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                        {[...Array(6)].map((_, i) => <PulseBlock key={i} height="80px" borderRadius="1rem" />)}
+                    </div>
+                </CardSkeleton>
+
+                {/* Currency Section */}
+                <CardSkeleton height="150px" />
+
+                {/* Two large sections (Categories & Methods) */}
+                <div className="flex flex-col gap-10">
+                    <CardSkeleton height="400px" padding="2rem">
+                        <PulseBlock height="1.5rem" width="150px" className="mb-6" />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {[...Array(12)].map((_, i) => (
-                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-transparent bg-muted/10 h-16">
-                                    <PulseBlock height="0.75rem" width="0.75rem" borderRadius="9999px" />
-                                    <div className="flex flex-col gap-1 w-full">
-                                        <PulseBlock height="0.8rem" width="60%" />
-                                        <PulseBlock height="0.6rem" width="30%" />
-                                    </div>
-                                </div>
-                            ))}
+                            {[...Array(9)].map((_, i) => <PulseBlock key={i} height="3.5rem" />)}
                         </div>
                     </CardSkeleton>
-                    {/* Payment Methods Skeleton */}
-                    <CardSkeleton height="450px" padding="2rem">
-                        <div className="flex justify-between items-center mb-6">
-                            <PulseBlock height="1.5rem" width="180px" />
-                            <PulseBlock height="2.5rem" width="100px" />
-                        </div>
-                        <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => <PulseBlock key={i} height="5rem" width="100%" />)}
+
+                    <CardSkeleton height="300px" padding="2rem">
+                        <PulseBlock height="1.5rem" width="180px" className="mb-6" />
+                        <div className="space-y-3">
+                            {[...Array(3)].map((_, i) => <PulseBlock key={i} height="4rem" />)}
                         </div>
                     </CardSkeleton>
                 </div>
-            </div>
-            <div className="lg:col-span-4 space-y-8">
-                <CardSkeleton height="300px" />
+            </section>
+
+            {/* Separator mimic */}
+            <PulseBlock height="1px" width="100%" className="opacity-50" />
+
+            <section className="space-y-8">
+                {/* Security & Danger */}
+                <CardSkeleton height="250px" />
                 <CardSkeleton height="200px" />
-            </div>
+            </section>
+
+            {/* Info Card */}
+            <CardSkeleton height="150px" className="bg-primary/5 border-primary/10" />
         </div>
-    </div>
+    </div >
 );
 
 const CashFlowSkeleton = () => (
     <div className="container max-w-5xl mx-auto py-8 px-4 space-y-8 animate-in fade-in duration-700">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest pl-1">Cargando Flujo de Caja...</h2>
+        <StandardHeaderSkeleton />
         <div className="space-y-2">
             <PulseBlock height="2rem" width="180px" />
             <PulseBlock height="2.5rem" width="100%" /> {/* Filters */}
@@ -492,8 +510,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                     (fullPage && !withLayoutWrapper) ? "lg:pl-64" : ""
                 )}
             >
-                {/* Always render header skeleton for pages that have it, unless tab implies otherwise */}
-                {(tab !== 'config' && tab !== 'default' && tab !== 'cashflow' && fullPage) && <PageHeaderSkeleton />}
+                {/* Header skeleton is now handled inside each tab skeleton */}
 
                 <main
                     className={cn(

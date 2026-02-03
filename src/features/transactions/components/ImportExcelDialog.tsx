@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react';
-import { Transaction, TransactionType, PaymentMethod, MASTER_PALETTE } from '@/hooks/useFinanceData';
+import { Transaction, TransactionType, PaymentMethod } from '@/domains/types';
+import { MASTER_PALETTE } from '@/hooks/useFinanceDataLogic';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { supabase } from '@/integrations/supabase/client';
+import { trackEvent } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,8 +31,8 @@ import { parse, isValid, format as formatDateFns } from 'date-fns';
 
 interface ImportExcelDialogProps {
   paymentMethods: PaymentMethod[];
-  onImport: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error: any; count: number }>;
-  onImportBackground?: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error: any; count: number }>; // Para correr en segundo plano
+  onImport: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: any; count: number }>;
+  onImportBackground?: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: any; count: number }>; // Para correr en segundo plano
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTriggerButton?: boolean; // Si false, no muestra el botón DialogTrigger
@@ -529,8 +532,8 @@ export function ImportExcelDialog({
         supabase.from('payment_methods').select('*').eq('user_id', user.id)
       ]);
 
-      const catMap = new Map((currentCategories || []).map(c => [c.name.toLowerCase(), c.id]));
-      const pmMap = new Map((currentPaymentMethods || []).map(pm => [pm.name.toLowerCase(), pm.id]));
+      const catMap = new Map<string, string>((currentCategories || []).map(c => [c.name.toLowerCase(), String(c.id)]));
+      const pmMap = new Map<string, string>((currentPaymentMethods || []).map(pm => [pm.name.toLowerCase(), String(pm.id)]));
 
       // Ensure special categories exist
       const specialCategories = [
@@ -590,7 +593,7 @@ export function ImportExcelDialog({
 
         // --- AUTO-CATEGORIZATION FOR SAVINGS/INVESTMENT ACCOUNTS ---
         let finalCategory = rawCat;
-        let finalType = normalizedType;
+        let finalType: TransactionType = normalizedType;
         let finalCategoryId: string | undefined = undefined;
 
         // Check if payment method is savings or investment
@@ -603,8 +606,13 @@ export function ImportExcelDialog({
         );
 
         if (pmDetails && (pmDetails.type === 'savings' || pmDetails.type === 'investment')) {
-          // For savings/investment accounts, treat deposits/withdrawals as transfers (keep type as income/expense)
-          if (normalizedType === 'income' || normalizedType === 'expense') {
+          // For savings/investment accounts, treat deposits/withdrawals as transfers
+          if (normalizedType === 'income') {
+            finalType = 'transfer_in';
+            finalCategory = 'Transferencia entre Cuentas';
+            finalCategoryId = catMap.get('transferencia entre cuentas') || undefined;
+          } else if (normalizedType === 'expense') {
+            finalType = 'transfer_out';
             finalCategory = 'Transferencia entre Cuentas';
             finalCategoryId = catMap.get('transferencia entre cuentas') || undefined;
           }
@@ -631,14 +639,13 @@ export function ImportExcelDialog({
               .insert({
                 user_id: user.id,
                 name: finalCategory,
-                type: catType as any,
+                type: (catType === 'transfer_in' || catType === 'transfer_out') ? 'other' : catType,
                 color: colorToUse
               })
               .select()
               .single();
 
             if (catErr) {
-
               errors.push(`Fila ${i + 1}: Error creando categoría "${finalCategory}"`);
               continue;
             }
@@ -671,7 +678,6 @@ export function ImportExcelDialog({
               .single();
 
             if (pmErr) {
-
               errors.push(`Fila ${i + 1}: Error creando método de pago "${rawPM}"`);
               continue;
             }
@@ -692,29 +698,36 @@ export function ImportExcelDialog({
       }
 
       if (errors.length > 0) {
-        alert(`Errores previos encontrados:\n${errors.join('\n')}`);
-        // We continue with those that are valid
+        toast({
+          title: "Advertencias en categorías",
+          description: `Se encontraron ${errors.length} problemas que podrían afectar la importación.`,
+          variant: "destructive"
+        });
       }
 
       if (transactionsToImport.length === 0) {
         setIsImporting(false);
         localStorage.removeItem(importKey);
-        return;
+        return { count: 0 };
       }
 
       // En modo onboarding: pasar transacciones a onImport sin insertar en BD
       if (onboarding) {
-
-        await onImport(transactionsToImport);
+        const result = await onImport(transactionsToImport);
         setParsedRows([]);
         setFileName('');
         setOpen(false);
         setIsImporting(false);
         localStorage.removeItem(importKey);
-        return;
-      }
 
-      // Batch insert con tracking de errores por fila
+        trackEvent('excel_import_completed', {
+          count: transactionsToImport.length,
+          onboarding: true,
+          result: 'success'
+        });
+
+        return result;
+      }
 
       const batchSize = 100;
       let successCount = 0;
@@ -730,7 +743,7 @@ export function ImportExcelDialog({
 
           return {
             user_id: user.id,
-            type: t.type === 'transfer_out' || t.type === 'transfer_in' ? 'transfer' : t.type,
+            type: (t.type === 'transfer_out' || t.type === 'transfer_in') ? 'transfer' : t.type,
             category: needsReview ? 'Por Clasificar' : t.category,
             category_id: needsReview ? null : t.category_id,
             amount: truncatedAmount,
@@ -748,18 +761,14 @@ export function ImportExcelDialog({
             .select();
 
           if (insError) {
-
-
-            // Determinar el mensaje de error específico
             let errorMsg = insError.message || 'Error desconocido';
             if (insError.code === '22003') {
               errorMsg = 'Error de formato numérico';
             }
 
-            // Registrar todas las filas del batch como fallidas
             batchTransactions.forEach(t => {
               failedRows.push({
-                row: t._originalIndex + 2, // +2 por header y base-1
+                row: (t._originalIndex ?? 0) + 2,
                 error: errorMsg
               });
             });
@@ -768,26 +777,19 @@ export function ImportExcelDialog({
             successCount += (data?.length || 0);
           }
         } catch (e) {
-
-
-          // Determinar el mensaje de error específico
-          let errorMsg = e instanceof Error ? e.message : 'Error desconocido';
-
-          // Registrar todas las filas del batch como fallidas
+          const errorMsg = e instanceof Error ? e.message : 'Error desconocido';
           batchTransactions.forEach(t => {
             failedRows.push({
-              row: t._originalIndex + 2,
+              row: (t._originalIndex ?? 0) + 2,
               error: errorMsg
             });
           });
           failCount += batchTransactions.length;
         }
 
-        // Update progress
         const processed = Math.min(batch + batchSize, transactionsToImport.length);
         setProgress(Math.round((processed / transactionsToImport.length) * 100));
 
-        // Actualizar localStorage
         localStorage.setItem(importKey, JSON.stringify({
           startTime: Date.now(),
           validRows: transactionsToImport.length,
@@ -796,7 +798,13 @@ export function ImportExcelDialog({
         }));
       }
 
-      // Mostrar resultados con detalle de errores
+      // Track completing the import
+      trackEvent('excel_import_completed', {
+        count: successCount,
+        failed: failCount,
+        result: failCount === 0 ? 'success' : 'failure'
+      });
+
       if (failCount > 0) {
         const errorSummary = failedRows
           .slice(0, 5)
@@ -818,18 +826,21 @@ export function ImportExcelDialog({
         });
       }
 
-      // Cerrar el diálogo siempre después de importar
       setParsedRows([]);
       setFileName('');
       setOpen(false);
-
-      // Limpiar localStorage
       localStorage.removeItem(importKey);
+
+      return { count: successCount };
 
     } catch (err) {
-
-      alert("Ocurrió un error inesperado durante la importación.");
+      toast({
+        title: "Error crítico",
+        description: "Ocurrió un error inesperado durante la importación.",
+        variant: "destructive"
+      });
       localStorage.removeItem(importKey);
+      return { count: 0, error: err };
     } finally {
       setIsImporting(false);
       setProgress(0);
@@ -875,20 +886,20 @@ export function ImportExcelDialog({
         </DialogHeader>
 
         <div className="space-y-3 sm:space-y-4 mt-4">
-          <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-            <p className="font-medium">Formato esperado:</p>
-            <p className="text-muted-foreground">
+          <div className="p-4 bg-accent-soft-bg/50 rounded-xl text-sm space-y-2 border border-accent-soft-border/30">
+            <p className="font-semibold text-foreground/90">Formato esperado:</p>
+            <p className="text-muted-foreground/80">
               Columnas: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground/70 italic">
               Ejemplo: 15/01/2026 | Supermercado | Comida | {getExampleAmountDisplay()} | Débito BBVA
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm">Archivo Excel</Label>
+            <Label className="text-sm font-medium">Archivo Excel</Label>
             <div
-              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+              className="border-2 border-dashed border-border/60 rounded-xl p-4 sm:p-8 text-center cursor-pointer hover:border-primary/40 hover:bg-accent-soft-bg/20 transition-all duration-300 relative group"
               onClick={() => !fileName && fileInputRef.current?.click()}
             >
               <input
@@ -899,13 +910,18 @@ export function ImportExcelDialog({
                 className="hidden"
               />
               {fileName ? (
-                <div className="flex items-center justify-center gap-2">
-                  <FileSpreadsheet className="h-5 w-5 text-primary" />
-                  <span className="text-sm">{fileName}</span>
+                <div className="flex flex-col items-center justify-center gap-3 py-2">
+                  <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <FileSpreadsheet className="h-8 w-8" />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-sm font-semibold block">{fileName}</span>
+                    <span className="text-xs text-muted-foreground">Archivo listo para procesar</span>
+                  </div>
                   <Button
-                    variant="default"
+                    variant="ghost"
                     size="icon"
-                    className="h-6 w-6 absolute top-2 right-2 hover:bg-destructive/10"
+                    className="h-8 w-8 absolute top-2 right-2 rounded-full hover:bg-destructive/10 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
                       setFileName('');
@@ -923,26 +939,31 @@ export function ImportExcelDialog({
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Upload className="h-6 sm:h-8 w-6 sm:w-8 mx-auto text-muted-foreground" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Haz clic o arrastra un archivo .xlsx, .xls o .csv
-                  </p>
+                <div className="space-y-3">
+                  <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Upload className="h-6 sm:h-8 w-6 sm:w-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Haz clic o arrastra un archivo</p>
+                    <p className="text-xs text-muted-foreground underline decoration-dotted underline-offset-4">
+                      Soporta .xlsx, .xls o .csv
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {availableSheets.length > 1 && !showMappingStep && parsedRows.length > 0 && (
-            <div className="space-y-2">
-              <Label>
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+              <Label className="font-medium text-sm">
                 Seleccionar hoja
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-xs text-muted-foreground ml-2 font-normal">
                   ({availableSheets.length} hojas disponibles)
                 </span>
               </Label>
               <Select value={selectedSheet} onValueChange={handleSheetChange}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-lg">
                   <SelectValue placeholder="Selecciona una hoja" />
                 </SelectTrigger>
                 <SelectContent>
@@ -953,19 +974,19 @@ export function ImportExcelDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                💡 Se seleccionó automáticamente la hoja con más datos relevantes
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <span className="italic">💡 Se seleccionó automáticamente la hoja con más datos relevantes</span>
               </p>
             </div>
           )}
 
           {showMappingStep && (
-            <div className="space-y-4 p-4 border rounded-lg bg-card">
-              <div className="space-y-2 flex items-center justify-between">
-                <div className="space-y-2 flex-1">
-                  <h3 className="font-medium text-sm">Paso 1: Configura el mapeo de columnas</h3>
+            <div className="space-y-4 p-5 border border-border/50 rounded-xl bg-card/50 shadow-sm animate-in zoom-in-95 duration-300">
+              <div className="space-y-1 flex items-start justify-between">
+                <div className="space-y-1 flex-1">
+                  <h3 className="font-semibold text-sm">Paso 1: Configura el mapeo de columnas</h3>
                   <p className="text-xs text-muted-foreground">
-                    Asigna cada columna de tu archivo a los campos requeridos
+                    Asigna cada columna de tu archivo a los campos del sistema
                   </p>
                 </div>
                 {availableSheets.length > 1 && (
@@ -973,12 +994,12 @@ export function ImportExcelDialog({
                     setSelectedSheet(sheetName);
                     if (workbookData) processSheet(workbookData, sheetName);
                   }}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-36 h-8 text-xs">
                       <SelectValue placeholder="Cambiar hoja" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableSheets.map((sheetName) => (
-                        <SelectItem key={sheetName} value={sheetName}>
+                        <SelectItem key={sheetName} value={sheetName} className="text-xs">
                           {sheetName}
                         </SelectItem>
                       ))}
@@ -987,35 +1008,35 @@ export function ImportExcelDialog({
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 py-1">
                 <input
                   type="checkbox"
                   id="hasHeader"
                   checked={hasHeader}
                   onChange={(e) => setHasHeader(e.target.checked)}
-                  className="rounded"
+                  className="rounded border-border/50 text-primary focus:ring-primary/30 h-4 w-4"
                 />
-                <Label htmlFor="hasHeader" className="text-sm cursor-pointer">
+                <Label htmlFor="hasHeader" className="text-sm cursor-pointer font-medium text-foreground/80">
                   La primera fila contiene encabezados
                 </Label>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm">
+                  <Label className="text-xs font-semibold text-foreground/70 uppercase tracking-wider">
                     Fecha <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={columnMapping.date?.toString() ?? 'none'}
                     onValueChange={(val) => setColumnMapping({ ...columnMapping, date: val !== 'none' ? parseInt(val) : null })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona columna..." />
+                    <SelectTrigger className="h-9 text-sm rounded-lg">
+                      <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} - Ej: {col.samples[0]}
+                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1023,20 +1044,20 @@ export function ImportExcelDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">
+                  <Label className="text-xs font-semibold text-foreground/70 uppercase tracking-wider">
                     Descripción <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={columnMapping.description?.toString() ?? 'none'}
                     onValueChange={(val) => setColumnMapping({ ...columnMapping, description: val !== 'none' ? parseInt(val) : null })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona columna..." />
+                    <SelectTrigger className="h-9 text-sm rounded-lg">
+                      <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} - Ej: {col.samples[0]}
+                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1044,20 +1065,20 @@ export function ImportExcelDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">
+                  <Label className="text-xs font-semibold text-foreground/70 uppercase tracking-wider">
                     Monto <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={columnMapping.amount?.toString() ?? 'none'}
                     onValueChange={(val) => setColumnMapping({ ...columnMapping, amount: val !== 'none' ? parseInt(val) : null })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona columna..." />
+                    <SelectTrigger className="h-9 text-sm rounded-lg">
+                      <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} - Ej: {col.samples[0]}
+                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1065,39 +1086,39 @@ export function ImportExcelDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">Categoría (opcional)</Label>
+                  <Label className="text-xs font-semibold text-foreground/70 uppercase tracking-wider">Categoría</Label>
                   <Select
                     value={columnMapping.category?.toString() ?? 'none'}
                     onValueChange={(val) => setColumnMapping({ ...columnMapping, category: val !== 'none' ? parseInt(val) : null })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona columna..." />
+                    <SelectTrigger className="h-9 text-sm rounded-lg">
+                      <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Ninguna</SelectItem>
+                      <SelectItem value="none">No mapear</SelectItem>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} - Ej: {col.samples[0]}
+                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm">Método de pago (opcional)</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-semibold text-foreground/70 uppercase tracking-wider">Método de pago</Label>
                   <Select
                     value={columnMapping.paymentMethod?.toString() ?? 'none'}
                     onValueChange={(val) => setColumnMapping({ ...columnMapping, paymentMethod: val !== 'none' ? parseInt(val) : null })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona columna..." />
+                    <SelectTrigger className="h-9 text-sm rounded-lg">
+                      <SelectValue placeholder="Selecciona columna de método de pago..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Ninguna</SelectItem>
+                      <SelectItem value="none">No mapear (usar predeterminado)</SelectItem>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} - Ej: {col.samples[0]}
+                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1105,102 +1126,129 @@ export function ImportExcelDialog({
                 </div>
               </div>
 
-              <Button onClick={handleConfirmMapping} className="w-full">
+              <Button onClick={handleConfirmMapping} className="w-full h-11 shadow-sm font-semibold rounded-xl mt-2 transition-all active:scale-[0.98]">
                 Continuar con este mapeo
               </Button>
             </div>
           )}
 
           {parsedRows.length > 0 && !showMappingStep && (
-            <>
+            <div className="space-y-4 animate-in fade-in duration-500">
               <div className="flex items-center justify-between">
                 <Button
-                  variant="default"
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     setShowMappingStep(true);
                     setParsedRows([]);
                   }}
+                  className="text-primary h-8 px-2 hover:bg-primary/5 text-xs font-medium"
                 >
                   ⚙️ Cambiar mapeo de columnas
                 </Button>
-              </div>
 
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-1 text-green-600">
-                  <CheckCircle className="h-4 w-4" />
-                  {validCount} válidos
-                </div>
-                {invalidCount > 0 && (
-                  <div className="flex items-center gap-1 text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    {invalidCount} con errores
+                <div className="flex items-center gap-3 text-xs font-medium">
+                  <div className="flex items-center gap-1.5 text-income bg-income/10 px-2 py-1 rounded-full">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {validCount} listos
                   </div>
-                )}
+                  {invalidCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-expense bg-expense/10 px-2 py-1 rounded-full">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {invalidCount} errores
+                    </div>
+                  )}
+                </div>
               </div>
 
               {invalidCount > 0 && (
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
-                  <p className="font-medium text-amber-900 mb-1">⚠️ Advertencias detectadas</p>
-                  <p className="text-xs text-muted-foreground">
-                    Revisa la tabla abajo. Los montos excesivos se truncarán y se marcarán con estado de atención para filtrarlas en el historial.
-                  </p>
+                <div className="rounded-xl bg-orange-50/50 border border-orange-200/50 p-3 flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-orange-900 text-xs">Advertencia de validación</p>
+                    <p className="text-[11px] text-orange-800/80 leading-relaxed">
+                      Se detectaron inconsistencias. Los montos excesivos se marcaron para revisión manual tras la importación.
+                    </p>
+                  </div>
                 </div>
               )}
 
-              <div className="max-h-48 overflow-y-auto border rounded-lg overflow-x-auto">
-                <table className="w-full min-w-[600px] text-xs">
-                  <thead className="bg-muted sticky top-0">
-                    <tr>
-                      <th className="p-2 text-left">Fecha</th>
-                      <th className="p-2 text-left">Descripción</th>
-                      <th className="p-2 text-left">Categoría</th>
-                      <th className="p-2 text-right">Monto</th>
-                      <th className="p-2 text-center">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedRows.slice(0, 50).map((row, i) => (
-                      <tr key={i} className={row.isValid ? '' : 'bg-destructive/10'}>
-                        <td className="p-2">{row.date || '-'}</td>
-                        <td className="p-2 truncate max-w-32">{row.description || '-'}</td>
-                        <td className="p-2">{row.category || '-'}</td>
-                        <td className="p-2 text-right">{getCurrencySymbol()} {row.amount.toLocaleString()}</td>
-                        <td className="p-2 text-center">
-                          {row.isValid ? (
-                            <CheckCircle className="h-3 w-3 text-green-600 mx-auto" />
-                          ) : (
-                            <span className="text-destructive" title={row.error}>
-                              <AlertCircle className="h-3 w-3 mx-auto" />
-                            </span>
-                          )}
-                        </td>
+              <div className="max-h-56 overflow-hidden border border-border/40 rounded-xl bg-muted/5">
+                <div className="overflow-y-auto max-h-56">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/30 sticky top-0 backdrop-blur-sm">
+                      <tr className="border-b border-border/30">
+                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Fecha</th>
+                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Descripción</th>
+                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Categoría</th>
+                        <th className="p-2.5 text-right font-semibold text-muted-foreground/80">Monto</th>
+                        <th className="p-2.5 text-center font-semibold text-muted-foreground/80">Cdo.</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {parsedRows.slice(0, 50).map((row, i) => (
+                        <tr key={i} className={cn(
+                          "hover:bg-accent-soft-bg/10 transition-colors",
+                          !row.isValid && 'bg-expense/5'
+                        )}>
+                          <td className="p-2.5 text-muted-foreground/90 font-medium">{row.date || '-'}</td>
+                          <td className="p-2.5 truncate max-w-[120px] font-medium" title={row.description}>{row.description || '-'}</td>
+                          <td className="p-2.5 text-muted-foreground/70">{row.category || '-'}</td>
+                          <td className="p-2.5 text-right font-bold text-foreground/80">
+                            {getCurrencySymbol()} {row.amount.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}
+                          </td>
+                          <td className="p-2.5 text-center">
+                            {row.isValid ? (
+                              <div className="flex justify-center">
+                                <CheckCircle className="h-3.5 w-3.5 text-income shadow-sm" />
+                              </div>
+                            ) : (
+                              <div className="flex justify-center" title={row.error}>
+                                <AlertCircle className="h-3.5 w-3.5 text-expense" />
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {parsedRows.length > 50 && (
+                    <p className="p-2 text-[10px] text-center text-muted-foreground italic border-t border-border/10">
+                      Mostrando las primeras 50 de {parsedRows.length} filas...
+                    </p>
+                  )}
+                </div>
               </div>
 
               {isImporting ? (
-                <div className="space-y-2">
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                <div className="space-y-3 py-2">
+                  <div className="flex justify-between items-center text-[11px] font-semibold text-primary/80 px-1">
+                    <span>Procesando transacciones...</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
                     <div
-                      className="h-full bg-primary transition-all duration-300"
+                      className="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">Importando en background... {progress}%</p>
+                  <p className="text-[10px] text-center text-muted-foreground animate-pulse">
+                    Por favor no cierres esta ventana hasta terminar la carga
+                  </p>
                 </div>
               ) : (
                 <Button
                   onClick={() => handleImport()}
-                  className="w-full h-10 bg-primary text-primary-foreground hover:bg-white hover:text-black hover:border-primary border border-transparent transition-all duration-300"
+                  className="w-full h-11 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 rounded-xl transition-all active:scale-[0.99] group overflow-hidden"
                   disabled={validCount === 0}
                 >
-                  Importar {validCount > 0 && `(${validCount} filas)`}
+                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Completar Importación {validCount > 0 && `(${validCount} filas)`}
+                  </span>
                 </Button>
               )}
-            </>
+            </div>
           )}
         </div>
       </DialogContent>

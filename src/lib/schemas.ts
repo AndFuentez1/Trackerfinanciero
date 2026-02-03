@@ -3,7 +3,7 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { subYears, addYears, isWithinInterval } from "date-fns";
 
 export const insertTransactionSchema = z.object({
-    type: z.enum(["income", "expense", "investment", "saving", "transfer_out", "transfer_in", "loan"]),
+    type: z.enum(["income", "expense", "investment", "saving", "savings", "transfer_out", "transfer_in", "loan", "other"]),
     category: z.string().nullable().optional(),
     category_id: z.string().optional().nullable(),
     amount: z.coerce

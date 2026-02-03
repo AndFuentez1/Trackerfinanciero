@@ -239,7 +239,7 @@ export function AddTransactionDialog({
     }
 
     // Map transfer types to database storage format
-    let dbType: TransactionType = values.type;
+    const dbType: TransactionType = values.type;
     if (values.type === 'transfer_in') {
       categoryName = 'Transferencia';
     }
@@ -408,7 +408,7 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2 border border-primary min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+          className="gap-2 border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >

@@ -27,12 +27,14 @@ export function WelcomePanel() {
     baseColor,
     themeOptions,
     setAppThemePreference,
+    initializeDefaultCategories, // Need to add this to hook
   } = useFinanceData();
 
   const navigate = useNavigate();
 
   const [selectedCurrency, setSelectedCurrency] = useState(currency || 'USD');
   const [isConfiguringCurrency, setIsConfiguringCurrency] = useState(false);
+  const [isInitializingCategories, setIsInitializingCategories] = useState(false);
 
   // Dialog states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -43,12 +45,12 @@ export function WelcomePanel() {
       id: 'currency',
       icon: DollarSign,
       title: 'Configurar moneda',
-      description: 'Selecciona la moneda para tus transacciones',
+      description: 'Selecciona la moneda principal',
       completed: !!currency,
       action: (
-        <div className="space-y-3">
+        <div className="flex gap-2">
           <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-            <SelectTrigger>
+            <SelectTrigger className="flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -70,9 +72,8 @@ export function WelcomePanel() {
               setIsConfiguringCurrency(false);
             }}
             disabled={isConfiguringCurrency}
-            className="w-full"
           >
-            {isConfiguringCurrency ? 'Configurando...' : 'Configurar moneda'}
+            {isConfiguringCurrency ? '...' : <CheckCircle2 className="h-4 w-4" />}
           </Button>
         </div>
       ),
@@ -80,79 +81,83 @@ export function WelcomePanel() {
     {
       id: 'categories',
       icon: Tag,
-      title: 'Crear categorías',
-      description: 'Define categorías para organizar tus transacciones',
+      title: 'Categorías',
+      description: 'Organiza tus ingresos y gastos',
       completed: categories.length > 0,
       action: (
-        <Button onClick={() => setCategoryDialogOpen(true)} className="w-full">
-          Crear categoría
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            className="w-full border-dashed border-border hover:border-primary/50"
+            onClick={async () => {
+              setIsInitializingCategories(true);
+              await initializeDefaultCategories?.();
+              setIsInitializingCategories(false);
+            }}
+            disabled={isInitializingCategories}
+          >
+            {isInitializingCategories ? 'Cargando...' : 'Cargar sugeridas (recomendado)'}
+          </Button>
+          <Button onClick={() => setCategoryDialogOpen(true)} variant="secondary" className="w-full">
+            Crear manual
+          </Button>
+        </div>
       ),
     },
     {
       id: 'payment-methods',
       icon: Wallet,
-      title: 'Agregar métodos de pago',
-      description: 'Configura tarjetas, cuentas bancarias o efectivo',
+      title: 'Métodos de pago',
+      description: 'Cuentas, tarjetas o efectivo',
       completed: paymentMethods.length > 0,
       action: (
-        <Button onClick={() => navigate('/configuracion')} className="w-full">
-          Ir a Configuración
+        <Button onClick={() => setPaymentDialogOpen(true)} className="w-full">
+          Agregar mi primer método
         </Button>
       ),
     },
   ];
 
+  const allStepsCompleted = steps.every(s => s.completed);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-12">
-          <div className="p-3 rounded-full bg-primary/20 w-fit mx-auto mb-4">
-            <Wallet className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-4xl font-bold mb-2">Bienvenido a Tracker Financiero</h1>
-          <p className="text-muted-foreground text-lg">Completa estos pasos para comenzar a gestionar tu dinero</p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-xl space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-extrabold tracking-tight">Bienvenido</h1>
+          <p className="text-muted-foreground">Configura lo básico para empezar</p>
         </div>
 
-        <div className="grid gap-4 mb-8">
+        <div className="space-y-4">
           {steps.map((step, index) => {
             const Icon = step.icon;
-            const isDisabled = index > 0 && !steps[index - 1].completed;
+            const isPrevCompleted = index === 0 || steps[index - 1].completed;
 
             return (
               <Card
                 key={step.id}
-                className={`overflow-hidden transition-all ${step.completed ? 'bg-primary/5 border-primary/20' : ''
-                  } ${isDisabled ? 'opacity-50' : ''}`}
+                className={cn(
+                  "border-border/50 transition-all overflow-hidden",
+                  step.completed ? "bg-muted/30" : "bg-card",
+                  !isPrevCompleted && "opacity-50 grayscale pointer-events-none"
+                )}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`p-2 rounded-lg ${step.completed ? 'bg-primary/20' : 'bg-primary/20'
-                          }`}
-                      >
-                        {step.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
-                        ) : (
-                          <Icon className="h-5 w-5 text-primary" />
-                        )}
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">{step.title}</CardTitle>
-                        <CardDescription>{step.description}</CardDescription>
-                      </div>
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "p-2.5 rounded-xl transition-colors",
+                      step.completed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      {step.completed ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                     </div>
-                    {step.completed && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
-                        Completado
-                      </span>
-                    )}
+                    <div>
+                      <CardTitle className="text-base font-bold">{step.title}</CardTitle>
+                      <CardDescription className="text-xs">{step.description}</CardDescription>
+                    </div>
                   </div>
                 </CardHeader>
-                {/* Show action if not disabled. Even if completed, we let them change it (e.g. theme or add more categories) */}
-                {(!isDisabled) && (
-                  <CardContent>
+                {!step.completed && (
+                  <CardContent className="p-4 pt-0">
                     {step.action}
                   </CardContent>
                 )}
@@ -160,6 +165,17 @@ export function WelcomePanel() {
             );
           })}
         </div>
+
+        {allStepsCompleted && (
+          <div className="pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Button
+              className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
+              onClick={() => updateProfile({ welcome_completed: true })}
+            >
+              ¡Todo listo! Continuar <CheckCircle2 className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}

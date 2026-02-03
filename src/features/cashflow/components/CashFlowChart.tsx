@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -82,7 +82,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
       <CardContent className="p-4 pt-2">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.2} />
@@ -100,6 +100,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
                 tickLine={false}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                 dy={10}
+                interval={0}
               />
               <YAxis
                 tickFormatter={(val) => {
@@ -117,6 +118,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                width={60}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--muted)/0.1)', radius: 4 }}
@@ -125,30 +127,27 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
                 formatter={(value: any, name: string) => [formatCurrency(Number(value)), name]}
               />
 
-              {/* Areas & Lines controlled by Toggles */}
+              {/* Bars & Lines controlled by Toggles */}
 
               {showIncome && (
-                <>
-                  <Area
-                    type="monotone"
-                    dataKey="ingresos"
-                    name="Ingresos Totales"
-                    stroke="hsl(var(--success))"
-                    fill="url(#incomeGradient)"
-                    strokeWidth={2}
-                  />
-                  {/* Can add stacked breakdown if needed, but Total is cleaner for minimalism */}
-                </>
+                <Bar
+                  dataKey="ingresos"
+                  name="Ingresos Totales"
+                  fill="hsl(var(--success))"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                  fillOpacity={0.7}
+                />
               )}
 
               {showExpense && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="egresos"
                   name="Egresos Totales"
-                  stroke="hsl(var(--destructive))"
-                  fill="url(#expenseGradient)"
-                  strokeWidth={2}
+                  fill="hsl(var(--destructive))"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                  fillOpacity={0.7}
                 />
               )}
 
@@ -173,7 +172,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
                     dot={false}
                     strokeDasharray="5 5"
                     name="Balance Proyectado"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
                   />
                 </>
               )}

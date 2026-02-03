@@ -124,7 +124,7 @@ export function CurrencySection() {
 
                 {/* Conversion Logic (Hidden by default) */}
                 {showConversion && (
-                    <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-4 animate-in zoom-in-95 duration-200">
+                    <div className="p-4 rounded-2xl border-2 border-border/60 bg-primary/5 space-y-4 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center gap-2 text-primary">
                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
                             <h4 className="font-bold">Opciones de Cambio</h4>
@@ -150,7 +150,7 @@ export function CurrencySection() {
                                 </Button>
                             </div>
 
-                            <div className="p-4 rounded-xl bg-background border border-primary/30 shadow-sm space-y-3">
+                            <div className="p-4 rounded-xl bg-background border border-border/50 shadow-sm space-y-3">
                                 <h5 className="font-bold text-sm flex items-center gap-2">
                                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                                     Conversión total

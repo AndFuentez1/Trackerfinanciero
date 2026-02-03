@@ -13,7 +13,7 @@ interface ThemeOption {
 }
 
 interface ImportProgress {
-  status: 'idle' | 'loading' | 'completed' | 'failed';
+  status: 'idle' | 'loading' | 'completed' | 'failed' | 'cancelled';
   progress: number;
   message: string;
   error?: string;
@@ -171,27 +171,23 @@ export function OnboardingDecisionPanel({
                         type="button"
                         className={cn(
                           "w-16 h-16 rounded-xl border-2 flex items-center justify-center transition-all",
-                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-muted"
+                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-border/40 hover:border-border"
                         )}
                         style={{ background: theme.hex }}
                         aria-label={theme.label}
-                        onClick={() => setSelectedTheme(theme.hex)}
+                        onClick={() => {
+                          setSelectedTheme(theme.hex);
+                          onSelectTheme?.(theme.hex);
+                        }}
                       >
                         {selectedTheme === theme.hex && (
                           <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
                         )}
                       </button>
-                      <span className="text-xs mt-2 text-center break-words w-full" style={{ color: '#222' }}>{theme.label}</span>
+                      <span className="text-xs mt-2 text-center break-words w-full font-medium text-muted-foreground">{theme.label}</span>
                     </div>
                   ))}
                 </div>
-                <Button
-                  className="w-full mt-4"
-                  variant="default"
-                  onClick={() => onSelectTheme?.(selectedTheme)}
-                >
-                  Aplicar color
-                </Button>
               </CardContent>
             </Card>
           )}

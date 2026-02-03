@@ -20,7 +20,7 @@ import { SavingsProvider } from "./contexts/SavingsContext";
 import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
-
+import { BrowserRouter as Router } from 'react-router-dom';
 const queryClient = new QueryClient();
 
 // Inner component that consumes the finance context
@@ -31,12 +31,15 @@ const AppContent = () => {
     // Consolidated loading state
     const isLoading = authLoading || (!!user && financeLoading);
 
-    // Apply theme variables
+    // Apply theme variables with smooth transition
     useEffect(() => {
         if (themeVars) {
+            // Apply variables
             Object.entries(themeVars).forEach(([key, value]) => {
                 document.documentElement.style.setProperty(key, value);
             });
+            // Ensure smooth transition for all color changes
+            document.documentElement.classList.add('transition-colors', 'duration-300');
         }
     }, [themeVars]);
 
@@ -54,12 +57,15 @@ const AppContent = () => {
 
     // 1. Strict Loading Guard — SkeletonLoader evita layout shift inicial
     if (isLoading) {
-        return <SkeletonLoader fullPage message="Cargando aplicación..." />;
+        // Safe check for hash router path
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname.replace('/Trackerfinanciero', '') || '/' : '/';
+        const skeletonType = getSkeletonType(currentPath) as any;
+        return <SkeletonLoader fullPage message="Cargando aplicación..." tab={skeletonType} />;
     }
 
     // 2. Atomic Routing Decision
     return (
-        <HashRouter>
+        <Router>
             <Routes>
                 {user ? (
                     /* Authenticated Routes */
@@ -83,7 +89,7 @@ const AppContent = () => {
                     </>
                 )}
             </Routes>
-        </HashRouter>
+        </Router>
     );
 };
 

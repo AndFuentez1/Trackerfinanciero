@@ -290,7 +290,7 @@ export function SavingsPerformance({
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="bg-card border border-arquitectura-2/30 shadow-md">
+      <Card className="bg-card border border-border/50 shadow-md">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -318,10 +318,9 @@ export function SavingsPerformance({
         )}
       </div>
 
-      {/* Accounts performance */}
       <div className="grid gap-4 md:grid-cols-2 auto-rows-fr">
         {accountPerformance.map(account => (
-          <Card key={account.id} className="savings-card h-full">
+          <Card key={account.id} className="savings-card h-full border-border/50">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
                 <div>
@@ -359,14 +358,14 @@ export function SavingsPerformance({
               )}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-border/40 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Depósitos</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalDeposits)}</p>
                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
-                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-border/40 rounded p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Retiros</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalWithdrawals)}</p>
@@ -386,7 +385,7 @@ export function SavingsPerformance({
       </div>
 
       {accounts.length === 0 && (
-        <Card className="bg-card border-2 border-dashed border-arquitectura-2/30">
+        <Card className="bg-card border-2 border-dashed border-border/40">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
@@ -399,21 +398,21 @@ export function SavingsPerformance({
 
       {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
-        <div className="bg-gradient-to-b from-card to-card/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
+        <div className="bg-gradient-to-b from-card to-card/50 rounded-xl border border-border/40 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
             <table className="w-full table-auto">
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
                 <tr>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Fecha</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Descripción</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Tipo</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Método de Pago</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Monto</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">% Rendimiento</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Fecha</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Descripción</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Tipo</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Método de Pago</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Monto</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">% Rendimiento</th>
                   <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-arquitectura-2/30">
+              <tbody className="divide-y divide-border/30">
                 {transactions.slice(0, 20).map((tx, index) => {
                   const account = accounts.find(a => a.id === tx.payment_method_id);
                   const isEditing = editingTxId === tx.id;
@@ -520,7 +519,7 @@ export function SavingsPerformance({
                         {isEditing ? (
                           <Input
                             type="number"
-                            className="h-8 text-sm font-bold border-primary w-[8rem] mx-auto text-center"
+                            className="h-8 text-sm font-bold border-input w-[8rem] mx-auto text-center"
                             value={draft?.amount ?? tx.amount}
                             onChange={(e) => setDraft(d => d ? { ...d, amount: Number(e.target.value) || 0 } : d)}
                           />

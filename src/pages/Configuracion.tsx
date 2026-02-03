@@ -22,9 +22,9 @@ export default function ConfiguracionPage() {
             <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12 animate-in fade-in duration-700">
 
                 {/* Header Section */}
-                <header className="space-y-4">
+                <header className="space-y-4 border-b border-border/40 pb-6">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
                             <Settings2 className="h-6 w-6" />
                         </div>
                         <div>
@@ -52,7 +52,7 @@ export default function ConfiguracionPage() {
                     </section>
 
                     {/* Information Card - Moved to bottom */}
-                    <Card className="rounded-2xl border-primary/10 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden border-border/50 shadow-sm">
+                    <Card className="rounded-2xl border-border/50 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden shadow-sm">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Información</CardTitle>
                         </CardHeader>
