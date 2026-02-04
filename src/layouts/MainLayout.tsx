@@ -54,7 +54,7 @@ export default function MainLayout() {
                 }
                 setHasCheckedPassword(true);
             } catch (error) {
-
+                console.error('[MainLayout] Failed to check user password', error);
                 setHasCheckedPassword(true);
             }
         };
@@ -63,7 +63,7 @@ export default function MainLayout() {
     }, [user, hasCheckedPassword]);
 
     if (loading) {
-        return <SkeletonLoader fullPage={true} message="Cargando sesión..." />;
+        return <SkeletonLoader fullPage withLayoutWrapper={false} />;
     }
 
     if (!user) return null;

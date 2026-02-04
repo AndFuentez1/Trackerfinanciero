@@ -61,17 +61,7 @@ export default function ConfiguracionPage() {
                                 Todos tus datos se guardan de forma segura en la nube y se sincronizan en tiempo real con todos tus dispositivos.
                             </p>
                             <div className="space-y-3 pt-2">
-                                <a
-                                    href="https://github.com"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/50 transition-colors border border-transparent hover:border-border/50 group"
-                                >
-                                    <div className="p-1.5 rounded-lg bg-slate-900 text-white shadow-sm">
-                                        <Github className="h-4 w-4" />
-                                    </div>
-                                    <span className="text-sm font-semibold group-hover:text-primary transition-colors">Contribuir en GitHub</span>
-                                </a>
+
                                 <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground font-medium">
                                     Hecho con <Heart className="h-3 w-3 text-red-500 fill-current animate-pulse" /> por Joan Fuentes
                                 </div>

@@ -96,7 +96,11 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                 trigger
             ) : (
                 <DialogTrigger asChild>
-                    <Button variant="default" size="sm" className="w-full justify-start gap-2 text-xs font-medium text-primary hover:text-primary">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs font-medium border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    >
                         <Plus className="h-4 w-4" />
                         Nueva categoría
                     </Button>

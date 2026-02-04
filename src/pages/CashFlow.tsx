@@ -18,7 +18,7 @@ export default function CashFlow() {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
   // Datos reales del hook
-  const { cashFlowSeries, balance_actual, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown } = useCashFlow(year, month, range);
+  const { cashFlowSeries, balance_actual, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning } = useCashFlow(year, month, range);
   const loading = !cashFlowSeries;
 
   // Años/meses disponibles (debería venir de los datos)
@@ -32,8 +32,21 @@ export default function CashFlow() {
   const projectedBalance = (cashFlowSeries && cashFlowSeries.length > 0) ? cashFlowSeries[cashFlowSeries.length - 1].balanceProyectado : 0;
 
   // Formateador global de moneda
-  const formatCOP = (v: number | null | undefined) =>
-    (typeof v === 'number' && !isNaN(v)) ? v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 }) : '$ 0,00';
+  const formatCOP = (v: number | null | undefined) => {
+    if (typeof v !== 'number' || isNaN(v)) return <span className="text-muted-foreground">$ 0,00</span>;
+
+    const formatted = v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 });
+    const parts = formatted.split(',');
+
+    if (parts.length === 1) return <span>{formatted}</span>;
+
+    return (
+      <span className="inline-flex items-baseline">
+        <span>{parts[0]}</span>
+        <span className="text-[0.85em] opacity-85">,{parts[1]}</span>
+      </span>
+    );
+  };
 
   if (loading) {
     return <SkeletonLoader tab="cashflow" fullPage withLayoutWrapper />;
@@ -74,7 +87,7 @@ export default function CashFlow() {
           />
         </div>
         <div className="mb-6">
-          <CashFlowChart data={cashFlowSeries} loading={loading} />
+          <CashFlowChart data={cashFlowSeries} loading={loading} isWarning={isProjectionWarning} />
         </div>
         {/* Tabla de Desglose Mensual */}
         <div className="w-full">

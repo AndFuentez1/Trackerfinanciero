@@ -28,7 +28,18 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, loading, colorV
       {loading ? (
         <Skeleton className="h-8 w-2/3" />
       ) : (
-        <span className="text-2xl font-bold text-foreground">{formatCurrency(value)}</span>
+        <div className="flex items-baseline text-2xl font-bold text-foreground">
+          {(() => {
+            const parts = formatCurrency(value).split(',');
+            if (parts.length === 1) return parts[0];
+            return (
+              <>
+                <span>{parts[0]}</span>
+                <span className="text-[0.85em] opacity-85">,{parts[1]}</span>
+              </>
+            );
+          })()}
+        </div>
       )}
     </div>
   );

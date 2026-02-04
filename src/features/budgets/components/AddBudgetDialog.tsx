@@ -4,6 +4,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -64,12 +65,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     return curr?.symbol || currency || '$';
   };
 
-  const getCurrencyPadding = () => {
-    const symbol = getCurrencySymbol();
-    if (symbol.length > 2) return 'pl-16';
-    if (symbol.length === 2) return 'pl-12';
-    return 'pl-9';
-  };
+
 
   const getPlaceholderAmount = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -151,6 +147,11 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       }
       setOpen(false);
     } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar el presupuesto. Intenta de nuevo.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -165,16 +166,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     }
   };
 
-  const formatDisplayedAmount = (value: number) => {
-    if (value === 0 || isNaN(value)) return '';
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (val: number) => void) => {
-    const val = e.target.value.replace(/\./g, '');
-    const parsed = parseFloat(val);
-    onChange(isNaN(parsed) ? 0 : parsed);
-  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -268,16 +260,12 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                 <FormItem className="space-y-2">
                   <FormLabel className="text-sm">Monto máximo</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                      <Input
-                        className={`${getCurrencyPadding()} h-11 md:h-9 text-sm placeholder:text-[90%]`}
-                        placeholder={getPlaceholderAmount()}
-                        inputMode="decimal"
-                        value={formatDisplayedAmount(field.value)}
-                        onChange={(e) => handleAmountChange(e, field.onChange)}
-                      />
-                    </div>
+                    <MoneyInput
+                      className="h-11 md:h-9 text-sm placeholder:text-[90%]"
+                      placeholder={getPlaceholderAmount()}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

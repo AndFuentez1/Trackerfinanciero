@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { formatLocalDate } from '@/lib/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -57,6 +57,24 @@ const ORIGINAL_COLOR_MAP: Record<string, { h: number; s: number; l: number }> = 
   '--income': { h: 152, s: 60, l: 42 },
   '--expense': { h: 0, s: 84, l: 60 },
   '--savings': { h: 215, s: 11, l: 50 },
+};
+
+const mapTransactionRow = (t: TransactionRow): Transaction => {
+  const extra = t as unknown as { installments?: number | null };
+  return {
+    id: t.id,
+    type: t.type === 'transfer'
+      ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
+      : t.type as TransactionType,
+    category: t.category,
+    category_id: t.category_id ?? null,
+    amount: Number(t.amount),
+    description: t.description,
+    date: t.date,
+    payment_method_id: t.payment_method_id ?? null,
+    installments: extra.installments ?? undefined,
+    created_at: t.created_at,
+  };
 };
 
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
@@ -598,6 +616,25 @@ export function getThemeAccessibilityReport() {
 // Row type returned by Supabase for payment_methods table
 export type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
 export type TransactionRow = Database['public']['Tables']['transactions']['Row'];
+type TransactionRealtimePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: TransactionRow;
+  old?: TransactionRow;
+};
+type ProfileSelect = Pick<
+  Database['public']['Tables']['profiles']['Row'],
+  'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color'
+>;
+type CategoryInsert = Database['public']['Tables']['categories']['Insert'];
+type CategoryUpdate = Database['public']['Tables']['categories']['Update'] & { saving_goal?: number | null };
+type ResettableTable =
+  | 'transactions'
+  | 'budgets'
+  | 'payment_methods'
+  | 'categories'
+  | 'savings_transactions'
+  | 'savings_accounts'
+  | 'loans';
 
 // Palette of distinct colors for consistent assignment
 export const MASTER_PALETTE = [
@@ -723,6 +760,7 @@ export function useFinanceDataLogic() {
     return DEFAULT_BASE_COLOR;
   });
   const [themeVars, setThemeVars] = useState<Record<string, string>>(() => calculateProportionalTheme(baseColor));
+  const hasLoadedAllTransactionsRef = useRef(false);
   const [sortConfig, setSortConfig] = useState<{
     column: 'date' | 'amount';
     ascending: boolean;
@@ -746,7 +784,7 @@ export function useFinanceDataLogic() {
     setLoading(true);
     const errors: string[] = [];
     try {
-      const tables: (keyof Database['public']['Tables'])[] = [
+      const tables: ResettableTable[] = [
         'transactions',
         'budgets',
         'payment_methods',
@@ -754,7 +792,7 @@ export function useFinanceDataLogic() {
         'savings_transactions',
         'savings_accounts',
         'loans',
-      ] as any;
+      ];
 
       for (const table of tables) {
         const { error } = await supabase
@@ -845,7 +883,7 @@ export function useFinanceDataLogic() {
       }
 
       toast({ title: 'Éxito', description: 'Tus datos operativos han sido eliminados. Configuración conservada.' });
-      await fetchData();
+      await fetchData({ includeAll: true });
       return { error: null };
     } catch (err) {
       toast({
@@ -931,20 +969,7 @@ export function useFinanceDataLogic() {
       return { data: [], total: 0 };
     }
 
-    const mappedPaginated = (paginatedRes.data || []).map(t => ({
-      id: t.id,
-      type: t.type === 'transfer'
-        ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
-        : t.type as TransactionType,
-      category: t.category,
-      category_id: (t as any).category_id,
-      amount: Number(t.amount),
-      description: t.description,
-      date: t.date,
-      payment_method_id: t.payment_method_id,
-      installments: (t as any).installments,
-      created_at: t.created_at,
-    }));
+    const mappedPaginated = (paginatedRes.data || []).map(mapTransactionRow);
 
     setHasMore(mappedPaginated.length === PAGE_SIZE);
 
@@ -955,20 +980,7 @@ export function useFinanceDataLogic() {
       // Save total count from paginated query for display
       setTotalTransactionsCount(paginatedRes.count || 0);
       if (rangeRes.data) {
-        const mappedRange = (rangeRes.data || []).map(t => ({
-          id: t.id,
-          type: t.type === 'transfer'
-            ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
-            : t.type as TransactionType,
-          category: t.category,
-          category_id: (t as any).category_id,
-          amount: Number(t.amount),
-          description: t.description,
-          date: t.date,
-          payment_method_id: t.payment_method_id,
-          installments: (t as any).installments,
-          created_at: t.created_at,
-        }));
+        const mappedRange = (rangeRes.data || []).map(mapTransactionRow);
         setRangeTransactions(mappedRange);
       }
     }
@@ -994,68 +1006,65 @@ export function useFinanceDataLogic() {
     }
   }, [calculateDates]);
 
-  const fetchData = useCallback(async () => {
+  const fetchAllTransactions = useCallback(async () => {
+    if (!user || !supabase) return { data: [], error: null };
+
+    const allTxnsData: TransactionRow[] = [];
+    let hasMorePages = true;
+    let offset = 0;
+    const PAGE_SIZE_ALL = 1000;
+
+    while (hasMorePages) {
+      const res = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .range(offset, offset + PAGE_SIZE_ALL - 1);
+
+      if (res.error) {
+        return { data: [], error: res.error };
+      }
+
+      if (res.data) {
+        allTxnsData.push(...res.data);
+        if (res.data.length < PAGE_SIZE_ALL) {
+          hasMorePages = false;
+        } else {
+          offset += PAGE_SIZE_ALL;
+        }
+      } else {
+        hasMorePages = false;
+      }
+    }
+
+    return { data: allTxnsData.map(mapTransactionRow), error: null };
+  }, [user]);
+
+  const fetchData = useCallback(async (options?: { includeAll?: boolean }) => {
     if (!user || !supabase) return;
 
+    const includeAll = options?.includeAll ?? !hasLoadedAllTransactionsRef.current;
     setLoading(true);
     setLastUpdated(new Date());
 
     try {
       // Fetch transactions with filters AND fetch ALL transactions (no date filter) for aggregate stats
-      const [transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes] = await Promise.all([
+      const [_transactionsRes, budgetsRes, paymentMethodsRes, categoriesRes, allTransactionsRes] = await Promise.all([
         fetchTransactions(false), // Fetch transactions with current date filter
         supabase.from('budgets').select('*').eq('user_id', user.id), // Fetch budgets
         supabase.from('payment_methods').select('*').eq('user_id', user.id), // Fetch payment methods
         supabase.from('categories').select('*').eq('user_id', user.id), // Fetch categories
+        includeAll ? fetchAllTransactions() : Promise.resolve(null),
       ]);
 
-      // Fetch ALL transactions for aggregate stats - paginate to get all records
-      const allTxnsData: any[] = [];
-      let allTxnsRes = null;
-      let hasMore = true;
-      let offset = 0;
-      const PAGE_SIZE_ALL = 1000;
-
-      while (hasMore) {
-        const res = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false })
-          .range(offset, offset + PAGE_SIZE_ALL - 1);
-
-        if (res.error) {
-          allTxnsRes = res;
-          hasMore = false;
-        } else if (res.data) {
-          allTxnsData.push(...res.data);
-          if (res.data.length < PAGE_SIZE_ALL) {
-            hasMore = false;
-          } else {
-            offset += PAGE_SIZE_ALL;
-          }
+            if (includeAll && allTransactionsRes) {
+        if (allTransactionsRes.error) {
+          toast({ title: 'Error', description: 'No se pudieron cargar todos los registros hist?ricos.', variant: 'destructive' });
+        } else {
+          setAllTransactions(allTransactionsRes.data);
+          hasLoadedAllTransactionsRef.current = true;
         }
-      }
-
-      // Map all transactions for summary calculations
-      if (allTxnsData.length > 0) {
-        const mappedAllTxns = allTxnsData.map(t => ({
-          id: t.id,
-          type: t.type === 'transfer'
-            ? (t.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in') as TransactionType
-            : t.type as TransactionType,
-          category: t.category,
-          category_id: (t as any).category_id,
-          amount: Number(t.amount),
-          description: t.description,
-          date: t.date,
-          payment_method_id: t.payment_method_id,
-          created_at: t.created_at,
-          // payment_method_id missing in original map? Added it.
-        }));
-        setAllTransactions(mappedAllTxns);
-      } else if (allTxnsRes?.error) {
-        toast({ title: 'Error', description: 'No se pudieron cargar todos los registros históricos.', variant: 'destructive' });
       }
 
       // Transaction logic is handled inside fetchTransactions now
@@ -1095,7 +1104,7 @@ export function useFinanceDataLogic() {
       }
 
       // Fetch Profile/Currency using 'id' as the user identifier
-      let profile: any = null;
+      let profile: ProfileSelect | null = null;
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -1205,7 +1214,7 @@ export function useFinanceDataLogic() {
     } finally {
       setLoading(false);
     }
-  }, [user, toast, fetchTransactions]);
+  }, [user, toast, fetchTransactions, fetchAllTransactions]);
 
   // Consolidated effect for initial load and filter changes
   useEffect(() => {
@@ -1214,12 +1223,14 @@ export function useFinanceDataLogic() {
       setBudgets([]);
       setPaymentMethods([]);
       setCategories([]);
+      setAllTransactions([]);
+      hasLoadedAllTransactionsRef.current = false;
       setLoading(false);
       return;
     }
 
-    // This fetches everything including transactions for the current dateFilter
-    fetchData();
+    // Fetch filtered data; fetch all transactions only on first load
+    fetchData({ includeAll: !hasLoadedAllTransactionsRef.current });
   }, [user, dateFilter, fetchData]);
 
   // Persist welcome completion once the user has configured currency, categories, and payment methods
@@ -1236,7 +1247,7 @@ export function useFinanceDataLogic() {
             .update({ welcome_completed: true })
             .eq('id', user.id);
         } catch (_) {
-          // best-effort; ignore if column is still missing or request fails
+          console.warn('[useFinanceDataLogic] Failed to persist welcome_completed');
         }
       };
       void persistWelcome();
@@ -1320,7 +1331,7 @@ export function useFinanceDataLogic() {
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) return { error: 'No autenticado' };
 
-    let resolvedCategoryId = (transaction as any).category_id;
+    let resolvedCategoryId = transaction.category_id;
     let finalType = transaction.type;
     let finalCategory = transaction.category;
 
@@ -1419,7 +1430,7 @@ export function useFinanceDataLogic() {
           colorToUse = getUniqueColor(usedColors);
 
           // Special Logic: Direct UPSERT to ensure persistence
-          const upsertData: any = {
+          const upsertData: CategoryInsert = {
             user_id: user.id,
             name: finalCategory,
             type: catType,
@@ -1539,29 +1550,39 @@ export function useFinanceDataLogic() {
       );
     }
 
+    const createdRow = data as TransactionRow;
+
     setTransactions(prev => [{
-      id: data.id,
-      type: data.type as TransactionType,
+      id: createdRow.id,
+      type: createdRow.type as TransactionType,
       category: finalCategoryForDB,
-      category_id: (data as any).category_id,
-      amount: Number(data.amount),
-      description: data.description,
-      date: data.date,
-      payment_method_id: data.payment_method_id,
+      category_id: createdRow.category_id,
+      amount: Number(createdRow.amount),
+      description: createdRow.description,
+      date: createdRow.date,
+      payment_method_id: createdRow.payment_method_id,
     }, ...prev]);
 
     // Update local states for charts and totals
     setRangeTransactions(prev => [{
-      id: data.id,
-      type: data.type as TransactionType,
+      id: createdRow.id,
+      type: createdRow.type as TransactionType,
       category: finalCategoryForDB,
-      category_id: (data as any).category_id,
-      amount: Number(data.amount),
-      description: data.description,
-      date: data.date,
-      payment_method_id: data.payment_method_id,
-      created_at: data.created_at,
+      category_id: createdRow.category_id,
+      amount: Number(createdRow.amount),
+      description: createdRow.description,
+      date: createdRow.date,
+      payment_method_id: createdRow.payment_method_id,
+      created_at: createdRow.created_at,
     }, ...prev]);
+
+    const mappedAll = mapTransactionRow(createdRow);
+    setAllTransactions(prev => {
+      if (prev.find(t => t.id === mappedAll.id)) {
+        return prev.map(t => t.id === mappedAll.id ? mappedAll : t);
+      }
+      return [mappedAll, ...prev];
+    });
 
     setTotalTransactionsCount(prev => prev + 1);
     setLastUpdated(new Date());
@@ -1666,7 +1687,7 @@ export function useFinanceDataLogic() {
     });
 
     // Refresh data after bulk import
-    await fetchData();
+    await fetchData({ includeAll: true });
 
     // Completado y aplicado - resetear todo porque los datos ya están en la BD
     setImportProgress({
@@ -1721,6 +1742,7 @@ export function useFinanceDataLogic() {
 
     setTransactions(prev => prev.filter(t => t.id !== id));
     setRangeTransactions(prev => prev.filter(t => t.id !== id));
+    setAllTransactions(prev => prev.filter(t => t.id !== id));
     setTotalTransactionsCount(prev => Math.max(0, prev - 1));
     setLastUpdated(new Date());
 
@@ -1833,19 +1855,21 @@ export function useFinanceDataLogic() {
       await updatePaymentMethodBalance(oldTx.payment_method_id, -Number(oldTx.amount), oldTx.type);
     }
 
+    const updatedRow = data as TransactionRow;
+
     // Map DB response to Transaction object for state update and balance application
     const updatedTx: Transaction = {
-      id: data.id,
-      type: (data.type === 'transfer'
-        ? (data.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in')
-        : data.type) as TransactionType,
-      category: data.category as string | null,
-      category_id: (data as any).category_id,
-      amount: Number(data.amount),
-      description: data.description,
-      date: data.date,
-      payment_method_id: data.payment_method_id,
-      created_at: data.created_at,
+      id: updatedRow.id,
+      type: (updatedRow.type === 'transfer'
+        ? (updatedRow.category === 'Transferencia Enviada' ? 'transfer_out' : 'transfer_in')
+        : updatedRow.type) as TransactionType,
+      category: updatedRow.category as string | null,
+      category_id: updatedRow.category_id,
+      amount: Number(updatedRow.amount),
+      description: updatedRow.description,
+      date: updatedRow.date,
+      payment_method_id: updatedRow.payment_method_id,
+      created_at: updatedRow.created_at,
     };
 
     if (updatedTx.payment_method_id) {
@@ -1854,6 +1878,10 @@ export function useFinanceDataLogic() {
 
     setTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
     setRangeTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
+    setAllTransactions(prev => {
+      const exists = prev.some(t => t.id === id);
+      return exists ? prev.map(t => t.id === id ? updatedTx : t) : [updatedTx, ...prev];
+    });
     setLastUpdated(new Date());
 
     return { error: null, data };
@@ -1886,7 +1914,7 @@ export function useFinanceDataLogic() {
         estimated_yield: pm.estimated_yield ?? null,
         closing_date: pm.closing_date,
         payment_day: pm.payment_day,
-        color: (pm as any).color ?? '#475569',
+        color: pm.color ?? '#475569',
       } as Database['public']['Tables']['payment_methods']['Insert'])
       .select()
       .single();
@@ -1909,7 +1937,7 @@ export function useFinanceDataLogic() {
       estimated_yield: createdRow.estimated_yield ? Number(createdRow.estimated_yield) : null,
       closing_date: createdRow.closing_date || null,
       payment_day: createdRow.payment_day || null,
-      color: (createdRow as any).color || null,
+      color: createdRow.color || null,
     };
 
     setPaymentMethods(prev => [...prev, createdPM]);
@@ -2001,7 +2029,7 @@ export function useFinanceDataLogic() {
     }
 
     toast({ title: 'Éxito', description: 'Transferencia realizada con éxito' });
-    fetchData();
+    fetchData({ includeAll: true });
     return { error: null };
   };
 
@@ -2031,18 +2059,19 @@ export function useFinanceDataLogic() {
         .select();
     } else {
       // Si no existe, hacer INSERT con 'id' como user identifier
+      const insertPayload: Database['public']['Tables']['profiles']['Insert'] = {
+        user_id: user.id,
+        id: user.id,
+        email: user.email,
+        type: 'personal',
+        profile_type: 'Personal',
+        onboarding_decision: null,
+        has_pending_import: false,
+        ...updates
+      };
       result = await supabase
         .from('profiles')
-        .insert({
-          user_id: user.id,
-          id: user.id,
-          email: user.email,
-          type: 'personal',
-          profile_type: 'Personal',
-          onboarding_decision: null,
-          has_pending_import: false,
-          ...updates
-        } as any)
+        .insert(insertPayload)
         .select();
     }
 
@@ -2077,7 +2106,7 @@ export function useFinanceDataLogic() {
     toast({ title: 'Éxito', description: 'Perfil actualizado' });
 
     // Refrescar datos después de actualizar
-    await fetchData();
+    await fetchData({ includeAll: false });
 
     return { error: null };
   };
@@ -2104,7 +2133,7 @@ export function useFinanceDataLogic() {
     }
 
     // Refrescar datos después de actualizar
-    await fetchData();
+    await fetchData({ includeAll: false });
 
     return { error: null };
   };
@@ -2130,7 +2159,7 @@ export function useFinanceDataLogic() {
     setOnboardingDecision('imported');
 
     // Refrescar datos después de confirmar
-    await fetchData();
+    await fetchData({ includeAll: false });
 
     return { error: null };
   };
@@ -2187,7 +2216,7 @@ export function useFinanceDataLogic() {
     setOnboardingDecision('from_scratch');
 
     // Refrescar datos para volver al Dashboard
-    await fetchData();
+    await fetchData({ includeAll: false });
   };
 
   const confirmImportData = async () => {
@@ -2261,7 +2290,7 @@ export function useFinanceDataLogic() {
         .eq('id', user.id);
 
       // Refrescar datos
-      await fetchData();
+      await fetchData({ includeAll: true });
 
       // Resetear progreso después de refrescar
       setImportProgress({
@@ -2333,7 +2362,7 @@ export function useFinanceDataLogic() {
   const recalculatePaymentMethodBalances = async () => {
     // Esta función recalcula los saldos de métodos de pago basado en transacciones importadas
     // por ahora es un placeholder - la lógica depende de cómo manejes transacciones de importación
-    await fetchData();
+    await fetchData({ includeAll: true });
 
     toast({ title: 'Éxito', description: 'Datos aplicados correctamente' });
     return { error: null };
@@ -2414,7 +2443,7 @@ export function useFinanceDataLogic() {
       // Note: fetchData removed to prevent race condition overwriting currency state
       // The realtime subscription will handle refreshing if needed
       return { error: null };
-    } catch (err: any) { // Explicitly type 'err' as 'any' or 'unknown'
+    } catch (err: unknown) {
 
       toast({ title: 'Error', description: 'No se pudo aplicar la conversión', variant: 'destructive' });
       return { error: err };
@@ -2536,6 +2565,34 @@ export function useFinanceDataLogic() {
     toast({ title: 'Eliminado', description: 'Presupuesto eliminado' });
   }, [toast]);
 
+  const applyRealtimeTransactionToAll = useCallback((payload: TransactionRealtimePayload | null) => {
+    if (!payload?.eventType) return;
+
+    if (payload.eventType === 'INSERT' && payload.new) {
+      const mapped = mapTransactionRow(payload.new);
+      setAllTransactions(prev => {
+        if (prev.find(t => t.id === mapped.id)) {
+          return prev.map(t => t.id === mapped.id ? mapped : t);
+        }
+        return [mapped, ...prev];
+      });
+      return;
+    }
+
+    if (payload.eventType === 'UPDATE' && payload.new) {
+      const mapped = mapTransactionRow(payload.new);
+      setAllTransactions(prev => {
+        const exists = prev.some(t => t.id === mapped.id);
+        return exists ? prev.map(t => t.id === mapped.id ? mapped : t) : [mapped, ...prev];
+      });
+      return;
+    }
+
+    if (payload.eventType === 'DELETE' && payload.old?.id) {
+      setAllTransactions(prev => prev.filter(t => t.id !== payload.old.id));
+    }
+  }, []);
+
   // Real-time synchronization
   useEffect(() => {
     if (!user) return;
@@ -2549,7 +2606,7 @@ export function useFinanceDataLogic() {
       }
       debounceTimer = setTimeout(() => {
         setLoading(true);
-        fetchData();
+        fetchData({ includeAll: false });
       }, 500); // Wait 500ms after last change before fetching
     };
 
@@ -2563,7 +2620,8 @@ export function useFinanceDataLogic() {
           table: 'transactions',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
+        (payload) => {
+          applyRealtimeTransactionToAll(payload);
           handleRealtimeChange();
         }
       )
@@ -2599,7 +2657,7 @@ export function useFinanceDataLogic() {
       }
       supabase.removeChannel(transactionsChannel);
     };
-  }, [user]);
+  }, [user, fetchData, applyRealtimeTransactionToAll]);
 
   const addCategory = async (category: Omit<CategoryItem, 'id' | 'created_at'>) => {
     try {
@@ -2749,9 +2807,10 @@ export function useFinanceDataLogic() {
   const updateCategoryGoal = async (id: string, goal: number) => {
     if (!user) return { error: 'No autenticado' };
 
+    const payload: CategoryUpdate = { saving_goal: goal };
     const { error } = await supabase
       .from('categories')
-      .update({ saving_goal: goal } as any)
+      .update(payload)
       .eq('id', id);
 
     if (error) {

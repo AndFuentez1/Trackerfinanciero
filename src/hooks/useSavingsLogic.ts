@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { PaymentMethodRow, TransactionRow, TransactionType } from './financeTypes';
+import { PaymentMethodRow } from './financeTypes';
+import type { Database } from '@/integrations/supabase/types';
 import { SavingsAccount, SavingsTransaction } from './useSavingsData';
 
 
@@ -85,7 +86,7 @@ export function useSavingsDataLogic() {
         toast({ title: 'Error', description: msg, variant: 'destructive' });
       } else {
         setError(null);
-        const mappedTransactions = transactionsData.map((t: any) => ({
+        const mappedTransactions = transactionsData.map((t: Database['public']['Tables']['savings_transactions']['Row']) => ({
           id: t.id,
           payment_method_id: t.payment_method_id,
           type: t.type,
@@ -130,7 +131,7 @@ export function useSavingsDataLogic() {
         is_savings_account: true,
         savings_goal: account.savings_goal ?? null,
         estimated_yield: account.estimated_yield ?? account.interest_rate ?? 0,
-      } as any) // Use any cast to avoid complexity with Insert type matching if stricter than logic
+      } satisfies Database['public']['Tables']['payment_methods']['Insert'])
       .select()
       .single();
 
@@ -200,7 +201,7 @@ export function useSavingsDataLogic() {
         description: transaction.description || undefined,
         date: transaction.date,
         balance_after_transaction: newBalance,
-      } as any)
+      } satisfies Database['public']['Tables']['savings_transactions']['Insert'])
       .select()
       .single();
 

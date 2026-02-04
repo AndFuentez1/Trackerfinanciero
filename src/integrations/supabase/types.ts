@@ -77,6 +77,87 @@ export type Database = {
         }
         Relationships: []
       }
+      future_expenses: {
+        Row: {
+          id: string
+          created_at: string
+          payment_date: string
+          amount: number
+          description: string
+          category_id: string | null
+          user_id: string
+          status: string
+          is_subscription: boolean | null
+          frequency: string | null
+          payment_day: number | null
+          start_date: string | null
+          end_date: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          payment_date: string
+          amount: number
+          description: string
+          category_id?: string | null
+          user_id: string
+          status?: string
+          is_subscription?: boolean | null
+          frequency?: string | null
+          payment_day?: number | null
+          start_date?: string | null
+          end_date?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          payment_date?: string
+          amount?: number
+          description?: string
+          category_id?: string | null
+          user_id?: string
+          status?: string
+          is_subscription?: boolean | null
+          frequency?: string | null
+          payment_day?: number | null
+          start_date?: string | null
+          end_date?: string | null
+        }
+        Relationships: []
+      }
+      pending_invoices: {
+        Row: {
+          id: string
+          created_at: string
+          arrival_date: string
+          amount: number
+          description: string
+          category: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          arrival_date?: string
+          amount: number
+          description: string
+          category?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          arrival_date?: string
+          amount?: number
+          description?: string
+          category?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           balance: number

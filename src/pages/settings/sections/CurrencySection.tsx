@@ -105,7 +105,7 @@ export function CurrencySection() {
                                     <SelectItem key={c.code} value={c.code} className="rounded-lg">
                                         <span className="flex items-center gap-2">
                                             <span className="font-mono font-bold text-xs bg-muted px-1.5 py-0.5 rounded">{c.code}</span>
-                                            {c.name} ({c.symbol})
+                                            {c.name}
                                         </span>
                                     </SelectItem>
                                 ))}

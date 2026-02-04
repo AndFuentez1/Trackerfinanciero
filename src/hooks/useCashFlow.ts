@@ -4,7 +4,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { useLoans } from '@/contexts/LoansContext';
 import { useBudgetsData } from './useBudgetsData';
 import { useSavingsData } from './useSavingsData';
-import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth, setDate, getDate } from 'date-fns';
+import { addMonths, startOfMonth, format, isBefore, isAfter, endOfMonth, setDate, getDate, isSameMonth } from 'date-fns';
 import { CashFlowPoint } from '@/features/cashflow/components/cashflow.types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -48,11 +48,11 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     if (!user) return;
     const fetchFE = async () => {
       const { data } = await supabase
-        .from('future_expenses' as any)
+        .from('future_expenses')
         .select('*')
         .eq('user_id', user.id)
         .neq('status', 'paid');
-      if (data) setFutureExpenses(data as any[]);
+      if (data) setFutureExpenses(data as FutureExpense[]);
     };
     fetchFE();
     const channel = supabase
@@ -171,17 +171,30 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
     // --- Préstamos: amortización francesa real ---
     const newLoans: Record<string, { saldo: number, cuotasRestantes: number }> = { ...prevLoans };
+
+    // Calcular ingresos por préstamos que me deben (Type = 'lent')
+    let ingresoPrestamoMes = 0;
+
     loans.forEach(loan => {
       const prev = prevLoans[loan.id] ?? { saldo: loan.total_amount - (loan.paid_amount || 0), cuotasRestantes: loan.installments || 12 };
+
       if (prev.saldo > 0 && prev.cuotasRestantes > 0) {
         const tasa = loan.interest_rate;
         const cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
         const interes = prev.saldo * tasa / 12;
 
         if (!isPastMonth) {
-          egresosPrestamos += cuota;
-          egresosPrestamosInteres += interes;
-          egresosPrestamosCapital += cuota - interes;
+          if (loan.type === 'lent') {
+            // Es dinero que entra (Cobro de préstamo)
+            ingresoPrestamoMes += cuota;
+            // Opcional: Separar capital e interes si se requiere en reportes, 
+            // por ahora sumamos todo a 'ingresosPrestamos'
+          } else {
+            // Es dinero que sale (Pago de deuda - 'borrowed')
+            egresosPrestamos += cuota;
+            egresosPrestamosInteres += interes;
+            egresosPrestamosCapital += cuota - interes;
+          }
         }
 
         newLoans[loan.id] = {
@@ -192,6 +205,9 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
         newLoans[loan.id] = prev;
       }
     });
+
+    // Asignar al acumulador global
+    const ingresosPrestamos = ingresoPrestamoMes;
 
     // --- Tarjetas de crédito ---
     const newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = { ...prevCardInstallments };
@@ -227,49 +243,25 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       const isSameMonth = tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM');
       const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
 
-      const isMultiCuotaCC = pm?.type === 'credit' && ((tx as any).installments || 1) > 1;
+      const isMultiCuotaCC = pm?.type === 'credit' && (tx.installments || 1) > 1;
 
       if (isSameMonth && !isMultiCuotaCC) {
         if (tx.type === 'expense') {
           egresosReales += tx.amount;
         } else if (tx.type === 'income') {
-          if (isPastMonth) {
-            otrosIngresos += tx.amount;
-          }
+          // Allow income to be shown for ALL months (Past, Current, Future) if a transaction exists
+          otrosIngresos += tx.amount;
         }
       }
     });
 
-    // Cleaning up Income logic:
-    // Past: `ingresosSalario` (0), `otrosIngresos` (Real Sum).
-    // Future: `ingresosSalario` (Budget), `otrosIngresos` (0).
-    // Current: `ingresosSalario` (Budget), `otrosIngresos` (0)? 
-    // If I have extra income in current month? 
-    // Let's add real income to `otrosIngresos` if it's NOT the salary category? 
-    // Too complex to match strings.
-    // Simplification:
-    // Past: Ingresos = Sum(Real Transactions type income).
-    // Future: Ingresos = Sum(Budgets type income).
-    // Current: Max(Sum(Budgets), Sum(Real))? Or just Budget?
-    // Let's go with:
-    // Past:
-    if (isPastMonth) {
-      ingresosSalario = 0;
-      otrosIngresos = 0;
-      transactions.forEach(tx => {
-        if (isTransferTransaction(tx)) return;
-        const txDate = new Date(tx.date);
-        if (format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM') && tx.type === 'income') {
-          otrosIngresos += tx.amount;
-        }
-      });
-    }
+    // --- Ingresos Logic Simplified ---
+    // (Redundant block removed)
 
-    // --- Préstamos que me deben (ingresos por cobrar) ---
-    const ingresosPrestamos = 0;
+
 
     // Calcular totales y balances antes de usarlos
-    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos;
+    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos;
     // Note: egresosReales contains only expenses.
     const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales;
     const balanceNetoMes = ingresosTotales - egresosTotales;
@@ -319,26 +311,134 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start, futureExpenses, categories]);
 
   // --- Serie para gráfica (compatibilidad) ---
-  const cashFlowSeries = monthlyBreakdown.map((row, idx) => ({
-    name: format(addMonths(start, idx), 'MMM', { locale: es }).replace('.', ''),
-    ingresos: row.ingresosTotales,
-    ingresosSalario: row.ingresosSalario,
-    interesesAhorro: row.interesesAhorro,
-    egresos: row.egresosTotales,
-    gastosFuturos: row.gastosFuturos,
-    egresosPrestamos: row.egresosPrestamos,
-    egresosTarjeta: row.egresosTarjeta,
-    egresosReales: row.egresosReales,
-    balanceReal: idx === 0 ? balance_actual : null,
-    balanceProyectado: row.balanceAcumulado,
-    breakdown: row,
-  }));
+  // --- Serie para gráfica (compatibilidad) ---
+  let runningRealBalance = balance_actual;
+
+  // Find last transaction date
+  const lastTxDate = useMemo(() => {
+    if (transactions.length === 0) return new Date();
+    // Assuming transactions are NOT sorted effectively here, or just to be safe:
+    // We need the MAX date.
+    // transactions usually have string 'date'.
+    return transactions.reduce((max, t) => {
+      const d = new Date(t.date);
+      return d > max ? d : max;
+    }, new Date(0)); // Start from epoch
+  }, [transactions]);
+
+  // If no transactions found (unlikely if user is using app), default to now?
+  // The reduce with epoch will return epoch if empty. 
+  // If empty, let's use now.
+  const pivotDate = transactions.length > 0 ? lastTxDate : new Date();
+
+  const cashFlowSeries = monthlyBreakdown.map((row, idx) => {
+    // Calculate 'Real' flow
+    const realFlowNet =
+      (row.ingresosTotales) -
+      (row.egresosReales + row.egresosPrestamos + row.egresosTarjeta);
+
+    // Update running balance
+    runningRealBalance += realFlowNet;
+
+    // Check dates for cutoff logic
+    const rowDate = addMonths(start, idx);
+    const startRow = startOfMonth(rowDate);
+    const startPivot = startOfMonth(pivotDate);
+
+    const isAfterPivot = isAfter(startRow, startPivot);
+    const isBeforePivot = isBefore(startRow, startPivot);
+    const isSamePivot = isSameMonth(startRow, startPivot);
+
+    const val = (idx === 0) ? balance_actual : runningRealBalance;
+
+    return {
+      rowDate, // Keep for later processing
+      name: format(addMonths(start, idx), 'MMM', { locale: es }).replace('.', ''),
+      ingresos: row.ingresosTotales,
+      ingresosSalario: row.ingresosSalario,
+      interesesAhorro: row.interesesAhorro,
+      egresos: row.egresosTotales,
+      gastosFuturos: row.gastosFuturos,
+      egresosPrestamos: row.egresosPrestamos,
+      egresosTarjeta: row.egresosTarjeta,
+      egresosReales: row.egresosReales,
+      // Raw values for now, will post-process for stitching
+      balanceReal_Raw: val,
+      balanceProyectado_Raw: row.balanceAcumulado,
+      isAfterPivot,
+      isBeforePivot,
+      isSamePivot,
+      breakdown: row,
+    };
+  });
+
+  // --- Post-Processing: Stitching & Warning Detection ---
+
+  // 1. Detect Pending Past Expenses (Warning Condition)
+  // Check if there are any futureExpenses with status='pending' and date < pivotDate
+  const pendingPastExpenses = futureExpenses.filter(fe =>
+    fe.status === 'pending' && !fe.is_subscription && isBefore(new Date(fe.payment_date), pivotDate)
+  );
+
+  const pendingPastExpensesTotal = pendingPastExpenses.reduce((sum, fe) => sum + fe.amount, 0);
+  const hasPendingPastExpenses = pendingPastExpenses.length > 0;
+
+  // 2. Stitch Gap & Anchor to Truth
+  // Find Pivot Point (The "Present")
+  const pivotPoint = cashFlowSeries.find(p => p.isSamePivot);
+
+  // Calculate Anchoring Corrections
+  // Goal: Both Real and Projected lines must pass through 'balance_actual' (The Truth) at the Pivot Point.
+  // Currently, they are calculated relative to 'balance_actual' starting at Month 0 (which might be in the past).
+  // So we calculate the difference between the "Calculated Value at Pivot" and the "True Value at Pivot".
+
+  const rawRealAtPivot = pivotPoint ? pivotPoint.balanceReal_Raw : balance_actual;
+  const rawProjectedAtPivot = pivotPoint ? pivotPoint.balanceProyectado_Raw : balance_actual;
+
+  const realCorrection = balance_actual - rawRealAtPivot;
+  const projectedCorrection = balance_actual - rawProjectedAtPivot;
+
+  // 3. Finalize Series
+  const finalSeries = cashFlowSeries.map(p => {
+    // Apply Anchoring Corrections
+    const stitchedReal = p.balanceReal_Raw + realCorrection;
+    const stitchedProjected = p.balanceProyectado_Raw + projectedCorrection;
+
+    // Simulated "Ideal" Balance: What if we had paid all those past debts?
+    // We assume those debts would have been paid from the CURRENT balance.
+    // So the "True" starting balance would be (balance_actual - pendingPastExpensesTotal).
+    // So the curve shifts down by pendingPastExpensesTotal.
+    const simulatedProjected = stitchedProjected - pendingPastExpensesTotal;
+
+    return {
+      name: p.name,
+      ingresos: p.ingresos,
+      ingresosSalario: p.ingresosSalario,
+      interesesAhorro: p.interesesAhorro,
+      egresos: p.egresos,
+      gastosFuturos: p.gastosFuturos,
+      egresosPrestamos: p.egresosPrestamos,
+      egresosTarjeta: p.egresosTarjeta,
+      egresosReales: p.egresosReales,
+      breakdown: p.breakdown,
+
+      // Cutoff Logic + Stitching
+      balanceReal: p.isAfterPivot ? null : stitchedReal,
+
+      // Projected: Show from Pivot (inclusive) with Stitched Value
+      balanceProyectado: p.isBeforePivot ? null : stitchedProjected,
+
+      // Simulated: Show from Pivot (inclusive), only if warning exists
+      balanceSimulated: (hasPendingPastExpenses && !p.isBeforePivot) ? simulatedProjected : null
+    };
+  });
 
   return {
-    cashFlowSeries,
+    cashFlowSeries: finalSeries,
     balance_actual,
     monthlyBreakdown,
-    proyeccion_ingresos: cashFlowSeries.length > 0 ? cashFlowSeries[0].ingresos : 0,
-    compromisos_deuda: cashFlowSeries.length > 0 ? (cashFlowSeries[0].egresosPrestamos + cashFlowSeries[0].egresosTarjeta) : 0,
+    proyeccion_ingresos: finalSeries.length > 0 ? finalSeries[0].ingresos : 0,
+    compromisos_deuda: finalSeries.length > 0 ? (finalSeries[0].egresosPrestamos + finalSeries[0].egresosTarjeta) : 0,
+    isProjectionWarning: hasPendingPastExpenses,
   };
 }

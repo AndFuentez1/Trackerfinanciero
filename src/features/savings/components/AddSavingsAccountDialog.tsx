@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -22,8 +23,8 @@ interface AddSavingsAccountDialogProps {
 export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [balance, setBalance] = useState('');
-  const [savingsGoal, setSavingsGoal] = useState('');
+  const [balance, setBalance] = useState<number>(0);
+  const [savingsGoal, setSavingsGoal] = useState<number>(0);
   const [estimatedYield, setEstimatedYield] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, decimalPlaces } = useFinance();
@@ -34,12 +35,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
     return curr?.symbol || currency || '$';
   };
 
-  const getCurrencyPadding = () => {
-    const symbol = getCurrencySymbol();
-    if (symbol.length > 2) return 'pl-16';
-    if (symbol.length === 2) return 'pl-12';
-    return 'pl-9';
-  };
+
 
   const getPlaceholderAmount = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -57,16 +53,16 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
 
     const { error } = await onAdd({
       name: name.trim(),
-      balance: balance ? parseFloat(balance) : 0,
-      savings_goal: savingsGoal ? parseFloat(savingsGoal) : undefined,
+      balance: balance,
+      savings_goal: savingsGoal > 0 ? savingsGoal : undefined,
       estimated_yield: estimatedYield ? parseFloat(estimatedYield) : undefined,
     });
 
     setIsSubmitting(false);
     if (!error) {
       setName('');
-      setBalance('');
-      setSavingsGoal('');
+      setBalance(0);
+      setSavingsGoal(0);
       setEstimatedYield('');
       setOpen(false);
     } else {
@@ -95,7 +91,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
           <span className="sm:hidden flex flex-row items-center gap-2">Nueva cuenta <Wallet className="h-3 w-3" /></span>
         </Button>
       </DialogTrigger>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-md max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -116,35 +112,23 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
           </div>
           <div className="space-y-2">
             <Label htmlFor="balance">Saldo inicial</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-              <Input
-                id="balance"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder={getPlaceholderAmount()}
-                value={balance}
-                onChange={(e) => setBalance(e.target.value)}
-                className={getCurrencyPadding()}
-              />
-            </div>
+            <MoneyInput
+              id="balance"
+              placeholder={getPlaceholderAmount()}
+              value={balance}
+              onChange={setBalance}
+              className="pl-12"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="goal">Meta de ahorro</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-              <Input
-                id="goal"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder={getPlaceholderAmount()}
-                value={savingsGoal}
-                onChange={(e) => setSavingsGoal(e.target.value)}
-                className={getCurrencyPadding()}
-              />
-            </div>
+            <MoneyInput
+              id="goal"
+              placeholder={getPlaceholderAmount()}
+              value={savingsGoal}
+              onChange={setSavingsGoal}
+              className="pl-12"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="interest">Rentabilidad estimada (%)</Label>

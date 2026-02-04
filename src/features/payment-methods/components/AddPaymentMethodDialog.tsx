@@ -4,6 +4,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -52,12 +53,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
     return curr?.symbol || currency || '$';
   };
 
-  const getCurrencyPadding = () => {
-    const symbol = getCurrencySymbol();
-    if (symbol.length > 2) return 'pl-16';
-    if (symbol.length === 2) return 'pl-12';
-    return 'pl-9';
-  };
+
 
   const getPlaceholderBalance = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -70,9 +66,9 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const setOpen = isControlled ? onOpenChange! : setInternalOpen;
   const [name, setName] = useState(initialName);
   const [type, setType] = useState<PaymentMethodType | 'savings'>('debit');
-  const [balance, setBalance] = useState('');
-  const [creditLimit, setCreditLimit] = useState('');
-  const [savingsGoal, setSavingsGoal] = useState('');
+  const [balance, setBalance] = useState<number>(0);
+  const [creditLimit, setCreditLimit] = useState<number>(0);
+  const [savingsGoal, setSavingsGoal] = useState<number>(0);
   const [estimatedYield, setEstimatedYield] = useState('');
   const [closingDate, setClosingDate] = useState('');
   const [color, setColor] = useState('#4f46e5');
@@ -90,10 +86,10 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
     const result = await onAdd({
       name,
       type,
-      balance: parseFloat(balance || '0'),
-      credit_limit: type === 'credit' ? parseFloat(creditLimit || '0') : null,
+      balance: balance,
+      credit_limit: type === 'credit' ? creditLimit : null,
       is_savings_account: type === 'savings',
-      savings_goal: type === 'savings' && savingsGoal ? parseFloat(savingsGoal) : null,
+      savings_goal: type === 'savings' && savingsGoal > 0 ? savingsGoal : null,
       estimated_yield: type === 'savings' && estimatedYield ? parseFloat(estimatedYield) : null,
       closing_date: type === 'credit' && closingDate ? parseInt(closingDate) : null,
       color,
@@ -106,9 +102,9 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       // Reset form
       setName('');
       setType('debit');
-      setBalance('');
-      setCreditLimit('');
-      setSavingsGoal('');
+      setBalance(0);
+      setCreditLimit(0);
+      setSavingsGoal(0);
       setEstimatedYield('');
       setClosingDate('');
       setColor('#4f46e5');
@@ -201,38 +197,23 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="debt">Deuda actual</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                    <Input
-                      id="debt"
-                      type="number"
-                      placeholder={getPlaceholderBalance()}
-                      value={balance}
-                      onChange={(e) => setBalance(e.target.value)}
-                      min="0"
-                      step="0.01"
-                      className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
-                      inputMode="decimal"
-                    />
-                  </div>
+                  <MoneyInput
+                    id="debt"
+                    placeholder={getPlaceholderBalance()}
+                    value={balance}
+                    onChange={setBalance}
+                    className="pl-12 text-sm"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="limit">Límite de crédito</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                    <Input
-                      id="limit"
-                      type="number"
-                      placeholder={getPlaceholderBalance()}
-                      value={creditLimit}
-                      onChange={(e) => setCreditLimit(e.target.value)}
-                      min="0"
-                      step="0.01"
-                      required
-                      className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
-                      inputMode="decimal"
-                    />
-                  </div>
+                  <MoneyInput
+                    id="limit"
+                    placeholder={getPlaceholderBalance()}
+                    value={creditLimit}
+                    onChange={setCreditLimit}
+                    className="pl-12 text-sm"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
@@ -254,19 +235,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
           ) : (
             <div className="space-y-2">
               <Label htmlFor="balance" className="text-sm">Saldo actual</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                <Input
-                  id="balance"
-                  type="number"
-                  placeholder={getPlaceholderBalance()}
-                  value={balance}
-                  onChange={(e) => setBalance(e.target.value)}
-                  step="0.01"
-                  className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
-                  inputMode="decimal"
-                />
-              </div>
+              <MoneyInput
+                id="balance"
+                placeholder={getPlaceholderBalance()}
+                value={balance}
+                onChange={setBalance}
+                className="pl-12 text-sm"
+              />
             </div>
           )}
 
@@ -274,16 +249,12 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="space-y-2">
                 <Label htmlFor="goal" className="text-sm">Meta de ahorro ({getCurrencySymbol()})</Label>
-                <Input
+                <MoneyInput
                   id="goal"
-                  type="number"
                   placeholder={`Ej: ${getPlaceholderBalance()}`}
                   value={savingsGoal}
-                  onChange={(e) => setSavingsGoal(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className={`${getCurrencyPadding()} h-11 md:h-9 text-sm`}
-                  inputMode="decimal"
+                  onChange={setSavingsGoal}
+                  className="pl-12 text-sm"
                 />
               </div>
               <div className="space-y-2">

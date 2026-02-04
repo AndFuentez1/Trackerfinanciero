@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
@@ -58,12 +58,18 @@ const AppContent = () => {
     // 1. Strict Loading Guard — SkeletonLoader evita layout shift inicial
     if (isLoading) {
         // Safe check for hash router path
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname.replace('/Trackerfinanciero', '') || '/' : '/';
-        const skeletonType = getSkeletonType(currentPath) as any;
-        return <SkeletonLoader fullPage message="Cargando aplicación..." tab={skeletonType} />;
-    }
+        let currentPath = '/';
+        if (typeof window !== 'undefined') {
+            if (window.location.hash) {
+                currentPath = window.location.hash.replace('#', '') || '/';
+            } else {
+                currentPath = window.location.pathname.replace('/Trackerfinanciero', '') || '/';
+            }
+        }
 
-    // 2. Atomic Routing Decision
+        const skeletonType = getSkeletonType(currentPath) as 'dashboard' | 'transactions' | 'savings' | 'loans' | 'budgets' | 'config' | 'cashflow' | 'default';
+        return <SkeletonLoader fullPage tab={skeletonType} />;
+    }
     return (
         <Router>
             <Routes>

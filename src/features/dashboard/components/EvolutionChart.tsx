@@ -144,16 +144,11 @@ export function EvolutionChart({
           monthIndex: m
         };
 
-        if (y === currentYear && m > new Date().getMonth()) {
-          point.balance = null;
-          point.income = null;
-          point.expense = null;
-        } else {
-          const d = getDataForPeriod(end, start);
-          point.balance = d.balance;
-          point.income = d.income;
-          point.expense = d.expense;
-        }
+        const d = getDataForPeriod(end, start);
+        point.balance = d.balance;
+        point.income = d.income;
+        point.expense = d.expense;
+
         points.push(point);
       }
     } else {
@@ -165,16 +160,46 @@ export function EvolutionChart({
         const end = new Date(y, m, d, 23, 59, 59);
         const point: any = { name: `${d}` };
 
-        if (start > new Date()) {
-          point.balance = null;
-        } else {
-          const dat = getDataForPeriod(end, start);
-          point.balance = dat.balance;
-          point.income = dat.income;
-          point.expense = dat.expense;
-        }
+        const dat = getDataForPeriod(end, start);
+        point.balance = dat.balance;
+        point.income = dat.income;
+        point.expense = dat.expense;
+
         points.push(point);
       }
+    }
+
+    // Post-process: Cut balance line after last record (Strict "no future balance line")
+    // Find the last index that has ANY data (income OR expense).
+    let lastActiveIndex = -1;
+    points.forEach((p, i) => {
+      if (p.income !== 0 || p.expense !== 0) lastActiveIndex = i;
+    });
+
+    // If we have data, cut everything after the last active point.
+    // However, if the user has data in Feb but we are in Jan (weird case), or if data is sparse...
+    // The user said: "se corta en el mes que hubo el ultimo registro".
+    // This implies if I have data in Jan and Mar, but not Feb... well, "ultimo registro" implies the max date.
+    // So if max date is Mar, Feb should show balance because it's *between*. 
+    // BUT the request says "ultimo registro". So yes, after the MAX index, it should be null.
+    // What about before? "se corta... para los meses que no hay registros" -> Wait.
+    // "cortar... para los meses que no hay registros. Asegura que exista... cuando se filtra por mes".
+    // "se corta en el mes que hubo el ultimo registro".
+    // Interpretation: The line should exist UP TO the last record. After that, it should stop.
+
+    if (lastActiveIndex !== -1) {
+      for (let i = lastActiveIndex + 1; i < points.length; i++) {
+        points[i].balance = null;
+      }
+    } else {
+      // If absolutely no data in the view?
+      // Maybe we just show the balance line? Or nothing?
+      // If "no registros", usually balance is just flat.
+      // But user complained about cutoff. Let's assume if no data, no line is safer to avoid confusion?
+      // Or if it's the current period, show up to today.
+      // Let's stick to "Null if no data found" to be safe.
+      // Actually, if selectedMonth is 'all' and no data, user sees empty chart.
+      points.forEach(p => p.balance = null);
     }
 
     return points;
@@ -256,6 +281,7 @@ export function EvolutionChart({
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               dy={10}
               interval={0}
+              minTickGap={0}
             />
             <YAxis
               tickFormatter={formatLargeCurrency}
@@ -263,6 +289,7 @@ export function EvolutionChart({
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
               width={60}
+              domain={['auto', 'auto']}
             />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
@@ -300,6 +327,7 @@ export function EvolutionChart({
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
                 dot={false}
+                connectNulls={false}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
               />
             )}

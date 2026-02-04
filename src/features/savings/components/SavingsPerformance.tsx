@@ -329,17 +329,17 @@ export function SavingsPerformance({
                 </div>
                 <div className="flex gap-1">
                   <Button
-                    variant="default"
+                    variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    className="h-8 w-8 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
                     onClick={() => onEdit(account.id)}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="default"
+                    variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-8 w-8 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
                     onClick={() => onDeleteAccount(account.id)}
                   >
                     <Trash2 className="h-4 w-4" />

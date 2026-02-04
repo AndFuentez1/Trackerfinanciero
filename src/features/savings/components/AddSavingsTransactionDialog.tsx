@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import { useFinance } from '@/contexts/FinanceContext';
@@ -32,7 +33,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   const [open, setOpen] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState<'deposit' | 'withdrawal' | 'interest'>('deposit');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number>(0);
   const [date, setDate] = useState(getTodayLocalDate());
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,12 +44,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
     return curr?.symbol || currency || '$';
   };
 
-  const getCurrencyPadding = () => {
-    const symbol = getCurrencySymbol();
-    if (symbol.length > 2) return 'pl-16';
-    if (symbol.length === 2) return 'pl-12';
-    return 'pl-9';
-  };
+
 
   const getPlaceholderAmount = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -58,13 +54,13 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountId) return;
-    
+
     setIsSubmitting(true);
 
     const { error } = await onAdd({
       payment_method_id: accountId,
       type,
-      amount: parseFloat(amount),
+      amount: amount,
       date,
       description: description.trim() || '',
     });
@@ -73,7 +69,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
     if (!error) {
       setAccountId('');
       setType('deposit');
-      setAmount('');
+      setAmount(0);
       setDate(getTodayLocalDate());
       setDescription('');
       setOpen(false);
@@ -88,7 +84,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
           <span className="sm:hidden flex flex-row items-center gap-2">Nuevo Movimiento <Coins className="h-3 w-3" /></span>
         </Button>
       </DialogTrigger>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-md max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -127,20 +123,13 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Monto</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder={getPlaceholderAmount()}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                className={getCurrencyPadding()}
-              />
-            </div>
+            <MoneyInput
+              id="amount"
+              placeholder={getPlaceholderAmount()}
+              value={amount}
+              onChange={setAmount}
+              className="pl-12"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Fecha</Label>

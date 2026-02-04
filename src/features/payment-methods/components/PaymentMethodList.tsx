@@ -59,13 +59,26 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
     const currCode = ctxCurrency || currency || 'COP';
     const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
 
-    return new Intl.NumberFormat('es-CO', {
+    const formatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: currCode,
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
       currencyDisplay: 'code',
     }).format(value).replace(currCode, symbol);
+
+    const parts = formatted.split(',');
+    if (parts.length === 1) return <span className="text-3xl font-semibold" style={{ color: getTextColor(pm.color || '#64748b') }}>{formatted}</span>;
+
+    const integerPart = parts[0].replace(symbol, '').trim();
+    const decimalPart = parts[1];
+
+    return (
+      <div className="flex items-baseline" style={{ color: getTextColor(pm.color || '#64748b') }}>
+        <span className="text-3xl font-semibold">{symbol} {integerPart}</span>
+        <span className="text-2xl font-semibold opacity-85">,{decimalPart}</span>
+      </div>
+    );
   };
 
   return (
@@ -74,6 +87,35 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
         const accountType = getAccountType(pm.type, pm.is_savings_account || false);
+
+        // Custom formatting inside loop to access specific Colors if needed, but we extracted logic.
+        // Actually, formatCurrencyPayment needs 'pm' context for color? 
+        // No, 'pm' is inside the map. The helper above used 'pm' which is not defined there.
+        // Let's move the helper INSIDE the map or pass color.
+
+        const renderBalance = (val: number) => {
+          const currCode = ctxCurrency || currency || 'COP';
+          const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
+
+          const formatted = new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: currCode,
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
+            currencyDisplay: 'code',
+          }).format(val).replace(currCode, symbol);
+
+          const parts = formatted.split(',');
+          const integerPart = parts[0].replace(symbol, '').trim();
+          const decimalPart = parts.length > 1 ? parts[1] : null;
+
+          return (
+            <div className="flex items-baseline" style={{ color: textColor }}>
+              <span className="text-3xl font-semibold">{symbol} {integerPart}</span>
+              {decimalPart && <span className="text-[0.85em] font-semibold opacity-85">,{decimalPart}</span>}
+            </div>
+          );
+        };
 
         return (
           <div
@@ -97,12 +139,12 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
               <p className="text-xs font-normal mb-2 opacity-90" style={{ color: textColor }}>
                 {pm.type === 'credit' ? 'Disponible' : 'Saldo en débito'}
               </p>
-              <div className="text-3xl font-semibold" style={{ color: textColor }}>
+              <div className="" style={{ color: textColor }}>
                 {pm.is_savings_account || pm.type === 'debit' || pm.type === 'cash'
-                  ? formatCurrencyPayment(pm.balance)
+                  ? renderBalance(pm.balance)
                   : pm.type === 'credit'
-                    ? formatCurrencyPayment(pm.credit_limit ? pm.credit_limit - pm.balance : pm.balance)
-                    : formatCurrencyPayment(pm.balance)}
+                    ? renderBalance(pm.credit_limit ? pm.credit_limit - pm.balance : pm.balance)
+                    : renderBalance(pm.balance)}
               </div>
             </div>
 

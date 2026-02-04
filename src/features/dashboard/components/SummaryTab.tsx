@@ -92,18 +92,18 @@ export function SummaryTab({
   const availableMonths = useMemo(() => {
     const months = [
       { value: 'all', label: 'Todo' },
-      { value: '0', label: 'Ene' },
-      { value: '1', label: 'Feb' },
-      { value: '2', label: 'Mar' },
-      { value: '3', label: 'Abr' },
-      { value: '4', label: 'May' },
-      { value: '5', label: 'Jun' },
-      { value: '6', label: 'Jul' },
-      { value: '7', label: 'Ago' },
-      { value: '8', label: 'Sep' },
-      { value: '9', label: 'Oct' },
-      { value: '10', label: 'Nov' },
-      { value: '11', label: 'Dic' },
+      { value: '1', label: 'Ene' },
+      { value: '2', label: 'Feb' },
+      { value: '3', label: 'Mar' },
+      { value: '4', label: 'Abr' },
+      { value: '5', label: 'May' },
+      { value: '6', label: 'Jun' },
+      { value: '7', label: 'Jul' },
+      { value: '8', label: 'Ago' },
+      { value: '9', label: 'Sep' },
+      { value: '10', label: 'Oct' },
+      { value: '11', label: 'Nov' },
+      { value: '12', label: 'Dic' },
     ];
 
     // If showing all years or if it's the current year, only show months up to current month
@@ -238,7 +238,12 @@ export function SummaryTab({
 
   // SECTION 3: Current Total Balance for Charts
   const currentTotalBalance = useMemo(() => {
-    return paymentMethods.reduce((sum, pm) => sum + (pm.balance || 0), 0);
+    return paymentMethods.reduce((sum, pm) => {
+      if (pm.type === 'credit') {
+        return sum - (pm.balance || 0);
+      }
+      return sum + (pm.balance || 0);
+    }, 0);
   }, [paymentMethods]);
 
   return (

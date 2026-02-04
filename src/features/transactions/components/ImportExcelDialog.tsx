@@ -31,8 +31,8 @@ import { parse, isValid, format as formatDateFns } from 'date-fns';
 
 interface ImportExcelDialogProps {
   paymentMethods: PaymentMethod[];
-  onImport: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: any; count: number }>;
-  onImportBackground?: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: any; count: number }>; // Para correr en segundo plano
+  onImport: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: unknown; count: number }>;
+  onImportBackground?: (transactions: Omit<Transaction, 'id'>[]) => Promise<{ error?: unknown; count: number }>; // Para correr en segundo plano
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTriggerButton?: boolean; // Si false, no muestra el botón DialogTrigger
@@ -355,7 +355,7 @@ export function ImportExcelDialog({
 
     const parsed: ParsedRow[] = rows.map((row: unknown[]) => {
       const rawDate = mapping.date !== null ? row[mapping.date] : undefined;
-      const date = parseDate(rawDate as any);
+      const date = parseDate((typeof rawDate === 'string' || typeof rawDate === 'number') ? rawDate : '');
       const description = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
       const category = mapping.category !== null ? String(row[mapping.category] || '').trim() : '';
       const rawValue = mapping.amount !== null ? String(row[mapping.amount] || '0').trim() : '0';
@@ -855,7 +855,7 @@ export function ImportExcelDialog({
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
             aria-label="Importar Excel"

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, Plus, DollarSign, Wallet, Trash2 } from 'lucide-react';
+import { CalendarIcon, Plus, DollarSign, Wallet, Trash2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useFinanceData } from '@/hooks/useFinanceData';
@@ -18,6 +18,8 @@ import { useFormatCurrency } from '@/hooks/useFormatCurrency';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
+
+import { MoneyInput } from '@/components/common/MoneyInput';
 
 interface FutureExpense {
     id: string;
@@ -92,6 +94,7 @@ export function FutureExpensesList() {
     const [expenses, setExpenses] = useState<FutureExpense[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // Add Form State
     const [newExpense, setNewExpense] = useState<{
@@ -120,6 +123,7 @@ export function FutureExpensesList() {
     const [isPayOpen, setIsPayOpen] = useState(false);
     const [selectedExpense, setSelectedExpense] = useState<FutureExpense | null>(null);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+    const [paymentDate, setPaymentDate] = useState<string>(format(new Date(), 'yyyy-MM-dd')); // New state
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState<FutureExpense | null>(null);
 
@@ -186,11 +190,13 @@ export function FutureExpensesList() {
             payload.start_date = newExpense.start_date;
             payload.end_date = newExpense.end_date;
 
-            // Calculate next payment date based on today AND frequency
+            // Calculate next payment date only if NEW (to avoid resetting date on simple edits) OR if logic demands it.
+            // For now, let's keep it simple: if modifying subscription params, re-calc dates.
+            // But if just editing name/amount, maybe keep `payment_date`?
+            // To be safe and consistent with "logic generator", we re-calculate.
             const today = new Date();
             const nextDate = new Date(today.getFullYear(), today.getMonth(), parseInt(newExpense.payment_day));
 
-            // If today is past the payment day, move to next cycle
             if (nextDate < today) {
                 switch (payload.frequency) {
                     case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
@@ -201,22 +207,43 @@ export function FutureExpensesList() {
                     default: nextDate.setMonth(nextDate.getMonth() + 1);
                 }
             }
-            payload.payment_date = format(nextDate, 'yyyy-MM-dd');
+            if (!editingId) {
+                // Only set initial payment date on creation to avoid overriding custom dates/delays?
+                // Actually, for this simple system, always re-calculating ensures data integrity.
+                payload.payment_date = format(nextDate, 'yyyy-MM-dd');
+            } else {
+                // On Edit, keep existing payment_date UNLESS user changed subscription params?
+                // Let's assume user might want to fix the date manually? No manual date field for sub in form.
+                // So we must calculate it.
+                payload.payment_date = format(nextDate, 'yyyy-MM-dd');
+            }
 
         } else {
             payload.payment_date = newExpense.payment_date;
         }
 
-        const { error } = await supabase
-            .from('future_expenses' as any)
-            .insert(payload);
+        let error;
+
+        if (editingId) {
+            const { error: updateError } = await supabase
+                .from('future_expenses' as any)
+                .update(payload)
+                .eq('id', editingId);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase
+                .from('future_expenses' as any)
+                .insert(payload);
+            error = insertError;
+        }
 
         if (error) {
             console.error(error);
-            toast({ title: 'Error', description: 'No se pudo crear el gasto futuro o suscripción.', variant: 'destructive' });
+            toast({ title: 'Error', description: 'No se pudo guardar el gasto futuro.', variant: 'destructive' });
         } else {
-            toast({ title: 'Creado', description: newExpense.is_subscription ? 'Suscripción creada exitosamente.' : 'Gasto futuro programado.' });
+            toast({ title: editingId ? 'Actualizado' : 'Creado', description: editingId ? 'Gasto actualizado correctamente.' : (newExpense.is_subscription ? 'Suscripción creada exitosamente.' : 'Gasto futuro programado.') });
             setIsAddOpen(false);
+            setEditingId(null);
             setNewExpense({
                 description: '',
                 amount: '',
@@ -231,8 +258,27 @@ export function FutureExpensesList() {
         }
     };
 
+    const handleEdit = (expense: FutureExpense) => {
+        setEditingId(expense.id);
+        const expenseFreq = expense.frequency || 'monthly';
+        // Note: 'frequency' might not exist on type if not added to interface, checking... yes added safely.
+
+        setNewExpense({
+            description: expense.description,
+            amount: expense.amount.toString(),
+            payment_date: expense.payment_date,
+            category_id: expense.category_id || '',
+            is_subscription: expense.is_subscription || false,
+            payment_day: expense.payment_day?.toString() || '1',
+            start_date: expense.start_date || format(new Date(), 'yyyy-MM-dd'),
+            end_date: expense.end_date || format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+            frequency: expenseFreq
+        });
+        setIsAddOpen(true);
+    };
+
     const handlePay = async () => {
-        if (!selectedExpense || !selectedPaymentMethod) return;
+        if (!selectedExpense || !selectedPaymentMethod || !paymentDate) return;
 
         try {
             // 1. Create Transaction (Deduct balance)
@@ -244,7 +290,7 @@ export function FutureExpensesList() {
                 category_id: selectedExpense.category_id,
                 amount: selectedExpense.amount,
                 description: selectedExpense.description,
-                date: new Date().toISOString().split('T')[0], // Paid TODAY? Or on payment_date? Usually "Pay Now" means Today.
+                date: paymentDate, // Use selected date
                 payment_method_id: selectedPaymentMethod
             });
 
@@ -345,6 +391,18 @@ export function FutureExpensesList() {
                             variant="default"
                             className="border-dashed min-w-[160px] sm:min-w-[190px]"
                             onClick={(e) => {
+                                setEditingId(null);
+                                setNewExpense({
+                                    description: '',
+                                    amount: '',
+                                    payment_date: format(new Date(), 'yyyy-MM-dd'),
+                                    category_id: '',
+                                    is_subscription: false,
+                                    payment_day: '1',
+                                    start_date: format(new Date(), 'yyyy-MM-dd'),
+                                    end_date: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+                                    frequency: 'monthly'
+                                });
                                 if (dataLoading) {
                                     e.preventDefault();
                                     return;
@@ -365,7 +423,7 @@ export function FutureExpensesList() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>{newExpense.is_subscription ? 'Nueva Suscripción Mensual' : 'Nuevo Gasto Futuro'}</DialogTitle>
+                            <DialogTitle>{editingId ? 'Editar Gasto/Suscripción' : (newExpense.is_subscription ? 'Nueva Suscripción Mensual' : 'Nuevo Gasto Futuro')}</DialogTitle>
                             <DialogDescription className="sr-only">
                                 Completa la información para programar un gasto futuro o suscripción.
                             </DialogDescription>
@@ -385,19 +443,12 @@ export function FutureExpensesList() {
                                 </div>
                                 <div className="space-y-2 col-span-2 sm:col-span-1">
                                     <label className="text-sm font-medium">Monto</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                            {currSymbol}
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            value={newExpense.amount}
-                                            onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
-                                            placeholder={placeholderAmount}
-                                            step={getStepValue()}
-                                            className={dynamicPadding}
-                                        />
-                                    </div>
+                                    <MoneyInput
+                                        value={newExpense.amount ? parseFloat(newExpense.amount) : 0}
+                                        onChange={(val) => setNewExpense({ ...newExpense, amount: val.toString() })}
+                                        placeholder={placeholderAmount}
+                                        currencySymbol={currSymbol}
+                                    />
                                 </div>
                             </div>
 
@@ -506,7 +557,7 @@ export function FutureExpensesList() {
                                 </div>
                             </div>
                             <Button className="w-full mt-4" onClick={handleCreate}>
-                                {newExpense.is_subscription ? 'Crear Suscripción' : 'Guardar Compromiso'}
+                                {editingId ? 'Guardar Cambios' : (newExpense.is_subscription ? 'Crear Suscripción' : 'Guardar Compromiso')}
                             </Button>
                         </div>
                     </DialogContent>
@@ -541,11 +592,24 @@ export function FutureExpensesList() {
                                         {category?.name || 'Sin categoría'}
                                     </span>
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="destructive" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
-                                            setExpenseToDelete(expense);
-                                            setIsDeleteAlertOpen(true);
-                                        }}>
-                                            <Trash2 className="w-4 h-4" />
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 border-primary text-black hover:bg-primary/50 hover:text-black transition-colors"
+                                            onClick={() => handleEdit(expense)}
+                                        >
+                                            <Pencil className="w-3.5 h-3.5 text-black" />
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 border-primary text-black hover:bg-primary/50 hover:text-black transition-colors"
+                                            onClick={() => {
+                                                setExpenseToDelete(expense);
+                                                setIsDeleteAlertOpen(true);
+                                            }}
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5 text-black" />
                                         </Button>
                                         <Button size="sm" className="h-8 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200 border" onClick={() => {
                                             setSelectedExpense(expense);
@@ -604,29 +668,40 @@ export function FutureExpensesList() {
                             Selecciona la cuenta de origen:
                         </p>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Método de Pago</label>
-                            <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cuenta..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(pm => (
-                                        <SelectItem key={pm.id} value={pm.id}>
-                                            <div className="flex items-center gap-2">
-                                                <Wallet className="w-4 h-4 text-muted-foreground" />
-                                                <span>{pm.name}</span>
-                                                <span className="text-xs text-muted-foreground">({formatCurrency80(Number(pm.balance))})</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Fecha de Pago</label>
+                                <Input
+                                    type="date"
+                                    value={paymentDate}
+                                    onChange={(e) => setPaymentDate(e.target.value)}
+                                />
+                            </div>
 
-                        <Button className="w-full mt-2" onClick={handlePay} disabled={!selectedPaymentMethod}>
-                            Confirmar Pago
-                        </Button>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Método de Pago</label>
+                                <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cuenta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <Wallet className="w-4 h-4 text-muted-foreground" />
+                                                    <span>{pm.name}</span>
+                                                    <span className="text-xs text-muted-foreground">({formatCurrency80(Number(pm.balance))})</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <Button className="w-full mt-2" onClick={handlePay} disabled={!selectedPaymentMethod || !paymentDate}>
+                                Confirmar Pago
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

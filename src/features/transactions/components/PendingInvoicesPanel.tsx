@@ -48,18 +48,29 @@ export function PendingInvoicesPanel() {
         if (!user) return;
 
         const fetchInvoices = async () => {
-            // Cast table name to any to bypass strict typing until schema is updated
             const { data, error } = await (supabase
-                .from('pending_invoices' as any)
+                .from('pending_invoices')
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
-                .order('arrival_date', { ascending: false })) as any;
+                .order('arrival_date', { ascending: false }));
 
             if (error) {
 
+                console.error('[PendingInvoicesPanel] Failed to fetch invoices', error);
+
+                toast({
+
+                    title: 'Error',
+
+                    description: 'No se pudieron cargar las facturas pendientes.',
+
+                    variant: 'destructive'
+
+                });
+
             } else {
-                setInvoices((data as PendingInvoice[]) || []);
+                setInvoices(data || []);
             }
             setLoading(false);
         };
@@ -77,9 +88,11 @@ export function PendingInvoicesPanel() {
                     table: 'pending_invoices',
                     filter: `user_id=eq.${user.id}`,
                 },
-                (payload) => {
-
-                    fetchInvoices(); // Refresh consistent state
+                (payload) => {
+                    if (payload.errors?.length) {
+                        console.error('[PendingInvoicesPanel] Realtime error', payload.errors);
+                    }
+                    fetchInvoices(); // Refresh consistent state
                 }
             )
             .subscribe();
@@ -149,6 +162,8 @@ export function PendingInvoicesPanel() {
 
                     if (catError) {
 
+                        console.error('[PendingInvoicesPanel] Failed to create category', catError);
+
                         toast({ title: 'Error', description: 'No se pudo crear la categoría', variant: 'destructive' });
                         return;
                     }
@@ -174,14 +189,18 @@ export function PendingInvoicesPanel() {
 
             // Mark invoice as approved (delete it)
             const { error: deleteError } = await supabase
-                .from('pending_invoices' as any)
+                .from('pending_invoices')
                 .delete()
                 .eq('id', invoice.id);
 
             if (deleteError) {
 
+                console.error('[PendingInvoicesPanel] Failed to delete invoice', deleteError);
+
                 toast({ title: 'Error', description: 'No se pudo eliminar la factura', variant: 'destructive' });
+
                 return;
+
             }
 
             toast({
@@ -199,13 +218,16 @@ export function PendingInvoicesPanel() {
 
         } catch (error) {
 
+            console.error('[PendingInvoicesPanel] Failed to approve invoice', error);
+
             toast({ title: 'Error', description: 'No se pudo aprobar la factura', variant: 'destructive' });
+
         }
     };
 
     const handleReject = async (id: string) => {
         const { error } = await supabase
-            .from('pending_invoices' as any)
+            .from('pending_invoices')
             .delete()
             .eq('id', id);
 

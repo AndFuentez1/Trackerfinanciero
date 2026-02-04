@@ -49,7 +49,7 @@ const transferSchema = z.object({
 type TransferFormValues = z.infer<typeof transferSchema>;
 
 interface AddTransferDialogProps {
-    onAdd: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: any }>;
+    onAdd: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: unknown }>;
 }
 
 export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
@@ -62,12 +62,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
         return curr?.symbol || currency || '$';
     };
 
-    const getCurrencyPadding = () => {
-        const symbol = getCurrencySymbol();
-        if (symbol.length > 2) return 'pl-16';
-        if (symbol.length === 2) return 'pl-12';
-        return 'pl-9';
-    };
+
 
     const getPlaceholderAmount = () => {
         const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -128,9 +123,9 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                     <span className="sm:hidden flex flex-row items-center gap-2">Nueva transferencia <ArrowRightLeft className="h-3 w-3" /></span>
                 </Button>
             </DialogTrigger>
-            <DialogContent 
-              className="sm:max-w-md max-h-[90vh] overflow-y-auto"
-              onInteractOutside={(e) => e.preventDefault()}
+            <DialogContent
+                className="sm:max-w-md max-h-[90vh] overflow-y-auto"
+                onInteractOutside={(e) => e.preventDefault()}
             >
                 <DialogHeader>
                     <DialogTitle>Mover dinero entre cuentas</DialogTitle>
@@ -202,9 +197,9 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                                     <FormLabel>Monto</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{currency}</span>
                                             <Input
-                                                className={getCurrencyPadding()}
+                                                className="pl-16"
                                                 placeholder={getPlaceholderAmount()}
                                                 value={formatDisplayedAmount(field.value)}
                                                 onChange={(e) => handleAmountChange(e, field.onChange)}

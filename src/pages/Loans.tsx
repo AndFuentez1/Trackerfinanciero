@@ -62,12 +62,7 @@ export default function LoansPage() {
         return activeDecimals > 0 ? `100000${decimals}` : '100000';
     };
 
-    const getCurrencyPadding = () => {
-        const symbol = getCurrencySymbol();
-        if (symbol.length > 2) return 'pl-16';
-        if (symbol.length === 2) return 'pl-12';
-        return 'pl-9';
-    };
+
 
     const getStepValue = () => {
         if (!activeDecimals || activeDecimals <= 0) return '1';
@@ -184,9 +179,12 @@ export default function LoansPage() {
         is_disbursed: true,
     });
 
+    const [editingId, setEditingId] = useState<string | null>(null);
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { error } = await createLoan({
+
+        const payload = {
             name: formData.name,
             total_amount: Number(formData.total_amount),
             interest_rate: Number(formData.interest_rate),
@@ -194,11 +192,22 @@ export default function LoansPage() {
             due_date: formData.due_date || null,
             payment_method_id: formData.payment_method_id || null, // Allow null if not disbursed
             is_disbursed: formData.is_disbursed,
-        }, Number(formData.paid_amount));
+        };
+
+        let error;
+
+        if (editingId) {
+            const { error: err } = await updateLoan(editingId, payload);
+            error = err;
+        } else {
+            const { error: err } = await createLoan(payload, Number(formData.paid_amount));
+            error = err;
+        }
 
         if (!error) {
             setIsDialogOpen(false);
             setFormData({ name: '', total_amount: '', paid_amount: '', interest_rate: '', type: 'borrowed', due_date: '', payment_method_id: '', is_disbursed: true });
+            setEditingId(null);
             refetch();
         }
     };
@@ -386,8 +395,8 @@ export default function LoansPage() {
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                                 <DialogHeader>
-                                    <DialogTitle>Agregar Nuevo Préstamo</DialogTitle>
-                                    <DialogDescription className="sr-only">Registra un nuevo préstamo o deuda con sus datos básicos.</DialogDescription>
+                                    <DialogTitle>{editingId ? "Editar Préstamo" : "Agregar Nuevo Préstamo"}</DialogTitle>
+                                    <DialogDescription className="sr-only">Formulario de préstamos</DialogDescription>
                                 </DialogHeader>
                                 <form onSubmit={handleCreate} className="space-y-4">
                                     <div className="space-y-2">
@@ -418,7 +427,7 @@ export default function LoansPage() {
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Monto Total Original</label>
                                             <div className="relative">
-                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
                                                 <Input
                                                     required
                                                     type="number"
@@ -426,14 +435,14 @@ export default function LoansPage() {
                                                     value={formData.total_amount}
                                                     onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
                                                     step={getStepValue()}
-                                                    className={getCurrencyPadding()}
+                                                    className="pl-16"
                                                 />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Monto Ya Pagado</label>
                                             <div className="relative">
-                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
                                                 <Input
                                                     required
                                                     type="number"
@@ -441,7 +450,7 @@ export default function LoansPage() {
                                                     value={formData.paid_amount}
                                                     onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
                                                     step={getStepValue()}
-                                                    className={getCurrencyPadding()}
+                                                    className="pl-16"
                                                 />
                                             </div>
                                         </div>
@@ -535,7 +544,7 @@ export default function LoansPage() {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Monto del Abono</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
+                                    <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
                                     <Input
                                         required
                                         type="number"
@@ -543,7 +552,7 @@ export default function LoansPage() {
                                         value={paymentData.amount}
                                         onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
                                         step={getStepValue()}
-                                        className={getCurrencyPadding()}
+                                        className="pl-16"
                                     />
                                 </div>
                             </div>
@@ -804,69 +813,82 @@ export default function LoansPage() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-2">
-                                                        {isPendingDisbursement ? (
-                                                            <Button
-                                                                size="sm"
-                                                                className="gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
-                                                                onClick={() => handleOpenDisbursement(loan)}
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                                <span className="hidden sm:inline">{isDebt ? 'Recibir Dinero' : 'Confirmar Desembolso'}</span>
-                                                            </Button>
-                                                        ) : isOrphaned ? (
-                                                            <Button
-                                                                size="sm"
-                                                                className="gap-2 shadow-sm bg-red-600 hover:bg-red-700 text-white min-w-[140px] flex items-center justify-center"
-                                                                onClick={() => handleOpenEdit(loan)}
-                                                            >
-                                                                Reclasificar <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : isFullyPaid ? (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="default"
-                                                                className="gap-2 shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white min-w-[140px] flex items-center justify-center"
-                                                                onClick={() => handleDelete(loan.id)}
-                                                            >
-                                                                Eliminar <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="default"
-                                                                    className="gap-2 shadow-sm"
-                                                                    onClick={() => handlePayInFull(loan)}
-                                                                >
-                                                                    <CheckCircle2 className="h-4 w-4" />
-                                                                    <span className="hidden sm:inline">Pagar Todo</span>
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="default"
-                                                                    className="gap-2 shadow-sm border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
-                                                                    onClick={() => handleOpenPayment(loan)}
-                                                                >
-                                                                    <span className="hidden sm:flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>
-                                                                    <span className="sm:hidden flex flex-row items-center gap-2">Abonar <Save className="h-3 w-3" /></span>
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    {!isFullyPaid && (
+
+                                                <div className="flex items-center gap-2 mt-4 md:mt-0">
+                                                    {isPendingDisbursement ? (
                                                         <Button
-                                                            variant="default"
-                                                            size="icon"
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            size="sm"
+                                                            className="gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
+                                                            onClick={() => handleOpenDisbursement(loan)}
+                                                        >
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">{isDebt ? 'Recibir Dinero' : 'Confirmar Desembolso'}</span>
+                                                        </Button>
+                                                    ) : isOrphaned ? (
+                                                        <Button
+                                                            size="sm"
+                                                            className="gap-2 shadow-sm bg-red-600 hover:bg-red-700 text-white min-w-[140px] flex items-center justify-center"
+                                                            onClick={() => handleOpenEdit(loan)}
+                                                        >
+                                                            Reclasificar <Edit2 className="h-4 w-4" />
+                                                        </Button>
+                                                    ) : isFullyPaid ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-9 w-9 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
                                                             onClick={() => handleDelete(loan.id)}
+                                                            title="Eliminar historial"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
+                                                    ) : (
+                                                        <>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-9 w-9 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
+                                                                onClick={() => {
+                                                                    setFormData({
+                                                                        name: loan.name,
+                                                                        total_amount: loan.total_amount.toString(),
+                                                                        paid_amount: loan.paid_amount.toString(),
+                                                                        interest_rate: loan.interest_rate.toString(),
+                                                                        type: loan.type,
+                                                                        due_date: loan.due_date ? loan.due_date.split('T')[0] : '',
+                                                                        payment_method_id: loan.payment_method_id || '',
+                                                                        is_disbursed: !!loan.payment_method_id
+                                                                    });
+                                                                    setEditingId(loan.id);
+                                                                    setIsDialogOpen(true);
+                                                                }}
+                                                                title="Editar"
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-9 w-9 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
+                                                                onClick={() => handleOpenPayment(loan)}
+                                                                title="Registrar Abono"
+                                                            >
+                                                                <HandCoins className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-9 w-9 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                                                                onClick={() => handleDelete(loan.id)}
+                                                                title="Eliminar"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
+
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-xs font-medium">
                                                     <span>Progreso de {isDebt ? 'pago' : 'cobro'}</span>
@@ -888,9 +910,9 @@ export default function LoansPage() {
                                 );
                             })
                         )}
-                    </div>
-                </div>
-            </main>
+                    </div >
+                </div >
+            </main >
         </div >
     );
 }

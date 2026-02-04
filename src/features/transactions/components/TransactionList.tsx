@@ -30,6 +30,13 @@ import { TransactionCard } from './TransactionCard';
 import { typeLabels, typeStyles } from './constants';
 
 // ICON_MAP removed as part of color-only system transition
+type TransactionDraft = {
+  description: string;
+  amount: number;
+  category_id: string | null;
+  payment_method_id: string | null;
+  date: string;
+};
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -69,13 +76,7 @@ export function TransactionList({
   }>({ key: 'date', direction: 'desc' });
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{
-    description: string;
-    amount: number;
-    category_id: string | null;
-    payment_method_id: string | null;
-    date: string; // ISO string
-  } | null>(null);
+  const [draft, setDraft] = useState<TransactionDraft | null>(null);
 
   const startEdit = useCallback((t: Transaction) => {
     setEditingId(t.id);
@@ -104,23 +105,23 @@ export function TransactionList({
       category_id: draft.category_id || null,
       payment_method_id: draft.payment_method_id || null,
       date: new Date(draft.date).toISOString(),
-    } as any;
+    };
 
     // Also send category name if category_id selected (helps parent sync immediately)
     const cat = categories.find(c => c.id === draft.category_id || '');
     if (cat) {
-      (updates as any).category = cat.name;
+      updates.category = cat.name;
     }
 
     const res = await onUpdate(t.id, updates);
-    const hadError = typeof res === 'object' && res && 'error' in res && (res as any).error;
+    const hadError = typeof res === 'object' && res !== null && 'error' in res && Boolean((res as { error?: unknown }).error);
     if (!hadError) {
       setEditingId(null);
       setDraft(null);
     }
   }, [onUpdate, draft, editingId, categories]);
 
-  const handleDraftChange = useCallback((updates: any) => {
+  const handleDraftChange = useCallback((updates: Partial<TransactionDraft>) => {
     setDraft(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
 
@@ -148,8 +149,8 @@ export function TransactionList({
 
   const sortedTransactions = useMemo(() => {
     return [...filteredTransactions].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number = 0;
+      let bValue: string | number = 0;
 
       if (sortConfig.key === 'date') {
         aValue = new Date(a.date).getTime();

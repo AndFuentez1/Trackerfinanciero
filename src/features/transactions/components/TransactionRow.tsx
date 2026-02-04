@@ -22,10 +22,18 @@ import {
 } from "@/components/ui/select";
 import { typeStyles, typeLabels } from './constants';
 
+type TransactionDraft = {
+    description: string;
+    amount: number;
+    category_id: string | null;
+    payment_method_id: string | null;
+    date: string;
+};
+
 interface TransactionRowProps {
     transaction: Transaction;
     isEditing: boolean;
-    draft: any;
+    draft: TransactionDraft | null;
     paymentMethods: PaymentMethod[];
     categories: CategoryItem[];
     highlightOrphaned: boolean;
@@ -35,7 +43,7 @@ interface TransactionRowProps {
     onSaveEdit: (t: Transaction) => void;
     onDelete: (id: string) => void;
     onUpdate?: (id: string, updates: Partial<Omit<Transaction, 'id'>>) => Promise<{ error?: unknown } | void>;
-    onDraftChange: (updates: any) => void;
+    onDraftChange: (updates: Partial<TransactionDraft>) => void;
 }
 
 export const TransactionRow = memo(({
@@ -114,8 +122,7 @@ export const TransactionRow = memo(({
                 'border-b border-border transition-all duration-200 group hover:bg-muted/30',
                 isEditing && 'bg-primary/5 hover:bg-primary/10',
                 isOrphan && 'bg-destructive/5 hover:bg-destructive/10',
-                highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive',
-                'animate-fade-in'
+                highlightOrphaned && isOrphan && 'border-l-4 border-l-destructive'
             )}
         >
             {/* Date */}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
 @import './styles/tokens.css';
 @tailwind base;
 @tailwind components;
@@ -11,15 +11,21 @@
   }
 
   html {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Sora', "Avenir Next", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.01em;
     font-feature-settings: "ss01", "cv01", "cv02", "cv03";
+    text-rendering: optimizeLegibility;
   }
 
   body {
     font-weight: 400;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent-soft-bg)) 0%, transparent 60%),
+      radial-gradient(900px 500px at 90% 0%, hsl(var(--accent-soft)) 0%, transparent 55%),
+      radial-gradient(600px 400px at 50% 100%, hsl(var(--muted)) 0%, transparent 60%);
+    background-attachment: fixed;
   }
 
   h1,

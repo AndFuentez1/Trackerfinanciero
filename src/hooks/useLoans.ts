@@ -58,7 +58,12 @@ export function useCreateLoan() {
                 });
 
             if (paymentError) {
-
+                console.error('[useLoans] Failed to create initial loan payment', paymentError);
+                toast({
+                    title: 'Advertencia',
+                    description: 'El préstamo se creó, pero no se registró el abono inicial.',
+                    variant: 'default'
+                });
             }
         }
 

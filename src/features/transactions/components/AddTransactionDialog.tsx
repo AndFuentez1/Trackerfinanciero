@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { TransactionType, Transaction, useFinanceData } from '@/hooks/useFinanceData';
+import { TransactionType, Transaction, CategoryItem, PaymentMethod, useFinanceData } from '@/hooks/useFinanceData';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CURRENCIES } from '@/hooks/currencyConstants';
 import { insertTransactionSchema, TransactionFormValues } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -52,13 +53,13 @@ import { getTodayLocalDate } from '@/lib/dateUtils';
 
 export interface AddTransactionDialogProps {
   onAdd?: (transaction: Omit<Transaction, 'id'>) => Promise<{ error?: unknown } | void>;
-  onUpdateTransaction?: (id: string, updates: any) => Promise<void>;
+  onUpdateTransaction?: (id: string, updates: Partial<Omit<Transaction, 'id'>>) => Promise<{ error?: unknown } | void>;
   transactionToEdit?: Transaction | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  categories?: any[];
-  paymentMethods?: any[];
-  onAddTransfer?: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: any }>;
+  categories?: CategoryItem[];
+  paymentMethods?: PaymentMethod[];
+  onAddTransfer?: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: unknown }>;
 }
 
 const typeOptions: { value: TransactionType; label: string }[] = [
@@ -95,13 +96,7 @@ export function AddTransactionDialog({
     return curr?.symbol || currency || '$';
   };
 
-  const getCurrencyPadding = () => {
-    const symbol = getCurrencySymbol();
-    // COP, ARS, CLP, Mex$ necesitan más espacio
-    if (symbol.length > 2) return 'pl-16';
-    if (symbol.length === 2) return 'pl-12';
-    return 'pl-9';
-  };
+
 
   const getPlaceholderAmount = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
@@ -343,7 +338,9 @@ export function AddTransactionDialog({
     // Add Mode
     if (onAdd) {
       const result = await onAdd(transactionData);
-      const error = result && (result as any).error;
+      const error = typeof result === 'object' && result !== null && 'error' in result
+        ? (result as { error?: unknown }).error
+        : undefined;
 
       if (error) {
         toast({
@@ -371,17 +368,9 @@ export function AddTransactionDialog({
     }
   };
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (val: number) => void) => {
-    const rawValue = e.target.value;
-    const cleanValue = rawValue.replace(/\./g, '').replace(/,/g, '.');
-    const parsedValue = parseFloat(cleanValue);
-    onChange(isNaN(parsedValue) ? 0 : parsedValue);
-  };
 
-  const formatDisplayedAmount = (value: number) => {
-    if (value === 0) return '';
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
+
+
 
   return (
     <>
@@ -662,17 +651,13 @@ export function AddTransactionDialog({
                   <FormItem className="space-y-2">
                     <FormLabel htmlFor="amount">Monto</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{getCurrencySymbol()}</span>
-                        <Input
-                          id="amount"
-                          className={`${getCurrencyPadding()} h-11 md:h-9`}
-                          placeholder={`${getPlaceholderAmount()}`}
-                          inputMode="decimal"
-                          value={formatDisplayedAmount(field.value)}
-                          onChange={(e) => handleAmountChange(e, field.onChange)}
-                        />
-                      </div>
+                      <MoneyInput
+                        id="amount"
+                        className="h-11 md:h-9"
+                        placeholder={getPlaceholderAmount()}
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

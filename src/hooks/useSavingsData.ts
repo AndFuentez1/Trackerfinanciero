@@ -19,7 +19,7 @@ export interface SavingsTransaction {
   category?: string;
   calculated_yield?: number | null;
   balance_after_transaction?: number | null;
-  raw?: any;
+  raw?: unknown;
 }
 
 // Global hook to be used by components

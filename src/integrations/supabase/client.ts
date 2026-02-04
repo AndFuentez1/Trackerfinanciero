@@ -100,8 +100,8 @@ try {
       // fetch('http://127.0.0.1:7242/ingest/...')
       // #endregion
       // Clear invalid session silently
-      supabaseClient.auth.signOut().catch(() => {
-        // Ignore errors during cleanup
+      supabaseClient.auth.signOut().catch((err) => {
+        console.warn('[Supabase] Failed to sign out during token refresh cleanup', err);
       });
     }
   });
@@ -115,12 +115,12 @@ try {
       // Clear all Supabase-related localStorage items
       const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
       supabaseKeys.forEach(key => localStorage.removeItem(key));
-      supabaseClient.auth.signOut().catch(() => {
-        // Ignore errors during cleanup
+      supabaseClient.auth.signOut().catch((err) => {
+        console.warn('[Supabase] Failed to sign out during session cleanup', err);
       });
     }
-  }).catch(() => {
-    // Ignore initialization errors - they're handled above
+  }).catch((err) => {
+    console.warn('[Supabase] Failed to get session during init', err);
   });
 
 

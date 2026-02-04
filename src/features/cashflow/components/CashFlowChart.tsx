@@ -12,9 +12,10 @@ import { getCurrencySymbol } from '@/lib/utils';
 interface CashFlowChartProps {
   data: any[];
   loading?: boolean;
+  isWarning?: boolean;
 }
 
-export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) => {
+export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isWarning }) => {
   const { currency } = useFinance();
   const { formatCurrency } = useFormatCurrency();
   const symbol = getCurrencySymbol(currency || 'COP');
@@ -167,13 +168,28 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
                   <Line
                     type="monotone"
                     dataKey="balanceProyectado"
-                    stroke="hsl(var(--primary))"
+                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
                     strokeWidth={2}
                     dot={false}
                     strokeDasharray="5 5"
-                    name="Balance Proyectado"
-                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
+                    name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
+                    className={isWarning ? "opacity-90" : ""}
                   />
+                  {/* Balance Simulado (Ideal) */}
+                  {isWarning && (
+                    <Line
+                      type="monotone"
+                      dataKey="balanceSimulated"
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeWidth={2}
+                      dot={false}
+                      strokeDasharray="4 4"
+                      name="Proyección Ideal (Si se paga hoy)"
+                      activeDot={{ r: 4, strokeWidth: 0, fill: "hsl(var(--muted-foreground))" }}
+                      className="opacity-70"
+                    />
+                  )}
                 </>
               )}
 
@@ -181,6 +197,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading }) =
           </ResponsiveContainer>
         </div>
       </CardContent>
-    </Card>
+    </Card >
   );
 };

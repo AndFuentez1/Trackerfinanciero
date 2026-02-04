@@ -28,6 +28,7 @@ export function useAuth() {
           setUser(session?.user ?? null);
         }
       } catch (err) {
+        console.error('[useAuth] initAuth failed', err);
         if (!ignore) {
           setSession(null);
           setUser(null);
@@ -79,7 +80,7 @@ export function useAuth() {
     });
 
     if (error) {
-
+      console.error('[useAuth] signInWithOtp failed', error);
     }
 
     return { error };

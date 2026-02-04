@@ -19,7 +19,7 @@ interface HistoryTabProps {
   totalCount?: number; // Total count from Supabase (respects filters)
   paymentMethods: PaymentMethod[];
   onDeleteTransaction: (id: string) => Promise<void>;
-  onUpdateTransaction: (id: string, updates: any) => Promise<any>;
+  onUpdateTransaction: (id: string, updates: Partial<Omit<Transaction, 'id'>>) => Promise<{ error?: unknown } | void>;
   onEditTransaction?: (transaction: Transaction) => void;
   categories: CategoryItem[];
   highlightOrphaned?: boolean;

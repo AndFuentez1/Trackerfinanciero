@@ -1,29 +1,20 @@
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
-import { AddBudgetDialog } from '@/features/budgets/components/AddBudgetDialog';
 import { useBudgetsData } from '@/hooks/useBudgetsData';
 import { ImportExcelDialog } from '@/features/transactions/components/ImportExcelDialog';
 import { ExportExcelButton } from '@/features/transactions/components/ExportExcelButton';
 import { SummaryTab } from '@/features/dashboard/components/SummaryTab';
 import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
-import { Wallet, AlertCircle, Calendar as CalendarIcon, FilterX, BarChart3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Link } from 'react-router-dom';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { WelcomePanel } from '@/features/auth/components/WelcomePanel';
 import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDecisionPanel';
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/hooks/financeUtils';
-import { CURRENCIES } from '@/hooks/currencyConstants';
+import { LayoutDashboard } from 'lucide-react';
 
 export default function Index() {
-  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const {
     transactions,
@@ -151,25 +142,28 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background/30">
-      <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
-        <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-              <BarChart3 className="h-6 w-6" />
+    <div className="min-h-screen">
+      <main className="mx-auto max-w-6xl px-4 py-10 space-y-12 animate-in fade-in duration-700">
+        {/* Header Section */}
+        <header className="space-y-4 border-b border-border/40 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                <LayoutDashboard className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight">Panel Principal</h1>
+                <p className="text-muted-foreground font-medium">Resumen general de tu estado financiero</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">Panel Principal</h1>
-              <p className="text-muted-foreground font-medium">Resumen general de tus finanzas</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
+              <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+              <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
             </div>
-          </div>
-          <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
-            <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
-            <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
-            <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
           </div>
         </header>
-        <div className="space-y-6">
+        <section className="space-y-6">
           <SummaryTab
             transactions={chartTransactions}
             allTransactions={allTransactions}
@@ -186,7 +180,7 @@ export default function Index() {
             dateFilter={{ period: 'all', from: null, to: null }}
             updateFilter={() => { }}
           />
-        </div>
+        </section>
         {lastUpdated && (
           <div className="flex justify-center sm:justify-end pt-4">
             <p className="text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded inline-block">

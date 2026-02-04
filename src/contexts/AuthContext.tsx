@@ -1,14 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+
+type SignInWithOtpResult = Awaited<ReturnType<typeof supabase.auth.signInWithOtp>>;
+type SignInWithPasswordResult = Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
+type SignOutResult = Awaited<ReturnType<typeof supabase.auth.signOut>>;
+type AuthErrorWithCode = AuthError & { code?: string };
 
 interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
-    signInWithOtp: (email: string, rememberMe?: boolean) => Promise<{ error: any }>;
-    signInWithPassword: (email: string, password: string, rememberMe?: boolean) => Promise<{ data?: any; error: any }>;
-    signOut: () => Promise<{ error: any }>;
+    signInWithOtp: (email: string, rememberMe?: boolean) => Promise<{ error: SignInWithOtpResult['error'] }>;
+    signInWithPassword: (email: string, password: string, rememberMe?: boolean) => Promise<{ data?: SignInWithPasswordResult['data']; error: AuthErrorWithCode | null }>;
+    signOut: () => Promise<{ error: SignOutResult['error'] }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
