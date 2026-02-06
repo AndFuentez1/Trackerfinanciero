@@ -36,19 +36,21 @@ interface Transaction {
 
 interface EvolutionChartProps {
   transactions: Transaction[];
-  selectedYear?: string;
-  onSelectedYearChange?: (year: string) => void;
+  selectedYears: string[];
+  onSelectedYearsChange: (years: string[]) => void;
   selectedMonth?: string;
   onSelectedMonthChange?: (month: string) => void;
+  onSelectAllYears?: () => void;
   currentBalance?: number;
 }
 
 export function EvolutionChart({
   transactions,
-  selectedYear: controlledYear,
-  onSelectedYearChange,
+  selectedYears,
+  onSelectedYearsChange,
   selectedMonth: controlledMonth,
   onSelectedMonthChange,
+  onSelectAllYears,
   currentBalance = 0,
 }: EvolutionChartProps) {
   const decimalPlaces = useDecimalPlaces();
@@ -61,19 +63,16 @@ export function EvolutionChart({
   const [showBalance, setShowBalance] = useState(true);
 
   // --- Date Selection Logic ---
-  const years = useMemo(() => {
+  const availableYears = useMemo(() => {
     const uniqueYears = new Set(transactions.map(t => new Date(t.date).getFullYear()));
     uniqueYears.add(currentYear);
     return Array.from(uniqueYears).sort((a, b) => b - a).map(String);
   }, [transactions, currentYear]);
 
   const [internalMonth, setInternalMonth] = useState<string>('all');
-  const [internalYear, setInternalYear] = useState<string>(() => years[0] || String(currentYear));
 
   const selectedMonth = controlledMonth ?? internalMonth;
-  const selectedYear = controlledYear ?? internalYear;
 
-  useEffect(() => { if (controlledYear) setInternalYear(controlledYear); }, [controlledYear]);
   useEffect(() => { if (controlledMonth) setInternalMonth(controlledMonth); }, [controlledMonth]);
 
   const setMonth = (value: string) => {
@@ -81,9 +80,15 @@ export function EvolutionChart({
     onSelectedMonthChange?.(value);
   };
 
-  const setYear = (value: string) => {
-    setInternalYear(value);
-    onSelectedYearChange?.(value);
+  const toggleYear = (year: string) => {
+    const newSelection = selectedYears.includes(year)
+      ? selectedYears.filter(y => y !== year)
+      : [...selectedYears, year];
+
+    // Prevent empty selection? 
+    if (newSelection.length === 0) return;
+
+    onSelectedYearsChange(newSelection);
   };
 
   const availableMonths = useMemo(() => ([
@@ -132,78 +137,79 @@ export function EvolutionChart({
     };
 
     const points: any[] = [];
-    const y = parseInt(selectedYear);
 
-    if (selectedMonth === 'all') {
-      for (let m = 0; m < 12; m++) {
-        const start = new Date(y, m, 1, 0, 0, 0);
-        const end = new Date(y, m + 1, 0, 23, 59, 59);
+    // Sort selected years strictly ascending for chart continuity
+    const sortedSelectedYears = [...selectedYears].sort((a, b) => Number(a) - Number(b));
 
-        const point: any = {
-          name: format(new Date(y, m, 1), 'MMM', { locale: es }),
-          monthIndex: m
-        };
+    sortedSelectedYears.forEach(yearStr => {
+      const y = parseInt(yearStr);
 
-        const d = getDataForPeriod(end, start);
-        point.balance = d.balance;
-        point.income = d.income;
-        point.expense = d.expense;
+      if (selectedMonth === 'all') {
+        for (let m = 0; m < 12; m++) {
+          const start = new Date(y, m, 1, 0, 0, 0);
+          const end = new Date(y, m + 1, 0, 23, 59, 59);
 
-        points.push(point);
+          const point: any = {
+            name: format(new Date(y, m, 1), 'MMM', { locale: es }),
+            monthIndex: m,
+            year: y,
+            // Unique key for recharts if needed, but name is usually XAxis
+            // If multiple years have same month name 'Ene', we might want unique XAxis labels like 'Ene 23'
+            displayName: sortedSelectedYears.length > 1
+              ? `${format(new Date(y, m, 1), 'MMM', { locale: es })} '${y.toString().slice(2)}`
+              : format(new Date(y, m, 1), 'MMM', { locale: es })
+          };
+
+          const d = getDataForPeriod(end, start);
+          point.balance = d.balance;
+          point.income = d.income;
+          point.expense = d.expense;
+          point.fullDate = start;
+
+          points.push(point);
+        }
+      } else {
+        const m = parseInt(selectedMonth) - 1;
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const start = new Date(y, m, d, 0, 0, 0);
+          const end = new Date(y, m, d, 23, 59, 59);
+          const point: any = {
+            name: `${d}`,
+            year: y,
+            displayName: sortedSelectedYears.length > 1
+              ? `${d}/${m + 1}/${y.toString().slice(2)}`
+              : `${d}`
+          };
+
+          const dat = getDataForPeriod(end, start);
+          point.balance = dat.balance;
+          point.income = dat.income;
+          point.expense = dat.expense;
+          point.fullDate = start;
+
+          points.push(point);
+        }
       }
-    } else {
-      const m = parseInt(selectedMonth) - 1;
-      const daysInMonth = new Date(y, m + 1, 0).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const start = new Date(y, m, d, 0, 0, 0);
-        const end = new Date(y, m, d, 23, 59, 59);
-        const point: any = { name: `${d}` };
-
-        const dat = getDataForPeriod(end, start);
-        point.balance = dat.balance;
-        point.income = dat.income;
-        point.expense = dat.expense;
-
-        points.push(point);
-      }
-    }
+    });
 
     // Post-process: Cut balance line after last record (Strict "no future balance line")
-    // Find the last index that has ANY data (income OR expense).
     let lastActiveIndex = -1;
     points.forEach((p, i) => {
       if (p.income !== 0 || p.expense !== 0) lastActiveIndex = i;
     });
-
-    // If we have data, cut everything after the last active point.
-    // However, if the user has data in Feb but we are in Jan (weird case), or if data is sparse...
-    // The user said: "se corta en el mes que hubo el ultimo registro".
-    // This implies if I have data in Jan and Mar, but not Feb... well, "ultimo registro" implies the max date.
-    // So if max date is Mar, Feb should show balance because it's *between*. 
-    // BUT the request says "ultimo registro". So yes, after the MAX index, it should be null.
-    // What about before? "se corta... para los meses que no hay registros" -> Wait.
-    // "cortar... para los meses que no hay registros. Asegura que exista... cuando se filtra por mes".
-    // "se corta en el mes que hubo el ultimo registro".
-    // Interpretation: The line should exist UP TO the last record. After that, it should stop.
 
     if (lastActiveIndex !== -1) {
       for (let i = lastActiveIndex + 1; i < points.length; i++) {
         points[i].balance = null;
       }
     } else {
-      // If absolutely no data in the view?
-      // Maybe we just show the balance line? Or nothing?
-      // If "no registros", usually balance is just flat.
-      // But user complained about cutoff. Let's assume if no data, no line is safer to avoid confusion?
-      // Or if it's the current period, show up to today.
-      // Let's stick to "Null if no data found" to be safe.
-      // Actually, if selectedMonth is 'all' and no data, user sees empty chart.
       points.forEach(p => p.balance = null);
     }
 
     return points;
-  }, [transactions, selectedYear, selectedMonth, currentBalance, currentYear]);
+  }, [transactions, selectedYears, selectedMonth, currentBalance, currentYear]);
 
   // --- Helpers ---
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-CO', {
@@ -260,12 +266,38 @@ export function EvolutionChart({
             </SelectContent>
           </Select>
 
-          <Select value={selectedYear} onValueChange={setYear}>
-            <SelectTrigger className="w-[100px] h-9 bg-background/50 border-input"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
+                {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[150px]">
+              <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {onSelectAllYears && (
+                <>
+                  <DropdownMenuCheckboxItem
+                    checked={selectedYears.length === availableYears.length}
+                    onCheckedChange={onSelectAllYears}
+                  >
+                    Todos
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {availableYears.map(year => (
+                <DropdownMenuCheckboxItem
+                  key={year}
+                  checked={selectedYears.includes(year)}
+                  onCheckedChange={() => toggleYear(year)}
+                >
+                  {year}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -275,13 +307,13 @@ export function EvolutionChart({
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
             <XAxis
-              dataKey="name"
+              dataKey="displayName"
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               dy={10}
-              interval={0}
-              minTickGap={0}
+              interval="preserveStartEnd"
+              minTickGap={30}
             />
             <YAxis
               tickFormatter={formatLargeCurrency}

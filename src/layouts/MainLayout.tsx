@@ -1,6 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 // import { useInactivityLogout } from "@/hooks/useInactivityLogout"; // Deshabilitado: solo cerrar sesión manual
 import { useEffect, useState } from "react";
@@ -9,12 +9,16 @@ import { Button } from "@/components/ui/button";
 import { SkeletonLoader } from "@/components/common/skeletons/SkeletonLoader";
 import { SetPasswordDialog } from "@/features/auth/components/SetPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 
 export default function MainLayout() {
     const { user, loading, signOut } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [hasCheckedPassword, setHasCheckedPassword] = useState(false);
+    const scrollRef = useScrollRestoration<HTMLElement>();
 
     // Auto logout after 30 minutes of inactivity - DESHABILITADO
     // useInactivityLogout(30);
@@ -63,7 +67,8 @@ export default function MainLayout() {
     }, [user, hasCheckedPassword]);
 
     if (loading) {
-        return <SkeletonLoader fullPage withLayoutWrapper={false} />;
+        const skeletonType = getSkeletonTypeFromPath(location.pathname) as 'dashboard' | 'transactions' | 'savings' | 'loans' | 'budgets' | 'config' | 'cashflow' | 'default';
+        return <SkeletonLoader fullPage tab={skeletonType} withLayoutWrapper={false} />;
     }
 
     if (!user) return null;
@@ -107,7 +112,7 @@ export default function MainLayout() {
                 className="flex h-screen w-full overflow-hidden font-sans antialiased"
             >
                 <Sidebar />
-                <main className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative">
+                <main ref={scrollRef} className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative">
                     <Outlet />
                 </main>
                 <MobileNav />
@@ -121,4 +126,3 @@ export default function MainLayout() {
         </>
     );
 }
-

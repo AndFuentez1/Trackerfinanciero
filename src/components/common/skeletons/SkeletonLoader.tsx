@@ -88,14 +88,14 @@ const PageHeaderSkeleton = () => (
 
 const SidebarSkeleton = () => (
     <div
-        className="hidden lg:flex flex-col border-r h-screen p-6 fixed top-0 left-0 bottom-0 z-0"
+        className="hidden lg:flex flex-col w-64 border-r h-screen p-6 sticky top-0 flex-shrink-0"
         style={{
-            width: '16rem', // w-64
             backgroundColor: 'hsl(var(--container))',
             borderRight: '1px solid var(--border)',
+            boxShadow: '1px 0 0 rgba(0,0,0,0.08)',
         }}
     >
-        <div className="flex items-center gap-3 mb-10 px-2 mt-1">
+        <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
             <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.75rem" />
             <div className="flex flex-col gap-2">
                 <PulseBlock height="1.25rem" width="80px" />
@@ -103,7 +103,7 @@ const SidebarSkeleton = () => (
             </div>
         </div>
 
-        <nav className="space-y-4 flex-1">
+        <nav className="space-y-4 flex-1 overflow-hidden">
             {[...Array(7)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
                     <PulseBlock height="1.25rem" width="1.25rem" />
@@ -112,7 +112,7 @@ const SidebarSkeleton = () => (
             ))}
         </nav>
 
-        <div className="mt-auto pt-6">
+        <div className="mt-auto pt-6 flex-shrink-0">
             <PulseBlock height="3rem" width="100%" borderRadius="0.75rem" />
         </div>
     </div>
@@ -154,7 +154,7 @@ const StandardHeaderSkeleton = () => (
 // ---------------------------------------------------------------------
 
 const DashboardSkeleton = () => (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-12">
         <StandardHeaderSkeleton />
         {/* Header - usually handled by PageHeaderSkeleton but some pages have their own */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -196,7 +196,7 @@ const DashboardSkeleton = () => (
 );
 
 const HistorySkeleton = () => (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6">
         <StandardHeaderSkeleton />
         {/* Status Bar */}
         <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-border bg-muted/20">
@@ -247,7 +247,7 @@ const HistorySkeleton = () => (
 );
 
 const BudgetsSkeleton = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-in fade-in duration-700">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <StandardHeaderSkeleton />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <CardSkeleton height="140px">
@@ -288,7 +288,7 @@ const BudgetsSkeleton = () => (
 );
 
 const LoansSkeleton = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-in fade-in duration-700">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <StandardHeaderSkeleton />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <CardSkeleton height="100px" padding="1.5rem" className="flex flex-col justify-center">
@@ -320,7 +320,7 @@ const LoansSkeleton = () => (
 );
 
 const SavingsSkeleton = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-in fade-in duration-700">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <StandardHeaderSkeleton />
 
         {/* Total Balance Card */}
@@ -367,7 +367,7 @@ const SavingsSkeleton = () => (
 );
 
 const ConfigSkeleton = () => (
-    <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12 animate-in fade-in duration-700">
+    <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12">
         {/* Header Section */}
         <StandardHeaderSkeleton />
 
@@ -418,7 +418,7 @@ const ConfigSkeleton = () => (
 );
 
 const CashFlowSkeleton = () => (
-    <div className="container max-w-6xl mx-auto py-8 px-4 space-y-6 animate-in fade-in duration-700">
+    <div className="container max-w-6xl mx-auto py-8 px-4 space-y-6">
         <StandardHeaderSkeleton />
 
         {/* Filters */}
@@ -490,12 +490,49 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
     const loadingText = message || "Cargando...";
 
+    // Embedded Mode (Inside MainLayout)
+    if (!fullPage) {
+        return (
+            <div className="w-full h-full bg-background">
+                <style>
+                    {`
+                    @keyframes skeleton-pulse {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                        100% { opacity: 1; }
+                    }
+                    .skeleton-pulse {
+                        animation: skeleton-pulse 1.8s ease-in-out infinite;
+                    }
+                    `}
+                </style>
+                {/* Loading Indicator for embedded view */}
+                <div className="fixed top-[140px] left-1/2 -translate-x-1/2 z-[100] pointer-events-none fade-in duration-500">
+                    <div className="bg-card/90 backdrop-blur-md px-6 py-3 rounded-full border border-border/50 shadow-xl flex items-center gap-3 skeleton-pulse">
+                        <div className="h-2.5 w-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                        <div className="h-2.5 w-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                        <div className="h-2.5 w-2.5 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                        <span className="text-sm font-semibold tracking-wide ml-1 text-foreground whitespace-nowrap">{loadingText}</span>
+                    </div>
+                </div>
+
+                <div
+                    className={cn(
+                        "w-full",
+                        tab === 'config' ? "" : "container max-w-6xl mx-auto px-4 py-10"
+                    )}
+                >
+                    {renderTabSkeleton()}
+                </div>
+            </div>
+        );
+    }
+
+    // Full Page Mode (App.tsx / MainLayout fallback)
     return (
         <div
             className={cn(
-                "min-h-screen bg-background w-full",
-                // Only use flex if we are rendering the sidebar structure
-                fullPage ? "flex" : ""
+                "h-screen w-full overflow-hidden font-sans antialiased bg-background flex"
             )}
         >
             <style>
@@ -511,7 +548,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 `}
             </style>
 
-            {/* Loading Indicator - Positioned below header (approx 120px top) */}
+            {/* Loading Indicator */}
             <div className="fixed top-[140px] left-1/2 -translate-x-1/2 z-[100] pointer-events-none fade-in duration-500">
                 <div className="bg-card/90 backdrop-blur-md px-6 py-3 rounded-full border border-border/50 shadow-xl flex items-center gap-3 skeleton-pulse">
                     <div className="h-2.5 w-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
@@ -521,30 +558,28 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 </div>
             </div>
 
-            {/* Sidebar Skeleton - Only if fullPage */}
-            {fullPage && <SidebarSkeleton />}
+            {/* Sidebar Skeleton */}
+            <SidebarSkeleton />
 
-            <div
+            {/* Main Content Area - Matching MainLayout structure */}
+            <main
                 className={cn(
-                    "flex flex-col min-h-screen flex-1",
-                    "transition-all duration-300",
-                    // Only enforce left padding if sidebar is present AND we are NOT inside a wrapper that already handles it
-                    (fullPage && !withLayoutWrapper) ? "lg:pl-64" : ""
+                    "flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative",
+                    "transition-all duration-300"
                 )}
             >
-                {/* Header skeleton is now handled inside each tab skeleton */}
-
-                <main
+                {/* Content Container */}
+                <div
                     className={cn(
-                        "w-full flex-1",
-                        tab === 'config' ? "" : "container max-w-6xl mx-auto px-4 py-8"
+                        "w-full mx-auto px-4 py-10",
+                        tab === 'config' ? "" : "max-w-6xl"
                     )}
                 >
                     {renderTabSkeleton()}
-                </main>
-            </div>
+                </div>
+            </main>
 
-            {fullPage && !withLayoutWrapper && <MobileNavSkeleton />}
+            {!withLayoutWrapper && <MobileNavSkeleton />}
         </div>
     );
 };

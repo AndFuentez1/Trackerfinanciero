@@ -21,6 +21,7 @@ import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
 import { BrowserRouter as Router } from 'react-router-dom';
+import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
 const queryClient = new QueryClient();
 
 // Inner component that consumes the finance context
@@ -43,17 +44,7 @@ const AppContent = () => {
         }
     }, [themeVars]);
 
-    // Helper for skeleton type
-    const getSkeletonType = (path: string) => {
-        if (path === '/') return 'dashboard';
-        if (path.includes('historial')) return 'transactions';
-        if (path.includes('ahorros')) return 'savings';
-        if (path.includes('prestamos')) return 'loans';
-        if (path.includes('presupuestos')) return 'budgets';
-        if (path.includes('configuracion')) return 'config';
-        if (path.includes('flujo-caja')) return 'cashflow';
-        return 'default';
-    };
+
 
     // 1. Strict Loading Guard — SkeletonLoader evita layout shift inicial
     if (isLoading) {
@@ -67,7 +58,7 @@ const AppContent = () => {
             }
         }
 
-        const skeletonType = getSkeletonType(currentPath) as 'dashboard' | 'transactions' | 'savings' | 'loans' | 'budgets' | 'config' | 'cashflow' | 'default';
+        const skeletonType = getSkeletonTypeFromPath(currentPath) as 'dashboard' | 'transactions' | 'savings' | 'loans' | 'budgets' | 'config' | 'cashflow' | 'default';
         return <SkeletonLoader fullPage tab={skeletonType} />;
     }
     return (

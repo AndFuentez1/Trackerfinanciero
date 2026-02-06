@@ -33,7 +33,7 @@ export function SecuritySection() {
                         variant="outline"
                         size="sm"
                         onClick={() => setShowPasswordDialog(true)}
-                        className="w-full sm:w-auto font-medium"
+                        className="w-full sm:w-[220px] font-medium"
                     >
                         Cambiar / Establecer
                     </Button>
@@ -50,10 +50,10 @@ export function SecuritySection() {
                         </div>
                     </div>
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => signOut()}
-                        className="w-full sm:w-auto text-destructive hover:bg-destructive/10 hover:text-destructive font-medium"
+                        className="w-full sm:w-[220px] border-destructive text-destructive bg-white hover:bg-destructive/10 hover:text-destructive hover:border-destructive font-medium"
                     >
                         Cerrar sesión ahora
                     </Button>

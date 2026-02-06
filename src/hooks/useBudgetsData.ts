@@ -132,9 +132,6 @@ export function useBudgetsData() {
 
             // 2. Filter Transactions
             const budgetTransactions = transactions.filter(t => {
-                // Must be expense
-                if (t.type !== 'expense') return false;
-
                 // Must be in date range: match year and, if selected, month
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
@@ -143,7 +140,14 @@ export function useBudgetsData() {
                 if (budgetMonth !== 'all' && tMonth !== budgetMonth) return false;
 
                 // Must match category_id
-                return t.category_id === budget.category_id;
+                if (t.category_id !== budget.category_id) return false;
+
+                // NEW: Validate type match if category info is available
+                if (category) {
+                    if (t.type !== category.type) return false;
+                }
+
+                return true;
             }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             // 3. Calculate metrics

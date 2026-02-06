@@ -55,14 +55,14 @@ export default function BudgetsPage() {
     const isLoading = authLoading || budgetsLoading;
 
     if (isLoading) {
-        return <SkeletonLoader tab="budgets" fullPage withLayoutWrapper />;
+        return <SkeletonLoader tab="budgets" fullPage={false} withLayoutWrapper />;
     }
     if (!user) return null;
 
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
-                <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
+                <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border pb-6">
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
                             <PieChart className="h-6 w-6" />

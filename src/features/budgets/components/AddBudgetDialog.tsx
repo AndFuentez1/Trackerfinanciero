@@ -99,12 +99,19 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     }
   }, [editingBudget, reset]);
 
-  // Filter only expense categories for budgets
-  const expenseCategories = useMemo(() =>
+  // Filter categories based on functionality. We allow Expense and Income now for projection purposes.
+  // Note: Parent component can control this if needed in future, but currently we enable both.
+  const availableCategories = useMemo(() =>
     categories
-      .filter(c => c.type === 'expense')
+      .filter(c => {
+        // If editing, always include the budget's category even if type doesn't match default filter
+        if (editingBudget && editingBudget.category_id === c.id) return true;
+
+        // Include both expenses and income categories
+        return c.type === 'expense' || c.type === 'income';
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
-    [categories]);
+    [categories, editingBudget]);
 
   const onFormSubmit = async (values: BudgetFormValues) => {
     const now = new Date();
@@ -219,7 +226,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                       <Select
                         onValueChange={(val) => {
                           field.onChange(val);
-                          const cat = expenseCategories.find(c => c.id === val);
+                          const cat = availableCategories.find(c => c.id === val);
                           if (cat) {
                             setValue('category', cat.name);
 
@@ -234,9 +241,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenseCategories.map((c) => (
+                          {availableCategories.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
-                              {c.name}
+                              {c.name} ({c.type === 'income' ? 'Ingreso' : 'Gasto'})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -244,6 +251,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                     </div>
                     {!editingBudget && (
                       <div className="flex-shrink-0">
+                        {/* Default to expense, but maybe we should allow income? For now keeping as is to avoid scope creep for "Add Budget" flow which is 99% expense */}
                         <AddCategoryDialog type="expense" onAdd={addCategory} />
                       </div>
                     )}

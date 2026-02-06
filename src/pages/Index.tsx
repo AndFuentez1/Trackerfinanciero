@@ -145,7 +145,7 @@ export default function Index() {
     <div className="min-h-screen">
       <main className="mx-auto max-w-6xl px-4 py-10 space-y-12 animate-in fade-in duration-700">
         {/* Header Section */}
-        <header className="space-y-4 border-b border-border/40 pb-6">
+        <header className="space-y-4 border-b border-border pb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">

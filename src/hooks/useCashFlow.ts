@@ -35,7 +35,7 @@ interface FutureExpense {
   frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
 }
 
-export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año') {
+export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año', incomeMode: 'real' | 'projected' = 'real') {
   // ... (hooks remain same)
   const { user } = useAuth();
   const { transactions, paymentMethods, categories } = useFinance();
@@ -67,6 +67,17 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     return round(paymentMethods.reduce((sum, acc) => sum + (acc.balance || 0), 0));
   }, [paymentMethods]);
 
+  // Last recorded INCOME transaction date
+  const lastIncomeDate = useMemo(() => {
+    if (transactions.length === 0) return new Date(0);
+    return transactions
+      .filter(t => t.type === 'income')
+      .reduce((max, t) => {
+        const d = new Date(t.date);
+        return d > max ? d : max;
+      }, new Date(0));
+  }, [transactions]);
+
   // Fechas de proyección
   const now = new Date();
   const currentMonthStart = startOfMonth(now);
@@ -84,6 +95,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   // --- Cálculo detallado mensual avanzado ---
   function calculateMonthlySnapshot(date: Date, prevBalance: number, prevSavings: Record<string, number>, prevLoans: Record<string, { saldo: number, cuotasRestantes: number }>, prevCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }>) {
     const isPastMonth = isBefore(endOfMonth(date), currentMonthStart);
+    const isFutureRelativeToIncome = isAfter(startOfMonth(date), startOfMonth(lastIncomeDate));
 
     // Ingresos
     let ingresosSalario = 0;
@@ -113,11 +125,43 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       }
     });
 
-    // --- Ingresos proyectados (Removido: Solo transacciones reales o FE) ---
-    // (Anteriormente usaba budgets para proyecciones de ingresos)
+    // --- LOGICA DE INGRESOS ---
+    // 1. Ingresos por transacciones reales (siempre se calculan para histórico)
+    let realIncomeSum = 0;
+    transactions.forEach(tx => {
+      if (isTransferTransaction(tx)) return;
+      const txDate = new Date(tx.date);
+      const isSameMonth = tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM');
+      const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
 
-    // --- Gastos presupuestados (Removido: No proyectar metas, solo obligaciones) ---
-    // (Anteriormente usaba budgets para proyecciones de gastos)
+      const isMultiCuotaCC = pm?.type === 'credit' && (tx.installments || 1) > 1;
+
+      if (isSameMonth && !isMultiCuotaCC) {
+        if (tx.type === 'expense') {
+          egresosReales += tx.amount;
+        } else if (tx.type === 'income') {
+          // Allow income to be shown for ALL months (Past, Current, Future) if a transaction exists
+          realIncomeSum += tx.amount;
+        }
+      }
+    });
+
+    // 2. Ingresos Presupuestados (Monthly Income Budget)
+    const budgetedIncome = budgets.reduce((sum, b) => {
+      const cat = categories.find(c => c.id === b.budget.category_id);
+      if (cat && cat.type === 'income') {
+        return sum + b.budget.amount;
+      }
+      return sum;
+    }, 0);
+
+    // 3. DECISION: Real vs Projected
+    if (incomeMode === 'projected' && isFutureRelativeToIncome) {
+      otrosIngresos = budgetedIncome;
+    } else {
+      otrosIngresos = realIncomeSum;
+    }
+
 
     // --- Future Expenses & Subscriptions ---
     if (!isPastMonth) {
@@ -236,29 +280,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
 
     // --- Gastos reales del mes (Historical) ---
-    // Excluir transferencias entre cuentas propias para no inflar flujo neto (mismo criterio que Dashboard)
-    transactions.forEach(tx => {
-      if (isTransferTransaction(tx)) return;
-      const txDate = new Date(tx.date);
-      const isSameMonth = tx.date && !isNaN(txDate.getTime()) && format(txDate, 'yyyy-MM') === format(date, 'yyyy-MM');
-      const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
-
-      const isMultiCuotaCC = pm?.type === 'credit' && (tx.installments || 1) > 1;
-
-      if (isSameMonth && !isMultiCuotaCC) {
-        if (tx.type === 'expense') {
-          egresosReales += tx.amount;
-        } else if (tx.type === 'income') {
-          // Allow income to be shown for ALL months (Past, Current, Future) if a transaction exists
-          otrosIngresos += tx.amount;
-        }
-      }
-    });
-
-    // --- Ingresos Logic Simplified ---
-    // (Redundant block removed)
-
-
+    // (Ya calculados arriba en el loop de transacciones: egresosReales)
 
     // Calcular totales y balances antes de usarlos
     const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos;
@@ -308,9 +330,8 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       prevCardInstallments = snap.newCardInstallments;
     }
     return arr;
-  }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start, futureExpenses, categories]);
+  }, [balance_actual, budgets, savingsAccounts, loans, paymentMethods, transactions, start, futureExpenses, categories, incomeMode, lastIncomeDate]);
 
-  // --- Serie para gráfica (compatibilidad) ---
   // --- Serie para gráfica (compatibilidad) ---
   let runningRealBalance = balance_actual;
 
@@ -332,13 +353,6 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const pivotDate = transactions.length > 0 ? lastTxDate : new Date();
 
   const cashFlowSeries = monthlyBreakdown.map((row, idx) => {
-    // Calculate 'Real' flow
-    const realFlowNet =
-      (row.ingresosTotales) -
-      (row.egresosReales + row.egresosPrestamos + row.egresosTarjeta);
-
-    // Update running balance
-    runningRealBalance += realFlowNet;
 
     // Check dates for cutoff logic
     const rowDate = addMonths(start, idx);
@@ -349,7 +363,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     const isBeforePivot = isBefore(startRow, startPivot);
     const isSamePivot = isSameMonth(startRow, startPivot);
 
-    const val = (idx === 0) ? balance_actual : runningRealBalance;
+    const val = row.balanceAcumulado;
 
     return {
       rowDate, // Keep for later processing

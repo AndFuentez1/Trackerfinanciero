@@ -430,6 +430,7 @@ export function SummaryTab({
         </div>
 
         {/* Sección de Insights */}
+        {/* Sección de Insights - Oculta por solicitud
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-foreground border-l-2 border-primary pl-2 truncate">
             Insights y Alertas
@@ -438,6 +439,7 @@ export function SummaryTab({
             <InsightsPanel insights={insights.filter(i => !i.id.startsWith('budget-'))} />
           </div>
         </div>
+        */}
       </div>
     </div>
   );

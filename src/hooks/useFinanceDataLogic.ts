@@ -634,7 +634,8 @@ type ResettableTable =
   | 'categories'
   | 'savings_transactions'
   | 'savings_accounts'
-  | 'loans';
+  | 'loans'
+  | 'future_expenses';
 
 // Palette of distinct colors for consistent assignment
 export const MASTER_PALETTE = [
@@ -785,13 +786,14 @@ export function useFinanceDataLogic() {
     const errors: string[] = [];
     try {
       const tables: ResettableTable[] = [
+        'future_expenses',
+        'loans',
+        'savings_transactions',
         'transactions',
+        'savings_accounts',
         'budgets',
         'payment_methods',
         'categories',
-        'savings_transactions',
-        'savings_accounts',
-        'loans',
       ];
 
       for (const table of tables) {
@@ -860,7 +862,7 @@ export function useFinanceDataLogic() {
     setLoading(true);
     const errors: string[] = [];
     try {
-      const tables = ['transactions', 'savings_transactions', 'budgets', 'loans'];
+      const tables = ['future_expenses', 'loans', 'savings_transactions', 'transactions', 'budgets'];
 
       for (const table of tables) {
         const { error } = await supabase.from(table).delete().eq('user_id', user.id);
@@ -1058,7 +1060,7 @@ export function useFinanceDataLogic() {
         includeAll ? fetchAllTransactions() : Promise.resolve(null),
       ]);
 
-            if (includeAll && allTransactionsRes) {
+      if (includeAll && allTransactionsRes) {
         if (allTransactionsRes.error) {
           toast({ title: 'Error', description: 'No se pudieron cargar todos los registros hist?ricos.', variant: 'destructive' });
         } else {
@@ -2491,9 +2493,24 @@ export function useFinanceDataLogic() {
       .eq('id', id);
 
     if (error) {
-      toast({ title: 'Error', description: 'No se pudo eliminar el método de pago. Por favor, intenta de nuevo.', variant: 'destructive' });
+      console.error('Error deleting payment method:', error);
+      // Check for Foreign Key violation (Postgres error 23503)
+      if (error.code === '23503') {
+        toast({
+          title: 'No se puede eliminar',
+          description: 'Esta cuenta tiene transacciones asociadas. Debes eliminar las transacciones primero o usar "Resetear datos operativos" en configuración.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: `No se pudo eliminar: ${error.message}`,
+          variant: 'destructive'
+        });
+      }
       return;
     }
+
 
     setPaymentMethods(prev => prev.filter(pm => pm.id !== id));
     toast({ title: 'Eliminado', description: 'Método de pago eliminado' });
