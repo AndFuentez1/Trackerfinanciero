@@ -20,7 +20,7 @@ import { SavingsProvider } from "./contexts/SavingsContext";
 import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
-import { BrowserRouter as Router } from 'react-router-dom';
+import { HashRouter as Router } from 'react-router-dom';
 import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
 const queryClient = new QueryClient();
 
@@ -54,7 +54,8 @@ const AppContent = () => {
             if (window.location.hash) {
                 currentPath = window.location.hash.replace('#', '') || '/';
             } else {
-                currentPath = window.location.pathname.replace('/Trackerfinanciero', '') || '/';
+                // Fallback for initial load before hash might be set or if using memory router in tests
+                currentPath = '/';
             }
         }
 

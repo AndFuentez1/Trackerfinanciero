@@ -177,7 +177,12 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsGoogleSubmitting(true);
 
     try {
-      const redirectTo = `${window.location.origin}/auth`;
+      // Construct dynamic redirect URL based on environment
+      const origin = window.location.origin;
+      const baseUrl = import.meta.env.BASE_URL; // e.g., '/Trackerfinanciero/' or '/'
+      const separator = baseUrl.endsWith('/') ? '' : '/';
+      const redirectTo = `${origin}${baseUrl}${separator}auth`; // Points to valid route
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -317,7 +322,10 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const redirectUrl = window.location.origin;
+      const origin = window.location.origin;
+      const baseUrl = import.meta.env.BASE_URL;
+      const separator = baseUrl.endsWith('/') ? '' : '/';
+      const redirectUrl = `${origin}${baseUrl}`;
 
       const { error } = await supabase.auth.signUp({
         email,
@@ -396,7 +404,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           data: {
             display_name: userName.trim(),
           },
-          emailRedirectTo: `${window.location.origin}/auth?mode=confirm-signup`,
+          emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}?mode=confirm-signup`,
         }
       });
 

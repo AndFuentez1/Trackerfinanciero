@@ -37,7 +37,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     handleClearCacheAndReload = () => {
         localStorage.clear();
         sessionStorage.clear();
-        window.location.href = '/Trackerfinanciero/'; // Force navigate to base URL
+        window.location.href = import.meta.env.BASE_URL; // Force navigate to base URL
     };
 
     render() {
