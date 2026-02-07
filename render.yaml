@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: tracker-financiero-backend
+    env: python
+    plan: free
+    region: ohio
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api_backend:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
