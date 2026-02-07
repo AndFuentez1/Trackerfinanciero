@@ -72,6 +72,7 @@ export function WelcomePanel() {
               setIsConfiguringCurrency(false);
             }}
             disabled={isConfiguringCurrency}
+            aria-label="Confirmar moneda"
           >
             {isConfiguringCurrency ? '...' : <CheckCircle2 className="h-4 w-4" />}
           </Button>
@@ -96,10 +97,15 @@ export function WelcomePanel() {
             }}
             disabled={isInitializingCategories}
           >
-            {isInitializingCategories ? 'Cargando...' : 'Cargar sugeridas (recomendado)'}
+            {isInitializingCategories ? 'Cargando...' : (
+              <>
+                <span className="hidden sm:inline">Cargar sugeridas (recomendado)</span>
+                <span className="sm:hidden">Cargar sugeridas</span>
+              </>
+            )}
           </Button>
-          <Button onClick={() => setCategoryDialogOpen(true)} variant="secondary" className="w-full">
-            Crear manual
+          <Button onClick={() => navigate('/configuracion?highlight=categories')} variant="secondary" className="w-full">
+            Ir a Configuración
           </Button>
         </div>
       ),
@@ -111,8 +117,8 @@ export function WelcomePanel() {
       description: 'Cuentas, tarjetas o efectivo',
       completed: paymentMethods.length > 0,
       action: (
-        <Button onClick={() => setPaymentDialogOpen(true)} className="w-full">
-          Agregar mi primer método
+        <Button onClick={() => navigate('/configuracion?highlight=payment-methods')} className="w-full">
+          Ir a Configuración
         </Button>
       ),
     },
@@ -124,7 +130,7 @@ export function WelcomePanel() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-xl space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight">Bienvenido</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Bienvenido</h1>
           <p className="text-muted-foreground">Configura lo básico para empezar</p>
         </div>
 
@@ -172,7 +178,9 @@ export function WelcomePanel() {
               className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
               onClick={() => updateProfile({ welcome_completed: true })}
             >
-              ¡Todo listo! Continuar <CheckCircle2 className="ml-2 h-5 w-5" />
+              <span className="hidden sm:inline">¡Todo listo! Continuar</span>
+              <span className="sm:hidden">Continuar</span>
+              <CheckCircle2 className="ml-2 h-5 w-5" />
             </Button>
           </div>
         )}

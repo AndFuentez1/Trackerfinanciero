@@ -20,7 +20,12 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function PaymentMethodsSection() {
+interface PaymentMethodsSectionProps {
+    highlighted?: boolean;
+    onPaymentMethodCreated?: () => void;
+}
+
+export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: PaymentMethodsSectionProps = {}) {
     const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } = useSettingsPaymentMethods();
     const { formatCurrency } = useFormatCurrency();
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -38,7 +43,7 @@ export function PaymentMethodsSection() {
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
                             <Wallet className="h-5 w-5 text-primary" />
                             Mis Cuentas ({paymentMethods.length})
                         </CardTitle>
@@ -63,7 +68,14 @@ export function PaymentMethodsSection() {
                 <AddPaymentMethodDialog
                     open={isAddOpen}
                     onOpenChange={setIsAddOpen}
-                    onAdd={addPaymentMethod}
+                    onAdd={async (pm) => {
+                        const result = await addPaymentMethod(pm);
+                        // Trigger callback after adding payment method
+                        if (onPaymentMethodCreated && !result.error) {
+                            onPaymentMethodCreated();
+                        }
+                        return result;
+                    }}
                 />
 
                 {selectedPM && (

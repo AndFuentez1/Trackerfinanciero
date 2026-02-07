@@ -84,7 +84,7 @@ export function CurrencySection() {
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
                     <Globe className="h-5 w-5 text-primary" />
                     Moneda y Formato
                 </CardTitle>

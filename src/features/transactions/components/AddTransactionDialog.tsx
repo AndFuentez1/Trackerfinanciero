@@ -397,12 +397,12 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2 border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+          className="gap-2 border border-input text-[15px] py-2 flex items-center justify-center"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >
-          <span className="hidden sm:flex flex-row items-center gap-2">Nueva transacción <Plus className="h-3 w-3" /></span>
-          <span className="sm:hidden flex flex-row items-center gap-2">Nueva transacción <Plus className="h-3 w-3" /></span>
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Nueva transacción</span>
         </Button>
       )}
 

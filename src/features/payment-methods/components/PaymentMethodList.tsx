@@ -199,8 +199,8 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
           ]
         )}
       >
-        <Plus className={cn("h-7 w-7", highlighted && "animate-pulse")} />
-        <span>Agregar método</span>
+        <Plus className={cn("h-5 w-5", highlighted && "animate-pulse")} />
+        <span className="hidden sm:inline ml-2">Agregar método</span>
       </Button>
     </div>
   );

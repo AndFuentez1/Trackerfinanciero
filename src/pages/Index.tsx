@@ -152,7 +152,7 @@ export default function Index() {
                 <LayoutDashboard className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight">Panel Principal</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Panel Principal</h1>
                 <p className="text-muted-foreground font-medium">Resumen general de tu estado financiero</p>
               </div>
             </div>

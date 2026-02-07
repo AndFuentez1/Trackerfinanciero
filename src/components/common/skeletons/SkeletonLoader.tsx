@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 interface SkeletonLoaderProps {
     loading?: boolean;
-    tab?: 'dashboard' | 'transactions' | 'config' | 'savings' | 'loans' | 'budgets' | 'default' | 'cashflow';
+    tab?: 'dashboard' | 'transactions' | 'config' | 'savings' | 'loans' | 'budgets' | 'default' | 'cashflow' | 'auth';
     message?: string;
     rows?: number;
     fullPage?: boolean;
@@ -36,16 +36,20 @@ const PulseBlock: React.FC<{
 const CardSkeleton: React.FC<{
     className?: string;
     height?: string;
+    width?: string;
+    maxWidth?: string;
     children?: React.ReactNode;
     padding?: string;
     style?: React.CSSProperties;
-}> = ({ className, height, children, padding = '1.5rem', style }) => (
+}> = ({ className, height, width, maxWidth, children, padding = '1.5rem', style }) => (
     <div
         className={cn("rounded-xl shadow-sm", className)}
         style={{
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border)',
             height,
+            width,
+            maxWidth,
             padding,
             transition: 'all 0.3s ease',
             ...style
@@ -461,6 +465,30 @@ const CashFlowSkeleton = () => (
 );
 
 // ---------------------------------------------------------------------
+// Auth Skeleton (No Sidebar)
+// ---------------------------------------------------------------------
+const AuthSkeleton = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+        <CardSkeleton height="auto" width="100%" maxWidth="450px" padding="2rem" className="flex flex-col items-center space-y-6">
+            <div className="p-3 rounded-2xl bg-primary/10 mb-2">
+                <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.5rem" />
+            </div>
+            <PulseBlock height="2rem" width="60%" className="mb-2" />
+            <PulseBlock height="1rem" width="40%" className="mb-8" />
+
+            <div className="w-full space-y-4">
+                <PulseBlock height="3rem" width="100%" borderRadius="0.5rem" />
+                <div className="flex gap-2">
+                    <PulseBlock height="2.5rem" width="50%" borderRadius="0.5rem" />
+                    <PulseBlock height="2.5rem" width="50%" borderRadius="0.5rem" />
+                </div>
+                <PulseBlock height="10rem" width="100%" borderRadius="0.5rem" />
+            </div>
+        </CardSkeleton>
+    </div>
+);
+
+// ---------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------
 
@@ -482,13 +510,13 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             case 'savings': return <SavingsSkeleton />;
             case 'config': return <ConfigSkeleton />;
             case 'cashflow': return <CashFlowSkeleton />;
+            case 'auth': return <AuthSkeleton />;
             default: return <DashboardSkeleton />;
         }
     };
 
-
-
     const loadingText = message || "Cargando...";
+    const isAuth = tab === 'auth';
 
     // Embedded Mode (Inside MainLayout)
     if (!fullPage) {
@@ -558,28 +586,30 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 </div>
             </div>
 
-            {/* Sidebar Skeleton */}
-            <SidebarSkeleton />
+            {/* Sidebar Skeleton - Only show if NOT auth */}
+            {!isAuth && <SidebarSkeleton />}
 
-            {/* Main Content Area - Matching MainLayout structure */}
+            {/* Main Content Area */}
             <main
                 className={cn(
                     "flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative",
-                    "transition-all duration-300"
+                    "transition-all duration-300",
+                    isAuth ? "bg-background flex items-center justify-center" : ""
                 )}
             >
                 {/* Content Container */}
                 <div
                     className={cn(
                         "w-full mx-auto px-4 py-10",
-                        tab === 'config' ? "" : "max-w-6xl"
+                        tab === 'config' ? "" : "max-w-6xl",
+                        isAuth ? "flex justify-center items-center h-full" : ""
                     )}
                 >
                     {renderTabSkeleton()}
                 </div>
             </main>
 
-            {!withLayoutWrapper && <MobileNavSkeleton />}
+            {!withLayoutWrapper && !isAuth && <MobileNavSkeleton />}
         </div>
     );
 };

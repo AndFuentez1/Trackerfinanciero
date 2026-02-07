@@ -180,7 +180,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       <DialogTrigger asChild>
         {children || (
           <Button
-            className="gap-2 shadow-sm border border-input min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+            className="gap-2 shadow-sm border border-input text-[15px] py-2 flex items-center justify-center"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
             onClick={(e) => {
@@ -198,8 +198,8 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
               }
             }}
           >
-            <span className="hidden sm:flex flex-row items-center gap-2">Nuevo Presupuesto <Target className="h-3 w-3" /></span>
-            <span className="sm:hidden flex flex-row items-center gap-2">Nuevo Presupuesto <Target className="h-3 w-3" /></span>
+            <Target className="h-4 w-4" />
+            <span className="hidden sm:inline">Nuevo Presupuesto</span>
           </Button>
         )}
       </DialogTrigger>

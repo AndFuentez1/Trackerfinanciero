@@ -284,7 +284,7 @@ export default function HistoryPage() {
                             <Wallet className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight">Historial</h1>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Historial</h1>
                             <p className="text-muted-foreground font-medium">Gestiona y consulta tus transacciones</p>
                         </div>
                     </div>

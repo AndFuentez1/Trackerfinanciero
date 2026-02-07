@@ -356,7 +356,7 @@ export default function LoansPage() {
             <div className="min-h-screen bg-background/30">
                 <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                     <div className="container max-w-6xl mx-auto px-4 py-4">
-                        <h1 className="text-xl font-semibold">Préstamos y Deudas</h1>
+                        <h1 className="text-lg sm:text-xl font-semibold">Préstamos y Deudas</h1>
                     </div>
                 </header>
                 <main className="container max-w-6xl mx-auto px-4 py-16 flex flex-col items-center justify-center gap-4 text-center">
@@ -377,7 +377,7 @@ export default function LoansPage() {
                             <HandCoins className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight">Préstamos y Deudas</h1>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Préstamos y Deudas</h1>
                             <p className="text-muted-foreground font-medium">Gestiona tus préstamos personales y deudas</p>
                         </div>
                     </div>
@@ -389,8 +389,8 @@ export default function LoansPage() {
                                     aria-label="Nuevo préstamo"
                                     title="Nuevo préstamo"
                                 >
-                                    <span className="hidden sm:flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
-                                    <span className="sm:hidden flex flex-row items-center gap-2">Nuevo préstamo <CheckCircle2 className="h-3 w-3" /></span>
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Nuevo préstamo</span>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">

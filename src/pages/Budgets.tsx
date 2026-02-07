@@ -68,7 +68,7 @@ export default function BudgetsPage() {
                             <PieChart className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight">Presupuestos</h1>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Presupuestos</h1>
                             <p className="text-muted-foreground font-medium">Controla tus gastos mensuales</p>
                         </div>
                     </div>

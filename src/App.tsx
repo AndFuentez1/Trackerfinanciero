@@ -20,13 +20,14 @@ import { SavingsProvider } from "./contexts/SavingsContext";
 import { LoansProvider } from "./contexts/LoansContext";
 import { useFinance } from "./contexts/FinanceContext";
 import { SkeletonLoader } from "./components/common/skeletons/SkeletonLoader";
+import { SessionTimeoutWarning } from "./components/SessionTimeoutWarning";
 import { HashRouter as Router } from 'react-router-dom';
 import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
 const queryClient = new QueryClient();
 
 // Inner component that consumes the finance context
 const AppContent = () => {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, showTimeoutWarning, remainingTime, extendSession, logoutNow } = useAuth();
     const { themeVars, loading: financeLoading } = useFinance();
 
     // Consolidated loading state
@@ -59,35 +60,50 @@ const AppContent = () => {
             }
         }
 
+        // Force 'auth' skeleton if we are on the auth page
+        if (currentPath.includes('auth')) {
+            return <SkeletonLoader fullPage tab="auth" />;
+        }
+
         const skeletonType = getSkeletonTypeFromPath(currentPath) as 'dashboard' | 'transactions' | 'savings' | 'loans' | 'budgets' | 'config' | 'cashflow' | 'default';
         return <SkeletonLoader fullPage tab={skeletonType} />;
     }
     return (
-        <Router>
-            <Routes>
-                {user ? (
-                    /* Authenticated Routes */
-                    <Route element={<MainLayout />}>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/historial" element={<HistoryPage />} />
-                        <Route path="/ahorros" element={<SavingsPage />} />
-                        <Route path="/presupuestos" element={<BudgetsPage />} />
-                        <Route path="/prestamos" element={<LoansPage />} />
-                        <Route path="/configuracion" element={<ConfiguracionPage />} />
-                        <Route path="/flujo-caja" element={<CashFlow />} />
-                        {/* Catch-all for authenticated users: Redirect to Dashboard */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Route>
-                ) : (
-                    /* Public Routes */
-                    <>
-                        <Route path="/auth" element={<Auth />} />
-                        {/* Catch-all for guests: Redirect to Auth */}
-                        <Route path="*" element={<Navigate to="/auth" replace />} />
-                    </>
-                )}
-            </Routes>
-        </Router>
+        <>
+            {/* Session Timeout Warning Modal - Global */}
+            <SessionTimeoutWarning
+                open={showTimeoutWarning}
+                remainingTime={remainingTime}
+                onExtend={extendSession}
+                onLogout={logoutNow}
+            />
+
+            <Router>
+                <Routes>
+                    {user ? (
+                        /* Authenticated Routes */
+                        <Route element={<MainLayout />}>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/historial" element={<HistoryPage />} />
+                            <Route path="/ahorros" element={<SavingsPage />} />
+                            <Route path="/presupuestos" element={<BudgetsPage />} />
+                            <Route path="/prestamos" element={<LoansPage />} />
+                            <Route path="/configuracion" element={<ConfiguracionPage />} />
+                            <Route path="/flujo-caja" element={<CashFlow />} />
+                            {/* Catch-all for authenticated users: Redirect to Dashboard */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Route>
+                    ) : (
+                        /* Public Routes */
+                        <>
+                            <Route path="/auth" element={<Auth />} />
+                            {/* Catch-all for guests: Redirect to Auth */}
+                            <Route path="*" element={<Navigate to="/auth" replace />} />
+                        </>
+                    )}
+                </Routes>
+            </Router>
+        </>
     );
 };
 

@@ -11,5 +11,7 @@ export const getSkeletonTypeFromPath = (path: string) => {
     if (normalizedPath.includes('configuracion')) return 'config';
     if (normalizedPath.includes('flujo-caja')) return 'cashflow';
 
+    if (normalizedPath.includes('auth')) return 'auth';
+
     return 'default';
 };

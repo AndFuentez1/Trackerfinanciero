@@ -58,10 +58,11 @@ export function CategoryDialog({ open, onOpenChange, categoryToEdit, onSave }: C
             } else {
                 setName('');
                 setType('expense');
-                setSelectedColor('');
 
-                // New category: show top 10 available
-                setVisibleOptions(availablePool.slice(0, 10));
+                // New category: show top 10 available and pre-select the first one
+                const options = availablePool.slice(0, 10);
+                setVisibleOptions(options);
+                setSelectedColor(options[0] || '');
             }
         }
     }, [categoryToEdit, open]); // eslint-disable-line react-hooks/exhaustive-deps

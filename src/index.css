@@ -245,6 +245,16 @@ select {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     cursor: pointer;
   }
+
+  @media (max-width: 640px) {
+    .btn-base:has(svg) .button-text {
+      display: none;
+    }
+
+    .btn-base:has(svg) span:not(:has(svg)) {
+      display: none;
+    }
+  }
 }
 
 html,

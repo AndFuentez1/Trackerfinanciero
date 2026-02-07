@@ -88,11 +88,16 @@ export function PendingInvoicesPanel() {
                     table: 'pending_invoices',
                     filter: `user_id=eq.${user.id}`,
                 },
-                (payload) => {
-                    if (payload.errors?.length) {
-                        console.error('[PendingInvoicesPanel] Realtime error', payload.errors);
-                    }
-                    fetchInvoices(); // Refresh consistent state
+                (payload) => {
+
+                    if (payload.errors?.length) {
+
+                        console.error('[PendingInvoicesPanel] Realtime error', payload.errors);
+
+                    }
+
+                    fetchInvoices(); // Refresh consistent state
+
                 }
             )
             .subscribe();
@@ -161,15 +166,11 @@ export function PendingInvoicesPanel() {
                         .single();
 
                     if (catError) {
-
                         console.error('[PendingInvoicesPanel] Failed to create category', catError);
-
                         toast({ title: 'Error', description: 'No se pudo crear la categoría', variant: 'destructive' });
                         return;
                     }
                     categoryId = newCategory.id;
-
-                    // Refresh data globally
                     refreshData();
                 }
             }
@@ -185,22 +186,28 @@ export function PendingInvoicesPanel() {
                 date: invoice.arrival_date,
             };
 
-            await addTransaction(transactionData);
+            const result = await addTransaction(transactionData);
 
-            // Mark invoice as approved (delete it)
+            if (result && result.error) {
+                console.error('[PendingInvoicesPanel] Transaction failed', result.error);
+                if (typeof result.error === 'string') {
+                    // Toast likely shown by hook
+                } else {
+                    toast({ title: 'Error', description: 'No se pudo crear la transacción. Verifica los datos.', variant: 'destructive' });
+                }
+                return;
+            }
+
+            // Mark invoice as approved (delete it) ONLY if transaction succeeded
             const { error: deleteError } = await supabase
                 .from('pending_invoices')
                 .delete()
                 .eq('id', invoice.id);
 
             if (deleteError) {
-
                 console.error('[PendingInvoicesPanel] Failed to delete invoice', deleteError);
-
-                toast({ title: 'Error', description: 'No se pudo eliminar la factura', variant: 'destructive' });
-
+                toast({ title: 'Error', description: 'Se creó la transacción pero no se pudo eliminar de pendientes.', variant: 'destructive' });
                 return;
-
             }
 
             toast({
@@ -208,20 +215,12 @@ export function PendingInvoicesPanel() {
                 description: 'La transacción ha sido registrada exitosamente.'
             });
 
-            // Update local state and cleanup
-            setInvoices(prev => prev.filter(i => i.id !== invoice.id));
-            setEditingId(null);
-            setEditForm({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
-
             // Refresh global data
             refreshData();
 
         } catch (error) {
-
             console.error('[PendingInvoicesPanel] Failed to approve invoice', error);
-
             toast({ title: 'Error', description: 'No se pudo aprobar la factura', variant: 'destructive' });
-
         }
     };
 
@@ -235,6 +234,7 @@ export function PendingInvoicesPanel() {
             toast({ title: 'Error', description: 'No se pudo rechazar la factura', variant: 'destructive' });
         } else {
             toast({ title: 'Factura rechazada', description: 'Se ha eliminado de la lista.' });
+            // Optimistic update
             setInvoices(prev => prev.filter(i => i.id !== id));
         }
     };

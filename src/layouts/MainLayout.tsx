@@ -82,7 +82,7 @@ export default function MainLayout() {
                         <Mail className="h-10 w-10 text-amber-600" />
                     </div>
                     <div className="space-y-3">
-                        <h1 className="text-2xl font-bold tracking-tight">Verifica tu correo</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Verifica tu correo</h1>
                         <p className="text-muted-foreground text-sm">
                             Tu cuenta está casi lista. Hemos enviado un correo de confirmación a <span className="font-bold text-foreground">{user.email}</span>.
                         </p>

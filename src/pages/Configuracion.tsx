@@ -9,9 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SkeletonLoader } from '@/components/common/skeletons/SkeletonLoader';
 import { Settings2, Github, Heart } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 export default function ConfiguracionPage() {
     const { loading } = useFinanceData();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const highlight = params.get('highlight');
+        if (highlight) {
+            setHighlightedSection(highlight);
+        }
+    }, [location.search]);
 
     if (loading) {
         return <SkeletonLoader tab="config" fullPage withLayoutWrapper />;
@@ -28,7 +42,7 @@ export default function ConfiguracionPage() {
                             <Settings2 className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight">Configuración</h1>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Configuración</h1>
                             <p className="text-muted-foreground font-medium">Gestiona tus preferencias, cuentas y seguridad de la aplicación</p>
                         </div>
                     </div>
@@ -39,8 +53,38 @@ export default function ConfiguracionPage() {
                         <ThemeSection />
                         <CurrencySection />
                         <div className="flex flex-col gap-10">
-                            <CategoriesSection />
-                            <PaymentMethodsSection />
+                            <div className={cn(
+                                "transition-all duration-300",
+                                highlightedSection === 'categories' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
+                            )}>
+                                <CategoriesSection
+                                    highlighted={highlightedSection === 'categories'}
+                                    onCategoryCreated={() => {
+                                        if (highlightedSection === 'categories') {
+                                            setTimeout(() => {
+                                                setHighlightedSection(null);
+                                                navigate('/auth');
+                                            }, 500);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className={cn(
+                                "transition-all duration-300",
+                                highlightedSection === 'payment-methods' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
+                            )}>
+                                <PaymentMethodsSection
+                                    highlighted={highlightedSection === 'payment-methods'}
+                                    onPaymentMethodCreated={() => {
+                                        if (highlightedSection === 'payment-methods') {
+                                            setTimeout(() => {
+                                                setHighlightedSection(null);
+                                                navigate('/auth');
+                                            }, 500);
+                                        }
+                                    }}
+                                />
+                            </div>
                         </div>
                     </section>
 

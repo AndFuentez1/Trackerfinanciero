@@ -76,7 +76,7 @@ export default function SavingsPage() {
             <div className="min-h-screen bg-background/30">
                 <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                     <div className="container max-w-6xl mx-auto px-4 py-4">
-                        <h1 className="text-xl font-semibold">Ahorros</h1>
+                        <h1 className="text-lg sm:text-xl font-semibold">Ahorros</h1>
                     </div>
                 </header>
                 <main className="container max-w-6xl mx-auto px-4 py-16 flex flex-col items-center justify-center gap-4 text-center">
@@ -101,7 +101,7 @@ export default function SavingsPage() {
                             <Wallet className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight">Ahorros</h1>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ahorros</h1>
                             <p className="text-muted-foreground font-medium">Metas y seguimiento de ahorros</p>
                         </div>
                     </div>

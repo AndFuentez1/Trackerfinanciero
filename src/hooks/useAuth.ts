@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useIdleTimer } from './useIdleTimer';
+import { useToast } from './use-toast';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let ignore = false;
@@ -103,8 +107,50 @@ export function useAuth() {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     localStorage.removeItem('sb_remember_me');
+    setShowTimeoutWarning(false); // Close warning if open
     return { error };
   };
+
+  // Idle timer callbacks
+  const handleIdleWarning = useCallback(() => {
+    setShowTimeoutWarning(true);
+  }, []);
+
+  const handleIdleTimeout = useCallback(async () => {
+    setShowTimeoutWarning(false);
+    await signOut();
+    toast({
+      title: 'Sesión cerrada',
+      description: 'Tu sesión se cerró automáticamente por inactividad.',
+      variant: 'default',
+    });
+    // Redirect to auth page
+    if (typeof window !== 'undefined') {
+      window.location.href = window.location.origin + '/auth';
+    }
+  }, [toast]);
+
+  // Initialize idle timer (only when user is logged in)
+  const idleTimer = useIdleTimer({
+    timeout: 3600000, // 1 hour
+    warningTime: 300000, // 5 minutes
+    onWarning: handleIdleWarning,
+    onTimeout: handleIdleTimeout,
+    enabled: !!user && !loading,
+  });
+
+  const extendSession = useCallback(() => {
+    setShowTimeoutWarning(false);
+    idleTimer.extendSession();
+  }, [idleTimer]);
+
+  const logoutNow = useCallback(async () => {
+    setShowTimeoutWarning(false);
+    await signOut();
+    if (typeof window !== 'undefined') {
+      window.location.href = window.location.origin + '/auth';
+    }
+  }, []);
 
   return {
     user,
@@ -113,5 +159,10 @@ export function useAuth() {
     signInWithOtp,
     signInWithPassword,
     signOut,
+    // Idle timer state
+    showTimeoutWarning,
+    remainingTime: idleTimer.remainingTime,
+    extendSession,
+    logoutNow,
   };
 }

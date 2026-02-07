@@ -20,7 +20,12 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function CategoriesSection() {
+interface CategoriesSectionProps {
+    highlighted?: boolean;
+    onCategoryCreated?: () => void;
+}
+
+export function CategoriesSection({ highlighted, onCategoryCreated }: CategoriesSectionProps = {}) {
     const { categories, addCategory, updateCategory, deleteCategory } = useSettingsCategories();
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -41,11 +46,17 @@ export function CategoriesSection() {
     };
 
     const handleSave = async (category: Omit<CategoryItem, 'id'>, id?: string) => {
+        let result;
         if (id) {
-            await updateCategory(id, category);
+            result = await updateCategory(id, category);
         } else {
-            await addCategory(category);
+            result = await addCategory(category);
+            // Trigger callback if creating new category (not editing)
+            if (onCategoryCreated && !result.error) {
+                onCategoryCreated();
+            }
         }
+        return result;
     };
 
     const typeLabels: Record<string, string> = {
@@ -62,7 +73,7 @@ export function CategoriesSection() {
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
                             <Tags className="h-5 w-5 text-primary" />
                             Categorías ({categories.length})
                         </CardTitle>

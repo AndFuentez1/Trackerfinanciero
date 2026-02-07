@@ -451,7 +451,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             <Mail className="h-10 w-10 text-amber-600" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Verifica tu correo</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Verifica tu correo</h1>
             <p className="text-muted-foreground">
               Hemos enviado un enlace de confirmación a <span className="font-semibold text-foreground">{email || (user?.email)}</span>.
             </p>
@@ -480,7 +480,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             <Wallet className="h-10 w-10 text-primary" />
           </div>
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">TrackFinance</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TrackFinance</h1>
             <p className="text-muted-foreground text-sm mt-1">Tu control financiero, simplificado.</p>
           </div>
         </div>

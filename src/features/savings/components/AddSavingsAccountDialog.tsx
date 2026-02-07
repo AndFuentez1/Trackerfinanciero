@@ -87,8 +87,8 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
         <Button variant="default" size="sm" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center">
-          <span className="hidden sm:flex flex-row items-center gap-2">Nueva cuenta <Wallet className="h-3 w-3" /></span>
-          <span className="sm:hidden flex flex-row items-center gap-2">Nueva cuenta <Wallet className="h-3 w-3" /></span>
+          <Wallet className="h-4 w-4" />
+          <span className="hidden sm:inline">Nueva cuenta</span>
         </Button>
       </DialogTrigger>
       <DialogContent

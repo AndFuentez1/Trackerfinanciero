@@ -34,7 +34,7 @@ export function DangerZone() {
     return (
         <Card className="rounded-2xl shadow-sm border-destructive/20 bg-destructive/5 overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl font-bold text-destructive">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-destructive">
                     <AlertCircle className="h-5 w-5" />
                     Zona de Peligro
                 </CardTitle>

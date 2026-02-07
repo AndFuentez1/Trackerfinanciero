@@ -61,7 +61,7 @@ export default function CashFlow() {
               <Wallet className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">Flujo de Caja</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Flujo de Caja</h1>
               <p className="text-muted-foreground font-medium">Proyección de ingresos y egresos</p>
             </div>
           </div>

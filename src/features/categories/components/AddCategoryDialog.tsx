@@ -52,12 +52,13 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
     // State for visible options
     const [visibleOptions, setVisibleOptions] = useState<string[]>([]);
 
-    // Initialize visible options when dialog opens
+    // Initialize visible options when dialog opens, pre-selecting the first available color
     useEffect(() => {
         if (open) {
-            // New category scenario
-            setSelectedColor('');
-            setVisibleOptions(availablePool.slice(0, 10));
+            // New category scenario: pre-select the first available color
+            const options = availablePool.slice(0, 10);
+            setVisibleOptions(options);
+            setSelectedColor(options[0] || '');
         }
     }, [open]); // Depend on open to reset. Not on availablePool to avoid reshuffles.
 
