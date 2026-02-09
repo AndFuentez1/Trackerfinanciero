@@ -1,8 +1,8 @@
 import { LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
-import { useFinance } from '@/contexts/FinanceContext';
-import { CURRENCIES } from '@/hooks/currencyConstants';
+import { cn } from '@/core/utils';
+import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
+import { useFinance } from '@/features/finance/context/FinanceContext';
+import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 
 interface SummaryCardProps {
   title: string;
@@ -110,3 +110,6 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
     </div>
   );
 }
+
+
+

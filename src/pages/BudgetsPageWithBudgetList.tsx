@@ -1,4 +1,4 @@
-import { BudgetList } from '@/features/budgets/components/BudgetList';
+import { BudgetList } from '@/features/finance/budgets/components/BudgetList';
 // ...existing code...
 
 export default function BudgetsPage() {
@@ -15,3 +15,4 @@ export default function BudgetsPage() {
     </div>
   );
 }
+

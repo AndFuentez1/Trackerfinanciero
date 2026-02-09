@@ -1,4 +1,7 @@
 {
     "css.customData": [],
-    "css.lint.unknownAtRules": "ignore"
+    "css.lint.unknownAtRules": "ignore",
+    "chat.tools.terminal.autoApprove": {
+        "Test-Path": true
+    }
 }

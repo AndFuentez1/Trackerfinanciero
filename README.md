@@ -58,68 +58,58 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
 - **Optimización de UI:** Eliminación de componentes redundantes en Presupuestos para mejorar UX.
 - **Fixes de Tipado:** Corrección estricta de errores TypeScript en gráficos y contextos.
 
+## 🚀 Hoja de Ruta (Roadmap) & Próximos Pasos
+
+Se ha diseñado un plan para futuras mejoras críticas que optimizarán la flexibilidad y el alcance de la aplicación:
+
+### 1. Internacionalización (i18n)
+- **Selector de Idioma:** Preparación para soporte multi-idioma (Español/Inglés).
+- **Localización:** Adaptación de formatos de fecha y moneda según la elección del usuario
+
+### 2. Toggles de Funcionalidad (Feature Toggles)
+- **Control de Visibilidad:** Implementación de interruptores en Configuración para mostrar/ocultar módulos específicos:
+    - **Panel de Facturas Pendientes:** Opción para usuarios que prefieren un historial más limpio.
+    - **Zona de Reclasificación:** Toggle para activar/desactivar la asistencia de limpieza de datos.
+- **Persistencia:** Uso de `localStorage` para preferencias inmediatas, escalable a perfil de base de datos.
+
 ## Estructura del Código
 
 ### Directorios Principales
 
-#### `/src/components`
-- **`ui/`**: Componentes base de shadcn/ui (49 componentes: botones, inputs, dialogs, tables, etc.)
-- **`common/`**: Componentes reutilizables
-  - `skeletons/` - Loading states específicos por página
-- **`layout/`**: Componentes de layout
-  - `PageHeader.tsx` - Header reutilizable para páginas
+#### `/src/features` (Feature-First Architecture)
+Organización por dominio funcional. Cada feature es autocontenida:
 
-#### `/src/features` (Feature-Based Architecture)
-Organización por dominio funcional. Cada feature contiene sus propios componentes, hooks y tipos:
+- **`auth/`**: Autenticación, login, protecciones de ruta.
+- **`finance/`**: Núcleo financiero.
+    - `components/`: UI específica de finanzas (tablas, cards).
+    - `hooks/`: Lógica de negocio (`useFinanceData`, `useBudgetsData`, `useLoans`, `useSavingsData`).
+    - `context/`: `FinanceContext`, `LoansContext`, `SavingsContext`.
+    - `utils/`: Helpers financieros (`financeUtils`).
+    - `types/`: Definiciones TypeScript (`Transaction`, `Budget`, etc.).
+- **`dashboard/`**: Vistas de resumen y widgets principales.
+- **`settings/`**: Configuración de usuario y preferencias.
 
-- **`auth/`**: Autenticación, login, onboarding
-- **`budgets/`**: Gestión de presupuestos mensuales
-- **`cashflow/`**: Proyecciones de flujo de caja y gastos futuros
-- **`categories/`**: Gestión de categorías de transacciones
-- **`dashboard/`**: Vista principal, resúmenes, gráficas
-- **`loans/`**: Préstamos y deudas (prestados y recibidos)
-- **`payment-methods/`**: Métodos de pago (efectivo, débito, crédito, ahorros)
-- **`savings/`**: Ahorros e inversiones con tracking de rendimientos
-- **`transactions/`**: Transacciones, historial, importar/exportar Excel
+#### `/src/shared` (Shared Kernel)
+Componentes y utilidades reutilizables en toda la app:
 
-#### `/src/hooks`
-Custom hooks para lógica de negocio:
-- **Core**: `useFinanceData`, `useFinanceLogic` - Estado financiero principal
-- **Dominio**: `useBudgetsData`, `useLoans`, `useSavingsData` - Datos por feature
-- **UI**: `useFormatCurrency`, `useDecimalPlaces`, `useMobile` - Utilidades UI
+- **`ui/`**: Componentes base de shadcn/ui (Button, Card, Dialog, etc.).
+- **`components/`**: Componentes compuestos reutilizables (`ErrorBoundary`, `MoneyInput`).
+    - `skeletons/`: Loaders visuales.
+- **`hooks/`**: Hooks genéricos (`use-toast`, `use-mobile`, `useScrollRestoration`).
+- **`layouts/`**: Estructuras de página (`MainLayout`, `Sidebar`, `MobileNav`).
 
-#### `/src/contexts`
-Context providers para estado global:
-- `FinanceContext` - Estado financiero principal (transacciones, categorías, métodos de pago)
-- `LoansContext` - Estado de préstamos y deudas
-- `SavingsContext` - Estado de ahorros e inversiones
-
-#### `/src/layouts`
-Layouts de la aplicación:
-- `MainLayout.tsx` - Layout principal con autenticación
-- `Sidebar.tsx` - Navegación lateral (desktop)
-- `MobileNav.tsx` - Navegación inferior (mobile)
-
-#### `/src/pages`
-Vistas principales (rutas):
-- `Index.tsx` - Dashboard principal
-- `History.tsx` - Historial de transacciones
-- `Budgets.tsx` - Presupuestos mensuales
-- `CashFlow.tsx` - Flujo de caja proyectado
-- `Savings.tsx` - Ahorros e inversiones
-- `Loans.tsx` - Préstamos y deudas
-- `Configuracion.tsx` - Configuración de la app
-- `Auth.tsx` - Autenticación (login/registro)
-- `settings/` - Secciones de configuración
-
-#### `/src/lib`
-Utilidades y helpers:
-- `utils.ts` - Funciones utilitarias generales
-- `currencyFormat.tsx` - Formateo de moneda
+#### `/src/core`
+Lógica transversal de la aplicación:
+- **`api/`**: Query keys y configuraciones.
+- **`utils/`**: Utilidades generales (`cn`, `dateUtils`, `analytics`).
 
 #### `/src/integrations`
-Integraciones con servicios externos:
-- `supabase/` - Cliente y tipos de Supabase
+- `supabase/`: Cliente y tipos generados automáticamente.
+- `excel/`: Lógica de importación/exportación.
+
+#### `/src/pages`
+Puntos de entrada de rutas (ahora más delgados, delegando a features):
+- `Index.tsx`, `History.tsx`, `Budgets.tsx`, `CashFlow.tsx`, `Savings.tsx`, `Loans.tsx`.
 
 ---
 
@@ -282,22 +272,22 @@ npm run dev
 **Purpose:** Provide concise, actionable information for AI agents & developers.
 
 ## Quick Summary
-- `src/hooks/useFinanceData.ts` - Core transactions, categories, payment methods
-- `src/hooks/useBudgetsData.ts` - Budget management and tracking
-- `src/hooks/useLoans.ts` + `useLoansLogic.ts` - Loan management (debts & credits)
-- `src/hooks/useSavingsData.ts` + `useSavingsLogic.ts` - Savings goals and tracking
-- `src/hooks/usePaymentMethods.ts` - Payment method operations
-- Context providers: `FinanceContext.tsx`, `LoansContext.tsx`, `SavingsContext.tsx`
+- `src/features/finance/hooks/useFinanceData.ts` - Core transactions, categories, payment methods
+- `src/features/finance/hooks/useBudgetsData.ts` - Budget management
+- `src/features/finance/loans/hooks/useLoans.ts` - Loan management
+- `src/features/finance/hooks/useSavingsData.ts` - Savings goals
+- `src/features/finance/context/` - Context providers (`FinanceContext`, `LoansContext`, `SavingsContext`)
 
 ## Architecture & Important Patterns
 
+### Feature-Based Architecture
+- **Features**: Self-contained modules in `src/features/[feature-name]`
+- **Shared**: Common UI and logic in `src/shared`
+- **Core**: App-wide configuration in `src/core`
+
 ### Modular Hook Architecture
-- Core finance operations: `useFinanceData.ts`, `useFinanceLogic.ts`
-- Domain-specific: `useBudgetsData.ts`, `useLoans.ts`, `useSavingsData.ts`, `usePaymentMethods.ts`
-- Logic hooks: `useLoansLogic.ts`, `useSavingsLogic.ts` (business logic separated from data fetching)
-- `FinanceContext` → exposes `useFinance()` hook
-- `LoansContext` → exposes `useLoansContext()` hook
-- `SavingsContext` → exposes `useSavingsContext()` hook
+- Logic separated from UI components.
+- State management via Context API + React Query (TanStack Query) patterns where applicable.
 
 ### Database & Security
 - All reads/writes filter by `user.id` (e.g., `.eq('user_id', user.id)`)

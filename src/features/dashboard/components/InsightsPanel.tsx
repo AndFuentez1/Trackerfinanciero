@@ -1,6 +1,6 @@
-import { Insight } from '@/hooks/useFinanceData';
+import { Insight } from '@/features/finance/hooks/useFinanceData';
 import { AlertTriangle, Lightbulb, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/utils';
 
 interface InsightsPanelProps {
   insights: Insight[];
@@ -52,3 +52,4 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
     </div>
   );
 }
+

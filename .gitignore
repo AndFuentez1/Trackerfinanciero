@@ -6,3 +6,5 @@ dist
 env.txt
 *.log
 .DS_Store
+dist_deploy
+dist_final

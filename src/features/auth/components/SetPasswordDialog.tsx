@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
 import { AlertCircle, Lock, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/shared/hooks/use-toast';
 
 interface SetPasswordDialogProps {
     open: boolean;
@@ -149,3 +149,5 @@ export function SetPasswordDialog({ open, onOpenChange, userEmail }: SetPassword
         </Dialog>
     );
 }
+
+

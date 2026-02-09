@@ -1,26 +1,103 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
 @import './styles/tokens.css';
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('./assets/fonts/inter/inter-latin-300-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/inter/inter-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/inter/inter-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/inter/inter-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/inter/inter-latin-700-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/sora/sora-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/sora/sora-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/sora/sora-latin-700-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --radius: 0.75rem;
-    --button-border: 220 13% 82%;
+    --radius: var(--radius-md);
+    /* Default radius for Tailwind util */
   }
 
   html {
-    font-family: 'Sora', "Avenir Next", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.01em;
-    font-feature-settings: "ss01", "cv01", "cv02", "cv03";
+    font-family: var(--font-base);
+    font-size: 16px;
+    /* Base for rem calculations */
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
-    font-weight: 400;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-weight: var(--weight-regular);
+    font-size: var(--text-base);
     background-image:
       radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent-soft-bg)) 0%, transparent 60%),
       radial-gradient(900px 500px at 90% 0%, hsl(var(--accent-soft)) 0%, transparent 55%),
@@ -28,32 +105,77 @@
     background-attachment: fixed;
   }
 
+  /* Typography Hierarchy */
   h1,
-  h2 {
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
-
+  h2,
   h3,
   h4,
   h5,
   h6 {
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.025em;
+    /* Subtle aesthetic tightening */
+    line-height: var(--leading-tight);
+    margin-bottom: 0.5em;
+    /* Consistent optical spacing */
   }
 
+  h1 {
+    font-size: var(--text-4xl);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+  }
+
+  h2 {
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: var(--text-2xl);
+  }
+
+  h4 {
+    font-size: var(--text-xl);
+  }
+
+  h5 {
+    font-size: var(--text-lg);
+  }
+
+  h6 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+
+  p {
+    margin-bottom: 1em;
+    line-height: var(--leading-relaxed);
+    /* Better readability for body text */
+  }
+
+  small,
+  .text-small {
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+  }
+
+  /* Interactive Elements */
   button,
-  .btn,
-  .Button {
-    font-weight: 500;
-    letter-spacing: 0.5px;
+  .btn {
+    font-family: var(--font-base);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.01em;
+    /* Removed aggressive spacing */
   }
 
-  label,
-  .sidebar,
-  .Sidebar {
-    font-weight: 500;
-    letter-spacing: -0.01em;
+  label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    margin-bottom: 0.25rem;
+    color: hsl(var(--muted-foreground));
   }
 }
 
@@ -133,55 +255,56 @@ select {
 
 
 @layer components {
-  .finance-card {
-    background-color: hsl(var(--bg-card));
-    border: 1px solid hsl(var(--border-card));
-    @apply rounded-xl p-6 shadow-md;
-    transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
+
+  /* Minimalist Card Style */
+  .finance-card,
+  .chart-card,
+  .summary-card,
+  .config-card,
+  .savings-card,
+  .card {
+    background-color: hsl(var(--surface-elevated));
+    border: 1px solid hsl(var(--border-subtle));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
 
-  .finance-card:hover {
-    @apply shadow-lg;
+  .finance-card:hover,
+  .chart-card:hover,
+  .summary-card:hover,
+  .config-card:hover,
+  .savings-card:hover,
+  .card:hover {
+    border-color: hsl(var(--border-strong));
+    box-shadow: var(--shadow-md);
+    /* Subtle lift effect defined by shadow change, no transform translate needed for minimalist feel */
+  }
+
+  /* Padding adjustments for specific cards if needed */
+  .finance-card,
+  .chart-card {
+    @apply p-6;
   }
 
   .summary-card {
-    background-color: hsl(var(--bg-card));
-    border: 1px solid hsl(var(--border-card));
-    @apply rounded-xl p-5 shadow-md relative flex flex-col justify-between h-full;
-    transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
+    @apply p-5 relative flex flex-col justify-between h-full;
   }
 
-  .summary-card:hover {
-    @apply shadow-lg;
+  /* Inputs & Interactive */
+  .input-base {
+    background-color: hsl(var(--surface-base));
+    border: 1px solid hsl(var(--border-subtle));
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.02);
+    /* Extremely subtle inset feel */
+    transition: all 0.15s ease;
   }
 
-  .config-card {
-    background-color: hsl(var(--bg-card));
-    border: 1px solid hsl(var(--border-card));
-    @apply shadow-md;
-    transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
-  }
-
-  .chart-card {
-    background-color: hsl(var(--bg-card));
-    border: 1px solid hsl(var(--border-card));
-    @apply rounded-xl p-6 shadow-md;
-    transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
-  }
-
-  .chart-card:hover {
-    @apply shadow-lg;
-  }
-
-  .savings-card {
-    background-color: hsl(var(--bg-card));
-    border: 1px solid hsl(var(--border-card));
-    @apply rounded-xl shadow-md;
-    transition: background-color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
-  }
-
-  .savings-card:hover {
-    @apply shadow-lg;
+  .input-base:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1);
+    outline: none;
   }
 
   .stat-value {
@@ -204,6 +327,10 @@ select {
 
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .scrollbar-stable {
+    scrollbar-gutter: stable;
   }
 
   /* Custom Premium Slider */

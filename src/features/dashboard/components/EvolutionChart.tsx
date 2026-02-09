@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { cn } from '@/lib/utils';
-import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
-import { useFinance } from '@/contexts/FinanceContext';
-import { CURRENCIES } from '@/hooks/currencyConstants';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from '@/components/ui/button';
+import { cn } from '@/core/utils';
+import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
+import { useFinance } from '@/features/finance/context/FinanceContext';
+import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { Button } from '@/shared/ui/button';
 import { ChevronDown, Filter, Check } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/ui/dropdown-menu";
 import { format, parseISO, isSameMonth, subMonths, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -222,6 +222,26 @@ export function EvolutionChart({
     return `$${val}`;
   };
 
+  // Calculate dynamic domain from data
+  const yDomain = useMemo(() => {
+    if (!chartData || chartData.length === 0) return [0, 1000000];
+
+    const allValues: number[] = [];
+    chartData.forEach(d => {
+      if (d.income != null) allValues.push(d.income);
+      if (d.expense != null) allValues.push(d.expense);
+      if (d.balance != null) allValues.push(d.balance);
+    });
+
+    if (allValues.length === 0) return [0, 1000000];
+
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+
+    const padding = (max - min) * 0.1;
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
+  }, [chartData]);
+
   return (
     <div className="space-y-4">
       {/* Header & Controls */}
@@ -310,8 +330,27 @@ export function EvolutionChart({
               dataKey="displayName"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-              dy={10}
+              tick={(props) => {
+                const { x, y, payload } = props;
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                let label = payload.value;
+                if (isMobile && selectedMonth === 'all' && label) {
+                  // For monthly view on mobile, show first letter only
+                  label = label.charAt(0);
+                }
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    dy={10}
+                    textAnchor="middle"
+                    fill="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  >
+                    {label}
+                  </text>
+                );
+              }}
               interval="preserveStartEnd"
               minTickGap={30}
             />
@@ -321,7 +360,7 @@ export function EvolutionChart({
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
               width={60}
-              domain={['auto', 'auto']}
+              domain={yDomain}
             />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
@@ -369,3 +408,7 @@ export function EvolutionChart({
     </div>
   );
 }
+
+
+
+

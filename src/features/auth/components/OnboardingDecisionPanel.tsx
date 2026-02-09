@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Upload, Plus, CheckCircle2, AlertCircle, X, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ImportExcelDialog } from '@/features/transactions/components/ImportExcelDialog';
-import { PaymentMethod, Transaction } from '@/hooks/useFinanceData';
-import { cn } from '@/lib/utils';
+import { Upload, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
+import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
+import { PaymentMethod, Transaction } from '@/features/finance/hooks/useFinanceData';
+import { cn } from '@/core/utils';
 
 interface ThemeOption {
   label: string;
@@ -22,14 +22,13 @@ interface ImportProgress {
 
 interface OnboardingDecisionPanelProps {
   onStartFromScratch: () => Promise<void>;
-  onImportData: () => void;
   hasPendingImport: boolean;
   onConfirmImport: () => Promise<void>;
   pendingImportCount: number;
   importProgress: ImportProgress;
   onCancelImport: () => void;
   paymentMethods: PaymentMethod[];
-  onImportComplete: (data: Omit<Transaction, 'id'>[]) => void;
+  onImportComplete: (data: Omit<Transaction, 'id'>[]) => Promise<void> | void;
   showCompletionCard: boolean;
   baseColor?: string;
   themeOptions?: ThemeOption[];
@@ -38,7 +37,6 @@ interface OnboardingDecisionPanelProps {
 
 export function OnboardingDecisionPanel({
   onStartFromScratch,
-  onImportData,
   hasPendingImport,
   onConfirmImport,
   pendingImportCount,
@@ -52,8 +50,8 @@ export function OnboardingDecisionPanel({
   onSelectTheme,
 }: OnboardingDecisionPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState(baseColor);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   const handleStartFromScratch = async () => {
     setIsLoading(true);
@@ -67,32 +65,34 @@ export function OnboardingDecisionPanel({
   // Show completion card when import is finished
   if (showCompletionCard) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md border-success/20 bg-success/5">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
-            <div>
-              <h2 className="text-xl font-semibold mb-1">¡Datos importados!</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Se han procesado {pendingImportCount} transacciones
-              </p>
-            </div>
-            <Button
-              onClick={async () => {
-                setIsLoading(true);
-                try {
-                  await onConfirmImport();
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? 'Confirmando...' : 'Ir al dashboard'}
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
+        <div className="flex min-h-full items-start sm:items-center justify-center p-4">
+          <Card className="w-full max-w-md border-success/20 bg-success/5">
+            <CardContent className="pt-6 text-center space-y-4">
+              <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
+              <div>
+                <h2 className="text-xl font-semibold mb-1">¡Datos importados!</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Se han procesado {pendingImportCount} transacciones
+                </p>
+              </div>
+              <Button
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    await onConfirmImport();
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+                className="w-full"
+              >
+                {isLoading ? 'Confirmando...' : 'Ir al dashboard'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -100,25 +100,27 @@ export function OnboardingDecisionPanel({
   // Show import progress
   if (hasPendingImport && importProgress.status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="text-lg font-semibold">Importando datos...</h2>
-            <p className="text-sm text-muted-foreground">{importProgress.message}</p>
+      <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
+        <div className="flex min-h-full items-start sm:items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6 space-y-4">
+              <h2 className="text-lg font-semibold">Importando datos...</h2>
+              <p className="text-sm text-muted-foreground">{importProgress.message}</p>
 
-            <div className="space-y-2">
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-primary h-full transition-all duration-300"
-                  style={{ width: `${importProgress.progress}%` }}
-                />
+              <div className="space-y-2">
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-primary h-full transition-all duration-300"
+                    style={{ width: `${importProgress.progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  {importProgress.recordsProcessed || 0} registros procesados
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground text-right">
-                {importProgress.recordsProcessed || 0} registros procesados
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -126,19 +128,21 @@ export function OnboardingDecisionPanel({
   // Show import error
   if (hasPendingImport && importProgress.status === 'failed') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="w-full max-w-md space-y-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error en la importación</AlertTitle>
-            <AlertDescription>{importProgress.error || 'Ocurrió un error desconocido'}</AlertDescription>
-          </Alert>
-          <Button
-            onClick={onCancelImport}
-            className="w-full"
-          >
-            Volver atrás
-          </Button>
+      <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
+        <div className="flex min-h-full items-start sm:items-center justify-center p-4">
+          <div className="w-full max-w-md space-y-4 py-8 sm:py-0">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error en la importación</AlertTitle>
+              <AlertDescription>{importProgress.error || 'Ocurrió un error desconocido'}</AlertDescription>
+            </Alert>
+            <Button
+              onClick={onCancelImport}
+              className="w-full"
+            >
+              Volver atrás
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -146,127 +150,122 @@ export function OnboardingDecisionPanel({
 
   // Main decision panel
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">¿Cómo deseas comenzar?</h1>
-          <p className="text-muted-foreground">
-            Elige entre empezar desde cero o importar tus datos
-          </p>
-        </div>
+    <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
+      <div className="flex min-h-full items-start sm:items-center justify-center p-4">
+        <div className="w-full max-w-lg space-y-4 sm:space-y-6 py-4 sm:py-0">
+          <div className="text-center mb-4 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">¿Cómo deseas comenzar?</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Elige entre empezar desde cero o importar tus datos
+            </p>
+          </div>
 
-        <div className="grid gap-4">
-          {/* Theme selector - Optional for onboarding */}
-          {themeOptions && themeOptions.length > 0 && (
-            <Card className="border-dashed">
+          <div className="grid gap-4">
+            {/* Theme selector - Optional for onboarding */}
+            {themeOptions && themeOptions.length > 0 && (
+              <Card className="border-dashed">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Elige un tema</CardTitle>
+                  <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-row flex-wrap gap-4 justify-center items-end my-2">
+                    {themeOptions.map((theme) => (
+                      <div key={theme.hex} className="flex flex-col items-center w-24">
+                        <button
+                          type="button"
+                          className={cn(
+                            "w-12 h-12 sm:w-16 sm:h-16 rounded-xl border-2 flex items-center justify-center transition-all",
+                            selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-border/40 hover:border-border"
+                          )}
+                          style={{ background: theme.hex }}
+                          aria-label={theme.label}
+                          onClick={() => {
+                            setSelectedTheme(theme.hex);
+                            onSelectTheme?.(theme.hex);
+                          }}
+                        >
+                          {selectedTheme === theme.hex && (
+                            <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
+                          )}
+                        </button>
+                        <span className="text-xs mt-2 text-center break-words w-full font-medium text-muted-foreground">{theme.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Start from scratch */}
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Elige un tema</CardTitle>
-                <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
+                <div className="flex items-start gap-3">
+                  <Plus className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Comenzar desde cero</CardTitle>
+                    <CardDescription className="text-xs">
+                      Crea transacciones nuevas desde ahora
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-row gap-4 justify-center items-end my-2">
-                  {themeOptions.map((theme) => (
-                    <div key={theme.hex} className="flex flex-col items-center w-24">
-                      <button
-                        type="button"
-                        className={cn(
-                          "w-16 h-16 rounded-xl border-2 flex items-center justify-center transition-all",
-                          selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-border/40 hover:border-border"
-                        )}
-                        style={{ background: theme.hex }}
-                        aria-label={theme.label}
-                        onClick={() => {
-                          setSelectedTheme(theme.hex);
-                          onSelectTheme?.(theme.hex);
-                        }}
-                      >
-                        {selectedTheme === theme.hex && (
-                          <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
-                        )}
-                      </button>
-                      <span className="text-xs mt-2 text-center break-words w-full font-medium text-muted-foreground">{theme.label}</span>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  onClick={handleStartFromScratch}
+                  disabled={isLoading}
+                  className="w-full"
+                  size="sm"
+                >
+                  {isLoading ? 'Cargando...' : 'Comenzar'}
+                </Button>
               </CardContent>
             </Card>
-          )}
 
-          {/* Start from scratch */}
-          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-3">
-              <div className="flex items-start gap-3">
-                <Plus className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div className="flex-1">
-                  <CardTitle className="text-base">Comenzar desde cero</CardTitle>
-                  <CardDescription className="text-xs">
-                    Crea transacciones nuevas desde ahora
-                  </CardDescription>
+            {/* Import data */}
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <Upload className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Importar datos</CardTitle>
+                    <CardDescription className="text-xs">
+                      Sube un archivo Excel o CSV con tus transacciones
+                    </CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={handleStartFromScratch}
-                disabled={isLoading}
-                className="w-full"
-                size="sm"
-              >
-                {isLoading ? 'Cargando...' : 'Comenzar'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Import data - COMENTADO */}
-          {/* 
-          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-3">
-              <div className="flex items-start gap-3">
-                <Upload className="h-5 w-5 text-success mt-1 flex-shrink-0" />
-                <div className="flex-1">
-                  <CardTitle className="text-base">Importar datos</CardTitle>
-                  <CardDescription className="text-xs">
-                    Carga un archivo Excel con tus datos
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={() => setShowImportDialog(true)}
-                variant="default"
-                className="w-full"
-                size="sm"
-              >
-                Seleccionar archivo
-              </Button>
-            </CardContent>
-          </Card>
-          */}
-        </div>
-
-        {/* Import Dialog - integrated */}
-        {showImportDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md relative">
-              <button
-                onClick={() => setShowImportDialog(false)}
-                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <ImportExcelDialog
-                paymentMethods={paymentMethods}
-                onImport={async (transactions) => {
-                  onImportComplete(transactions);
-                  setShowImportDialog(false);
-                  return { error: null, count: transactions.length };
-                }}
-              />
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setShowImportDialog(true)}
+                  className="w-full"
+                  size="sm"
+                >
+                  Importar
+                </Button>
+              </CardContent>
             </Card>
           </div>
-        )}
+          <ImportExcelDialog
+            paymentMethods={paymentMethods}
+            onImport={async (transactions) => {
+              try {
+                await onImportComplete(transactions);
+                return { error: null, count: transactions.length };
+              } catch (error) {
+                return { error, count: 0 };
+              }
+            }}
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            showTriggerButton={false}
+            onboarding
+          />
+        </div>
       </div>
     </div>
   );
 }
+
+
+

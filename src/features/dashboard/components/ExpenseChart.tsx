@@ -1,9 +1,9 @@
-import { CategoryItem } from '@/hooks/useFinanceData';
+import { CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
-import { useDecimalPlaces } from '@/hooks/useDecimalPlaces';
-import { useFinance } from '@/contexts/FinanceContext';
-import { CURRENCIES } from '@/hooks/currencyConstants';
+import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
+import { useFinance } from '@/features/finance/context/FinanceContext';
+import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 
 interface ExpenseChartProps {
   data: { category: string; category_id?: string | null; amount: number }[];
@@ -179,3 +179,7 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
     </div>
   );
 }
+
+
+
+

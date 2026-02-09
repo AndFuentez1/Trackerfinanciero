@@ -1,7 +1,7 @@
 import { Mail, Lock, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/shared/ui/button';
+import { Label } from '@/shared/ui/label';
+import { Input } from '@/shared/ui/input';
 
 interface SetPasswordStepProps {
     passwordStep: string;
@@ -132,3 +132,4 @@ export function SetPasswordStep({
         </form>
     );
 }
+

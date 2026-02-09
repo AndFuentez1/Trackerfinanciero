@@ -1,7 +1,7 @@
 import { LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useFinance } from '@/contexts/FinanceContext';
-import { CURRENCIES } from '@/hooks/currencyConstants';
+import { cn } from '@/core/utils';
+import { useFinance } from '@/features/finance/context/FinanceContext';
+import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 
 interface HighlightedCardProps {
     title: string;
@@ -107,3 +107,5 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
         </div>
     );
 }
+
+

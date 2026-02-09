@@ -86,6 +86,11 @@ export default {
         'soft': 'var(--shadow-sm)',
         'soft-md': 'var(--shadow-md)',
         'soft-lg': 'var(--shadow-lg)',
+        'float': 'var(--shadow-float)',
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
+        'xl': 'var(--shadow-float)',
       },
       keyframes: {
         "accordion-down": {

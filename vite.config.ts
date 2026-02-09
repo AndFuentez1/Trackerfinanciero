@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    fs: {
+      allow: ['.'],
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   base: mode === 'production' ? '/Trackerfinanciero/' : '/',

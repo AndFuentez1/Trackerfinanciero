@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { parseLocalDate } from "@/lib/dateUtils";
+import { parseLocalDate } from "@/core/utils";
 import { subYears, addYears, isWithinInterval } from "date-fns";
 
 export const insertTransactionSchema = z.object({

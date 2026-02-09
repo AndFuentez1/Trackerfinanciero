@@ -8,36 +8,89 @@ FinTrack es una aplicación de gestión financiera personal construida con:
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime)
 - **Routing**: React Router v6
 - **Forms**: React Hook Form + Zod
-- **State**: Context API + Custom Hooks
+- **State**: Context API + TanStack Query
+- **Analytics**: Mixpanel
+
+---
+
+## Arquitectura Feature-First
+
+### Principios de Organización
+
+El proyecto sigue una **arquitectura Feature-First** donde cada funcionalidad es autocontenida y modular:
+
+```
+src/
+├── features/          # Features autocontenidas
+│   ├── auth/          # Autenticación y protección de rutas
+│   ├── finance/       # Núcleo financiero (transacciones, presupuestos, etc.)
+│   ├── dashboard/     # Vistas de resumen
+│   └── settings/      # Configuración de usuario
+├── shared/            # Código compartido entre features
+│   ├── ui/            # Componentes base (shadcn/ui)
+│   ├── components/    # Componentes reutilizables
+│   ├── hooks/         # Hooks genéricos
+│   └── layouts/       # Estructuras de página
+├── core/              # Lógica transversal de la app
+│   ├── api/           # Query keys y configuraciones
+│   └── utils/         # Utilidades generales
+├── integrations/      # Servicios externos
+│   └── supabase/      # Cliente y tipos de Supabase
+├── lib/               # Helpers y utilidades
+└── pages/             # Puntos de entrada de rutas
+```
+
+### Feature: Finance (Ejemplo Detallado)
+
+```
+src/features/finance/
+├── components/              # UI específica de finanzas
+│   ├── cards/               # Cards de resumen
+│   ├── charts/              # Gráficos financieros
+│   └── tables/              # Tablas de datos
+├── context/                 # Context providers
+│   ├── FinanceContext.tsx   # Estado principal
+│   ├── LoansContext.tsx     # Préstamos
+│   └── SavingsContext.tsx   # Ahorros
+├── hooks/                   # Lógica de negocio
+│   ├── useFinanceData.ts    # Fetch de datos
+│   ├── useFinanceDataLogic.ts # Lógica compleja
+│   ├── useBudgetsData.ts    # Presupuestos
+│   ├── useLoansLogic.ts     # Lógica de préstamos
+│   └── useSavingsLogic.ts   # Lógica de ahorros
+├── loans/                   # Sub-feature: Préstamos
+│   ├── components/
+│   ├── context/
+│   └── hooks/
+├── savings/                 # Sub-feature: Ahorros
+│   ├── components/
+│   ├── context/
+│   └── hooks/
+├── transactions/            # Sub-feature: Transacciones
+│   └── components/
+├── cashflow/                # Sub-feature: Flujo de caja
+│   ├── components/
+│   └── hooks/
+├── constants/               # Constantes financieras
+│   ├── currencyConstants.ts
+│   └── financeConstants.ts
+├── types/                   # Tipos TypeScript
+│   └── financeTypes.ts
+└── utils/                   # Utilidades financieras
+    └── financeUtils.ts
+```
+
+**Ventajas**:
+- ✅ **Cohesión alta**: Todo relacionado a finanzas está junto
+- ✅ **Acoplamiento bajo**: Features independientes
+- ✅ **Escalabilidad**: Fácil agregar sub-features
+- ✅ **Mantenibilidad**: Cambios aislados por feature
 
 ---
 
 ## Patrones de Diseño
 
-### 1. Feature-Based Architecture
-
-Organización por dominio funcional en lugar de por tipo de archivo.
-
-```
-src/features/
-├── auth/           # Autenticación y onboarding
-├── budgets/        # Gestión de presupuestos
-├── cashflow/       # Proyecciones de flujo de caja
-├── categories/     # Gestión de categorías
-├── dashboard/      # Vista principal y resúmenes
-├── loans/          # Préstamos y deudas
-├── payment-methods/# Métodos de pago
-├── savings/        # Ahorros e inversiones
-└── transactions/   # Transacciones y historial
-```
-
-**Ventajas**:
-- ✅ **Cohesión alta**: Todo relacionado a una feature está junto
-- ✅ **Acoplamiento bajo**: Features independientes
-- ✅ **Escalabilidad**: Fácil agregar nuevas features
-- ✅ **Mantenibilidad**: Cambios aislados por feature
-
-### 2. Custom Hooks Pattern
+### 1. Custom Hooks Pattern
 
 Separación de lógica de negocio y presentación.
 
@@ -50,47 +103,60 @@ Fetch y mutación de datos desde Supabase.
 - `useLoans` - Préstamos y deudas
 - `useSavingsData` - Ahorros e inversiones
 
+**Ubicación**: `src/features/finance/hooks/`
+
 #### Logic Hooks
 Cálculos y transformaciones de datos.
-- `useFinanceLogic` - Cálculos financieros
+- `useFinanceDataLogic` - Cálculos financieros complejos
 - `useCashFlow` - Proyecciones de flujo de caja
 - `useLoansLogic` - Lógica de préstamos
 - `useSavingsLogic` - Lógica de ahorros
 
+**Ubicación**: `src/features/finance/hooks/` y sub-features
+
 #### UI Hooks
 Estado y comportamiento de UI.
-- `useFormatCurrency` - Formateo de moneda
-- `useDecimalPlaces` - Decimales por moneda
-- `useMobile` - Detección de dispositivo móvil
-- `useAuth` - Estado de autenticación
+- `use-toast` - Sistema de notificaciones
+- `use-mobile` - Detección de dispositivo móvil
+- `useScrollRestoration` - Restauración de scroll
 
-### 3. Context + Hooks Pattern
+**Ubicación**: `src/shared/hooks/`
+
+### 2. Context + Hooks Pattern
 
 Estado global accesible sin prop drilling.
 
 ```typescript
 // Context Provider
-<FinanceContext.Provider value={financeData}>
-  <App />
-</FinanceContext.Provider>
+<FinanceProvider>
+  <LoansProvider>
+    <SavingsProvider>
+      <App />
+    </SavingsProvider>
+  </LoansProvider>
+</FinanceProvider>
 
 // Consumer Hook
 const { transactions, addTransaction } = useFinance();
+const { loans } = useLoans();
 ```
 
 **Contexts Activos**:
-- `FinanceContext` - Estado financiero principal
-- `LoansContext` - Préstamos y deudas
-- `SavingsContext` - Ahorros e inversiones
+- `FinanceContext` - Estado financiero principal (`src/features/finance/context/`)
+- `LoansContext` - Préstamos y deudas (`src/features/finance/loans/context/`)
+- `SavingsContext` - Ahorros e inversiones (`src/features/finance/savings/context/`)
+- `AuthContext` - Autenticación (`src/features/auth/context/`)
 
-### 4. Compound Components Pattern
+### 3. Compound Components Pattern
 
-Componentes complejos con sub-componentes relacionados.
+Componentes complejos con sub-componentes relacionados (shadcn/ui).
 
 **Ejemplos**:
 - `Card` → `CardHeader`, `CardTitle`, `CardContent`, `CardFooter`
 - `Dialog` → `DialogTrigger`, `DialogContent`, `DialogHeader`
 - `Table` → `TableHeader`, `TableBody`, `TableRow`, `TableCell`
+
+**Ubicación**: `src/shared/ui/`
 
 ---
 
@@ -104,6 +170,8 @@ User Login
 Supabase Auth (Magic Link / Google OAuth)
   ↓
 Session Created
+  ↓
+AuthContext Updated
   ↓
 MainLayout (Protected)
   ↓
@@ -137,7 +205,7 @@ User Action (e.g., Add Transaction)
   ↓
 Component calls addTransaction()
   ↓
-Hook validates data
+Hook validates data (Zod)
   ↓
 Supabase Insert/Update
   ↓
@@ -146,13 +214,15 @@ Optimistic UI Update (opcional)
 Real-time Sync
   ↓
 State Updated
+  ↓
+Toast Notification
 ```
 
 ---
 
 ## Decisiones Técnicas
 
-### ¿Por qué Feature-Based Architecture?
+### ¿Por qué Feature-First Architecture?
 
 **Alternativas consideradas**: Organización por tipo (components/, hooks/, etc.)
 
@@ -161,14 +231,15 @@ State Updated
 - ✅ Facilita trabajo en equipo (features independientes)
 - ✅ Reduce conflictos de merge
 - ✅ Más fácil encontrar código relacionado
+- ✅ Permite sub-features anidadas (e.g., `finance/loans/`)
 
-### ¿Por qué Context API en lugar de Redux?
+### ¿Por qué Context API + TanStack Query?
 
 **Razones**:
-- ✅ Suficiente para este caso de uso
-- ✅ Menos boilerplate
+- ✅ Context API para estado de UI y autenticación
+- ✅ TanStack Query para cache y sincronización de datos
+- ✅ Menos boilerplate que Redux
 - ✅ Integración nativa con React
-- ✅ No necesitamos time-travel debugging
 - ✅ Real-time sync desde Supabase maneja la mayoría del estado
 
 ### ¿Por qué Supabase?
@@ -215,12 +286,16 @@ export const TransactionList = memo(function TransactionList({ ... }) {
 });
 ```
 
-#### 2. Debounce en Búsquedas
+#### 2. TanStack Query Cache
 ```typescript
-const debouncedSearch = useMemo(
-  () => debounce((value: string) => setSearch(value), 300),
-  []
-);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 60 * 1000, // 10 minutos
+      gcTime: 30 * 60 * 1000,    // 30 minutos
+    },
+  },
+});
 ```
 
 #### 3. Optimistic Updates
@@ -232,13 +307,25 @@ await supabase.from('transactions').insert(newTransaction);
 
 #### 4. Skeleton Screens
 Evitar layout shift durante carga:
-- `SkeletonLoader` con variantes por página
+- `SkeletonLoader` con variantes por página (`src/shared/components/skeletons/`)
 - `AdaptiveSkeleton` específico por feature
 - Dimensiones exactas de componentes reales
 
-#### 5. Code Splitting (Futuro)
+#### 5. Code Splitting
 ```typescript
 const Loans = lazy(() => import('./pages/Loans'));
+const Savings = lazy(() => import('./pages/Savings'));
+```
+
+#### 6. Vite Chunking Strategy
+```typescript
+// vite.config.ts
+manualChunks(id) {
+  if (id.includes("@supabase")) return "supabase";
+  if (id.includes("@radix-ui")) return "radix";
+  if (id.includes("recharts")) return "charts";
+  if (id.includes("xlsx")) return "excel";
+}
 ```
 
 ### Métricas Objetivo
@@ -298,45 +385,100 @@ ADD CONSTRAINT positive_amount CHECK (amount > 0);
 
 ---
 
-## Testing (Roadmap Futuro)
-
-### Unit Tests
-- **Framework**: Vitest
-- **Cobertura**: Hooks, utilidades, cálculos financieros
-- **Target**: > 80% coverage
-
-### Integration Tests
-- **Framework**: React Testing Library
-- **Cobertura**: Componentes, formularios, flujos de usuario
-
-### E2E Tests
-- **Framework**: Playwright
-- **Cobertura**: Flujos críticos (login, transacciones, presupuestos)
-
----
-
-## Estructura de Archivos
-
-### Convenciones
+## Estructura de Archivos Completa
 
 ```
 src/
-├── components/
-│   ├── ui/              # shadcn/ui base components
-│   ├── common/          # Shared components (skeletons, etc.)
-│   └── layout/          # Layout components (PageHeader)
 ├── features/
-│   └── [feature]/
-│       ├── components/  # Feature-specific components
-│       ├── hooks/       # Feature-specific hooks (opcional)
-│       └── types/       # Feature-specific types (opcional)
-├── hooks/               # Global custom hooks
-├── contexts/            # Context providers
-├── layouts/             # App layouts (MainLayout, Sidebar, MobileNav)
-├── pages/               # Route pages
-├── lib/                 # Utilities
-├── integrations/        # External services (Supabase)
-└── styles/              # Global styles
+│   ├── auth/
+│   │   ├── components/
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx
+│   │   ├── hooks/
+│   │   │   └── useAuth.ts
+│   │   └── pages/
+│   │       └── Auth.tsx
+│   ├── finance/
+│   │   ├── components/
+│   │   │   ├── cards/
+│   │   │   ├── charts/
+│   │   │   └── tables/
+│   │   ├── context/
+│   │   │   ├── FinanceContext.tsx
+│   │   │   ├── LoansContext.tsx
+│   │   │   └── SavingsContext.tsx
+│   │   ├── hooks/
+│   │   │   ├── useFinanceData.ts
+│   │   │   ├── useFinanceDataLogic.ts
+│   │   │   ├── useBudgetsData.ts
+│   │   │   ├── useLoansLogic.ts
+│   │   │   └── useSavingsLogic.ts
+│   │   ├── loans/
+│   │   │   ├── components/
+│   │   │   ├── context/
+│   │   │   └── hooks/
+│   │   ├── savings/
+│   │   │   ├── components/
+│   │   │   ├── context/
+│   │   │   └── hooks/
+│   │   ├── transactions/
+│   │   │   └── components/
+│   │   ├── cashflow/
+│   │   │   ├── components/
+│   │   │   └── hooks/
+│   │   ├── constants/
+│   │   ├── types/
+│   │   └── utils/
+│   ├── dashboard/
+│   │   └── components/
+│   └── settings/
+│       └── components/
+├── shared/
+│   ├── ui/                  # shadcn/ui components
+│   ├── components/
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── MoneyInput.tsx
+│   │   ├── PageHeader.tsx
+│   │   └── skeletons/
+│   ├── hooks/
+│   │   ├── use-toast.ts
+│   │   ├── use-mobile.tsx
+│   │   └── useScrollRestoration.ts
+│   └── layouts/
+│       ├── MainLayout.tsx
+│       ├── Sidebar.tsx
+│       └── MobileNav.tsx
+├── core/
+│   ├── api/
+│   │   └── queryKeys.ts
+│   └── utils/
+│       ├── cn.ts
+│       ├── dateUtils.ts
+│       ├── analytics.ts
+│       └── onboardingGate.ts
+├── integrations/
+│   └── supabase/
+│       ├── client.ts
+│       └── types.ts
+├── lib/
+│   ├── analytics.ts
+│   ├── cashflowUtils.ts
+│   ├── currencyFormat.tsx
+│   ├── mixpanel-shim.ts
+│   ├── schemas.ts
+│   └── skeletonUtils.ts
+├── pages/
+│   ├── Index.tsx
+│   ├── History.tsx
+│   ├── Budgets.tsx
+│   ├── CashFlow.tsx
+│   ├── Savings.tsx
+│   └── Loans.tsx
+├── styles/
+│   └── tokens.css
+├── App.tsx
+├── main.tsx
+└── index.css
 ```
 
 ### Nomenclatura
@@ -363,6 +505,7 @@ src/
 - `tailwindcss` - Utility-first CSS
 - `@radix-ui/*` - Headless UI primitives
 - `lucide-react` - Icon library
+- `framer-motion` - Animations
 
 ### Forms
 - `react-hook-form` - Form state management
@@ -371,15 +514,259 @@ src/
 
 ### Data
 - `@supabase/supabase-js` - Supabase client
+- `@tanstack/react-query` - Data fetching and caching
 - `date-fns` - Date utilities
 
 ### Charts
 - `recharts` - Chart library
 
+### Analytics
+- `mixpanel-browser` - Product analytics
+
 ### Dev Tools
 - `vite` - Build tool
-- `@vitejs/plugin-react` - React plugin
+- `@vitejs/plugin-react-swc` - React plugin with SWC
 - `typescript` - Type checking
+
+---
+
+## Testing & Validation Strategy
+
+### Testing Roadmap
+
+#### Unit Tests
+- **Framework**: Vitest
+- **Cobertura**: Hooks, utilidades, cálculos financieros
+- **Target**: > 80% coverage
+
+#### Integration Tests
+- **Framework**: React Testing Library
+- **Cobertura**: Componentes, formularios, flujos de usuario
+
+#### E2E Tests
+- **Framework**: Playwright
+- **Cobertura**: Flujos críticos (login, transacciones, presupuestos)
+
+---
+
+## 🔍 Validation Checklist (Pre-Testing Phase)
+
+> **IMPORTANTE**: Antes de implementar el testing suite, se debe realizar una validación exhaustiva del sistema completo. Esta checklist asegura que todos los aspectos críticos están correctamente implementados.
+
+### 1. UX/UI Validation
+
+#### Visual Consistency
+- [ ] **Design System**: Todos los componentes usan tokens del sistema (`index.css`, `tokens.css`)
+- [ ] **Typography**: Jerarquía consistente (h1-h6, text-base, text-sm, etc.)
+- [ ] **Colors**: No hay colores hardcodeados, solo variables CSS
+- [ ] **Spacing**: Uso consistente de padding/margin (p-4, p-6, gap-4, etc.)
+- [ ] **Borders & Shadows**: Uso de `--border-subtle`, `--shadow-sm`, etc.
+
+#### Responsive Design
+- [ ] **Mobile First**: Todos los componentes funcionan en móvil (320px+)
+- [ ] **Breakpoints**: Correcta adaptación en sm, md, lg, xl
+- [ ] **Navigation**: Sidebar en desktop, MobileNav en mobile
+- [ ] **Touch Targets**: Botones y links tienen mínimo 44x44px en mobile
+
+#### Interactive States
+- [ ] **Hover**: Todos los elementos interactivos tienen hover states
+- [ ] **Focus**: Estados de focus visibles para accesibilidad
+- [ ] **Loading**: Skeletons en todas las cargas de datos
+- [ ] **Empty States**: Mensajes claros cuando no hay datos
+- [ ] **Error States**: Manejo visual de errores
+
+#### Accessibility (WCAG 2.1)
+- [ ] **Contrast**: Ratio mínimo 4.5:1 para texto
+- [ ] **Keyboard Navigation**: Todos los elementos accesibles por teclado
+- [ ] **Screen Readers**: Labels y aria-labels correctos
+- [ ] **Focus Trap**: Dialogs y modals atrapan el focus correctamente
+
+### 2. Database & Data Integrity
+
+#### Schema Validation
+- [ ] **RLS Policies**: Todas las tablas tienen Row Level Security
+- [ ] **Foreign Keys**: Relaciones correctamente definidas
+- [ ] **Constraints**: CHECK constraints para validaciones (ej: amount > 0)
+- [ ] **Indexes**: Índices en columnas frecuentemente consultadas
+- [ ] **Triggers**: Triggers funcionan correctamente (si aplica)
+
+#### Data Consistency
+- [ ] **User Isolation**: Queries filtran por `user_id`
+- [ ] **Cascade Deletes**: Eliminación de datos relacionados funciona
+- [ ] **Unique Constraints**: No hay duplicados donde no deberían existir
+- [ ] **Default Values**: Valores por defecto correctos en columnas
+
+#### Migrations
+- [ ] **Reversible**: Todas las migraciones tienen rollback
+- [ ] **Idempotent**: Migraciones pueden ejecutarse múltiples veces
+- [ ] **Documented**: Cambios de schema documentados
+
+### 3. Business Logic Validation
+
+#### Financial Calculations
+- [ ] **Currency Precision**: Todos los cálculos usan 2 decimales
+- [ ] **Rounding**: Redondeo consistente (Math.round)
+- [ ] **Negative Amounts**: Manejo correcto de números negativos
+- [ ] **Zero Division**: Protección contra división por cero
+- [ ] **Overflow**: Manejo de números muy grandes
+
+#### Transaction Logic
+- [ ] **Transfer Exclusion**: Transferencias no cuentan como ingreso/gasto
+- [ ] **Credit Card Installments**: Cuotas se proyectan correctamente
+- [ ] **Loan Amortization**: Cálculo francés correcto
+- [ ] **Savings Yield**: Interés compuesto calculado correctamente
+- [ ] **Budget Tracking**: Gasto vs presupuesto preciso
+
+#### Cash Flow Projection
+- [ ] **Pivot Date**: Separación correcta entre pasado y futuro
+- [ ] **Real vs Projected**: Lógica de ingresos reales vs presupuestados
+- [ ] **Future Expenses**: Suscripciones y gastos únicos proyectados
+- [ ] **Balance Continuity**: Balance acumulado es continuo
+- [ ] **Pending Debts**: Deudas pasadas restan correctamente
+
+### 4. State Management
+
+#### Context Providers
+- [ ] **Provider Order**: Contextos anidados en orden correcto
+- [ ] **Initial State**: Estados iniciales son seguros (no null/undefined)
+- [ ] **Updates**: State updates son inmutables
+- [ ] **Performance**: No re-renders innecesarios
+
+#### Real-time Sync
+- [ ] **Subscriptions**: Canales de Supabase correctamente suscritos
+- [ ] **Cleanup**: Subscriptions se limpian en unmount
+- [ ] **Conflict Resolution**: Manejo de actualizaciones concurrentes
+- [ ] **Optimistic Updates**: UI se actualiza antes de confirmación
+
+#### Cache Strategy (TanStack Query)
+- [ ] **Stale Time**: Configurado apropiadamente (10 min)
+- [ ] **Cache Time**: GC time correcto (30 min)
+- [ ] **Invalidation**: Queries se invalidan cuando corresponde
+- [ ] **Prefetching**: Datos críticos se precargan
+
+### 5. Infrastructure & Performance
+
+#### Build & Bundle
+- [ ] **Build Success**: `npm run build` sin errores
+- [ ] **Bundle Size**: < 500KB gzipped
+- [ ] **Code Splitting**: Chunks separados por vendor
+- [ ] **Tree Shaking**: Código no usado eliminado
+- [ ] **Source Maps**: Generados para debugging
+
+#### Performance Metrics
+- [ ] **FCP**: First Contentful Paint < 1.5s
+- [ ] **LCP**: Largest Contentful Paint < 2.5s
+- [ ] **TTI**: Time to Interactive < 3s
+- [ ] **CLS**: Cumulative Layout Shift < 0.1
+- [ ] **FID**: First Input Delay < 100ms
+
+#### Network & API
+- [ ] **API Calls**: Minimizados (batch requests donde sea posible)
+- [ ] **Error Handling**: Todos los fetch tienen try/catch
+- [ ] **Retry Logic**: Reintentos en fallos de red
+- [ ] **Timeout**: Timeouts configurados
+- [ ] **Rate Limiting**: Respeto a límites de Supabase
+
+### 6. Security & Privacy
+
+#### Authentication
+- [ ] **Session Validation**: Sesión verificada en cada request
+- [ ] **Token Refresh**: Tokens se refrescan automáticamente
+- [ ] **Logout**: Limpieza completa de estado en logout
+- [ ] **Protected Routes**: Rutas protegidas redirigen a login
+
+#### Data Protection
+- [ ] **XSS Prevention**: Inputs sanitizados
+- [ ] **CSRF Protection**: Tokens CSRF donde aplique
+- [ ] **SQL Injection**: Queries parametrizadas (Supabase lo maneja)
+- [ ] **Sensitive Data**: No se loguea información sensible
+
+#### Client-side Validation
+- [ ] **Zod Schemas**: Todos los forms tienen validación
+- [ ] **Type Safety**: TypeScript strict mode activo
+- [ ] **Input Sanitization**: Inputs limpios antes de enviar
+
+### 7. Error Handling & Monitoring
+
+#### Error Boundaries
+- [ ] **Global Boundary**: ErrorBoundary en App.tsx
+- [ ] **Feature Boundaries**: Boundaries en features críticas
+- [ ] **Fallback UI**: UI de error amigable
+- [ ] **Error Reporting**: Errores se reportan (Sentry/Mixpanel)
+
+#### User Feedback
+- [ ] **Toast Notifications**: Feedback en todas las acciones
+- [ ] **Loading States**: Indicadores de carga visibles
+- [ ] **Success Messages**: Confirmaciones claras
+- [ ] **Error Messages**: Mensajes de error descriptivos
+
+#### Analytics
+- [ ] **Event Tracking**: Eventos críticos trackeados (Mixpanel)
+- [ ] **User Properties**: Propiedades de usuario actualizadas
+- [ ] **Funnel Analysis**: Funnels de conversión configurados
+- [ ] **Error Tracking**: Errores se envían a analytics
+
+### 8. Code Quality
+
+#### TypeScript
+- [ ] **No `any`**: Cero uso de `any` type
+- [ ] **Strict Mode**: TypeScript strict habilitado
+- [ ] **Type Coverage**: > 95% de código tipado
+- [ ] **Type Imports**: Imports de tipos separados
+
+#### Code Organization
+- [ ] **Feature Isolation**: Features son independientes
+- [ ] **DRY Principle**: No código duplicado
+- [ ] **Single Responsibility**: Componentes/hooks con una responsabilidad
+- [ ] **Naming Conventions**: Nombres descriptivos y consistentes
+
+#### Documentation
+- [ ] **README**: Actualizado con estructura actual
+- [ ] **ARCHITECTURE**: Refleja implementación real
+- [ ] **THEME_CONTEXT**: Guía de diseño actualizada
+- [ ] **Code Comments**: Lógica compleja comentada
+
+---
+
+## 📋 Pre-Testing Execution Plan
+
+Cuando se decida implementar testing, seguir este orden:
+
+### Phase 1: Validation (1-2 días)
+1. Ejecutar checklist completo de arriba
+2. Documentar issues encontrados
+3. Priorizar fixes críticos
+4. Resolver issues bloqueantes
+
+### Phase 2: Setup (1 día)
+1. Instalar Vitest + React Testing Library
+2. Configurar test environment
+3. Crear helpers de testing
+4. Escribir primer test de ejemplo
+
+### Phase 3: Unit Tests (3-5 días)
+1. Testear utilidades (`financeUtils`, `dateUtils`)
+2. Testear hooks de cálculo (`useFinanceDataLogic`, `useCashFlow`)
+3. Testear formatters (`currencyFormat`)
+4. Alcanzar 80% coverage en lógica crítica
+
+### Phase 4: Integration Tests (3-5 días)
+1. Testear formularios principales
+2. Testear flujos de CRUD
+3. Testear interacciones de componentes
+4. Testear Context providers
+
+### Phase 5: E2E Tests (2-3 días)
+1. Configurar Playwright
+2. Testear flujo de login
+3. Testear flujos críticos (transacciones, presupuestos)
+4. Testear importación Excel
+
+### Phase 6: CI/CD (1 día)
+1. Configurar GitHub Actions
+2. Ejecutar tests en cada PR
+3. Bloquear merge si tests fallan
+4. Generar reportes de coverage
 
 ---
 
@@ -393,9 +780,9 @@ src/
    - E2E con Playwright
 
 2. **Performance**
-   - Implementar code splitting
    - Optimizar bundle size
    - Service Worker para offline
+   - Implementar más code splitting
 
 3. **Features**
    - Exportar PDF de reportes
@@ -416,4 +803,6 @@ src/
 - [Supabase Docs](https://supabase.com/docs)
 - [shadcn/ui](https://ui.shadcn.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
+- [TanStack Query](https://tanstack.com/query/latest)
 - [THEME_CONTEXT.md](./THEME_CONTEXT.md) - Guía de diseño visual
+- [README.md](./README.md) - Documentación del proyecto

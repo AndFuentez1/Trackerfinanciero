@@ -3,13 +3,13 @@ import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
 import { ExpenseChart } from './ExpenseChart';
 import { InsightsPanel } from './InsightsPanel';
-import { PaymentMethodList } from '@/features/payment-methods/components/PaymentMethodList';
-import { EditPaymentMethodDialog } from '@/features/payment-methods/components/EditPaymentMethodDialog';
-import { AddPaymentMethodDialog } from '@/features/payment-methods/components/AddPaymentMethodDialog';
-import { useFinanceData } from '@/hooks/useFinanceData';
-import { calculateExpensesByCategory } from '@/hooks/financeUtils';
+import { PaymentMethodList } from '@/features/finance/payment-methods/components/PaymentMethodList';
+import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/components/EditPaymentMethodDialog';
+import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { calculateExpensesByCategory } from '@/features/finance/utils/financeUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
-import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/hooks/useFinanceData';
+import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,16 +19,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useLoans } from '@/hooks/useLoans';
+} from "@/shared/ui/alert-dialog";
+import { useLoans } from '@/features/finance/loans/hooks/useLoans';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
+import { Button } from '@/shared/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { Calendar } from '@/shared/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { cn } from '@/core/utils';
 
 
 interface SummaryTabProps {
@@ -444,3 +444,8 @@ export function SummaryTab({
     </div>
   );
 }
+
+
+
+
+
