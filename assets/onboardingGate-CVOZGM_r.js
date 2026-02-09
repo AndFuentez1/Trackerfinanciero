@@ -1,0 +1,1 @@
+const O=({currency:n,paymentMethods:o,categories:t,onboardingDecision:s,welcomeCompleted:g})=>{const a=(o==null?void 0:o.length)??0,r=(t==null?void 0:t.length)??0,c=!n||a===0||r===0,i=!g&&c,l=!c&&(!s||s==="pending");return{isEmptyState:c,showWelcomePanel:i,showDecisionPanel:l,isOnboardingLocked:i||l}},b=n=>n==="/"||n.startsWith("/configuracion");export{O as g,b as i};

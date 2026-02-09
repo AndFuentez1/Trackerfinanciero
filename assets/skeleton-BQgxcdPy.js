@@ -1,0 +1,1 @@
+import{j as s}from"./data-DAlpANll.js";import{c as t}from"./index-myUJFB4w.js";function a({className:e,...o}){return s.jsx("div",{className:t("animate-pulse rounded-md bg-stone-200 dark:bg-stone-800",e),...o})}export{a as S};

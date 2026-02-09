@@ -4,24 +4,404 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:; img-src 'self' https: data: blob:;" />
 
   <link rel="icon" href="./favicon.ico" type="image/x-icon" />
   <title>TrackFinance</title>
-  <script type="module" crossorigin src="/Trackerfinanciero/assets/index-DJ5J7DQo.js"></script>
+
+  <!-- Critical Error Handler - Must be loaded first and non-module to run immediately -->
+  <script>
+    (function () {
+      const OVERLAY_ID = 'tf-compile-error-overlay';
+      const STYLE_ID = 'tf-compile-error-style';
+      const BACKUP_FONT_STACK = '"Sora", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif';
+
+      window.__tf_ensureStyle = () => {
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        // Styles based on previous slick design, but hardcoded to prevent missing-var issues
+        style.textContent = `
+          :root {
+            /* Fallback colors if app vars are missing */
+            --tf-primary: #2563eb;
+            --tf-bg-color: #f8fafc;
+            --tf-card-bg: #ffffff;
+            --tf-text-main: #0f172a;
+            --tf-text-muted: #64748b;
+            --tf-border-color: #e2e8f0;
+          }
+          #${OVERLAY_ID} {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            /* Slick gradient background */
+            background: 
+                radial-gradient(1200px 600px at 10% -10%, rgba(37, 99, 235, 0.1), transparent 60%),
+                radial-gradient(900px 500px at 90% 0%, rgba(37, 99, 235, 0.08), transparent 55%),
+                var(--tf-bg-color);
+            color: var(--tf-text-main);
+            font-family: ${BACKUP_FONT_STACK};
+            letter-spacing: -0.01em;
+            box-sizing: border-box;
+            backdrop-filter: blur(4px);
+          }
+          #${OVERLAY_ID} * { box-sizing: border-box; }
+          
+          #${OVERLAY_ID} .tf-error-card {
+            width: min(960px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            background: var(--tf-card-bg);
+            border: 1px solid var(--tf-border-color);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04);
+            padding: 32px;
+            animation: tf-fade-in 0.2s ease-out;
+          }
+
+          @keyframes tf-fade-in {
+            from { opacity: 0; transform: scale(0.98) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+          }
+          
+          #${OVERLAY_ID} .tf-error-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--tf-primary);
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            padding: 6px 10px;
+            border-radius: 99px;
+            margin-bottom: 20px;
+          }
+          
+          #${OVERLAY_ID} .tf-error-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 12px;
+            line-height: 1.2;
+            color: #1e293b;
+          }
+          
+          #${OVERLAY_ID} .tf-error-message {
+             font-size: 15px;
+             color: var(--tf-text-muted);
+             margin-bottom: 24px;
+             line-height: 1.6;
+          }
+          
+          #${OVERLAY_ID} .tf-section {
+            margin-top: 24px;
+          }
+          
+          #${OVERLAY_ID} .tf-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--tf-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: block;
+          }
+
+          #${OVERLAY_ID} pre {
+            margin: 0;
+            padding: 16px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            border: 1px solid var(--tf-border-color);
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: "Menlo", "Monaco", "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #334155;
+            max-height: 400px;
+            overflow-y: auto;
+          }
+
+          #${OVERLAY_ID} .tf-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--tf-primary);
+            color: white;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-family: inherit;
+          }
+          #${OVERLAY_ID} .tf-btn:hover {
+            opacity: 0.9;
+          }
+          #${OVERLAY_ID} .tf-actions {
+             display: flex;
+             justify-content: flex-end;
+             margin-top: 24px;
+          }
+        `;
+        document.head.appendChild(style);
+      };
+
+      window.__tf_ensureOverlay = () => {
+        let overlay = document.getElementById(OVERLAY_ID);
+        if (overlay) return overlay;
+
+        overlay = document.createElement('div');
+        overlay.id = OVERLAY_ID;
+        overlay.innerHTML = `
+          <div class="tf-error-card">
+            <div class="tf-error-badge">Se ha detenido la aplicación</div>
+            <h1 class="tf-error-title">Algo salió mal</h1>
+            <div id="tf-error-msg" class="tf-error-message">Ha ocurrido un error inesperado al cargar la aplicación.</div>
+            
+            <div id="tf-error-details-container" style="display:none">
+                <div class="tf-section" id="tf-sec-details">
+                    <span class="tf-label">Detalles</span>
+                    <pre id="tf-error-details-pre"></pre>
+                </div>
+                <div class="tf-section" id="tf-sec-frame">
+                    <span class="tf-label">Componentes</span>
+                    <pre id="tf-error-frame-pre"></pre>
+                </div>
+                <div class="tf-section" id="tf-sec-stack">
+                    <span class="tf-label">Stack Trace</span>
+                    <pre id="tf-error-stack-pre"></pre>
+                </div>
+            </div>
+
+            <div class="tf-actions">
+                <button class="tf-btn" onclick="if(window.caches){caches.keys().then(n=>Promise.all(n.map(c=>caches.delete(c))))};window.location.reload(true)">
+                  Intentar de nuevo
+                </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        return overlay;
+      };
+
+      window.__tf_showError = (payload) => {
+        try {
+          window.__tf_ensureStyle();
+          const overlay = window.__tf_ensureOverlay();
+          const err = payload?.err ?? payload ?? {};
+          const msgEl = overlay.querySelector('#tf-error-msg');
+          const detailsContainer = overlay.querySelector('#tf-error-details-container');
+
+          const secDetails = overlay.querySelector('#tf-sec-details');
+          const preDetails = overlay.querySelector('#tf-error-details-pre');
+
+          const secFrame = overlay.querySelector('#tf-sec-frame');
+          const preFrame = overlay.querySelector('#tf-error-frame-pre');
+
+          const secStack = overlay.querySelector('#tf-sec-stack');
+          const preStack = overlay.querySelector('#tf-error-stack-pre');
+
+          const badgeEl = overlay.querySelector('.tf-error-badge');
+          const titleEl = overlay.querySelector('.tf-error-title');
+
+          let message = err.message || String(err);
+          if (message.includes("Unexpected token '<'") || message.includes("Unexpected token <")) {
+            message += "\n\n(Posible causa: El servidor devolvió HTML (404/500) en lugar de un script JS)";
+          }
+          if (msgEl) msgEl.textContent = message;
+
+          // Update title/badge
+          if (err.plugin) {
+            if (badgeEl) badgeEl.textContent = 'Error: ' + err.plugin;
+            if (titleEl) titleEl.textContent = 'Error de compilación o carga';
+          } else {
+            if (badgeEl) badgeEl.textContent = 'Error en tiempo de ejecución';
+            if (titleEl) titleEl.textContent = 'La aplicación se detuvo';
+          }
+
+          let hasContent = false;
+
+          // 1. Details (File, Location, etc)
+          const detailsParts = [
+            err.id ? `Archivo: ${err.id}` : '',
+            err.loc ? `Ubicación: ${err.loc.file || 'archivo'}:${err.loc.line}:${err.loc.column}` : ''
+          ].filter(Boolean);
+
+          if (detailsParts.length > 0 && preDetails && secDetails) {
+            preDetails.textContent = detailsParts.join('\n');
+            secDetails.style.display = 'block';
+            hasContent = true;
+          } else if (secDetails) {
+            secDetails.style.display = 'none';
+          }
+
+          // 2. Fragmento / Frame (Component Stack)
+          if (err.frame && preFrame && secFrame) {
+            preFrame.textContent = err.frame;
+            secFrame.style.display = 'block';
+            hasContent = true;
+          } else if (secFrame) {
+            secFrame.style.display = 'none';
+          }
+
+          // 3. Stack Trace -- FORCE VISIBILITY for ReferenceError/SyntaxError
+          // Many modern browsers truncate stack traces for some errors, hiding where they come from.
+          // We make sure if there is any hint of a stack or if it's a known React error type, we show it.
+          const isReferenceOrSyntax = err.name === 'ReferenceError' || err.name === 'SyntaxError' || message.includes('is not defined');
+
+          if ((err.stack || isReferenceOrSyntax) && preStack && secStack) {
+            preStack.textContent = err.stack || 'No stack trace available (Browser restriction)';
+            secStack.style.display = 'block';
+            hasContent = true;
+          } else if (secStack) {
+            secStack.style.display = 'none';
+          }
+
+          if (detailsContainer) {
+            detailsContainer.style.display = hasContent ? 'block' : 'none';
+          }
+
+          overlay.style.display = 'flex';
+        } catch (e) {
+          console.error("Error displaying error overlay:", e);
+          alert("Critical Error: " + (payload?.err?.message || payload));
+        }
+      };
+
+      window.addEventListener('error', (event) => {
+        // Resource loading error (Capture phase)
+        if (event.target && (event.target instanceof HTMLElement)) {
+          const tag = event.target.tagName.toLowerCase();
+          const src = event.target.src || event.target.href;
+          // Ignore irrelevant resources if needed
+          if (!src) return;
+
+          // Specific handling for Module Scripts failing (likely syntax/import error in dependency)
+          if (tag === 'script' && src.includes('src/')) {
+            window.__tf_showError({
+              err: {
+                message: `Error crítico al cargar módulo: ${src}`,
+                id: src, // Shows in 'Detalles' section
+                stack: `Un archivo clave de la aplicación falló al cargarse.\nEsto suele deberse a:\n1. Un error de sintaxis o importación inválida (revisar consola).\n2. Un archivo inexistente.\n3. Fallo de conexión.\n\nRecurso: ${src}`,
+                plugin: 'Error de Carga de Módulo'
+              }
+            });
+            return;
+          }
+
+          window.__tf_showError({
+            err: {
+              message: `No se pudo cargar un recurso vital: <${tag}> desde ${src}`,
+              id: src, // Shows in 'Detalles' section
+              stack: `La aplicación no puede continuar porque falta un archivo.\nPor favor verifica tu conexión o la terminal del servidor.\n\nElemento: ${event.target.outerHTML}`,
+              plugin: 'Error de Red / Recurso'
+            }
+          });
+          return;
+        }
+
+        // Script error - Don't ignore completely, but warn
+        if (event.message === 'Script error.') {
+          console.warn('Script error detected (globally). Often CORS related.');
+          // We allow it to proceed to show the error overlay if it's the only thing we have
+        }
+
+        // ResizeObserver loop limit exceeded
+        if (event.message && event.message.includes('ResizeObserver')) return;
+
+        window.__tf_showError({
+          err: {
+            message: event.message || 'Error desconocido en tiempo de ejecución',
+            stack: event.error?.stack,
+            id: event.filename, // Shows in 'Detalles'
+            loc: { // Shows in 'Detalles'
+              file: event.filename,
+              line: event.lineno,
+              column: event.colno
+            }
+          }
+        });
+      }, true);
+
+      window.addEventListener('unhandledrejection', (event) => {
+        window.__tf_showError({
+          err: {
+            message: 'Promesa rechazada sin manejar: ' + (event.reason?.message || event.reason),
+            stack: event.reason?.stack
+          }
+        });
+      });
+
+      // Intercept console.error to catch silent Vite/Network errors
+      const originalConsoleError = console.error;
+      console.error = function (...args) {
+        originalConsoleError.apply(console, args);
+        // vite/client logs "[vite] Internal Server Error" when overlay is disabled
+        const text = args.map(a => String(a)).join(' ');
+
+        // Catch common Vite/Network failure patterns that don't trigger window.onerror
+        if (text.includes('[vite] Internal Server Error') ||
+          text.includes('[vite] Failed to resolve import') ||
+          text.includes('net::ERR_ABORTED') ||
+          (text.includes('Failed to fetch') && text.includes('vite'))
+        ) {
+          window.__tf_showError({
+            err: {
+              message: text.replace('[vite]', '').trim(),
+              plugin: 'Vite/Network Error',
+              stack: 'Este error fue interceptado de la consola.\nProbablemente un fallo de red o importación al recargar el módulo.\n\nLog:\n' + text
+            }
+          });
+        }
+      };
+
+      // 4. Host Verification - Detect mismatch between configured port and current port
+      (function checkHost() {
+        const expectedPort = '8080';
+        const currentPort = window.location.port;
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        if (isLocal && currentPort && currentPort !== expectedPort) {
+          console.warn(`[Host Check] Mismatch detected. Expected :${expectedPort}, found :${currentPort}`);
+
+          // Wait a bit for DOM to be ready
+          setTimeout(() => {
+            window.__tf_showError({
+              err: {
+                message: `Estás accediendo a la aplicación desde el puerto ${currentPort}, pero está configurada para el puerto ${expectedPort}.`,
+                plugin: 'Advertencia de Configuración',
+                stack: `Acceder desde un puerto no configurado (como :${currentPort}) puede causar errores de red, fallos en la carga de fuentes y problemas de autenticación con Supabase.\n\nPor favor, usa la URL oficial de desarrollo:\nhttp://localhost:${expectedPort}/`
+              }
+            });
+          }, 500);
+        }
+      })();
+
+    })();
+  </script>
+  <script type="module" crossorigin src="/Trackerfinanciero/assets/index-myUJFB4w.js"></script>
   <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/charts-wRdfen5Q.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/data-D_9Sdbxf.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/radix-BGBSsdWz.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/icons-BcpD3lHt.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/router-BEdPIWQO.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/supabase-CyJA9FNc.js">
-  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/excel-B7sBd1wv.js">
-  <link rel="stylesheet" crossorigin href="/Trackerfinanciero/assets/index-B8TmkM3f.css">
+  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/data-DAlpANll.js">
+  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/router-L6wkG90v.js">
+  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/radix-CFV-RNme.js">
+  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/supabase-DY7_jZEG.js">
+  <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/icons-D5Oc-8Of.js">
+  <link rel="stylesheet" crossorigin href="/Trackerfinanciero/assets/index-D6R3UJxm.css">
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
+
 </body>
 
 </html>
