@@ -450,10 +450,10 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
           <div className="space-y-2">
             <h1 className="text-xl sm:text-2xl font-bold">Verifica tu correo</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground" aria-live="polite">
               Hemos enviado un enlace de confirmación a <span className="font-semibold text-foreground">{email || (user?.email)}</span>.
             </p>
-            <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100 flex items-center gap-2">
+            <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100 flex items-center gap-2" role="alert">
               <AlertCircle className="h-4 w-4 shrink-0" />
               Debes confirmar tu correo para acceder al Dashboard.
             </p>
@@ -555,7 +555,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
 
                 {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
+                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2" role="alert">
                     <AlertCircle className="h-4 w-4" />
                     {error}
                   </p>
@@ -587,7 +587,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">¡Enlace enviado!</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed" aria-live="polite">
                     Hemos enviado un acceso directo a <span className="font-bold">{email}</span>.
                     Revisa tu bandeja de entrada (y spam).
                   </p>
@@ -662,7 +662,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
 
                 {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
+                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2" role="alert">
                     <AlertCircle className="h-4 w-4" />
                     {error}
                   </p>
@@ -770,7 +770,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
 
                 {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
+                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2" role="alert">
                     <AlertCircle className="h-4 w-4" />
                     {error}
                   </p>

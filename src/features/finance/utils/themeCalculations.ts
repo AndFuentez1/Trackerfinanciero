@@ -120,7 +120,7 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
     themeVars['--card-foreground'] = '220 15% 15%';
     themeVars['--border'] = '220 13% 90%';
     themeVars['--muted'] = '220 15% 96%';
-    themeVars['--muted-foreground'] = '220 10% 45%';
+    themeVars['--muted-foreground'] = '220 10% 40%'; // Improved contrast (was 45%)
     themeVars['--input'] = '0 0% 100%';
 
     // Accent tokens premium
@@ -129,7 +129,10 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
     const accentPrimaryL = Math.max(l, 48);
     themeVars['--accent-primary'] = `${h} ${accentPrimaryS}% ${accentPrimaryL}%`;
     themeVars['--primary'] = themeVars['--accent-primary'];
-    themeVars['--primary-foreground'] = '0 0% 100%';
+
+    // Dynamic Primary Foreground based on L (Level AA safety)
+    // If lightness is high (> 65%), use dark text
+    themeVars['--primary-foreground'] = accentPrimaryL > 65 ? '220 15% 15%' : '0 0% 100%';
 
     // Accent soft: para hover, focus, iconos activos, tabs activos
     const accentSoftS = Math.round(accentPrimaryS * 0.4);

@@ -72,6 +72,21 @@ Se ha diseñado un plan para futuras mejoras críticas que optimizarán la flexi
     - **Zona de Reclasificación:** Toggle para activar/desactivar la asistencia de limpieza de datos.
 - **Persistencia:** Uso de `localStorage` para preferencias inmediatas, escalable a perfil de base de datos.
 
+### 3. Aplicación Móvil y Modo Offline (Próximamente)
+- **Capacitor Wrapper:** Convertir la aplicación en una APK funcional utilizando WebView con Capacitor.
+- **Capacidades Offline:** Permitir el uso de la aplicación y el registro de datos sin conexión a internet.
+- **Sincronización Inteligente:** Actualizar automáticamente los datos con el servidor una vez se recupere la conexión.
+
+### 4. Gestión de Configuración
+- **Portabilidad:** Opción para exportar e importar la configuración personalizada de la aplicación (temas, feature toggles, preferencias) para facilitar la migración entre dispositivos.
+
+### 5. QA & Performance (Pendiente)
+- [ ] Ejecutar Lighthouse en entorno productivo y registrar scores (Performance, Accessibility, Best Practices, SEO).
+- [ ] Configurar suite de tests (Unit/Integration/E2E) y pipeline de CI.
+- [ ] Revisar CLS/TTI con datasets reales y optimizar carga de módulos pesados (charts/excel).
+- [ ] Auditoría de accesibilidad completa (teclado, aria-labels, contraste).
+- [ ] Backlog de tests guardado en `docs/tests-backlog.md` para reactivar la suite.
+
 ## Estructura del Código
 
 ### Directorios Principales

@@ -128,7 +128,7 @@ export function Sidebar() {
                 <div className="text-center min-h-[42px] flex items-center justify-center">
                     <div className="w-full bg-muted/30 px-3 py-2.5 rounded-xl border border-border/50 transition-all duration-300">
                         {lastUpdated ? (
-                            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/80">
+                            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/80">
                                 Modificado: {format(lastUpdated, "dd/MM/yy HH:mm", { locale: es })}
                             </p>
                         ) : (
