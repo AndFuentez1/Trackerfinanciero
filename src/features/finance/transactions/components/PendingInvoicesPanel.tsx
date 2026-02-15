@@ -276,13 +276,15 @@ export function PendingInvoicesPanel() {
     return (
         <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-6 animate-in slide-in-from-top-2">
             <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-orange-100 rounded-full text-orange-600">
-                        <AlertCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg text-orange-900">Facturas Pendientes</h3>
-                        <p className="text-base text-orange-700">Tienes {invoices.length} nuevo(s) documento(s) por revisar.</p>
+                <div className="flex flex-col gap-0 mb-4">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-orange-100 rounded-full text-orange-600 shrink-0">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h3 className="font-semibold text-lg text-orange-900 tracking-tight leading-none">Facturas Pendientes</h3>
+                            <p className="text-base text-orange-700 mt-1 font-medium leading-none">Tienes {invoices.length} nuevo(s) documento(s) por revisar.</p>
+                        </div>
                     </div>
                 </div>
 

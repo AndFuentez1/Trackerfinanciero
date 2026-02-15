@@ -1,8 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/core/utils';
-import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useFinance } from '@/features/finance/context/FinanceContext';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 
 interface SummaryCardProps {
   title: string;
@@ -14,48 +13,7 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', description, className }: SummaryCardProps) {
-  const decimalPlaces = useDecimalPlaces();
   const { currency } = useFinance();
-
-  const getCurrencySymbol = (currencyCode: string): string => {
-    const curr = CURRENCIES.find(c => c.code === currencyCode);
-    return curr?.symbol || currencyCode;
-  };
-
-  const formatSmartCurrency = (value: number) => {
-    const absValue = Math.abs(value);
-    const symbol = getCurrencySymbol(currency || 'COP');
-    let formatted = new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: currency || 'COP',
-      currencyDisplay: 'code',
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces,
-    }).format(absValue);
-
-    formatted = formatted.replace(currency || 'COP', symbol);
-
-    // Separar símbolo, parte entera y decimales
-    const parts = formatted.split(',');
-    const integerPart = parts[0]; // "$1.000" o "€1.000"
-    const decimalPart = parts.length > 1 && decimalPlaces > 0 ? parts[1] : ''; // "00"
-
-    // Extraer símbolo (puede ser $, €, etc.)
-    const extractedSymbol = integerPart.match(/[^0-9.,\s]+/)?.[0] || '$';
-
-    return {
-      symbol: extractedSymbol,
-      integerPart: integerPart.replace(/[^0-9.,\s]+/g, ''),
-      decimalPart,
-      fullLength: formatted.length
-    };
-  };
-
-  const getFontSize = (length: number) => {
-    if (length > 18) { return 'text-lg lg:text-xl'; }
-    if (length > 15) { return 'text-xl lg:text-2xl'; }
-    return 'text-2xl lg:text-3xl';
-  };
 
   const getTextColor = () => {
     return 'text-foreground';
@@ -68,48 +26,47 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
     return 'text-muted-foreground';
   };
 
-  const { symbol, integerPart, decimalPart, fullLength } = formatSmartCurrency(amount);
-  const fontSize = getFontSize(fullLength);
-
   return (
     <div className={cn(
-      "summary-card overflow-hidden transition-all duration-300",
+      "summary-card p-4 sm:p-5 flex flex-col gap-1 h-full min-h-[110px] justify-between bg-slate-50/50 backdrop-blur-sm",
       className
     )}>
-      {/* Icon - top right */}
-      <div className="absolute top-5 right-5 z-10">
-        <Icon className={cn("h-4 w-4 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
-      </div>
 
-      {/* Content */}
-      <div className="space-y-3">
-        {/* Label */}
-        <p className="text-xs font-medium text-muted-foreground tracking-wide">
-          {title}
-        </p>
-
-        {/* Amount */}
-        <div className="flex items-baseline gap-0.5">
-          <span className={cn(
-            'font-bold tracking-tight leading-none',
-            fontSize,
-            getTextColor()
-          )}>
-            <span style={{ fontSize: '0.7em', opacity: 0.8 }}>{symbol}</span>
-            <span>{integerPart}</span>
-            {decimalPart && <span className="opacity-60" style={{ fontSize: '0.7em' }}>,{decimalPart}</span>}
-          </span>
+      <div className="space-y-2.5">
+        {/* Header: Icon & Title Area */}
+        <div className="flex items-start gap-3">
+          <div className="flex shrink-0 items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+            <Icon className={cn("h-4 w-4 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <p className="text-sm font-medium text-muted-foreground tracking-tight leading-none">
+              {title}
+            </p>
+            {description && (
+              <p className="text-[11px] text-muted-foreground font-normal leading-none mt-1">
+                {description}
+              </p>
+            )}
+          </div>
         </div>
 
-        {description && (
-          <p className="text-[10px] text-muted-foreground font-normal">
-            {description}
-          </p>
-        )}
+        {/* Content: Amount - Independent layout hierarchy */}
+        <div className="pl-0 space-y-1">
+          <CurrencyDisplay
+            amount={amount}
+            currencyCode={currency}
+            className={cn(
+              'font-bold tracking-tight leading-none',
+              "text-2xl",
+              getTextColor()
+            )}
+          />
+        </div>
       </div>
     </div>
   );
 }
+
 
 
 

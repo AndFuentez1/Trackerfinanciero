@@ -20,12 +20,12 @@ interface HighlightedCardProps {
 
 export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }: HighlightedCardProps) {
     const { currency, decimalPlaces } = useFinance();
-    
+
     const getCurrencySymbol = (currencyCode: string): string => {
         const curr = CURRENCIES.find(c => c.code === currencyCode);
         return curr?.symbol || currencyCode;
     };
-    
+
     const formatSmartCurrency = (value: number) => {
         const symbol = getCurrencySymbol(currency || 'COP');
         let formatted = new Intl.NumberFormat('es-CO', {
@@ -34,7 +34,7 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
             currencyDisplay: 'code',
             minimumFractionDigits: decimalPlaces ?? 2,
         }).format(value);
-        
+
         formatted = formatted.replace(currency || 'COP', symbol);
 
         const [main, cents] = formatted.split(',');
@@ -54,9 +54,9 @@ export function HighlightedCard({ title, amount, icon: Icon, breakdown, footer }
             {/* Decorative background element - subtler for white theme */}
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-primary/5 rounded-full blur-[100px] group-hover:bg-primary/10 transition-colors duration-500" />
 
-            <div className="relative flex-1 space-y-4">
+            <div className="relative flex-1 space-y-3">
                 <div className="flex items-start justify-between">
-                    <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] pt-1">
+                    <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] leading-none">
                         {title}
                     </p>
                     <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-border/40 transition-transform group-hover:scale-110 shadow-sm">

@@ -32,9 +32,9 @@ export function Sidebar() {
     const { lastModification: budgetLastUpdated } = useBudgetsData();
 
     const lastUpdated = useMemo(() => {
-        if (!financeLastUpdated && !budgetLastUpdated) {return null;}
-        if (!financeLastUpdated) {return budgetLastUpdated;}
-        if (!budgetLastUpdated) {return financeLastUpdated;}
+        if (!financeLastUpdated && !budgetLastUpdated) { return null; }
+        if (!financeLastUpdated) { return budgetLastUpdated; }
+        if (!budgetLastUpdated) { return financeLastUpdated; }
         return financeLastUpdated > budgetLastUpdated ? financeLastUpdated : budgetLastUpdated;
     }, [financeLastUpdated, budgetLastUpdated]);
 

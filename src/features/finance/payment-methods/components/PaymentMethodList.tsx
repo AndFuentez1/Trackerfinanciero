@@ -8,6 +8,7 @@ import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 
 interface PaymentMethodListProps {
   paymentMethods: PaymentMethod[];
@@ -88,25 +89,14 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         // Let's move the helper INSIDE the map or pass color.
 
         const renderBalance = (val: number) => {
-          const currCode = ctxCurrency || currency || 'COP';
-          const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
-
-          const formatted = new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: currCode,
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces,
-            currencyDisplay: 'code',
-          }).format(val).replace(currCode, symbol);
-
-          const parts = formatted.split(',');
-          const integerPart = parts[0].replace(symbol, '').trim();
-          const decimalPart = parts.length > 1 ? parts[1] : null;
-
           return (
-            <div className="flex items-baseline" style={{ color: textColor }}>
-              <span className="text-3xl font-semibold">{symbol} {integerPart}</span>
-              {decimalPart && <span className="text-[0.85em] font-semibold opacity-85">,{decimalPart}</span>}
+            <div className="" style={{ color: textColor }}>
+              <CurrencyDisplay
+                amount={val}
+                currencyCode={ctxCurrency || currency}
+                className="text-3xl"
+                hideSymbol={false}
+              />
             </div>
           );
         };
@@ -196,7 +186,6 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
                   </div>
                 )}
               </div>
-              )
             </div>
           </div>
         );

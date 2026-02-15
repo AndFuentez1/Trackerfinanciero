@@ -23,13 +23,7 @@ export default function ConfiguracionPage() {
     const location = useLocation();
     const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
     const [pendingCategoryReturn, setPendingCategoryReturn] = useState(false);
-    const [isAdvancedOpen, setIsAdvancedOpen] = useState(() => {
-        return localStorage.getItem('settings-advanced-open') === 'true';
-    });
-
-    useEffect(() => {
-        localStorage.setItem('settings-advanced-open', String(isAdvancedOpen));
-    }, [isAdvancedOpen]);
+    const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
 
     const settingsBootLoading = authLoading || categoriesLoading || paymentMethodsLoading || profileLoading;
@@ -83,70 +77,69 @@ export default function ConfiguracionPage() {
             <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12 animate-in fade-in duration-700">
 
                 {/* Header Section */}
-                <header className="space-y-4 border-b border-border/40 pb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                <header className="border-b border-border/40 pb-6">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
                             <Settings2 className="h-6 w-6" />
                         </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Configuración</h1>
-                            <p className="text-base text-muted-foreground font-medium">Gestiona tus preferencias, cuentas y seguridad de la aplicación</p>
+                        <div className="flex flex-col">
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Configuración</h1>
+                            <p className="text-sm text-muted-foreground font-medium mt-1 leading-none">Gestiona tus preferencias, cuentas y seguridad de la aplicación</p>
                         </div>
                     </div>
                 </header>
 
                 <div className="space-y-8">
-                    <section className="space-y-8">
+                    <div className="flex flex-col gap-6">
                         <ThemeSection />
                         <CurrencySection />
-                        <div className="flex flex-col gap-10">
-                            <div
-                                id="categories"
-                                className={cn(
-                                    "transition-all duration-300",
-                                    highlightedSection === 'categories' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
-                                )}>
-                                <CategoriesSection
-                                    highlighted={highlightedSection === 'categories'}
-                                    onCategoryCreated={() => {
-                                        if (highlightedSection === 'categories') {
-                                            setPendingCategoryReturn(true);
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div
-                                id="payment-methods"
-                                className={cn(
-                                    "transition-all duration-300",
-                                    highlightedSection === 'payment-methods' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
-                                )}>
-                                <PaymentMethodsSection
-                                    highlighted={highlightedSection === 'payment-methods'}
-                                    onPaymentMethodCreated={() => {
-                                        if (highlightedSection === 'payment-methods') {
-                                            setTimeout(() => {
-                                                setHighlightedSection(null);
-                                                navigate('/auth');
-                                            }, 500);
-                                        }
-                                    }}
-                                />
-                            </div>
+                        <div
+                            id="categories"
+                            className={cn(
+                                "transition-all duration-300",
+                                highlightedSection === 'categories' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
+                            )}>
+                            <CategoriesSection
+                                highlighted={highlightedSection === 'categories'}
+                                onCategoryCreated={() => {
+                                    if (highlightedSection === 'categories') {
+                                        setPendingCategoryReturn(true);
+                                    }
+                                }}
+                            />
                         </div>
-                    </section>
+                        <div
+                            id="payment-methods"
+                            className={cn(
+                                "transition-all duration-300",
+                                highlightedSection === 'payment-methods' && "scale-105 rounded-2xl border-2 border-primary shadow-lg shadow-primary/20 p-1"
+                            )}>
+                            <PaymentMethodsSection
+                                highlighted={highlightedSection === 'payment-methods'}
+                                onPaymentMethodCreated={() => {
+                                    if (highlightedSection === 'payment-methods') {
+                                        setTimeout(() => {
+                                            setHighlightedSection(null);
+                                            navigate('/auth');
+                                        }, 500);
+                                    }
+                                }}
+                            />
+                        </div>
 
-                    <Separator className="my-8 opacity-50" />
-
-                    {/* Security & Privacy Section */}
-                    <div className="space-y-8">
                         <SecuritySection />
-                        <div id="advanced" className="pt-4">
+
+                        <Separator className="opacity-50" />
+
+                        <div id="advanced">
                             <AdvancedSettings
                                 isOpen={isAdvancedOpen}
                                 onOpenChange={setIsAdvancedOpen}
                             />
                         </div>
+
+                        <Separator className="opacity-50" />
+
                         <DangerZone />
                     </div>
 

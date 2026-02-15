@@ -38,11 +38,11 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
               )}
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="flex gap-4">
-                <Icon className="h-6 w-6 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-base">{insight.title}</h4>
-                  <p className="text-sm mt-2 opacity-90">{insight.description}</p>
+              <div className="flex items-start gap-4">
+                <Icon className="h-6 w-6 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <h4 className="font-semibold text-base leading-none">{insight.title}</h4>
+                  <p className="text-sm mt-1 opacity-90 leading-none">{insight.description}</p>
                 </div>
               </div>
             </div>

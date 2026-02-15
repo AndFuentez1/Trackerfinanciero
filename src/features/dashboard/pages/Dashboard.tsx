@@ -166,18 +166,18 @@ export default function Index() {
     <div className="min-h-screen">
       <main className="mx-auto max-w-6xl px-4 py-10 space-y-12 animate-in fade-in duration-700">
         {/* Header Section */}
-        <header className="space-y-4 border-b border-border pb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+        <header className="border-b border-border pb-6">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
                 <LayoutDashboard className="h-6 w-6" />
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Panel Principal</h1>
-                <p className="text-muted-foreground font-medium">Resumen general de tu estado financiero</p>
+              <div className="flex flex-col">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Panel Principal</h1>
+                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Resumen general de tu estado financiero</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 md:mt-1">
               <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
               <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
             </div>

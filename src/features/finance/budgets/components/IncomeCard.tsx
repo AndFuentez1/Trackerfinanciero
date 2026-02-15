@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { TrendingUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
@@ -114,9 +114,18 @@ export function IncomeCard() {
 
     return (
         <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-primary">Balance</CardTitle>
-            </CardHeader>
+            <div className="flex flex-col gap-1 pb-4">
+                <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+                        <TrendingUp className="h-4 w-4 text-primary" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                        <p className="text-sm font-medium text-muted-foreground tracking-tight leading-none">
+                            Balance
+                        </p>
+                    </div>
+                </div>
+            </div>
             <CardContent className="space-y-6 flex-1 flex flex-col">
                 {/* Main Metric: Savings Rate */}
                 <div className="space-y-3">

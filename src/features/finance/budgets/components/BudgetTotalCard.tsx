@@ -6,7 +6,7 @@ import { Progress } from "@/shared/ui/progress";
 import { useFinance } from "@/features/finance/context/FinanceContext";
 import { CURRENCIES } from "@/features/finance/constants/currencyConstants";
 import { useDecimalPlaces } from "@/features/finance/hooks/useDecimalPlaces";
-import { TrendingDown } from 'lucide-react';
+import { TrendingDown, PieChart } from 'lucide-react';
 
 interface BudgetTotalCardProps {
     totalBudget: TotalBudgetState;
@@ -64,9 +64,18 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
 
     return (
         <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-primary">Presupuesto</CardTitle>
-            </CardHeader>
+            <div className="flex flex-col gap-1 pb-4">
+                <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+                        <PieChart className="h-4 w-4 text-primary" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                        <p className="text-sm font-medium text-muted-foreground tracking-tight leading-none">
+                            Presupuesto
+                        </p>
+                    </div>
+                </div>
+            </div>
             <CardContent className="space-y-6">
                 {/* Progress Bar and Percentage */}
                 <div className="space-y-3">

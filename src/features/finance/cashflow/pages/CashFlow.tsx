@@ -134,14 +134,16 @@ export default function CashFlow() {
   return (
     <div className="min-h-screen bg-background/30">
       <main className="container max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 border-b border-border/40 pb-6">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-              <Wallet className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Flujo de Caja</h1>
-              <p className="text-muted-foreground font-medium">Proyección de ingresos y egresos</p>
+        <header className="border-b border-border/40 pb-6">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                <Wallet className="h-6 w-6" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Flujo de Caja</h1>
+                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Proyección de ingresos y egresos</p>
+              </div>
             </div>
           </div>
         </header>

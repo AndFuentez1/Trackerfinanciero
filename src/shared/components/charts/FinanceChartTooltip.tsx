@@ -1,4 +1,5 @@
 import type { TooltipProps } from 'recharts';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 
 interface FinanceChartTooltipProps extends TooltipProps<number, string> {
@@ -29,7 +30,7 @@ export function FinanceChartTooltip({
             const dataKey = typeof item.dataKey === 'string' ? item.dataKey : String(item.dataKey);
             const adjustment =
               dataKey === 'balanceAjuste' &&
-              typeof item.payload?.balanceAjusteDelta === 'number'
+                typeof item.payload?.balanceAjusteDelta === 'number'
                 ? item.payload.balanceAjusteDelta
                 : null;
             const value = adjustment ?? Number(item.value);
@@ -44,9 +45,7 @@ export function FinanceChartTooltip({
                   />
                   <span className="text-muted-foreground">{item.name ?? dataKey}</span>
                 </div>
-                <span className="font-semibold tabular-nums text-foreground">
-                  {formatCurrency(value)}
-                </span>
+                <CurrencyDisplay amount={value} currencyCode="COP" className="font-semibold text-foreground" />
               </div>
             );
           })}

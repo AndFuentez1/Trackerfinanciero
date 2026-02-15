@@ -66,7 +66,7 @@ export default function SavingsPage() {
 
     const isLoading = authLoading || dataLoading || savingsLoading;
 
-    if (!user && !isLoading) {return null;}
+    if (!user && !isLoading) { return null; }
 
     if (savingsError && savingsAccounts.length === 0 && !isLoading) {
         return (
@@ -95,14 +95,16 @@ export default function SavingsPage() {
                 {isLoading ? (
                     <StandardHeaderSkeleton />
                 ) : (
-                    <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border pb-6">
-                        <div className="flex items-center gap-3 w-full md:w-auto">
-                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                                <Wallet className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ahorros</h1>
-                                <p className="text-muted-foreground font-medium">Metas y seguimiento de ahorros</p>
+                    <header className="border-b border-border pb-6">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                            <div className="flex items-start gap-4 w-full md:w-auto">
+                                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                    <Wallet className="h-6 w-6" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Ahorros</h1>
+                                    <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Metas y seguimiento de ahorros</p>
+                                </div>
                             </div>
                         </div>
                     </header>
@@ -140,10 +142,3 @@ export default function SavingsPage() {
         </div>
     );
 }
-
-
-
-
-
-
-

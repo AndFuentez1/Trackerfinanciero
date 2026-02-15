@@ -80,27 +80,29 @@ export default function BudgetsPage() {
                 {isLoading ? (
                     <StandardHeaderSkeleton />
                 ) : (
-                    <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border pb-6">
-                        <div className="flex items-center gap-3 w-full md:w-auto">
-                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                                <PieChart className="h-6 w-6" />
+                    <header className="border-b border-border pb-6">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                    <PieChart className="h-6 w-6" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Presupuestos</h1>
+                                    <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Controla tus gastos mensuales</p>
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Presupuestos</h1>
-                                <p className="text-muted-foreground font-medium">Controla tus gastos mensuales</p>
+                            <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
+                                <AddTransactionDialog
+                                    onAdd={addTransaction}
+                                    categories={categories}
+                                    paymentMethods={paymentMethods}
+                                    onAddTransfer={addTransfer}
+                                />
+                                <AddBudgetDialog
+                                    onAdd={saveBudget}
+                                    monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                                />
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
-                            <AddTransactionDialog
-                                onAdd={addTransaction}
-                                categories={categories}
-                                paymentMethods={paymentMethods}
-                                onAddTransfer={addTransfer}
-                            />
-                            <AddBudgetDialog
-                                onAdd={saveBudget}
-                                monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
-                            />
                         </div>
                     </header>
                 )}
@@ -126,13 +128,14 @@ export default function BudgetsPage() {
 
                 <Separator className="my-6" />
 
-                {/* Category Budgets Grid */}
                 <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Wallet className="h-5 w-5 text-muted-foreground" />
-                            Presupuestos por Categoría
-                        </h2>
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+                        <div className="flex items-start gap-2 px-1">
+                            <Wallet className="h-5 w-5 text-primary flex-shrink-0" />
+                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
+                                Presupuestos por Categoría
+                            </h2>
+                        </div>
                         <div className="flex items-center gap-2">
                             <Select
                                 value={selectedMonth}

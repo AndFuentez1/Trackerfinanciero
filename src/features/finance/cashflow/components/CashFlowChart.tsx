@@ -52,7 +52,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     const allValues: number[] = [];
     data.forEach(d => {
       if (d.ingresos != null) allValues.push(d.ingresos);
-      if (d.egresos != null) allValues.push(d.egresos);
+      if (d.egresos != null) allValues.push(-Math.abs(d.egresos));
       if (d.balanceReal != null) allValues.push(d.balanceReal);
       if (d.balanceProyectado != null) allValues.push(d.balanceProyectado);
       if (d.balanceSimulated != null) allValues.push(d.balanceSimulated);
@@ -115,7 +115,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
   if (loading) {
     return (
-      <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="mb-6 shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm">
         <CardHeader>
           <Skeleton className="h-6 w-48 mb-2" />
           <Skeleton className="h-4 w-64" />
@@ -127,12 +127,16 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     )
   }
 
-  // Pre-process data to ensure continuity if needed, or rely on distinct keys
-  // data comes with 'balanceReal' (only 1st point) and 'balanceProyectado' (all points)
-  // We can render two lines.
+  // Pre-process data to make expenses negative for downward bars
+  const chartData = useMemo(() => {
+    return data.map(d => ({
+      ...d,
+      negativeEgresos: d.egresos != null ? -Math.abs(d.egresos) : null
+    }));
+  }, [data]);
 
   return (
-    <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="mb-6 shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm">
       <CardHeader className="pb-2">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -171,7 +175,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
       <CardContent className="p-4 pt-2">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.2} />
@@ -237,10 +241,10 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
               {showExpense && (
                 <Bar
-                  dataKey="egresos"
+                  dataKey="negativeEgresos"
                   name="Egresos Totales"
                   fill="hsl(var(--destructive))"
-                  radius={[4, 4, 0, 0]}
+                  radius={[0, 0, 4, 4]}
                   maxBarSize={40}
                   fillOpacity={0.7}
                 />

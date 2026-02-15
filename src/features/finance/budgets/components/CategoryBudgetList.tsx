@@ -5,6 +5,8 @@ import { cn } from "@/core/utils";
 import { Pencil } from "lucide-react";
 import { AddBudgetDialog } from "./AddBudgetDialog";
 import { Button } from "@/shared/ui/button";
+import { Badge } from '@/shared/ui/badge';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import type { PaymentMethod } from "@/features/finance/hooks/useFinanceData";
 import { useFormatCurrency } from "@/features/finance/hooks/useFormatCurrency";
 import { useFinance } from "@/features/finance/context/FinanceContext";
@@ -31,7 +33,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
     }
 
     return (
-        <div className="hidden md:block bg-gradient-to-b from-card to-card/50 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
+        <div className="hidden md:block bg-gray-50/50 dark:bg-muted/20 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
             <div className="overflow-x-auto">
                 <table className="w-full table-fixed">
                     <thead className="bg-gradient-to-r from-muted/40 to-muted/20">

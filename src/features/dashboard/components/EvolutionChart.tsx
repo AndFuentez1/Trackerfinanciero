@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/ui/card';
 import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
@@ -272,86 +273,92 @@ export function EvolutionChart({
   }, [chartData]);
 
   return (
-    <div className="space-y-4">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Evolución Histórica</h3>
-          <p className="text-sm text-muted-foreground">Comportamiento de ingresos, gastos y balance neto</p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2">
-            <Button
-              variant={showIncome ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[90px] justify-center", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
-            >
-              {showIncome && <Check className="h-3 w-3" />} Ingresos
-            </Button>
-            <Button
-              variant={showExpense ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[85px] justify-center", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
-            >
-              {showExpense && <Check className="h-3 w-3" />} Gastos
-            </Button>
-            <Button
-              variant={showBalance ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[85px] justify-center", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
-            >
-              {showBalance && <Check className="h-3 w-3" />} Balance
-            </Button>
+    <Card className="shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm h-full flex flex-col">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg font-semibold text-foreground">Evolución Histórica</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">Comportamiento de ingresos, gastos y balance neto</CardDescription>
           </div>
 
-          <Select value={selectedMonth} onValueChange={setMonth}>
-            <SelectTrigger className="w-[130px] h-9 bg-background/50 border-input"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {availableMonths.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
-                {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
-                <ChevronDown className="h-4 w-4 opacity-50" />
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2 order-2 md:order-1">
+              <Button
+                variant={showIncome ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowIncome(!showIncome)}
+                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200 opacity-100")}
+              >
+                {showIncome && <Check className="h-3 w-3" />} Ingresos
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[150px]">
-              <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {onSelectAllYears && (
-                <>
-                  <DropdownMenuCheckboxItem
-                    checked={selectedYears.length === availableYears.length}
-                    onCheckedChange={onSelectAllYears}
-                  >
-                    Todos
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {availableYears.map(year => (
-                <DropdownMenuCheckboxItem
-                  key={year}
-                  checked={selectedYears.includes(year)}
-                  onCheckedChange={() => toggleYear(year)}
-                >
-                  {year}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              <Button
+                variant={showExpense ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowExpense(!showExpense)}
+                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200 opacity-100")}
+              >
+                {showExpense && <Check className="h-3 w-3" />} Gastos
+              </Button>
+              <Button
+                variant={showBalance ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowBalance(!showBalance)}
+                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200 opacity-100")}
+              >
+                {showBalance && <Check className="h-3 w-3" />} Balance
+              </Button>
+            </div>
 
-      {/* Chart */}
-      <div className="w-full h-[350px] mt-4">
+            <div className="flex items-center gap-2 order-1 md:order-2">
+              <Select value={selectedMonth} onValueChange={setMonth}>
+                <SelectTrigger className="w-[110px] md:w-[130px] h-9 bg-background/50 border-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
+                    {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[150px]">
+                  <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {onSelectAllYears && (
+                    <>
+                      <DropdownMenuCheckboxItem
+                        checked={selectedYears.length === availableYears.length}
+                        onCheckedChange={onSelectAllYears}
+                      >
+                        Todos
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {availableYears.map(year => (
+                    <DropdownMenuCheckboxItem
+                      key={year}
+                      checked={selectedYears.includes(year)}
+                      onCheckedChange={() => toggleYear(year)}
+                    >
+                      {year}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-4 pt-2 min-h-[400px]">
+
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
 
@@ -374,8 +381,9 @@ export function EvolutionChart({
                     y={y}
                     dy={10}
                     textAnchor="middle"
-                    fill="hsl(var(--muted-foreground))"
-                    fontSize={12}
+                    fill="#475569"
+                    fontSize={11}
+                    fontWeight={500}
                   >
                     {label}
                   </text>
@@ -388,7 +396,7 @@ export function EvolutionChart({
               tickFormatter={formatAxisCurrency}
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
               width={60}
               domain={yDomain}
               ticks={yTicks}
@@ -397,7 +405,13 @@ export function EvolutionChart({
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
               content={<FinanceChartTooltip />}
             />
-            <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px' }} />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ paddingTop: '20px' }}
+              formatter={(value) => (
+                <span className="text-xs font-semibold text-slate-700 ml-1">{value}</span>
+              )}
+            />
 
             {showIncome && (
               <Bar
@@ -434,8 +448,8 @@ export function EvolutionChart({
             )}
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
-    </div>
+      </CardContent>
+    </Card >
   );
 }
 

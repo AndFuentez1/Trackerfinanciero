@@ -29,6 +29,7 @@ interface AccountPerformance extends SavingsAccount {
 }
 
 import { AddTransferDialog } from '@/features/finance/transactions/components/AddTransferDialog';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 
 interface SavingsPerformanceProps {
   accounts: SavingsAccount[];
@@ -290,24 +291,30 @@ export function SavingsPerformance({
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="bg-card border border-border/50 shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
-            <PiggyBank className="h-5 w-5 text-primary" />
-            Total en ahorros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold">{formatCurrencyCard70(totalBalance)}</p>
-              <p className="text-base text-muted-foreground mt-1">
-                {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}
+      <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border border-border/50 shadow-md">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+              <PiggyBank className="h-4 w-4 text-primary" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none">
+                Total en ahorros
               </p>
             </div>
-            {/* Keeping the visual balance but maybe simpler or removed if the icon is now in title */}
           </div>
-        </CardContent>
+          <div className="pl-[2.125rem] space-y-1">
+            <div className="text-2xl font-bold text-foreground leading-none">
+              <CurrencyDisplay
+                amount={totalBalance}
+                currencyCode={currency}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground font-normal leading-tight">
+              {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''} activa{accounts.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
       </Card>
 
       {/* Actions */}
@@ -323,12 +330,16 @@ export function SavingsPerformance({
 
       <div className="grid gap-4 md:grid-cols-2 auto-rows-fr">
         {accountPerformance.map(account => (
-          <Card key={account.id} className="savings-card h-full border-border/50">
+          <Card key={account.id} className="savings-card h-full border-border/50 bg-gray-50/50 dark:bg-muted/20">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-base">{account.name}</CardTitle>
-                  <p className="text-2xl font-bold mt-1">{formatCurrencyAccount80(account.balance)}</p>
+                  <CurrencyDisplay
+                    amount={account.balance}
+                    currencyCode={currency}
+                    className="text-3xl font-bold"
+                  />
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -401,7 +412,7 @@ export function SavingsPerformance({
 
       {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
-        <div className="bg-gradient-to-b from-card to-card/50 rounded-xl border border-border/40 overflow-hidden shadow-md">
+        <div className="bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border/40 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
             <table className="w-full table-auto">
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20">

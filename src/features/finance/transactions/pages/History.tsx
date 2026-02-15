@@ -1,12 +1,14 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { useFinance } from '@/features/finance/context/FinanceContext';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
 import { HistoryTab } from '@/features/finance/transactions/components/HistoryTab';
 import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { Input } from '@/shared/ui/input';
 import {
     Select,
@@ -56,6 +58,8 @@ export default function HistoryPage() {
         allTransactions, // Use full dataset for filter options
         totalTransactionsCount,
     } = useFinanceData();
+
+    const { currency } = useFinance();
 
     // useState hooks - MUST be before any conditionals
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -278,24 +282,26 @@ export default function HistoryPage() {
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8">
-                <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border pb-6">
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                            <Wallet className="h-6 w-6" />
+                <header className="border-b border-border pb-6">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                <Wallet className="h-6 w-6" />
+                            </div>
+                            <div className="flex flex-col">
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Historial</h1>
+                                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Gestiona y consulta tus transacciones</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Historial</h1>
-                            <p className="text-muted-foreground font-medium">Gestiona y consulta tus transacciones</p>
+                        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
+                            <AddTransactionDialog
+                                onAdd={addTransaction}
+                                onAddTransfer={addTransfer}
+                                categories={categories}
+                                paymentMethods={paymentMethods}
+                            />
+                            <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
-                        <AddTransactionDialog
-                            onAdd={addTransaction}
-                            onAddTransfer={addTransfer}
-                            categories={categories}
-                            paymentMethods={paymentMethods}
-                        />
-                        <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
                     </div>
                 </header>
                 {isLoading && !transactions.length ? (
@@ -435,7 +441,18 @@ export default function HistoryPage() {
                                                         />
                                                     </div>
                                                 </div>
-
+                                                <div className="font-bold">
+                                                    <CurrencyDisplay
+                                                        amount={tx.amount}
+                                                        currencyCode={currency}
+                                                        className={cn(
+                                                            "text-sm",
+                                                            tx.type === 'expense' ? "text-red-600" :
+                                                                tx.type === 'income' ? "text-emerald-600" :
+                                                                    "text-blue-600"
+                                                        )}
+                                                    />
+                                                </div>
                                                 {/* Action Buttons */}
                                                 <div className="flex gap-2 items-end">
                                                     <Button
@@ -475,12 +492,12 @@ export default function HistoryPage() {
 
                         {/* FILTROS UNIFICADOS */}
                         <div className={cn(
-                            "bg-card/30 p-4 rounded-xl border border-border/50",
+                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border/50",
                             filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
                         )}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <BarChart3 className="h-5 w-5 text-primary" />
-                                <h2 className="text-lg font-semibold">Filtros</h2>
+                            <div className="flex items-start gap-2 mb-4 px-1">
+                                <BarChart3 className="h-5 w-5 text-primary flex-shrink-0" />
+                                <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">Filtros</h2>
                             </div>
 
                             <div className="flex flex-col gap-3">

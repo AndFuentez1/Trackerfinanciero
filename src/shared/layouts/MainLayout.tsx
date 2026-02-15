@@ -3,7 +3,7 @@ import { MobileNav } from "./MobileNav";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
-// import { useInactivityLogout } from "@/hooks/useInactivityLogout"; // Deshabilitado: solo cerrar sesión manual
+import { useInactivityLogout } from "@/features/auth/hooks/useInactivityLogout";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Mail, AlertCircle } from "lucide-react";
@@ -34,8 +34,8 @@ export default function MainLayout() {
     const [hasCheckedPassword, setHasCheckedPassword] = useState(false);
     const scrollRef = useScrollRestoration<HTMLElement>();
 
-    // Auto logout after 30 minutes of inactivity - DESHABILITADO
-    // useInactivityLogout(30);
+    // Auto logout after 5 minutes of inactivity (Security Requirement)
+    useInactivityLogout(5);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -44,7 +44,7 @@ export default function MainLayout() {
     }, [user, loading, navigate]);
 
     useEffect(() => {
-        if (!user?.id) {return;}
+        if (!user?.id) { return; }
         queryClient.prefetchQuery({
             queryKey: queryKeys.user.config(user.id),
             queryFn: () => fetchUserConfigStatus(user.id),
@@ -79,7 +79,7 @@ export default function MainLayout() {
     // Check if user has password set
     useEffect(() => {
         const checkUserPassword = async () => {
-            if (!user || !user.email_confirmed_at || hasCheckedPassword) {return;}
+            if (!user || !user.email_confirmed_at || hasCheckedPassword) { return; }
 
             try {
                 const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -109,7 +109,7 @@ export default function MainLayout() {
         return <SkeletonLoader fullPage tab={skeletonType} withLayoutWrapper={false} />;
     }
 
-    if (!user) {return null;}
+    if (!user) { return null; }
 
     // Email Confirmation Guard
     if (!user.email_confirmed_at) {

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/core/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  "relative w-full rounded-lg border p-4 flex items-start gap-3",
   {
     variants: {
       variant: {
@@ -21,9 +21,27 @@ const alertVariants = cva(
 const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
-));
+>(({ className, variant, children, ...props }, ref) => {
+  const childrenArray = React.Children.toArray(children);
+
+  // Treat the first child as an icon if it's not a known text component
+  const firstChild = childrenArray[0];
+  const hasIcon = React.isValidElement(firstChild) &&
+    firstChild.type !== AlertTitle &&
+    firstChild.type !== AlertDescription;
+
+  const icon = hasIcon ? firstChild : null;
+  const content = hasIcon ? childrenArray.slice(1) : childrenArray;
+
+  return (
+    <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props}>
+      {icon}
+      <div className="flex flex-col grow min-w-0">
+        {content}
+      </div>
+    </div>
+  );
+});
 Alert.displayName = "Alert";
 
 const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(

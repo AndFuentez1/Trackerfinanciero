@@ -29,6 +29,7 @@ import { Progress } from '@/shared/ui/progress';
 import { Wallet, Trash2, Edit2, HandCoins, ArrowDownCircle, ArrowUpCircle, Calendar, AlertCircle, Percent, Save, CheckCircle2, XCircle } from 'lucide-react';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { cn } from '@/core/utils';
 import { format, isPast, parseISO } from 'date-fns';
@@ -36,6 +37,7 @@ import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { LoansSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 import { getTodayLocalDate } from '@/core/utils';
+import { Badge } from '@/shared/ui/badge';
 
 export default function LoansPage() {
     const { user, loading: authLoading } = useAuth();
@@ -278,161 +280,163 @@ export default function LoansPage() {
                     <LoansSkeleton />
                 ) : (
                     <>
-                        <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border pb-6">
-                            <div className="flex items-center gap-3 w-full md:w-auto">
-                                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                                    <HandCoins className="h-6 w-6" />
+                        <header className="border-b border-border pb-6">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                        <HandCoins className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Préstamos y Deudas</h1>
+                                        <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Gestiona tus préstamos personales y deudas</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Préstamos y Deudas</h1>
-                                    <p className="text-muted-foreground font-medium">Gestiona tus préstamos personales y deudas</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end">
-                                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            className="gap-2 border border-primary min-w-[44px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center p-2 sm:px-4" // Better touch target
-                                            aria-label="Nuevo préstamo"
-                                            title="Nuevo préstamo"
-                                        >
-                                            <CheckCircle2 className="h-5 w-5 sm:h-4 sm:w-4" />
-                                            <span className="hidden sm:inline">Nuevo préstamo</span>
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
-                                        <DialogHeader>
-                                            <DialogTitle>{editingId ? "Editar Préstamo" : "Agregar Nuevo Préstamo"}</DialogTitle>
-                                            <DialogDescription className="sr-only">Formulario de préstamos</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleCreate} className="space-y-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Tipo</label>
-                                                <Select
-                                                    value={formData.type}
-                                                    onValueChange={(val: 'borrowed' | 'lent') => setFormData({ ...formData, type: val })}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="borrowed">Dinero que recibí (Deuda)</SelectItem>
-                                                        <SelectItem value="lent">Dinero que presté (Por cobrar)</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Nombre del Préstamo</label>
-                                                <Input
-                                                    required
-                                                    placeholder="Ej: Préstamo Carro"
-                                                    value={formData.name}
-                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end md:mt-1">
+                                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                className="gap-2 border border-primary min-w-[44px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center p-2 sm:px-4" // Better touch target
+                                                aria-label="Nuevo préstamo"
+                                                title="Nuevo préstamo"
+                                            >
+                                                <CheckCircle2 className="h-5 w-5 sm:h-4 sm:w-4" />
+                                                <span className="hidden sm:inline">Nuevo préstamo</span>
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+                                            <DialogHeader>
+                                                <DialogTitle>{editingId ? "Editar Préstamo" : "Agregar Nuevo Préstamo"}</DialogTitle>
+                                                <DialogDescription className="sr-only">Formulario de préstamos</DialogDescription>
+                                            </DialogHeader>
+                                            <form onSubmit={handleCreate} className="space-y-4">
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Monto Total Original</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
+                                                    <label className="text-sm font-medium">Tipo</label>
+                                                    <Select
+                                                        value={formData.type}
+                                                        onValueChange={(val: 'borrowed' | 'lent') => setFormData({ ...formData, type: val })}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="borrowed">Dinero que recibí (Deuda)</SelectItem>
+                                                            <SelectItem value="lent">Dinero que presté (Por cobrar)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium">Nombre del Préstamo</label>
+                                                    <Input
+                                                        required
+                                                        placeholder="Ej: Préstamo Carro"
+                                                        value={formData.name}
+                                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium">Monto Total Original</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
+                                                            <Input
+                                                                required
+                                                                type="number"
+                                                                placeholder={getPlaceholderAmount()}
+                                                                value={formData.total_amount}
+                                                                onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
+                                                                step={getStepValue()}
+                                                                className="pl-16"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium">Monto Ya Pagado</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
+                                                            <Input
+                                                                required
+                                                                type="number"
+                                                                placeholder={getPlaceholderAmount()}
+                                                                value={formData.paid_amount}
+                                                                onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
+                                                                step={getStepValue()}
+                                                                className="pl-16"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium">Tasa de Interés (%)</label>
                                                         <Input
-                                                            required
                                                             type="number"
-                                                            placeholder={getPlaceholderAmount()}
-                                                            value={formData.total_amount}
-                                                            onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
                                                             step={getStepValue()}
-                                                            className="pl-16"
+                                                            placeholder={getPlaceholderInterest()}
+                                                            value={formData.interest_rate}
+                                                            onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium">Fecha de Vencimiento (Opcional)</label>
+                                                        <Input
+                                                            type="date"
+                                                            value={formData.due_date}
+                                                            onChange={e => setFormData({ ...formData, due_date: e.target.value })}
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Monto Ya Pagado</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
-                                                        <Input
-                                                            required
-                                                            type="number"
-                                                            placeholder={getPlaceholderAmount()}
-                                                            value={formData.paid_amount}
-                                                            onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
-                                                            step={getStepValue()}
-                                                            className="pl-16"
+                                                <div className="space-y-4 py-2 px-1 bg-secondary/5 rounded-xl border border-border/30">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="space-y-0.5">
+                                                            <Label className="text-sm font-semibold flex items-center gap-2">
+                                                                {formData.is_disbursed ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <XCircle className="h-4 w-4 text-slate-400" />}
+                                                                ¿Se desembolsó el dinero?
+                                                            </Label>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {formData.is_disbursed
+                                                                    ? "El dinero entrará/saldrá de tu cuenta ahora."
+                                                                    : "Solo registrar como recordatorio, sin afectar saldos."}
+                                                            </p>
+                                                        </div>
+                                                        <Switch
+                                                            checked={formData.is_disbursed}
+                                                            onCheckedChange={(val) => setFormData({ ...formData, is_disbursed: val })}
                                                         />
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Tasa de Interés (%)</label>
-                                                    <Input
-                                                        type="number"
-                                                        step={getStepValue()}
-                                                        placeholder={getPlaceholderInterest()}
-                                                        value={formData.interest_rate}
-                                                        onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium">Fecha de Vencimiento (Opcional)</label>
-                                                    <Input
-                                                        type="date"
-                                                        value={formData.due_date}
-                                                        onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-4 py-2 px-1 bg-secondary/5 rounded-xl border border-border/30">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-0.5">
-                                                        <Label className="text-sm font-semibold flex items-center gap-2">
-                                                            {formData.is_disbursed ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <XCircle className="h-4 w-4 text-slate-400" />}
-                                                            ¿Se desembolsó el dinero?
-                                                        </Label>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {formData.is_disbursed
-                                                                ? "El dinero entrará/saldrá de tu cuenta ahora."
-                                                                : "Solo registrar como recordatorio, sin afectar saldos."}
-                                                        </p>
-                                                    </div>
-                                                    <Switch
-                                                        checked={formData.is_disbursed}
-                                                        onCheckedChange={(val) => setFormData({ ...formData, is_disbursed: val })}
-                                                    />
-                                                </div>
-                                            </div>
 
-                                            <div className={cn("space-y-2 transition-opacity", !formData.is_disbursed && "opacity-50 pointer-events-none")}>
-                                                <label className="text-sm font-medium">Método de Origen/Destino</label>
-                                                <Select
-                                                    value={formData.payment_method_id}
-                                                    onValueChange={(val) => setFormData({ ...formData, payment_method_id: val })}
-                                                    disabled={!formData.is_disbursed}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Seleccionar cuenta..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {paymentMethods.map(pm => (
-                                                            <SelectItem key={pm.id} value={pm.id}>
-                                                                <span className="flex items-center justify-between w-full gap-2">
-                                                                    <span className="truncate">{pm.name}</span>
-                                                                    <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
-                                                                        <span className="opacity-80">(</span>
-                                                                        {formatCurrencySmall(pm.balance)}
-                                                                        <span className="opacity-80">)</span>
+                                                <div className={cn("space-y-2 transition-opacity", !formData.is_disbursed && "opacity-50 pointer-events-none")}>
+                                                    <label className="text-sm font-medium">Método de Origen/Destino</label>
+                                                    <Select
+                                                        value={formData.payment_method_id}
+                                                        onValueChange={(val) => setFormData({ ...formData, payment_method_id: val })}
+                                                        disabled={!formData.is_disbursed}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Seleccionar cuenta..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {paymentMethods.map(pm => (
+                                                                <SelectItem key={pm.id} value={pm.id}>
+                                                                    <span className="flex items-center justify-between w-full gap-2">
+                                                                        <span className="truncate">{pm.name}</span>
+                                                                        <span className="text-[11px] text-muted-foreground inline-flex items-baseline gap-0.5">
+                                                                            <span className="opacity-80">(</span>
+                                                                            {formatCurrencySmall(pm.balance)}
+                                                                            <span className="opacity-80">)</span>
+                                                                        </span>
                                                                     </span>
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-sm text-muted-foreground mt-1">Cuenta donde se registra el movimiento inicial del préstamo.</p>
-                                            </div>
-                                            <Button type="submit" className="w-full min-w-[140px] flex items-center justify-center gap-2">Guardar <Save className="h-4 w-4" /></Button>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-sm text-muted-foreground mt-1">Cuenta donde se registra el movimiento inicial del préstamo.</p>
+                                                </div>
+                                                <Button type="submit" className="w-full min-w-[140px] flex items-center justify-center gap-2">Guardar <Save className="h-4 w-4" /></Button>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
                             </div>
                         </header>
 
@@ -581,34 +585,55 @@ export default function LoansPage() {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Card className="bg-card">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                                        <ArrowDownCircle className="h-5 w-5" />
-                                        Mis Deudas Pendientes
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-foreground">{formatCurrencySmall(totalRemainingDebt)}</div>
-                                    <p className="text-base text-muted-foreground mt-1">(Solo préstamos desembolsados)</p>
-                                </CardContent>
+                            <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 hover:shadow-md transition-shadow">
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+                                            <ArrowDownCircle className="h-4 w-4 text-destructive" strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none uppercase tracking-wider text-[11px]">
+                                                Mis Deudas Pendientes
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="pl-[2.125rem] space-y-1">
+                                        <div className="text-2xl font-bold text-foreground leading-none">
+                                            <CurrencyDisplay amount={totalRemainingDebt} currencyCode={ctxCurrency} />
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground font-normal leading-tight">
+                                            (Solo préstamos desembolsados)
+                                        </p>
+                                    </div>
+                                </div>
                             </Card>
-                            <Card className="bg-card">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                                        <ArrowUpCircle className="h-5 w-5" />
-                                        Por Cobrar (Prestado)
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-foreground">{formatCurrencySmall(totalRemainingReceivable)}</div>
-                                    <p className="text-base text-muted-foreground mt-1">(Solo préstamos desembolsados)</p>
-                                </CardContent>
+
+                            <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 hover:shadow-md transition-shadow">
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
+                                            <ArrowUpCircle className="h-4 w-4 text-emerald-600" strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none uppercase tracking-wider text-[11px]">
+                                                Por Cobrar (Prestado)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="pl-[2.125rem] space-y-1">
+                                        <div className="text-2xl font-bold text-foreground leading-none">
+                                            <CurrencyDisplay amount={totalRemainingReceivable} currencyCode={ctxCurrency} />
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground font-normal leading-tight">
+                                            (Solo préstamos desembolsados)
+                                        </p>
+                                    </div>
+                                </div>
                             </Card>
                         </div>
 
                         <div className="flex flex-col gap-6">
-                            <h2 className="text-lg font-semibold px-1">Controla tus pagos y saldos pendientes</h2>
+                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold px-1 tracking-tight leading-none">Controla tus pagos y saldos pendientes</h2>
 
                             <div className="flex flex-col gap-4">
                                 {loans.length === 0 ? (
@@ -617,7 +642,7 @@ export default function LoansPage() {
                                     </div>
                                 ) : (
                                     loans.map(loan => {
-                                        const percentage = (loan.paid_amount / loan.total_amount) * 100;
+                                        const percentage = loan.total_amount > 0 ? (loan.paid_amount / loan.total_amount) * 100 : 0;
                                         const isDebt = loan.type === 'borrowed';
                                         const overdue = isOverdue(loan);
                                         const isPendingDisbursement = !loan.is_disbursed && !loan.payment_method_id;
@@ -626,7 +651,7 @@ export default function LoansPage() {
 
                                         return (
                                             <Card key={loan.id} className={cn(
-                                                "overflow-hidden border-l-4 transition-all hover:shadow-md border-border", // Added border-border
+                                                "overflow-hidden border-l-4 transition-all hover:shadow-md border-border bg-gray-50/50 dark:bg-muted/20", // Added border-border
                                                 isPendingDisbursement ? "border-l-slate-300 opacity-90" :
                                                     isOrphaned ? "border-l-red-400 opacity-90" :
                                                         isDebt ? "border-l-destructive/60" : "border-l-emerald-500/60", // Reduced opacity
@@ -746,45 +771,52 @@ export default function LoansPage() {
                                                                     >
                                                                         <HandCoins className="h-4 w-4" />
                                                                     </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-9 w-9 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
-                                                                        onClick={() => handleDelete(loan.id)}
-                                                                        title="Eliminar"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                    <p className="text-lg font-semibold leading-none tracking-tight">
+                                                                        <CurrencyDisplay amount={loan.total_amount} currencyCode={ctxCurrency} />
+                                                                    </p>
+                                                                    {loan.interest_rate > 0 && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 font-normal border-amber-200 bg-amber-50 text-amber-700">
+                                                                            +{loan.interest_rate}%
+                                                                        </Badge>
+                                                                    )}
                                                                 </>
                                                             )}
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-xs font-medium">
-                                                            <span>Progreso de {isDebt ? 'pago' : 'cobro'}</span>
-                                                            <span>{percentage.toFixed(dp)}%</span>
+                                                    {/* Progress Bar & Paid Amount */}
+                                                    <div className="space-y-1.5 w-full">
+                                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                                            <span>Pagado: <CurrencyDisplay amount={loan.paid_amount} currencyCode={ctxCurrency} className="font-medium text-foreground" variant="small" /></span>
+                                                            <span>Restante: <CurrencyDisplay amount={loan.total_amount - loan.paid_amount} currencyCode={ctxCurrency} className={cn("font-medium", overdue ? "text-destructive" : "text-foreground")} variant="small" /></span>
                                                         </div>
-                                                        <Progress
-                                                            value={percentage}
-                                                            className="h-2"
-                                                            indicatorClassName={cn(
-                                                                isPendingDisbursement ? "bg-slate-400" :
-                                                                    isOrphaned ? "bg-red-500" :
-                                                                        isDebt ? "bg-destructive" : "bg-emerald-500",
-                                                                overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-500"
-                                                            )}
-                                                        />
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-xs font-medium">
+                                                                <span>Progreso de {isDebt ? 'pago' : 'cobro'}</span>
+                                                                <span>{percentage.toFixed(2)}%</span>
+                                                            </div>
+                                                            <Progress
+                                                                value={percentage}
+                                                                className="h-2"
+                                                                indicatorClassName={cn(
+                                                                    isPendingDisbursement ? "bg-slate-400" :
+                                                                        isOrphaned ? "bg-red-500" :
+                                                                            isDebt ? "bg-destructive" : "bg-emerald-500",
+                                                                    overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-500"
+                                                                )}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
                                         );
                                     })
                                 )}
-                            </div >
-                        </div >
+                            </div>
+                        </div>
                     </>
-                )}
+                )
+                }
             </main >
         </div >
     );

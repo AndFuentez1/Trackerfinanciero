@@ -131,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signOut = useCallback(async () => {
         const { error } = await supabase.auth.signOut();
         localStorage.removeItem('sb_remember_me');
+        localStorage.removeItem('lastActiveTime');
         return { error };
     }, []);
 

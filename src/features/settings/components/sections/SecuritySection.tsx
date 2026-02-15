@@ -35,8 +35,8 @@ export function SecuritySection() {
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-                    <Shield className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
+                    <Shield className="h-5 w-5 text-primary flex-shrink-0" />
                     Seguridad y cuenta
                 </CardTitle>
                 <CardDescription className="text-base text-muted-foreground">Gestiona el acceso a tu cuenta y tu sesión</CardDescription>
@@ -62,47 +62,7 @@ export function SecuritySection() {
                     </Button>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/30 gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className={`flex items-center justify-center p-2.5 rounded-xl shrink-0 ${gmailStatus?.requiresReauth
-                                ? 'bg-destructive/10'
-                                : gmailStatus?.connected
-                                    ? 'bg-primary/10'
-                                    : 'bg-muted'
-                            }`}>
-                            <Mail className={`h-5 w-5 ${gmailStatus?.requiresReauth
-                                    ? 'text-destructive'
-                                    : gmailStatus?.connected
-                                        ? 'text-primary'
-                                        : 'text-muted-foreground'
-                                }`} />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-base font-semibold leading-none">Gmail</p>
-                            {gmailLoading ? (
-                                <p className="text-base text-muted-foreground leading-snug">Cargando...</p>
-                            ) : gmailStatus?.connected ? (
-                                <p className="text-base text-muted-foreground leading-snug">
-                                    {gmailStatus.requiresReauth
-                                        ? '⚠️ Sesión expirada - Reconecta'
-                                        : `✅ Conectado - Expira en ${formatExpiryTime(gmailStatus.expiresIn)}`
-                                    }
-                                </p>
-                            ) : (
-                                <p className="text-base text-muted-foreground leading-snug">No conectado</p>
-                            )}
-                        </div>
-                    </div>
-                    <Button
-                        variant={gmailStatus?.requiresReauth ? "destructive" : "outline"}
-                        size="sm"
-                        onClick={handleGmailConnect}
-                        disabled={!user?.id || !user?.email}
-                        className="w-full sm:w-[220px] font-medium"
-                    >
-                        {gmailStatus?.connected ? 'Reconectar' : 'Conectar Gmail'}
-                    </Button>
-                </div>
+
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/30 gap-4">
                     <div className="flex items-center gap-4">

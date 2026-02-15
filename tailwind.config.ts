@@ -15,6 +15,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-base)", "sans-serif"],
+        mono: ["var(--font-mono)", "monospace"],
+      },
       colors: {
         border: "hsl(var(--color-border))",
         input: "hsl(var(--color-input))",

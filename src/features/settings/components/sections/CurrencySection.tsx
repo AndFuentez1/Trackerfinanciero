@@ -10,6 +10,7 @@ import { useSettingsProfile } from '../hooks/useSettingsProfile';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useToast } from '@/shared/hooks/use-toast';
 import { Separator } from '@/shared/ui/separator';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 
 export function CurrencySection() {
     const { currency, updateProfile, decimalPlaces } = useSettingsProfile();
@@ -82,20 +83,20 @@ export function CurrencySection() {
     }).format(previewValue);
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border/50 bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-                    <Globe className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
+                    <Globe className="h-5 w-5 text-primary flex-shrink-0" />
                     Moneda y Formato
                 </CardTitle>
-                <CardDescription className="text-base text-muted-foreground">Configura tu moneda principal y la visualización de cifras</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground">Configura tu moneda principal y la visualización de cifras</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
 
                 {/* Currency Selection */}
                 <div className="flex flex-col sm:flex-row items-end gap-4">
                     <div className="flex-1 space-y-2 w-full">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest pl-1">Moneda actual: {currency ?? 'Sin definir'}</label>
+                        <label className="text-sm font-medium text-muted-foreground pl-1">Moneda actual</label>
                         <Select value={selectedCurrency || undefined} onValueChange={setSelectedCurrency}>
                             <SelectTrigger className="h-11 rounded-xl">
                                 <SelectValue placeholder="Selecciona una moneda" />
@@ -223,9 +224,11 @@ export function CurrencySection() {
 
                         <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-muted/30 border border-border/50">
                             <span className="text-xs text-muted-foreground">Vista previa:</span>
-                            <span className="font-mono font-semibold text-foreground">
-                                {formattedPreview}
-                            </span>
+                            <CurrencyDisplay
+                                amount={previewValue}
+                                currencyCode={currency}
+                                className="text-lg"
+                            />
                         </div>
                     </div>
 

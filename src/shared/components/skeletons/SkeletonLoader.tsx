@@ -76,10 +76,12 @@ const StatCardSkeleton = () => (
 
 export const PageHeaderSkeleton = () => (
     <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10 w-full mb-8">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
                 <PulseBlock height="2rem" width="2rem" borderRadius="0.5rem" />
-                <PulseBlock height="1.75rem" width="150px" />
+                <div className="flex flex-col">
+                    <PulseBlock height="1.75rem" width="150px" className="leading-none" />
+                </div>
             </div>
             <div className="flex items-center gap-3">
                 <PulseBlock height="2.25rem" width="120px" />
@@ -137,11 +139,11 @@ export const MobileNavSkeleton = () => (
 
 export const StandardHeaderSkeleton = () => (
     <div className="space-y-4 border-b border-border/40 pb-6 w-full animate-in fade-in duration-700 mb-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-6">
+            <div className="flex items-start gap-3 w-full md:w-auto">
                 <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
-                <div className="space-y-2">
-                    <PulseBlock height="2rem" width="200px" />
+                <div className="flex flex-col gap-2">
+                    <PulseBlock height="2rem" width="200px" className="leading-none" />
                     <PulseBlock height="1rem" width="300px" />
                 </div>
             </div>
@@ -410,11 +412,11 @@ export const SavingsSkeleton = () => (
         <StandardHeaderSkeleton />
 
         {/* Total Balance Card */}
-        <CardSkeleton height="100px" padding="1.5rem" className="flex items-center justify-between">
-            <div>
+        <CardSkeleton height="100px" padding="1.5rem" className="flex items-start justify-between">
+            <div className="flex flex-col">
                 <PulseBlock height="0.8rem" width="100px" className="mb-2" />
-                <PulseBlock height="2rem" width="150px" />
-                <PulseBlock height="0.8rem" width="80px" className="mt-1" />
+                <PulseBlock height="2rem" width="150px" className="leading-none" />
+                <PulseBlock height="0.8rem" width="80px" className="mt-2" />
             </div>
             <PulseBlock height="3rem" width="3rem" borderRadius="9999px" />
         </CardSkeleton>

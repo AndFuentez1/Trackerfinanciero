@@ -243,8 +243,28 @@ export function SummaryTab({
 
   return (
     <div className="space-y-8 py-6 antialiased">
-      {/* ... (rest of the render until EvolutionChart) ... */}
-      {/* SECCIÓN 1 and 2 omitted for brevity in replacement search but effectively we just insert variable and update usage */}
+      {/* SECTION 0: Global Alerts */}
+      {incompleteTransactions.length > 0 && (
+        <div className="bg-orange-50/50 border border-orange-200/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-orange-100 text-orange-600">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-orange-800 leading-tight">Acción requerida</h4>
+              <p className="text-xs text-orange-700 font-medium">Tienes {incompleteTransactions.length} transacciones sin categoría o método de pago.</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 bg-white/50 backdrop-blur-sm shadow-sm gap-2"
+            onClick={() => setEditingTransaction(incompleteTransactions[0])}
+          >
+            Corregir ahora <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Edit Dialog for Corrections */}
       {editingTransaction && (
@@ -266,10 +286,9 @@ export function SummaryTab({
       )}
 
 
-      {/* SECCIÓN 1: Mis Cuentas (Prioridad Alta) */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 px-1">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-start gap-2 leading-none tracking-tight">
             <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
             <span className="truncate">Mis Cuentas</span>
           </h2>
@@ -383,10 +402,9 @@ export function SummaryTab({
         )}
       </div>
 
-      {/* SECCIÓN 3: Resumen Mensual Detallado */}
       <div className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 flex-shrink-0" />
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-start gap-2 leading-none tracking-tight px-1">
+          <CalendarIcon className="w-5 h-5 text-primary flex-shrink-0" />
           <span className="truncate">Resumen del Mes</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -417,14 +435,14 @@ export function SummaryTab({
       {/* Herramientas de Análisis y Detalles */}
       <div className="flex flex-col gap-8 sm:gap-10 lg:gap-12">
         <div className="flex flex-col gap-4 sm:gap-6">
-          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2">
+          <div className="flex items-start gap-2 sm:gap-3 px-1">
             <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
-            <h2 className="text-lg font-semibold border-b-2 border-primary/20 pb-1 pr-4 whitespace-nowrap">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
               Análisis Visual
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-md overflow-x-auto">
+            <div className="lg:col-span-2">
               {loading ? (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
@@ -444,7 +462,7 @@ export function SummaryTab({
                 />
               )}
             </div>
-            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-md">
+            <div className="lg:col-span-1">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6">
                   <PulseBlock height="180px" width="180px" borderRadius="9999px" />
@@ -458,10 +476,20 @@ export function SummaryTab({
                   </div>
                 </div>
               ) : (
-                <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
+                <ExpenseChart
+                  data={expensesByCategoryFiltered}
+                  categories={categories}
+                  selectedMonth={selectedMonth}
+                  onSelectedMonthChange={setSelectedMonth}
+                  selectedYears={selectedYears}
+                  onSelectedYearsChange={setSelectedYears}
+                  availableYears={availableYears}
+                  onSelectAllYears={() => setSelectedYears(availableYears)}
+                />
               )}
             </div>
           </div>
+
         </div>
 
         {/* Sección de Insights */}
@@ -479,8 +507,3 @@ export function SummaryTab({
     </div>
   );
 }
-
-
-
-
-

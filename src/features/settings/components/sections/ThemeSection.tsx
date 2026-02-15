@@ -7,10 +7,10 @@ export function ThemeSection() {
     const { baseColor, themeOptions, setAppThemePreference } = useSettingsProfile();
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border/50 bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-                    <Settings className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
+                    <Settings className="h-5 w-5 text-primary flex-shrink-0" />
                     Tema de la app
                 </CardTitle>
                 <CardDescription className="text-base text-muted-foreground">Personaliza el color principal de la interfaz y el texto</CardDescription>
