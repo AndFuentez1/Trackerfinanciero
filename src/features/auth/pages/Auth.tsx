@@ -132,7 +132,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   };
 
   const handleSendMagicLink = async (e?: React.FormEvent | React.MouseEvent) => {
-    if (e) e.preventDefault();
+    if (e) {e.preventDefault();}
     setError('');
 
     // Validar rate limit antes de proceder
@@ -960,10 +960,14 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     setError('');
                     setIsSubmitting(true);
                     try {
+                      const origin = window.location.origin;
+                      const baseUrl = import.meta.env.BASE_URL;
+                      const redirectUrl = `${origin}${baseUrl}`;
                       const { error } = await supabase.auth.signInWithOtp({
                         email: email.trim(),
                         options: {
-                          shouldCreateUser: false
+                          shouldCreateUser: false,
+                          emailRedirectTo: redirectUrl,
                         }
                       });
 

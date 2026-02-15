@@ -18,6 +18,18 @@ export default defineConfig(({ mode }) => ({
     fs: {
       allow: ['.'],
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/auth': {
+        target: 'http://localhost:3001',
+        changeOrigin: false,
+        secure: false,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   base: mode === 'production' ? '/Trackerfinanciero/' : '/',
@@ -34,13 +46,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("@supabase/supabase-js")) return "supabase";
-            if (id.includes("lucide-react")) return "icons";
-            if (id.includes("@radix-ui")) return "radix";
-            if (id.includes("recharts")) return "charts";
-            if (id.includes("xlsx")) return "excel";
-            if (id.includes("@tanstack/react-query") || id.includes("react-hook-form")) return "data";
-            if (id.includes("react-router-dom")) return "router";
+            if (id.includes("@supabase/supabase-js")) {return "supabase";}
+            if (id.includes("lucide-react")) {return "icons";}
+            if (id.includes("@radix-ui")) {return "radix";}
+            if (id.includes("recharts")) {return "charts";}
+            if (id.includes("xlsx")) {return "excel";}
+            if (id.includes("@tanstack/react-query") || id.includes("react-hook-form")) {return "data";}
+            if (id.includes("react-router-dom")) {return "router";}
           }
         },
       },

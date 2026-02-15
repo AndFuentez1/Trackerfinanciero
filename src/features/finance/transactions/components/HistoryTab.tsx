@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TransactionList } from './TransactionList';
-import { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { Input } from '@/shared/ui/input';
 import {
   Select,
@@ -29,6 +29,7 @@ interface HistoryTabProps {
   statusFilter?: 'attention' | 'ok';
   paymentMethodFilter?: string;
   setStatusFilter?: (value: 'attention' | 'ok' | undefined) => void;
+  loading?: boolean;
 }
 
 
@@ -47,7 +48,8 @@ export function HistoryTab({
   categoryFilter,
   statusFilter,
   paymentMethodFilter,
-  setStatusFilter
+  setStatusFilter,
+  loading = false
 }: HistoryTabProps) {
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [localTypeFilter, setLocalTypeFilter] = useState<string | undefined>(undefined);
@@ -75,9 +77,9 @@ export function HistoryTab({
       // 1. Type Filter
       if (finalTypeFilter !== undefined) {
         if (finalTypeFilter === 'transfer') {
-          if (t.category !== 'Transferencia') return false;
+          if (t.category !== 'Transferencia') {return false;}
         } else if (finalTypeFilter === 'savings_investment') {
-          if (!['savings', 'investment'].includes(t.type)) return false;
+          if (!['savings', 'investment'].includes(t.type)) {return false;}
         } else if (t.type !== finalTypeFilter) {
           return false;
         }
@@ -85,25 +87,25 @@ export function HistoryTab({
 
       // 2. Category Filter
       if (finalCategoryFilter !== undefined) {
-        if (t.category_id !== finalCategoryFilter && t.category !== finalCategoryFilter) return false;
+        if (t.category_id !== finalCategoryFilter && t.category !== finalCategoryFilter) {return false;}
       }
 
       // 3. Payment Method Filter
       if (finalPaymentMethodFilter !== undefined) {
-        if (t.payment_method_id !== finalPaymentMethodFilter) return false;
+        if (t.payment_method_id !== finalPaymentMethodFilter) {return false;}
       }
 
       // 4. Search Term (Description Only for precision)
       if (finalSearchTerm) {
         const term = finalSearchTerm.toLowerCase().trim();
-        if (!t.description.toLowerCase().includes(term)) return false;
+        if (!t.description.toLowerCase().includes(term)) {return false;}
       }
 
       // 5. Status Filter
       if (finalStatusFilter !== undefined) {
         const isOrphan = !t.category && !t.category_id || !t.payment_method_id;
-        if (finalStatusFilter === 'attention' && !isOrphan) return false;
-        if (finalStatusFilter === 'ok' && isOrphan) return false;
+        if (finalStatusFilter === 'attention' && !isOrphan) {return false;}
+        if (finalStatusFilter === 'ok' && isOrphan) {return false;}
       }
 
       return true;
@@ -129,10 +131,9 @@ export function HistoryTab({
         categories={categories}
         highlightOrphaned={highlightOrphaned}
         statusFilter={finalStatusFilter}
-        setStatusFilter={setStatusFilter || (() => {})}
+        setStatusFilter={setStatusFilter || (() => { })}
+        loading={loading}
       />
     </div>
   );
 }
-
-

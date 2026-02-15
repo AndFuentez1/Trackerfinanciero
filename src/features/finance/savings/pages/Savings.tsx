@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useSavingsData } from '@/features/finance/hooks/useSavingsData';
 import { SavingsPerformance } from '@/features/finance/savings/components/SavingsPerformance';
 import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/components/EditPaymentMethodDialog';
-import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
+import { SkeletonLoader, StandardHeaderSkeleton, CardSkeleton, PulseBlock, SavingsSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 import { Wallet, LogOut } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useState } from 'react';
@@ -65,13 +66,9 @@ export default function SavingsPage() {
 
     const isLoading = authLoading || dataLoading || savingsLoading;
 
-    if (isLoading) {
-        return <SkeletonLoader tab="savings" fullPage={false} withLayoutWrapper />;
-    }
+    if (!user && !isLoading) {return null;}
 
-    if (!user) return null;
-
-    if (savingsError && savingsAccounts.length === 0) {
+    if (savingsError && savingsAccounts.length === 0 && !isLoading) {
         return (
             <div className="min-h-screen bg-background/30">
                 <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -95,21 +92,24 @@ export default function SavingsPage() {
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8">
-                <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border pb-6">
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                            <Wallet className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ahorros</h1>
-                            <p className="text-muted-foreground font-medium">Metas y seguimiento de ahorros</p>
-                        </div>
-                    </div>
-                </header>
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="animate-pulse text-muted-foreground">Cargando datos...</div>
-                    </div>
+                    <StandardHeaderSkeleton />
+                ) : (
+                    <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 border-b border-border pb-6">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                                <Wallet className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ahorros</h1>
+                                <p className="text-muted-foreground font-medium">Metas y seguimiento de ahorros</p>
+                            </div>
+                        </div>
+                    </header>
+                )}
+
+                {isLoading ? (
+                    <SavingsSkeleton />
                 ) : (
                     <>
                         <SavingsPerformance

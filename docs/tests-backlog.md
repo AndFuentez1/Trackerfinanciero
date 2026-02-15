@@ -390,3 +390,13 @@ test.describe('auth', () => {
   });
 });
 ```
+
+## E2E: advanced-settings-gmail.spec.ts
+\\\	s
+import { test, expect } from '@playwright/test';
+
+test.describe('Gmail Integration - Invoice Import', () => {
+    // ... (tests for sorting, hiding approved, select all)
+});
+\\\
+

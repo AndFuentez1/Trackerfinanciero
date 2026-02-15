@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
+import React, { Component } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -8,6 +9,7 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  overlayVisible: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface State {
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, overlayVisible: false };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -43,6 +45,15 @@ export class ErrorBoundary extends Component<Props, State> {
       }
     } catch (e) {
       console.error("Failed to report error to global overlay", e);
+    }
+
+    // Fallback: if overlay didn't show, render local UI to avoid white screen
+    try {
+      const overlay = document.getElementById(OVERLAY_ID);
+      const visible = Boolean(overlay && overlay.style.display === 'flex');
+      this.setState({ overlayVisible: visible });
+    } catch {
+      this.setState({ overlayVisible: false });
     }
   }
 
@@ -88,8 +99,33 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       // We delegate UI to the global overlay (index.html)
-      // We render an empty container to keep the React tree valid but invisible behind the overlay
-      return <div data-tf-error-boundary="true" style={{ display: 'none' }} />;
+      // If overlay is visible, keep React tree hidden behind it. Otherwise, show a basic fallback.
+      if (this.state.overlayVisible) {
+        return <div data-tf-error-boundary="true" style={{ display: 'none' }} />;
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 p-6">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Error</p>
+            <h1 className="mt-2 text-xl font-semibold">La aplicación se detuvo</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Ocurrió un error inesperado. Puedes recargar la página para intentarlo de nuevo.
+            </p>
+            <pre className="mt-4 max-h-60 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+              {this.state.error?.message || 'Error desconocido'}
+            </pre>
+            <div className="mt-4 flex justify-end">
+              <button
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+                onClick={() => window.location.reload()}
+              >
+                Recargar
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     return this.props.children;
@@ -123,6 +159,6 @@ function showRuntimeError(info: {
 
 function clearRuntimeError() {
   const overlay = document.getElementById(OVERLAY_ID);
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) {overlay.style.display = 'none';}
 }
 

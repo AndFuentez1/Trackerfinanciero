@@ -8,8 +8,9 @@ import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/comp
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { calculateExpensesByCategory } from '@/features/finance/utils/financeUtils';
+import { excludeTransfers } from '@/lib/cashflowUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
-import { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/core/utils';
 
 
+import { PulseBlock, CardSkeleton, AccountsListSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
+
 interface SummaryTabProps {
   transactions: Transaction[];
   allTransactions: Transaction[];
@@ -48,10 +51,10 @@ interface SummaryTabProps {
   onDeleteBudget: (id: string) => Promise<void>;
   onDeletePaymentMethod: (id: string) => Promise<void>;
   categories: CategoryItem[];
-  onUpdateCategoryGoal: (id: string, goal: number) => Promise<any>;
   onUpdateTransaction: (id: string, updates: any) => Promise<any>;
   dateFilter: { period: string; from: string | null; to: string | null };
   updateFilter: (period: string, from?: string, to?: string) => void;
+  loading?: boolean;
 }
 
 export function SummaryTab({
@@ -65,10 +68,10 @@ export function SummaryTab({
   onDeleteBudget,
   onDeletePaymentMethod,
   categories,
-  onUpdateCategoryGoal,
   onUpdateTransaction,
   dateFilter,
-  updateFilter
+  updateFilter,
+  loading = false
 }: SummaryTabProps) {
   // Get current date values first
   const currentMonth = new Date().getMonth();
@@ -139,17 +142,19 @@ export function SummaryTab({
 
   // Transacciones filtradas según la selección de la gráfica (años/mes)
   const filteredChartTransactions = useMemo(() => {
-    if (!allTransactions || allTransactions.length === 0) return [];
-    return allTransactions.filter(t => {
+    if (!allTransactions || allTransactions.length === 0) { return []; }
+    const byDate = allTransactions.filter(t => {
       const d = new Date(t.date);
       const yearStr = d.getFullYear().toString();
-      if (!selectedYears.includes(yearStr)) return false;
+      if (!selectedYears.includes(yearStr)) { return false; }
       if (selectedMonth !== 'all') {
         const monthNum = d.getMonth() + 1;
-        if (monthNum !== Number(selectedMonth)) return false;
+        if (monthNum !== Number(selectedMonth)) { return false; }
       }
       return true;
     });
+    const noTransfers = excludeTransfers(byDate);
+    return noTransfers.filter(t => !(t.type === 'expense' && (t.installments || 1) > 1));
   }, [allTransactions, selectedYears, selectedMonth]);
 
   const expensesByCategoryFiltered = useMemo(
@@ -236,16 +241,6 @@ export function SummaryTab({
     };
   }, [paymentMethods]);
 
-  // SECTION 3: Current Total Balance for Charts
-  const currentTotalBalance = useMemo(() => {
-    return paymentMethods.reduce((sum, pm) => {
-      if (pm.type === 'credit') {
-        return sum - (pm.balance || 0);
-      }
-      return sum + (pm.balance || 0);
-    }, 0);
-  }, [paymentMethods]);
-
   return (
     <div className="space-y-8 py-6 antialiased">
       {/* ... (rest of the render until EvolutionChart) ... */}
@@ -257,7 +252,7 @@ export function SummaryTab({
           open={isEditDialogOpen}
           onOpenChange={(open) => {
             setIsEditDialogOpen(open);
-            if (!open) setEditingTransaction(null);
+            if (!open) { setEditingTransaction(null); }
           }}
           transactionToEdit={editingTransaction}
           categories={categories}
@@ -280,35 +275,41 @@ export function SummaryTab({
           </h2>
         </div>
 
-        <PaymentMethodList
-          paymentMethods={paymentMethods}
-          variant="dashboard"
-          onEdit={(pm) => {
-            setEditingPM(pm);
-            setIsEditPMOpen(true);
-          }}
-          onDelete={(pm) => {
-            setPmToDelete(pm);
-            setIsDeleteConfirmOpen(true);
-          }}
-          onAdd={() => setIsAddPMOpen(true)}
-        />
+        {loading ? (
+          <AccountsListSkeleton count={2} />
+        ) : (
+          <>
+            <PaymentMethodList
+              paymentMethods={paymentMethods}
+              variant="dashboard"
+              onEdit={(pm) => {
+                setEditingPM(pm);
+                setIsEditPMOpen(true);
+              }}
+              onDelete={(pm) => {
+                setPmToDelete(pm);
+                setIsDeleteConfirmOpen(true);
+              }}
+              onAdd={() => setIsAddPMOpen(true)}
+            />
 
-        <EditPaymentMethodDialog
-          paymentMethod={editingPM}
-          open={isEditPMOpen}
-          onOpenChange={(o) => {
-            setIsEditPMOpen(o);
-            if (!o) setEditingPM(null);
-          }}
-          onSave={updatePaymentMethod}
-        />
+            <EditPaymentMethodDialog
+              paymentMethod={editingPM}
+              open={isEditPMOpen}
+              onOpenChange={(o) => {
+                setIsEditPMOpen(o);
+                if (!o) { setEditingPM(null); }
+              }}
+              onSave={updatePaymentMethod}
+            />
 
-        <AddPaymentMethodDialog
-          onAdd={addPaymentMethod}
-          open={isAddPMOpen}
-          onOpenChange={setIsAddPMOpen}
-        />
+            <AddPaymentMethodDialog
+              onAdd={addPaymentMethod}
+              open={isAddPMOpen}
+              onOpenChange={setIsAddPMOpen}
+            />
+          </>
+        )}
 
         {/* Modal de Confirmación de Eliminación */}
         <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
@@ -341,34 +342,45 @@ export function SummaryTab({
 
       {/* SECCIÓN 2: Disponibilidad y Ahorro */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <SummaryCard
-          title="Saldo Disponible"
-          amount={accumulatedData.availableBalance}
-          icon={Wallet}
-          variant="neutral"
-          description="Caja + Débito"
-        />
-        <SummaryCard
-          title="Patrimonio Líquido"
-          amount={accumulatedData.availablePlusSavings}
-          icon={PiggyBank}
-          variant="positive"
-          description="Total Global"
-        />
-        <SummaryCard
-          title="Balance del Mes"
-          amount={currentMonthData.monthBalance}
-          icon={Wallet}
-          variant={currentMonthData.monthBalance >= 0 ? 'positive' : 'negative'}
-          description="Ingresos vs Gastos"
-        />
-        <SummaryCard
-          title="Deudas del Mes"
-          amount={currentMonthData.monthDebts}
-          icon={DollarSign}
-          variant="warning"
-          description="Por pagar"
-        />
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <CardSkeleton key={i} height="100px" padding="1rem">
+              <PulseBlock height="0.75rem" width="60%" className="mb-2" />
+              <PulseBlock height="1.5rem" width="80%" />
+            </CardSkeleton>
+          ))
+        ) : (
+          <>
+            <SummaryCard
+              title="Saldo Disponible"
+              amount={accumulatedData.availableBalance}
+              icon={Wallet}
+              variant="positive"
+              description="Caja + Débito"
+            />
+            <SummaryCard
+              title="Patrimonio Líquido"
+              amount={accumulatedData.availablePlusSavings}
+              icon={PiggyBank}
+              variant="positive"
+              description="Total Global"
+            />
+            <SummaryCard
+              title="Balance del Mes"
+              amount={currentMonthData.monthBalance}
+              icon={Wallet}
+              variant={currentMonthData.monthBalance >= 0 ? 'positive' : 'negative'}
+              description="Ingresos vs Gastos"
+            />
+            <SummaryCard
+              title="Deudas del Mes"
+              amount={currentMonthData.monthDebts}
+              icon={DollarSign}
+              variant="warning"
+              description="Por pagar"
+            />
+          </>
+        )}
       </div>
 
       {/* SECCIÓN 3: Resumen Mensual Detallado */}
@@ -396,7 +408,7 @@ export function SummaryTab({
             title="Ahorro Total"
             amount={summary.totalSavings} // Using totalSavings from props which is usually monthly or global acc? Check logic later but keep prop usage
             icon={PiggyBank}
-            variant="neutral"
+            variant="positive"
             description="Acumulado"
           />
         </div>
@@ -412,19 +424,42 @@ export function SummaryTab({
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md overflow-x-auto">
-              <EvolutionChart
-                transactions={allTransactions}
-                selectedYears={selectedYears}
-                onSelectedYearsChange={setSelectedYears}
-                selectedMonth={selectedMonth}
-                onSelectedMonthChange={setSelectedMonth}
-                onSelectAllYears={() => setSelectedYears(availableYears)}
-                currentBalance={currentTotalBalance}
-              />
+            <div className="lg:col-span-2 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-md overflow-x-auto">
+              {loading ? (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <PulseBlock height="1.5rem" width="120px" />
+                    <PulseBlock height="2rem" width="160px" />
+                  </div>
+                  <PulseBlock height="300px" width="100%" />
+                </div>
+              ) : (
+                <EvolutionChart
+                  transactions={allTransactions}
+                  selectedYears={selectedYears}
+                  onSelectedYearsChange={setSelectedYears}
+                  selectedMonth={selectedMonth}
+                  onSelectedMonthChange={setSelectedMonth}
+                  onSelectAllYears={() => setSelectedYears(availableYears)}
+                />
+              )}
             </div>
-            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-arquitectura-2/30 shadow-md">
-              <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
+            <div className="lg:col-span-1 bg-card rounded-xl p-4 sm:p-6 border border-border shadow-md">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-full gap-6">
+                  <PulseBlock height="180px" width="180px" borderRadius="9999px" />
+                  <div className="w-full space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex justify-between">
+                        <PulseBlock height="0.75rem" width="40%" />
+                        <PulseBlock height="0.75rem" width="20%" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <ExpenseChart data={expensesByCategoryFiltered} categories={categories} />
+              )}
             </div>
           </div>
         </div>

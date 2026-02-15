@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type SignInWithOtpResult = Awaited<ReturnType<typeof supabase.auth.signInWithOtp>>;
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         let ignore = false;
+        let oauthTimeout: number | undefined;
 
         const initAuth = async () => {
             try {
@@ -34,14 +36,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // 🔍 CRITICAL: Check for OAuth hash fragments FIRST
                 // When Google/Magic Link redirects, URL contains: #access_token=...&refresh_token=...
                 // We need to keep loading=true until onAuthStateChange processes these tokens
-                const hash = window.location.hash;
-                const hasAuthTokens = hash.includes('access_token') || hash.includes('refresh_token');
+                const hash = window.location.hash || '';
+                const search = window.location.search || '';
+                const hasAuthTokens =
+                    hash.includes('access_token') ||
+                    hash.includes('refresh_token') ||
+                    hash.includes('type=recovery');
+                const hasAuthCode = search.includes('code=') || search.includes('error=');
 
-                if (hasAuthTokens) {
+                if (hasAuthTokens || hasAuthCode) {
                     // Don't set loading=false yet - let onAuthStateChange handle it
                     // This prevents App.tsx from evaluating user=null and redirecting to /auth
-                    console.log('🔐 [AuthContext] OAuth tokens detected in URL, waiting for Supabase to process...');
-                    console.log('🔐 [AuthContext] Hash preview:', hash.substring(0, 50) + '...');
+                    console.log('🔐 [AuthContext] OAuth tokens/code detected in URL, waiting for Supabase to process...');
+                    if (hash) {
+                        console.log('🔐 [AuthContext] Hash preview:', hash.substring(0, 50) + '...');
+                    }
+                    oauthTimeout = window.setTimeout(() => {
+                        if (!ignore) {
+                            console.warn('⚠️ [AuthContext] OAuth processing timeout, continuing without session');
+                            setLoading(false);
+                        }
+                    }, 8000);
                     return;
                 }
 
@@ -87,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => {
             console.log('🔴 [AuthContext] Cleanup - unsubscribing');
             ignore = true;
+            if (oauthTimeout) {
+                clearTimeout(oauthTimeout);
+            }
             subscription.unsubscribe();
         };
     }, []);

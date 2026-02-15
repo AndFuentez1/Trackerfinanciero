@@ -4,7 +4,8 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { CategoryItem, TransactionType, useFinanceData, MASTER_PALETTE } from '@/features/finance/hooks/useFinanceData';
+import type { CategoryItem, TransactionType} from '@/features/finance/hooks/useFinanceData';
+import { useFinanceData, MASTER_PALETTE } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
 import { Check, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
@@ -74,7 +75,7 @@ export function CategoryDialog({ open, onOpenChange, categoryToEdit, onSave }: C
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name) return;
+        if (!name) {return;}
 
         setIsSubmitting(true);
         const result = await onSave({

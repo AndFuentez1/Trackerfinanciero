@@ -1,39 +1,63 @@
-import React, { useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import React, { useMemo, useState } from 'react';
+import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Button } from '@/shared/ui/button';
 import { Check } from 'lucide-react';
-import { cn } from '@/core/utils';
+import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
-import { useFinance } from '@/features/finance/context/FinanceContext';
-import { getCurrencySymbol } from '@/core/utils';
+import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
+import type { CashFlowChartPoint } from '@/features/finance/cashflow/types/cashflowTypes';
 
 interface CashFlowChartProps {
-  data: any[];
+  data: CashFlowChartPoint[];
   loading?: boolean;
   isWarning?: boolean;
 }
 
+interface BalanceAdjustmentLabelProps {
+  x?: number;
+  y?: number;
+  payload?: CashFlowChartPoint;
+}
+
 export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isWarning }) => {
-  const { currency } = useFinance();
-  const { formatCurrency } = useFormatCurrency();
-  const symbol = getCurrencySymbol(currency || 'COP');
+  const { formatCurrency, currency } = useFormatCurrency();
+  const axisFormatter = useMemo(() => {
+    return (value: number) => formatCurrencyCompact(value, currency || 'COP');
+  }, [currency]);
+
+  const renderBalanceAdjustmentLabel = ({ x, y, payload }: BalanceAdjustmentLabelProps) => {
+    if (typeof x !== 'number' || typeof y !== 'number') {return null;}
+    const delta = payload?.balanceAjusteDelta;
+    if (typeof delta !== 'number' || delta === 0) {return null;}
+    return (
+      <text
+        x={x}
+        y={y - 12}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        fontSize={10}
+      >
+        {`Ajuste de Balance Inicial ${formatCurrency(delta)}`}
+      </text>
+    );
+  };
 
   // Calculate dynamic domain from data
   const yDomain = React.useMemo(() => {
-    if (!data || data.length === 0) return [0, 1000000]; // Fallback when no data
+    if (!data || data.length === 0) {return [0, 1000000];} // Fallback when no data
 
     const allValues: number[] = [];
     data.forEach(d => {
-      if (d.ingresos != null) allValues.push(d.ingresos);
-      if (d.egresos != null) allValues.push(d.egresos);
-      if (d.balanceReal != null) allValues.push(d.balanceReal);
-      if (d.balanceProyectado != null) allValues.push(d.balanceProyectado);
-      if (d.balanceSimulated != null) allValues.push(d.balanceSimulated);
+      if (d.ingresos != null) {allValues.push(d.ingresos);}
+      if (d.egresos != null) {allValues.push(d.egresos);}
+      if (d.balanceReal != null) {allValues.push(d.balanceReal);}
+      if (d.balanceProyectado != null) {allValues.push(d.balanceProyectado);}
+      if (d.balanceSimulated != null) {allValues.push(d.balanceSimulated);}
     });
 
-    if (allValues.length === 0) return [0, 1000000]; // Fallback when no valid values
+    if (allValues.length === 0) {return [0, 1000000];} // Fallback when no valid values
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
@@ -80,7 +104,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               variant={showIncome ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-xs gap-1.5 transition-all", showIncome && "bg-[var(--income)]/15 text-[var(--income)] hover:bg-[var(--income)]/25 border border-[var(--income)]/20")}
+              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[90px] justify-center", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
             >
               {showIncome && <Check className="h-3 w-3" />} Ingresos
             </Button>
@@ -88,7 +112,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               variant={showExpense ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-xs gap-1.5 transition-all", showExpense && "bg-[var(--expense)]/15 text-[var(--expense)] hover:bg-[var(--expense)]/25 border border-[var(--expense)]/20")}
+              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[85px] justify-center", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
             >
               {showExpense && <Check className="h-3 w-3" />} Egresos
             </Button>
@@ -96,7 +120,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               variant={showBalance ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-xs gap-1.5 transition-all", showBalance && "bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20")}
+              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[85px] justify-center", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
             >
               {showBalance && <Check className="h-3 w-3" />} Balance
             </Button>
@@ -116,8 +140,16 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="balanceHistoryGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="balanceProjectionGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.1} />
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -143,28 +175,15 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               />
               <YAxis
                 domain={yDomain}
-                tickFormatter={(val) => {
-                  if (val === 0) return `${symbol}0`;
-                  if (Math.abs(val) >= 1000000) {
-                    const m = val / 1000000;
-                    return `${symbol}${Number.isInteger(m) ? m : m.toFixed(1)}M`;
-                  }
-                  if (Math.abs(val) >= 1000) {
-                    const k = val / 1000;
-                    return `${symbol}${Number.isInteger(k) ? k : k.toFixed(0)}k`;
-                  }
-                  return `${symbol}${val}`;
-                }}
+                tickFormatter={axisFormatter}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 width={60}
               />
               <Tooltip
-                cursor={{ fill: 'hsl(var(--muted)/0.1)', radius: 4 }}
-                contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--popover))', boxShadow: 'var(--shadow-lg)' }}
-                labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '8px' }}
-                formatter={(value: any, name: string) => [formatCurrency(Number(value)), name]}
+                cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
+                content={<FinanceChartTooltip />}
               />
 
               {/* Bars & Lines controlled by Toggles */}
@@ -193,21 +212,23 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
               {showBalance && (
                 <>
-                  {/* Balance Real (Point 0) */}
-                  <Line
+                  {/* Balance Real (Histórico Descriptivo) */}
+                  <Area
                     type="monotone"
                     dataKey="balanceReal"
                     stroke="hsl(var(--primary))"
-                    strokeWidth={3}
-                    dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "#fff" }}
-                    name="Balance Actual"
-                    connectNulls
+                    strokeWidth={2.5}
+                    fill="url(#balanceHistoryGradient)"
+                    fillOpacity={1}
+                    dot={false}
+                    connectNulls={false}
+                    name="Balance Histórico"
                   />
                   {/* Balance Proyectado */}
                   <Line
                     type="monotone"
                     dataKey="balanceProyectado"
-                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
+                    stroke={isWarning ? "hsl(var(--destructive))" : "url(#balanceProjectionGradient)"}
                     strokeWidth={2}
                     dot={false}
                     strokeDasharray="5 5"
@@ -215,6 +236,18 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
                     className={isWarning ? "opacity-90" : ""}
                   />
+                  {/* Ajuste de Balance Inicial */}
+                  <Line
+                    type="monotone"
+                    dataKey="balanceAjuste"
+                    stroke="transparent"
+                    dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))" }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
+                    name="Ajuste de Balance Inicial"
+                    connectNulls={false}
+                  >
+                    <LabelList content={renderBalanceAdjustmentLabel} />
+                  </Line>
                   {/* Balance Simulado (Ideal) */}
                   {isWarning && (
                     <Line

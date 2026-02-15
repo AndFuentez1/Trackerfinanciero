@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { useSettingsPaymentMethods } from '../hooks/useSettingsPaymentMethods';
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/components/EditPaymentMethodDialog';
-import { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { PaymentMethodList } from '@/features/finance/payment-methods/components/PaymentMethodList';
@@ -20,13 +20,15 @@ import {
     AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
 
+import { AccountsListSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
+
 interface PaymentMethodsSectionProps {
     highlighted?: boolean;
     onPaymentMethodCreated?: () => void;
 }
 
 export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: PaymentMethodsSectionProps = {}) {
-    const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } = useSettingsPaymentMethods();
+    const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod, loading } = useSettingsPaymentMethods();
     const { formatCurrency } = useFormatCurrency();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -47,22 +49,26 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
                             <Wallet className="h-5 w-5 text-primary" />
                             Mis Cuentas ({paymentMethods.length})
                         </CardTitle>
-                        <CardDescription>Cuentas bancarias, tarjetas y efectivo</CardDescription>
+                        <CardDescription className="text-base text-muted-foreground">Cuentas bancarias, tarjetas y efectivo</CardDescription>
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
                 <ScrollArea className="flex-1 -mx-2 px-2 max-h-[600px]">
-                    <PaymentMethodList
-                        paymentMethods={paymentMethods}
-                        variant="settings"
-                        onEdit={handleEdit}
-                        onDelete={(pm) => {
-                            setSelectedPM(pm);
-                            setIsDeleteDialogOpen(true);
-                        }}
-                        onAdd={() => setIsAddOpen(true)}
-                    />
+                    {loading ? (
+                        <AccountsListSkeleton count={2} />
+                    ) : (
+                        <PaymentMethodList
+                            paymentMethods={paymentMethods}
+                            variant="settings"
+                            onEdit={handleEdit}
+                            onDelete={(pm) => {
+                                setSelectedPM(pm);
+                                setIsDeleteDialogOpen(true);
+                            }}
+                            onAdd={() => setIsAddOpen(true)}
+                        />
+                    )}
                 </ScrollArea>
 
                 <AddPaymentMethodDialog
@@ -100,7 +106,7 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
                             <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={() => {
-                                    if (selectedPM) deletePaymentMethod(selectedPM.id);
+                                    if (selectedPM) { deletePaymentMethod(selectedPM.id); }
                                     setIsDeleteDialogOpen(false);
                                 }}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"

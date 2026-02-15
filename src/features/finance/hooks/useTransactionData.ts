@@ -7,7 +7,7 @@
  * - Derived calculations (summary, insights, chart data)
  */
 
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
@@ -40,7 +40,6 @@ export function useTransactionData(
     currency: string = 'COP'
 ) {
     const queryClient = useQueryClient();
-    const hasLoadedAllTransactionsRef = useRef(false);
     const [pagedTransactions, setPagedTransactions] = useState<Transaction[]>([]);
 
     const filterKey = useMemo(() => JSON.stringify({
@@ -52,10 +51,6 @@ export function useTransactionData(
     useEffect(() => {
         setPagedTransactions([]);
     }, [filterKey]);
-
-    useEffect(() => {
-        hasLoadedAllTransactionsRef.current = false;
-    }, [userId]);
 
     // 1. Filtered Transactions Query
     const {
@@ -71,23 +66,24 @@ export function useTransactionData(
             pageSize: PAGE_SIZE
         }),
         queryFn: async () => {
-            if (!userId) return { data: [], total: 0 };
+            if (!userId) {return { data: [], total: 0 };}
 
             let q = supabase
                 .from('transactions')
                 .select('*', { count: 'exact' })
                 .eq('user_id', userId)
-                .order(sortConfig.column, { ascending: sortConfig.ascending });
+                .order(sortConfig.column, { ascending: sortConfig.ascending })
+                .order('id', { ascending: sortConfig.ascending });
 
-            if (dateFilter.from) q = q.gte('date', dateFilter.from);
-            if (dateFilter.to) q = q.lte('date', dateFilter.to);
+            if (dateFilter.from) {q = q.gte('date', dateFilter.from);}
+            if (dateFilter.to) {q = q.lte('date', dateFilter.to);}
 
             const from = page * PAGE_SIZE;
             const to = from + PAGE_SIZE - 1;
             q = q.range(from, to);
 
             const { data, count, error } = await q;
-            if (error) throw error;
+            if (error) {throw error;}
 
             return {
                 data: (data || []).map(mapTransactionRow),
@@ -103,7 +99,7 @@ export function useTransactionData(
     const { data: allTransactions = [] } = useQuery({
         queryKey: ['finance', 'allTransactions', userId],
         queryFn: async () => {
-            if (!userId) return [];
+            if (!userId) {return [];}
 
             const allTxnsData = [];
             let hasMorePages = true;
@@ -116,36 +112,45 @@ export function useTransactionData(
                     .select('*')
                     .eq('user_id', userId)
                     .order('date', { ascending: false })
+                    .order('id', { ascending: false })
                     .range(offset, offset + CHUNK_SIZE - 1);
 
-                if (res.error) throw res.error;
+                if (res.error) {throw res.error;}
 
                 if (res.data && res.data.length > 0) {
                     allTxnsData.push(...res.data);
-                    if (res.data.length < CHUNK_SIZE) hasMorePages = false;
-                    else offset += CHUNK_SIZE;
+                    if (res.data.length < CHUNK_SIZE) {hasMorePages = false;}
+                    else {offset += CHUNK_SIZE;}
                 } else {
                     hasMorePages = false;
                 }
             }
-            hasLoadedAllTransactionsRef.current = true;
-            return allTxnsData.map(mapTransactionRow);
+            const mapped = allTxnsData.map(mapTransactionRow);
+            const deduped: Transaction[] = [];
+            const seen = new Set<string>();
+            mapped.forEach(tx => {
+                if (seen.has(tx.id)) {return;}
+                seen.add(tx.id);
+                deduped.push(tx);
+            });
+            return deduped;
         },
-        enabled: !!userId && !hasLoadedAllTransactionsRef.current,
+        enabled: !!userId,
         staleTime: 30 * 60 * 1000,
     });
 
     // 3. Derived Calculations
     useEffect(() => {
-        if (!transactionsData || isPlaceholderData) return;
+        if (!transactionsData || isPlaceholderData) {return;}
 
         const incoming = transactionsData.data || [];
         setPagedTransactions(prev => {
-            if (page === 0) return incoming;
+            if ((transactionsData.total || 0) === 0) { return []; }
+            if (page === 0) {return incoming;}
             const existingIds = new Set(prev.map(t => t.id));
             const merged = [...prev];
             incoming.forEach(t => {
-                if (!existingIds.has(t.id)) merged.push(t);
+                if (!existingIds.has(t.id)) {merged.push(t);}
             });
             return merged;
         });

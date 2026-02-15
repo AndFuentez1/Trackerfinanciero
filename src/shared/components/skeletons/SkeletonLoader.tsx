@@ -15,7 +15,7 @@ interface SkeletonLoaderProps {
 // Modular Base Skeletons (High Fidelity)
 // ---------------------------------------------------------------------
 
-const PulseBlock: React.FC<{
+export const PulseBlock: React.FC<{
     width?: string | number;
     height?: string | number;
     className?: string;
@@ -27,14 +27,14 @@ const PulseBlock: React.FC<{
             width,
             height,
             borderRadius,
-            backgroundColor: 'rgba(100, 116, 139, 0.25)',
+            backgroundColor: 'rgba(100, 116, 139, 0.15)',
             border: '1px solid hsl(var(--border, 214 32% 91%))',
             transition: 'background-color 0.3s ease, border-color 0.3s ease',
         }}
     />
 );
 
-const CardSkeleton: React.FC<{
+export const CardSkeleton: React.FC<{
     className?: string;
     height?: string;
     width?: string;
@@ -44,9 +44,8 @@ const CardSkeleton: React.FC<{
     style?: React.CSSProperties;
 }> = ({ className, height, width, maxWidth, children, padding = '1.5rem', style }) => (
     <div
-        className={cn("rounded-xl shadow-sm", className)}
+        className={cn("rounded-xl shadow-sm bg-card", className)}
         style={{
-            backgroundColor: 'hsl(var(--bg-card, 0 0% 100%))',
             border: '1px solid hsl(var(--border, 214 32% 91%))',
             height,
             width,
@@ -75,7 +74,7 @@ const StatCardSkeleton = () => (
     </CardSkeleton>
 );
 
-const PageHeaderSkeleton = () => (
+export const PageHeaderSkeleton = () => (
     <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10 w-full mb-8">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -91,7 +90,7 @@ const PageHeaderSkeleton = () => (
     </div>
 );
 
-const SidebarSkeleton = () => (
+export const SidebarSkeleton = () => (
     <div
         className="hidden lg:flex flex-col w-64 border-r h-screen p-6 sticky top-0 flex-shrink-0"
         style={{
@@ -123,7 +122,7 @@ const SidebarSkeleton = () => (
     </div>
 );
 
-const MobileNavSkeleton = () => (
+export const MobileNavSkeleton = () => (
     <div
         className="lg:hidden fixed bottom-0 left-0 right-0 h-16 border-t px-6 py-2 flex items-center justify-between z-50 bg-background/80 backdrop-blur-md"
     >
@@ -136,7 +135,7 @@ const MobileNavSkeleton = () => (
     </div>
 );
 
-const StandardHeaderSkeleton = () => (
+export const StandardHeaderSkeleton = () => (
     <div className="space-y-4 border-b border-border/40 pb-6 w-full animate-in fade-in duration-700 mb-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3 w-full md:w-auto">
@@ -158,14 +157,37 @@ const StandardHeaderSkeleton = () => (
 // Tab Layouts
 // ---------------------------------------------------------------------
 
-const DashboardSkeleton = () => (
-    <div className="space-y-12">
+export const DashboardSkeleton = () => (
+    <div className="space-y-8">
         <StandardHeaderSkeleton />
-        {/* Header - usually handled by PageHeaderSkeleton but some pages have their own */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
+
+        {/* Mis Cuentas Section (Payment Methods) */}
+        <div className="space-y-4">
+            <PulseBlock height="1.5rem" width="150px" /> {/* Title */}
+            <AccountsListSkeleton count={2} />
         </div>
 
+        {/* Disponibilidad y Ahorro (4 Stats Cards) */}
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <PulseBlock height="1.5rem" width="220px" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
+            </div>
+        </div>
+
+        {/* Resumen del Mes (3 Stats Cards) */}
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <PulseBlock height="1.5rem" width="180px" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => <StatCardSkeleton key={i} />)}
+            </div>
+        </div>
+
+        {/* Charts Grid */}
         <div className="space-y-4">
             <PulseBlock height="1.5rem" width="200px" />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -200,30 +222,46 @@ const DashboardSkeleton = () => (
     </div>
 );
 
-const HistorySkeleton = () => (
+export const HistorySkeleton = () => (
     <div className="space-y-6">
         <StandardHeaderSkeleton />
         {/* Status Bar */}
         <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-border bg-muted/20">
             <div className="flex items-center gap-3">
                 <PulseBlock height="1.5rem" width="1.5rem" borderRadius="9999px" />
-                <PulseBlock height="1rem" width="200px" />
+                <PulseBlock height="1rem" width="260px" />
             </div>
             <PulseBlock height="2rem" width="100px" />
         </div>
 
         {/* Filters */}
-        <div className="bg-card/30 p-4 rounded-xl border border-border/50 space-y-4">
-            <div className="flex items-center gap-2">
+        <div className="bg-card/30 p-4 rounded-xl border border-border/50 space-y-3">
+            <div className="flex items-center gap-2 mb-3">
                 <PulseBlock height="1.25rem" width="1.25rem" />
                 <PulseBlock height="1.25rem" width="80px" />
             </div>
+
+            {/* Row 1: Search + Dropdowns */}
             <div className="flex flex-col sm:flex-row gap-3">
                 <PulseBlock height="2.5rem" width="100%" className="flex-1" /> {/* Search */}
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <PulseBlock height="2.5rem" width="140px" />
-                    <PulseBlock height="2.5rem" width="140px" />
-                    <PulseBlock height="2.5rem" width="140px" />
+                    <PulseBlock height="2.5rem" width="100px" />
+                    <PulseBlock height="2.5rem" width="130px" />
+                    <PulseBlock height="2.5rem" width="130px" />
+                </div>
+            </div>
+
+            {/* Row 2: Dates + Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-end items-center">
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <PulseBlock height="2.5rem" width="100px" />
+                    <PulseBlock height="2.5rem" width="100px" />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                    <PulseBlock height="2.5rem" width="80px" />
+                    <PulseBlock height="2.5rem" width="80px" />
+                    <PulseBlock height="2.5rem" width="80px" />
+                    <PulseBlock height="2.5rem" width="40px" />
                 </div>
             </div>
         </div>
@@ -231,91 +269,134 @@ const HistorySkeleton = () => (
         {/* List */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="bg-muted/30 p-4 border-b border-border">
-                <div className="grid grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, i) => <PulseBlock key={i} height="0.75rem" />)}
+                <div className="flex justify-between gap-4">
+                    <PulseBlock height="0.75rem" width="120px" />
+                    <PulseBlock height="0.75rem" width="80px" />
                 </div>
             </div>
             {[...Array(8)].map((_, i) => (
-                <div key={i} className="p-4 flex items-center justify-between border-b border-border last:border-0">
+                <div key={i} className="p-4 flex items-center justify-between border-b border-border last:border-0 hover:bg-muted/5">
                     <div className="flex items-center gap-4 flex-1">
                         <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
                         <div className="space-y-2 flex-1 max-w-[200px]">
-                            <PulseBlock height="0.9rem" width="80%" />
-                            <PulseBlock height="0.6rem" width="50%" />
+                            <PulseBlock height="0.9rem" width="90%" />
+                            <PulseBlock height="0.65rem" width="60%" />
                         </div>
                     </div>
-                    <PulseBlock height="1.25rem" width="100px" borderRadius="9999px" />
+                    <div className="text-right space-y-1">
+                        <PulseBlock height="1rem" width="100px" className="ml-auto" />
+                        <PulseBlock height="0.65rem" width="60px" className="ml-auto" />
+                    </div>
                 </div>
             ))}
         </div>
     </div>
 );
 
-const BudgetsSkeleton = () => (
+export const BudgetsSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <StandardHeaderSkeleton />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            <CardSkeleton height="140px">
+
+        {/* Top Cards: Total + Income */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            <CardSkeleton height="160px">
                 <PulseBlock height="1rem" width="120px" className="mb-4" />
                 <PulseBlock height="2.5rem" width="60%" className="mb-4" />
                 <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" />
             </CardSkeleton>
-            <CardSkeleton height="140px">
+            <CardSkeleton height="160px">
                 <PulseBlock height="1rem" width="120px" className="mb-4" />
                 <PulseBlock height="2.5rem" width="60%" className="mb-4" />
                 <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" />
             </CardSkeleton>
         </div>
 
-        <CardSkeleton>
-            <PulseBlock height="1.5rem" width="250px" className="mb-8" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2rem' }}>
+        <PulseBlock height="1px" width="100%" className="opacity-40" />
+
+        {/* Budgets by Category Grid */}
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <PulseBlock height="1.5rem" width="250px" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, i) => (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <PulseBlock height="1rem" width="40%" />
-                            <PulseBlock height="1rem" width="20%" />
+                    <CardSkeleton key={i} height="auto" padding="1.5rem">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                                <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.5rem" />
+                                <div className="space-y-1">
+                                    <PulseBlock height="1rem" width="100px" />
+                                    <PulseBlock height="0.75rem" width="60px" />
+                                </div>
+                            </div>
+                            <PulseBlock height="1.5rem" width="1.5rem" borderRadius="9999px" />
                         </div>
-                        <PulseBlock height="0.6rem" width="100%" borderRadius="9999px" />
-                    </div>
+                        <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" className="mb-3" />
+                        <div className="flex justify-between">
+                            <PulseBlock height="0.75rem" width="30%" />
+                            <PulseBlock height="0.75rem" width="30%" />
+                        </div>
+                    </CardSkeleton>
                 ))}
             </div>
-        </CardSkeleton>
+        </div>
+
+        <PulseBlock height="1px" width="100%" className="opacity-40" />
 
         {/* Future Expenses Skeleton */}
-        <CardSkeleton height="200px">
+        <div>
             <PulseBlock height="1.5rem" width="250px" className="mb-6" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(3)].map((_, i) => <CardSkeleton key={i} height="120px" padding="1rem" />)}
             </div>
-        </CardSkeleton>
+        </div>
     </div>
 );
 
-const LoansSkeleton = () => (
+export const LoansSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <StandardHeaderSkeleton />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            <CardSkeleton height="100px" padding="1.5rem" className="flex flex-col justify-center">
-                <PulseBlock height="0.75rem" width="100px" className="mb-2" />
-                <PulseBlock height="1.75rem" width="140px" />
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardSkeleton height="120px" padding="1.5rem" className="flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-2">
+                    <PulseBlock height="1rem" width="1rem" borderRadius="9999px" />
+                    <PulseBlock height="0.85rem" width="120px" />
+                </div>
+                <PulseBlock height="2rem" width="160px" />
+                <PulseBlock height="0.65rem" width="140px" className="mt-2" />
             </CardSkeleton>
-            <CardSkeleton height="100px" padding="1.5rem" className="flex flex-col justify-center">
-                <PulseBlock height="0.75rem" width="100px" className="mb-2" />
-                <PulseBlock height="1.75rem" width="140px" />
+            <CardSkeleton height="120px" padding="1.5rem" className="flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-2">
+                    <PulseBlock height="1rem" width="1rem" borderRadius="9999px" />
+                    <PulseBlock height="0.85rem" width="120px" />
+                </div>
+                <PulseBlock height="2rem" width="160px" />
+                <PulseBlock height="0.65rem" width="140px" className="mt-2" />
             </CardSkeleton>
         </div>
 
+        {/* List of Loans */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <PulseBlock height="1.5rem" width="280px" className="mb-2" />
             {[...Array(3)].map((_, i) => (
-                <CardSkeleton key={i} padding="1.5rem">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                            <PulseBlock height="1.25rem" width="50%" />
-                            <PulseBlock height="0.8rem" width="80%" />
+                <CardSkeleton key={i} padding="1.5rem" className="border-l-4 border-l-border">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <PulseBlock height="1.25rem" width="150px" />
+                                <PulseBlock height="1rem" width="80px" borderRadius="1rem" />
+                            </div>
+                            <div className="flex gap-3">
+                                <PulseBlock height="0.8rem" width="100px" />
+                                <PulseBlock height="0.8rem" width="80px" />
+                            </div>
                         </div>
-                        <PulseBlock height="2.25rem" width="120px" />
+                        <div className="flex gap-2">
+                            <PulseBlock height="2rem" width="2rem" borderRadius="0.5rem" />
+                            <PulseBlock height="2rem" width="2rem" borderRadius="0.5rem" />
+                        </div>
                     </div>
                     <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" />
                 </CardSkeleton>
@@ -324,7 +405,7 @@ const LoansSkeleton = () => (
     </div>
 );
 
-const SavingsSkeleton = () => (
+export const SavingsSkeleton = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <StandardHeaderSkeleton />
 
@@ -371,7 +452,7 @@ const SavingsSkeleton = () => (
     </div>
 );
 
-const ConfigSkeleton = () => (
+export const ConfigSkeleton = () => (
     <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12">
         {/* Header Section */}
         <StandardHeaderSkeleton />
@@ -379,86 +460,190 @@ const ConfigSkeleton = () => (
         <div className="space-y-8">
             <section className="space-y-8">
                 {/* Theme Section */}
-                <CardSkeleton height="200px">
-                    <PulseBlock height="1.5rem" width="180px" className="mb-6" />
+                <CardSkeleton height="auto" padding="1.5rem">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-3">
+                            <PulseBlock height="2rem" width="2rem" borderRadius="0.5rem" />
+                            <div>
+                                <PulseBlock height="1.2rem" width="120px" className="mb-1" />
+                                <PulseBlock height="0.8rem" width="180px" />
+                            </div>
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                         {[...Array(6)].map((_, i) => <PulseBlock key={i} height="80px" borderRadius="1rem" />)}
                     </div>
                 </CardSkeleton>
 
                 {/* Currency Section */}
-                <CardSkeleton height="150px" />
+                <CardSkeleton height="auto" padding="1.5rem">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                            <PulseBlock height="2rem" width="2rem" borderRadius="0.5rem" />
+                            <div>
+                                <PulseBlock height="1.2rem" width="120px" className="mb-1" />
+                                <PulseBlock height="0.8rem" width="200px" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => <PulseBlock key={i} height="60px" borderRadius="0.75rem" />)}
+                    </div>
+                </CardSkeleton>
 
-                {/* Two large sections (Categories & Methods) */}
+                {/* Categories & Methods */}
                 <div className="flex flex-col gap-10">
-                    <CardSkeleton height="400px" padding="2rem">
-                        <PulseBlock height="1.5rem" width="150px" className="mb-6" />
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {[...Array(9)].map((_, i) => <PulseBlock key={i} height="3.5rem" />)}
+                    {/* Categories */}
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-2">
+                                <PulseBlock height="1.5rem" width="1.5rem" />
+                                <PulseBlock height="1.5rem" width="150px" />
+                            </div>
+                            <PulseBlock height="2rem" width="100px" />
                         </div>
-                    </CardSkeleton>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {[...Array(9)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/5 h-16">
+                                    <PulseBlock height="1.25rem" width="1.25rem" borderRadius="4px" />
+                                    <div className="flex flex-col gap-2 flex-1">
+                                        <PulseBlock height="0.85rem" width="60%" />
+                                        <PulseBlock height="0.65rem" width="30%" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-                    <CardSkeleton height="300px" padding="2rem">
-                        <PulseBlock height="1.5rem" width="180px" className="mb-6" />
-                        <div className="space-y-3">
-                            {[...Array(3)].map((_, i) => <PulseBlock key={i} height="4rem" />)}
+                    {/* Payment Methods */}
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-2">
+                                <PulseBlock height="1.5rem" width="1.5rem" />
+                                <PulseBlock height="1.5rem" width="180px" />
+                            </div>
+                            <PulseBlock height="2rem" width="140px" />
                         </div>
-                    </CardSkeleton>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[...Array(3)].map((_, i) => (
+                                <CardSkeleton key={i} height="140px" padding="1.5rem">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.5rem" />
+                                            <div className="space-y-1">
+                                                <PulseBlock height="1rem" width="100px" />
+                                                <PulseBlock height="0.75rem" width="60px" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between mt-auto pt-4 border-t border-border/50">
+                                        <PulseBlock height="1rem" width="40%" />
+                                        <PulseBlock height="1.5rem" width="30%" />
+                                    </div>
+                                </CardSkeleton>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* Separator mimic */}
             <PulseBlock height="1px" width="100%" className="opacity-50" />
 
             <section className="space-y-8">
-                {/* Security & Danger */}
-                <CardSkeleton height="250px" />
+                {/* Advanced, Security & Danger */}
+                <CardSkeleton height="200px" />
                 <CardSkeleton height="200px" />
             </section>
-
-            {/* Info Card */}
-            <CardSkeleton height="150px" className="bg-primary/5 border-primary/10" />
         </div>
-    </div >
+    </div>
 );
 
-const CashFlowSkeleton = () => (
+export const CategoriesGridSkeleton = ({ count = 9 }) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {[...Array(count)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/5 h-16">
+                <PulseBlock height="1.25rem" width="1.25rem" borderRadius="4px" />
+                <div className="flex flex-col gap-2 flex-1">
+                    <PulseBlock height="0.85rem" width="60%" />
+                    <PulseBlock height="0.65rem" width="30%" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+export const AccountsListSkeleton = ({ count = 3 }) => (
+    <div className="space-y-3">
+        {[...Array(count)].map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border border-border/50 bg-muted/5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
+                    <div className="space-y-2">
+                        <PulseBlock height="1rem" width="120px" />
+                        <PulseBlock height="0.75rem" width="80px" />
+                    </div>
+                </div>
+                <PulseBlock height="1.25rem" width="100px" borderRadius="9999px" />
+            </div>
+        ))}
+    </div>
+);
+
+export const CashFlowSkeleton = () => (
     <div className="container max-w-6xl mx-auto py-8 px-4 space-y-6">
         <StandardHeaderSkeleton />
 
         {/* Filters */}
-        <div className="flex gap-4 mb-6">
-            <PulseBlock height="2.5rem" width="120px" />
-            <PulseBlock height="2.5rem" width="120px" />
-            <PulseBlock height="2.5rem" width="120px" />
+        <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
+            <PulseBlock height="2.5rem" width="140px" />
+            <PulseBlock height="2.5rem" width="140px" />
+            <PulseBlock height="2.5rem" width="180px" />
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {[...Array(4)].map((_, i) => (
-                <div key={i} className="rounded-xl border border-border/50 bg-muted/40 p-4 h-[100px] flex flex-col justify-between">
-                    <PulseBlock height="0.75rem" width="60%" className="mb-2" />
-                    <PulseBlock height="1.5rem" width="80%" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <CardSkeleton height="140px" padding="1.5rem">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <PulseBlock height="0.8rem" width="100px" className="mb-2" />
+                        <PulseBlock height="2rem" width="140px" />
+                    </div>
+                    <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
                 </div>
-            ))}
+            </CardSkeleton>
+            <CardSkeleton height="140px" padding="1.5rem">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <PulseBlock height="0.8rem" width="100px" className="mb-2" />
+                        <PulseBlock height="2rem" width="140px" />
+                    </div>
+                    <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
+                </div>
+            </CardSkeleton>
         </div>
 
         {/* Chart */}
         <CardSkeleton height="400px" className="mb-6">
-            <PulseBlock height="1.5rem" width="150px" className="mb-6" />
-            <PulseBlock height="300px" width="100%" />
+            <div className="flex justify-between items-center mb-6">
+                <PulseBlock height="1.5rem" width="200px" />
+                <PulseBlock height="2rem" width="120px" />
+            </div>
+            <PulseBlock height="280px" width="100%" />
         </CardSkeleton>
 
         {/* Table */}
         <div className="rounded-xl border border-input bg-card overflow-hidden">
-            <div className="bg-muted/40 p-4 border-b border-border">
+            <div className="p-4 border-b border-border">
+                <PulseBlock height="1.25rem" width="180px" />
+            </div>
+            <div className="bg-muted/40 p-3 border-b border-border">
                 <div className="grid grid-cols-6 gap-4">
                     {[...Array(6)].map((_, i) => <PulseBlock key={i} height="0.75rem" />)}
                 </div>
             </div>
             {[...Array(5)].map((_, i) => (
-                <div key={i} className="p-4 border-b border-border last:border-0 grid grid-cols-6 gap-4">
-                    {[...Array(6)].map((_, j) => <PulseBlock key={j} height="1rem" width="80%" />)}
+                <div key={i} className="p-4 border-b border-border last:border-0 grid grid-cols-6 gap-4 items-center">
+                    {[...Array(6)].map((_, j) => <PulseBlock key={j} height="1rem" width={j === 0 ? "60%" : "90%"} />)}
                 </div>
             ))}
         </div>
@@ -526,7 +711,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     withLayoutWrapper = false, // Default to assuming we need to provide the layout structure (padding)
     showLoadingIndicator = true
 }) => {
-    if (!loading) return null;
+    if (!loading) { return null; }
 
     const renderTabSkeleton = () => {
         switch (tab) {

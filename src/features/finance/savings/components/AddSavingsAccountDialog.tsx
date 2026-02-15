@@ -43,7 +43,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   };
 
   const getPlaceholderYield = () => {
-    if (decimalPlaces <= 0) return '3';
+    if (decimalPlaces <= 0) {return '3';}
     return `3.${'0'.repeat(decimalPlaces)}`;
   };
 

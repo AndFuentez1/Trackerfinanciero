@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
-import { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
+import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
 import { useToast } from '@/shared/hooks/use-toast';
 
 interface EditSavingsTransactionDialogProps {
@@ -60,7 +60,7 @@ export function EditSavingsTransactionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transaction || !accountId) return;
+    if (!transaction || !accountId) {return;}
 
     setIsSubmitting(true);
 

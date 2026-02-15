@@ -133,6 +133,9 @@ export type Database = {
           amount: number
           description: string
           category: string | null
+          category_id: string | null
+          message_id: string | null
+          source: string | null
           status: string
           user_id: string
         }
@@ -143,6 +146,9 @@ export type Database = {
           amount: number
           description: string
           category?: string | null
+          category_id?: string | null
+          message_id?: string | null
+          source?: string | null
           status?: string
           user_id: string
         }
@@ -153,6 +159,9 @@ export type Database = {
           amount?: number
           description?: string
           category?: string | null
+          category_id?: string | null
+          message_id?: string | null
+          source?: string | null
           status?: string
           user_id?: string
         }

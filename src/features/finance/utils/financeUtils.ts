@@ -1,4 +1,5 @@
-import { Transaction, Budget, PaymentMethod, CategoryItem, Insight, TransactionType } from '../types/financeTypes';
+import type { Transaction, Budget, PaymentMethod, Insight} from '../types/financeTypes';
+import { CategoryItem, TransactionType } from '../types/financeTypes';
 
 export const calculateSummary = (
     transactions: Transaction[],
@@ -33,6 +34,16 @@ export const calculateSummary = (
         netWorth: totalIncome - totalExpenses,
         currency,
     };
+};
+
+export const calculateCurrentRealBalance = (paymentMethods: PaymentMethod[]) => {
+    return paymentMethods.reduce((sum, pm) => {
+        const balance = pm.balance || 0;
+        if (pm.type === 'credit') {
+            return sum - balance;
+        }
+        return sum + balance;
+    }, 0);
 };
 
 export const calculateExpensesByCategory = (transactions: Transaction[]) => {

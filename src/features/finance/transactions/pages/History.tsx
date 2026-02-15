@@ -4,7 +4,6 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
-import { ExportExcelButton } from '@/features/finance/transactions/components/ExportExcelButton';
 import { HistoryTab } from '@/features/finance/transactions/components/HistoryTab';
 import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -20,7 +19,7 @@ import { PendingInvoicesPanel } from '@/features/finance/transactions/components
 import { ImportStatusBar } from '@/features/finance/transactions/components/ImportStatusBar';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { useState, useMemo, useEffect } from 'react';
-import { Transaction } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
 
 export default function HistoryPage() {
@@ -90,7 +89,7 @@ export default function HistoryPage() {
     const currentMonth = new Date().getMonth() + 1;
 
     const filtersApplied = useMemo(() => Boolean(
-        debouncedSearchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter.period !== 'all'
+        debouncedSearchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter?.period !== 'all'
     ), [debouncedSearchTerm, typeFilter, categoryFilter, paymentMethodFilter, statusFilter, dateFilter]);
 
     const yearOptions = useMemo(() => {
@@ -98,7 +97,7 @@ export default function HistoryPage() {
         // Use allTransactions to ensure years don't disappear when filtering
         (allTransactions || []).forEach(tx => {
             const y = new Date(tx.date).getFullYear();
-            if (!isNaN(y)) setYears.add(y);
+            if (!isNaN(y)) { setYears.add(y); }
         });
         // Always include current year
         setYears.add(currentYear);
@@ -158,22 +157,22 @@ export default function HistoryPage() {
 
     // Memoized values - transactions needing reclassification
     // CRITICAL: Exclude savings and investment types (managed in Savings tab only)
-    const reclassifyTxs = useMemo(() =>
-        transactions.filter(tx => {
+    const reclassifyTxs = useMemo(() => {
+        const safeTransactions = transactions || [];
+        return safeTransactions.filter(tx => {
             const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
-            if (isTransfer) return false; // Transfers should not require reclasificación
+            if (isTransfer) { return false; }
 
             return !tx.category_id &&
                 tx.type !== 'saving' &&
                 tx.type !== 'investment';
-        }),
-        [transactions]
-    );
+        });
+    }, [transactions]);
 
     // Memoized function to get filtered categories by type
     const getFilteredCategories = useMemo(() => {
         return (typeValue: string) => {
-            if (!typeValue) return categories;
+            if (!typeValue) { return categories; }
 
             // Map transaction types to category types
             const categoryTypeMap: Record<string, string> = {
@@ -212,7 +211,7 @@ export default function HistoryPage() {
 
     const handleReclassifySave = async (tx: Transaction) => {
         const draft = reclassifyDrafts[tx.id];
-        if (!draft || !draft.category_name || !draft.type) return;
+        if (!draft || !draft.category_name || !draft.type) { return; }
 
         setSavingId(tx.id);
 
@@ -224,7 +223,7 @@ export default function HistoryPage() {
                 categoryId = existingCategory.id;
             } else if (draft.category_name) {
                 // Create category
-                const result = await addCategory({ name: draft.category_name, type: draft.type });
+                const result = await addCategory({ name: draft.category_name, type: draft.type, color: '#475569' });
                 if ('data' in result && result.data && 'id' in result.data) {
                     categoryId = result.data.id;
                 }
@@ -269,11 +268,12 @@ export default function HistoryPage() {
     // CONDITIONAL RETURNS (after all hooks)
     // ============================================================================
     // Loading state (High Fidelity Skeleton Reveal)
-    if (isLoading) {
+    // Removed global blocking to allow layout to render immediately
+    /* if (isLoading) {
         return <SkeletonLoader tab="transactions" fullPage={false} withLayoutWrapper />;
-    }
+    } */
 
-    if (!user) return null;
+    if (!user) { return null; }
 
     return (
         <div className="min-h-screen bg-background/30">
@@ -296,7 +296,6 @@ export default function HistoryPage() {
                             paymentMethods={paymentMethods}
                         />
                         <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-                        <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
                     </div>
                 </header>
                 {isLoading && !transactions.length ? (
@@ -493,14 +492,14 @@ export default function HistoryPage() {
                                             placeholder="Buscar descripción"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="h-10 w-full bg-background/50 border-gray-100"
+                                            className="h-10 w-full bg-background/50 border-input"
                                         />
                                     </div>
 
                                     {/* Tipo, Categoría, Método */}
                                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                                         <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
                                                 <SelectValue placeholder="Tipo" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -513,7 +512,7 @@ export default function HistoryPage() {
                                         </Select>
 
                                         <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-gray-100 h-10">
+                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-input h-10">
                                                 <SelectValue placeholder="Categoría" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -525,7 +524,7 @@ export default function HistoryPage() {
                                         </Select>
 
                                         <Select value={paymentMethodFilter} onValueChange={(value) => setPaymentMethodFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-gray-100 h-10">
+                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-input h-10">
                                                 <SelectValue placeholder="Método de pago" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -561,7 +560,7 @@ export default function HistoryPage() {
                                                 updateFilter('custom', from, to);
                                             }
                                         }}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
                                                 <SelectValue placeholder="Mes" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -593,7 +592,7 @@ export default function HistoryPage() {
                                                 updateFilter('custom', from, to);
                                             }
                                         }}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-gray-100 h-10">
+                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
                                                 <SelectValue placeholder="Año" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -677,6 +676,7 @@ export default function HistoryPage() {
                             statusFilter={statusFilter as "attention" | "ok" | undefined}
                             paymentMethodFilter={paymentMethodFilter}
                             setStatusFilter={setStatusFilter}
+                            loading={isLoading}
                         />
 
                         {hasMore && (

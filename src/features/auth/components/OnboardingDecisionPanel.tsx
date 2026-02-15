@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
-import { PaymentMethod, Transaction } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod, Transaction } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
 
 interface ThemeOption {
@@ -67,7 +67,7 @@ export function OnboardingDecisionPanel({
     return (
       <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
         <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-          <Card className="w-full max-w-md border-success/20 bg-success/5">
+          <Card className="w-full max-w-md lg:max-w-xl border-success/20 bg-success/5">
             <CardContent className="pt-6 text-center space-y-4">
               <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
               <div>
@@ -102,7 +102,7 @@ export function OnboardingDecisionPanel({
     return (
       <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
         <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md lg:max-w-xl">
             <CardContent className="pt-6 space-y-4">
               <h2 className="text-lg font-semibold">Importando datos...</h2>
               <p className="text-sm text-muted-foreground">{importProgress.message}</p>
@@ -130,7 +130,7 @@ export function OnboardingDecisionPanel({
     return (
       <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
         <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-          <div className="w-full max-w-md space-y-4 py-8 sm:py-0">
+          <div className="w-full max-w-md lg:max-w-xl space-y-4 py-8 sm:py-0">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error en la importación</AlertTitle>
@@ -152,7 +152,7 @@ export function OnboardingDecisionPanel({
   return (
     <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
       <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-        <div className="w-full max-w-lg space-y-4 sm:space-y-6 py-4 sm:py-0">
+        <div className="w-full max-w-lg lg:max-w-3xl space-y-4 sm:space-y-6 py-4 sm:py-0">
           <div className="text-center mb-4 sm:mb-8">
             <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">¿Cómo deseas comenzar?</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
@@ -214,7 +214,7 @@ export function OnboardingDecisionPanel({
                 <Button
                   onClick={handleStartFromScratch}
                   disabled={isLoading}
-                  className="w-full"
+                  className="w-full hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
                   size="sm"
                 >
                   {isLoading ? 'Cargando...' : 'Comenzar'}
@@ -238,7 +238,7 @@ export function OnboardingDecisionPanel({
               <CardContent>
                 <Button
                   onClick={() => setShowImportDialog(true)}
-                  className="w-full"
+                  className="w-full hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
                   size="sm"
                 >
                   Importar

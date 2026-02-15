@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { useFormatCurrency } from "@/features/finance/hooks/useFormatCurrency";
-import { TotalBudgetState } from "@/features/finance/hooks/useBudgetsData";
+import type { TotalBudgetState } from "@/features/finance/hooks/useBudgetsData";
 import { cn } from "@/core/utils";
 import { Progress } from "@/shared/ui/progress";
 import { useFinance } from "@/features/finance/context/FinanceContext";
@@ -41,7 +41,7 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
         }
 
         const parts = formatted.split(',');
-        if (parts.length === 1) return formatted;
+        if (parts.length === 1) { return formatted; }
 
         const integerPart = parts[0].replace(symbol, '').trim();
         const decimalPart = parts[1];
@@ -71,7 +71,7 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
                 {/* Progress Bar and Percentage */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-muted-foreground">Ejecución del Presupuesto</span>
+                        <span className="text-base font-medium text-muted-foreground">Ejecución del Presupuesto</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-foreground">
                                 {percentage.toFixed(decimalPlaces)}%
@@ -82,22 +82,22 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
                     <Progress
                         value={Math.min(percentage, 100)}
                         className="h-3"
-                        indicatorClassName={isOverBudget ? "bg-red-500" : "bg-blue-500"}
+                        indicatorClassName={isOverBudget ? "bg-destructive" : "bg-primary"}
                     />
                 </div>
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-1 gap-3">
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                        <span className="text-sm text-muted-foreground font-medium">Presupuestado</span>
+                        <span className="text-base text-muted-foreground font-medium">Presupuestado</span>
                         <span className="text-lg font-bold text-foreground">{formatCurrency70(totalBudgeted)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                        <span className="text-sm text-muted-foreground font-medium">Gastos Reales</span>
+                        <span className="text-base text-muted-foreground font-medium">Gastos Reales</span>
                         <span className="text-lg font-bold text-foreground">{formatCurrency70(actualExpenses)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-muted-foreground font-medium">Diferencia</span>
+                        <span className="text-base text-muted-foreground font-medium">Diferencia</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-foreground">
                                 {formatCurrency70(difference)}
@@ -109,7 +109,7 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
 
                 {/* Bottom Message */}
                 <div className="text-center pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground font-medium">
+                    <p className="text-base text-muted-foreground font-medium">
                         Has gastado {percentage.toFixed(decimalPlaces)}% de tu presupuesto
                     </p>
                 </div>

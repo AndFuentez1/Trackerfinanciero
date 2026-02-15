@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { VariantProps, cva } from "class-variance-authority";
+import type { VariantProps} from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/shared/hooks/use-mobile";
@@ -81,11 +82,11 @@ const SidebarProvider = React.forwardRef<
 
   React.useEffect(() => {
     const container = sidebarRef.current;
-    if (!container || isMobile) return;
+    if (!container || isMobile) {return;}
 
     // Find the actual sidebar element inside
     const sidebarElement = container.querySelector('[data-sidebar="sidebar"]');
-    if (!sidebarElement) return;
+    if (!sidebarElement) {return;}
 
     const handleMouseEnter = () => {
       if (hoverTimeoutRef.current) {

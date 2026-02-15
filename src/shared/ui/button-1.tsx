@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { ChevronDown, LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Slot as SlotPrimitive } from '@radix-ui/react-slot';
 import { cn } from '@/core/utils';
 

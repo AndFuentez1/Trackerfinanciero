@@ -4,7 +4,7 @@ import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { SkeletonLoader } from "@/shared/components/skeletons/SkeletonLoader";
+import { StandardHeaderSkeleton, CardSkeleton, CategoriesGridSkeleton, PulseBlock } from "@/shared/components/skeletons/SkeletonLoader";
 import { PieChart, LogOut, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
@@ -53,46 +53,74 @@ export default function BudgetsPage() {
     const budgetInsights = insights.filter(i => i.id.startsWith('budget-'));
 
     const isLoading = authLoading || budgetsLoading;
+    const selectedMonth = budgetMonth === 'all' ? 'all' : (budgetMonth - 1).toString();
+    const selectedYear = budgetYear === 'all' ? 'all' : budgetYear.toString();
 
-    if (isLoading) {
-        return <SkeletonLoader tab="budgets" fullPage={false} withLayoutWrapper />;
-    }
-    if (!user) return null;
+    const monthOptions = [
+        { value: 'all', label: 'Todo el año' },
+        { value: '0', label: 'Enero' },
+        { value: '1', label: 'Febrero' },
+        { value: '2', label: 'Marzo' },
+        { value: '3', label: 'Abril' },
+        { value: '4', label: 'Mayo' },
+        { value: '5', label: 'Junio' },
+        { value: '6', label: 'Julio' },
+        { value: '7', label: 'Agosto' },
+        { value: '8', label: 'Septiembre' },
+        { value: '9', label: 'Octubre' },
+        { value: '10', label: 'Noviembre' },
+        { value: '11', label: 'Diciembre' },
+    ];
+
+    if (!user && !isLoading) { return null; }
 
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
-                <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border pb-6">
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
-                            <PieChart className="h-6 w-6" />
+                {isLoading ? (
+                    <StandardHeaderSkeleton />
+                ) : (
+                    <header className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-border pb-6">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border">
+                                <PieChart className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Presupuestos</h1>
+                                <p className="text-muted-foreground font-medium">Controla tus gastos mensuales</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Presupuestos</h1>
-                            <p className="text-muted-foreground font-medium">Controla tus gastos mensuales</p>
+                        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
+                            <AddTransactionDialog
+                                onAdd={addTransaction}
+                                categories={categories}
+                                paymentMethods={paymentMethods}
+                                onAddTransfer={addTransfer}
+                            />
+                            <AddBudgetDialog
+                                onAdd={saveBudget}
+                                monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                            />
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap">
-                        <AddTransactionDialog
-                            onAdd={addTransaction}
-                            categories={categories}
-                            paymentMethods={paymentMethods}
-                            onAddTransfer={addTransfer}
-                        />
-                        <AddBudgetDialog
-                            onAdd={saveBudget}
-                            monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
-                        />
-                    </div>
-                </header>
+                    </header>
+                )}
+
                 {/* Top Section: Budget Cards (Side by Side on desktop) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                     <div className="flex h-full flex-col space-y-4">
-                        <BudgetTotalCard totalBudget={totalBudget} />
+                        {isLoading ? (
+                            <CardSkeleton height="160px" />
+                        ) : (
+                            <BudgetTotalCard totalBudget={totalBudget} />
+                        )}
                     </div>
 
                     <div className="flex h-full flex-col space-y-4">
-                        <IncomeCard />
+                        {isLoading ? (
+                            <CardSkeleton height="160px" />
+                        ) : (
+                            <IncomeCard />
+                        )}
                     </div>
                 </div>
 
@@ -100,27 +128,76 @@ export default function BudgetsPage() {
 
                 {/* Category Budgets Grid */}
                 <div>
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                         <h2 className="text-lg font-semibold flex items-center gap-2">
                             <Wallet className="h-5 w-5 text-muted-foreground" />
                             Presupuestos por Categoría
                         </h2>
+                        <div className="flex items-center gap-2">
+                            <Select
+                                value={selectedMonth}
+                                onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
+                            >
+                                <SelectTrigger className="w-[140px] h-9">
+                                    <SelectValue placeholder="Mes" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {monthOptions.map((m) => (
+                                        <SelectItem key={m.value} value={m.value}>
+                                            {m.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select
+                                value={selectedYear}
+                                onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
+                            >
+                                <SelectTrigger className="w-[120px] h-9">
+                                    <SelectValue placeholder="Año" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    {availableYears.map((year) => (
+                                        <SelectItem key={year} value={year.toString()}>
+                                            {year}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
-                    <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
+                    {isLoading ? (
+                        <CategoriesGridSkeleton count={6} />
+                    ) : (
+                        <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
+                    )}
                 </div>
 
                 <Separator className="my-6" />
 
                 {/* Future Expenses Section */}
                 <div>
-                    <FutureExpensesList />
+                    {isLoading ? (
+                        <div className="space-y-4">
+                            <PulseBlock height="1.5rem" width="200px" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[...Array(3)].map((_, i) => (
+                                    <CardSkeleton key={i} height="120px" />
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <FutureExpensesList />
+                    )}
                 </div>
 
                 <Separator className="my-6" />
 
                 {/* Budget Alerts Section */}
-                {budgetInsights.length > 0 && (
+                {!isLoading && budgetInsights.length > 0 && (
                     <div>
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-semibold flex items-center gap-2">

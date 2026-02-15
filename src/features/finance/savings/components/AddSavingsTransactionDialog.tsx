@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { Coins } from 'lucide-react';
-import { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
+import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
 
 interface AddSavingsTransactionDialogProps {
   accounts: SavingsAccount[];
@@ -53,7 +53,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountId) return;
+    if (!accountId) {return;}
 
     setIsSubmitting(true);
 

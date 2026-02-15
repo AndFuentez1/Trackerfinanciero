@@ -1,23 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import {
-  Trash2,
-  CreditCard,
-  AlertCircle,
   Search,
-  HelpCircle,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown,
-  Pencil,
-  Check,
-  X
+  ArrowDown
 } from 'lucide-react';
-import { cn, getCurrencySymbol } from '@/core/utils';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
 import {
   Select,
   SelectContent,
@@ -28,8 +18,8 @@ import {
 import { TransactionRow } from './TransactionRow';
 import { TransactionCard } from './TransactionCard';
 import { typeLabels, typeStyles } from './constants';
+import { PulseBlock, CardSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 
-// ICON_MAP removed as part of color-only system transition
 type TransactionDraft = {
   description: string;
   amount: number;
@@ -50,15 +40,16 @@ interface TransactionListProps {
   statusFilter?: 'attention' | 'ok';
   setStatusFilter: (value: 'attention' | 'ok' | undefined) => void;
   currency?: string;
+  loading?: boolean;
 }
 
-export { typeLabels, typeStyles }; // Re-export if other external components used them (optional but safe)
+export { typeLabels, typeStyles };
 
 export function TransactionList({
   transactions,
   onDelete,
   onUpdate,
-  onEdit,
+  onEdit, // Although passed, it's mostly handled by onStartEdit locally for inline editing
   paymentMethods,
   categories,
   showOnlyRecent = false,
@@ -66,10 +57,13 @@ export function TransactionList({
   statusFilter,
   setStatusFilter,
   currency = 'COP',
+  loading = false,
 }: TransactionListProps) {
+  // Hooks
   const decimalPlaces = useDecimalPlaces();
   const { formatCurrencySmall } = useFormatCurrency();
 
+  // State
   const [sortConfig, setSortConfig] = useState<{
     key: 'date' | 'category' | 'amount' | 'status' | null;
     direction: 'asc' | 'desc';
@@ -78,6 +72,7 @@ export function TransactionList({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TransactionDraft | null>(null);
 
+  // Callbacks
   const startEdit = useCallback((t: Transaction) => {
     setEditingId(t.id);
     setDraft({
@@ -87,18 +82,17 @@ export function TransactionList({
       payment_method_id: t.payment_method_id || null,
       date: t.date,
     });
-  }, []);
+    if (onEdit) {onEdit(t);}
+  }, [onEdit]);
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
     setDraft(null);
   }, []);
 
-  // Helper moved to Row component, but kept here if needed for sort/filter usage logic?
-  // Actually, TransactionRow now has its own helper copies. Could be DRYed out later in a utils file.
-
   const saveEdit = useCallback(async (t: Transaction) => {
-    if (!onUpdate || !draft || editingId !== t.id) return;
+    if (!onUpdate || !draft || editingId !== t.id) {return;}
+
     const updates: Partial<Omit<Transaction, 'id'>> = {
       description: draft.description,
       amount: Number(draft.amount),
@@ -107,7 +101,6 @@ export function TransactionList({
       date: new Date(draft.date).toISOString(),
     };
 
-    // Also send category name if category_id selected (helps parent sync immediately)
     const cat = categories.find(c => c.id === draft.category_id || '');
     if (cat) {
       updates.category = cat.name;
@@ -134,10 +127,11 @@ export function TransactionList({
   };
 
   const getSortIcon = (key: 'date' | 'category' | 'amount' | 'status') => {
-    if (sortConfig.key !== key) return <ArrowUpDown className="ml-1 h-3 w-3" />;
+    if (sortConfig.key !== key) {return <ArrowUpDown className="ml-1 h-3 w-3" />;}
     return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
+  // Memos
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const isUndisbursedLoan = (!t.payment_method_id) &&
@@ -148,7 +142,7 @@ export function TransactionList({
   }, [transactions]);
 
   const sortedTransactions = useMemo(() => {
-    return [...filteredTransactions].sort((a, b) => {
+    const sorted = [...filteredTransactions].sort((a, b) => {
       let aValue: string | number = 0;
       let bValue: string | number = 0;
 
@@ -166,29 +160,72 @@ export function TransactionList({
       } else if (sortConfig.key === 'status') {
         const aIsOrphan = !a.category && !a.category_id || !a.payment_method_id;
         const bIsOrphan = !b.category && !b.category_id || !b.payment_method_id;
-        aValue = aIsOrphan ? 1 : 0; // Atención first
+        aValue = aIsOrphan ? 1 : 0;
         bValue = bIsOrphan ? 1 : 0;
       }
 
       if (sortConfig.key) {
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (aValue < bValue) {return sortConfig.direction === 'asc' ? -1 : 1;}
+        if (aValue > bValue) {return sortConfig.direction === 'asc' ? 1 : -1;}
         return 0;
       }
 
-      // Default sort (if no key)
       const aIsOrphan = !a.category || !a.payment_method_id;
       const bIsOrphan = !b.category || !b.payment_method_id;
 
-      if (aIsOrphan && !bIsOrphan) return -1;
-      if (!aIsOrphan && bIsOrphan) return 1;
+      if (aIsOrphan && !bIsOrphan) {return -1;}
+      if (!aIsOrphan && bIsOrphan) {return 1;}
 
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
+    return sorted;
   }, [filteredTransactions, sortConfig, categories]);
 
   const displayTransactions = showOnlyRecent ? sortedTransactions.slice(0, 10) : sortedTransactions;
 
+  // Render skeletons while loading
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-in fade-in duration-500">
+        {/* Desktop Table Skeleton */}
+        <div className="hidden md:block finance-card overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[600px] table-auto">
+              <thead className="bg-muted/30">
+                <tr>
+                  {[...Array(8)].map((_, i) => (
+                    <th key={i} className="py-4 px-4 border-r border-border last:border-r-0">
+                      <PulseBlock height="0.75rem" width="60%" className="mx-auto" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-border last:border-0 h-16">
+                    {[...Array(8)].map((_, j) => (
+                      <td key={j} className="px-4 py-2 border-r border-border/50 last:border-r-0">
+                        <PulseBlock height="0.75rem" width={j === 1 ? '80%' : '40%'} className="mx-auto" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Card Skeleton */}
+        <div className="md:hidden space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <CardSkeleton key={i} height="120px" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Render empty state
   if (displayTransactions.length === 0) {
     return (
       <div
@@ -210,6 +247,7 @@ export function TransactionList({
     );
   }
 
+  // Render list
   return (
     <>
       {/* Desktop Table View */}
@@ -218,10 +256,7 @@ export function TransactionList({
           <table className="w-full min-w-[600px] table-auto">
             <thead className="bg-muted/30">
               <tr>
-                <th
-                  className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border"
-                  style={{ fontStyle: 'normal' }}
-                >
+                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
                   <button
                     type="button"
                     onClick={() => handleSort('date')}
@@ -232,16 +267,13 @@ export function TransactionList({
                     <span>{getSortIcon('date')}</span>
                   </button>
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border">
                   Descripción
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
                   Tipo
                 </th>
-                <th
-                  className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider max-w-[80px] border-r border-border"
-                  style={{ fontStyle: 'normal' }}
-                >
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider max-w-[80px] border-r border-border">
                   <button
                     type="button"
                     onClick={() => handleSort('category')}
@@ -252,13 +284,10 @@ export function TransactionList({
                     <span>{getSortIcon('category')}</span>
                   </button>
                 </th>
-                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
                   Método de Pago
                 </th>
-                <th
-                  className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border"
-                  style={{ fontStyle: 'normal' }}
-                >
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
                   <button
                     type="button"
                     onClick={() => handleSort('amount')}
@@ -269,7 +298,7 @@ export function TransactionList({
                     <span>{getSortIcon('amount')}</span>
                   </button>
                 </th>
-                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>
+                <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <div className="flex items-center justify-center gap-1">
                     <Select value={statusFilter ? statusFilter : 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as 'attention' | 'ok')}>
                       <SelectTrigger className="h-6 w-20 text-[10px] border-none bg-transparent p-0">
@@ -286,7 +315,7 @@ export function TransactionList({
                     </button>
                   </div>
                 </th>
-                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontStyle: 'normal' }}>Acciones</th>
+                <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -329,7 +358,3 @@ export function TransactionList({
     </>
   );
 }
-
-
-
-

@@ -1,4 +1,4 @@
-import { Transaction, PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { Button } from '@/shared/ui/button';
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -85,13 +85,13 @@ export function ExportExcelButton({ transactions, paymentMethods }: ExportExcelB
     <Button
       variant="default"
       size="sm"
-      className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+      className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
       onClick={handleExport}
       aria-label="Exportar Excel"
       title="Exportar Excel"
     >
-      <span className="hidden sm:flex flex-row items-center gap-2">Exportar Excel <Download className="h-3 w-3" /></span>
-      <span className="sm:hidden flex flex-row items-center gap-2">Exportar Excel <Download className="h-3 w-3" /></span>
+      <Download className="h-4 w-4" />
+      <span className="hidden sm:inline ml-2">Exportar Excel</span>
     </Button>
   );
 }

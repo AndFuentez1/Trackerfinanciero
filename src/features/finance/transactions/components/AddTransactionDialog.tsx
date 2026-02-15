@@ -2,10 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { TransactionType, Transaction, CategoryItem, PaymentMethod, useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import type { TransactionType, Transaction, CategoryItem, PaymentMethod} from '@/features/finance/hooks/useFinanceData';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
-import { insertTransactionSchema, TransactionFormValues } from '@/lib/schemas';
+import type { TransactionFormValues } from '@/lib/schemas';
+import { insertTransactionSchema } from '@/lib/schemas';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { MoneyInput } from '@/shared/components/MoneyInput';
@@ -176,7 +178,7 @@ export function AddTransactionDialog({
 
   // Validation before opening form
   const validateBeforeOpen = () => {
-    if (loading) return;
+    if (loading) {return;}
 
     if (categories.length === 0 || paymentMethods.length === 0) {
       setShowAlert(true);
@@ -397,7 +399,7 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2 border border-input text-[15px] py-2 flex items-center justify-center"
+          className="gap-2 border border-input text-[15px] py-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >
@@ -461,7 +463,7 @@ export function AddTransactionDialog({
                             field.onChange(val);
                             // Sync the category name for legacy support
                             const cat = availableCategories.find(c => c.value === val);
-                            if (cat) setValue('category', cat.label);
+                            if (cat) {setValue('category', cat.label);}
                           }}
                           value={field.value || ''}
                         >

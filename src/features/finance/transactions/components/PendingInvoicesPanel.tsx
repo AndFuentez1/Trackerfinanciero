@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/shared/ui/select";
-import { TransactionType } from '@/features/finance/hooks/useFinanceData';
+import type { TransactionType } from '@/features/finance/hooks/useFinanceData';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Check, X, Edit2, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -27,7 +27,11 @@ interface PendingInvoice {
     arrival_date: string;
     amount: number;
     description: string;
-    category: string | null;
+    category?: string | null;
+    category_id?: string | null;
+    payment_method_id?: string | null;
+    type?: TransactionType;
+    date?: string | null;
     status: string;
     user_id: string;
 }
@@ -43,9 +47,13 @@ export function PendingInvoicesPanel() {
     const [editForm, setEditForm] = useState<{ amount: string, description: string, category: string, type: TransactionType, payment_method_id: string | null }>({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
 
     const categories = financeCategories;
+    const resolveCategoryName = (invoice: PendingInvoice) =>
+        invoice.category ||
+        categories.find(cat => cat.id === invoice.category_id)?.name ||
+        '';
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) { return; }
 
         const fetchInvoices = async () => {
             const { data, error } = await (supabase
@@ -53,6 +61,7 @@ export function PendingInvoicesPanel() {
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
+                .or('source.is.null,source.eq.ai,source.eq.gmail')
                 .order('arrival_date', { ascending: false }));
 
             if (error) {
@@ -109,14 +118,15 @@ export function PendingInvoicesPanel() {
 
     const handleStartEdit = (invoice: PendingInvoice) => {
         setEditingId(invoice.id);
-        // Pre-load payment method if it exists in the invoice
-        const defaultPaymentMethod = paymentMethods.length > 0 ? paymentMethods[0].id : null;
+        const defaultPaymentMethod = invoice.payment_method_id ?? (paymentMethods.length > 0 ? paymentMethods[0].id : null);
+        const resolvedCategory = resolveCategoryName(invoice);
+        const resolvedType = invoice.type || 'expense';
         setEditForm({
             amount: invoice.amount.toString(),
             description: invoice.description,
-            category: invoice.category || '',
-            type: 'expense', // Default to expense
-            payment_method_id: defaultPaymentMethod // Auto-select first payment method
+            category: resolvedCategory,
+            type: resolvedType,
+            payment_method_id: defaultPaymentMethod
         });
     };
 
@@ -129,11 +139,14 @@ export function PendingInvoicesPanel() {
         try {
             // Use the edit form data if editing, otherwise use invoice data
             const isEditing = editingId === invoice.id;
+            const originalCategory = resolveCategoryName(invoice);
             const finalAmount = isEditing ? parseFloat(editForm.amount) : invoice.amount;
             const finalDescription = isEditing ? editForm.description : invoice.description;
-            const finalCategory = isEditing ? editForm.category : (invoice.category || '');
-            const finalType = isEditing ? editForm.type : 'expense';
-            const finalPaymentMethodId = isEditing ? editForm.payment_method_id : (paymentMethods.length > 0 ? paymentMethods[0].id : null);
+            const finalCategory = (isEditing ? editForm.category : originalCategory).trim();
+            const finalType = isEditing ? editForm.type : (invoice.type || 'expense');
+            const finalPaymentMethodId = isEditing
+                ? editForm.payment_method_id
+                : (invoice.payment_method_id ?? (paymentMethods.length > 0 ? paymentMethods[0].id : null));
 
             // Validate payment method
             if (!finalPaymentMethodId) {
@@ -214,8 +227,28 @@ export function PendingInvoicesPanel() {
                 title: 'Factura aprobada',
                 description: 'La transacción ha sido registrada exitosamente.'
             });
+            setInvoices(prev => prev.filter(item => item.id !== invoice.id));
+            setEditingId(null);
+            setEditForm({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
 
-            // Refresh global data
+            // Retroalimentación para el clasificador (Aprendizaje)
+            if (finalCategory.toLowerCase() !== originalCategory.toLowerCase()) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/classifier/learn`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user!.id,
+                            pattern: finalDescription.split('(')[0].trim(),
+                            category: finalCategory,
+                            type: 'keyword'
+                        })
+                    });
+                } catch (learnError) {
+                    console.error('❌ Error enviando aprendizaje:', learnError);
+                }
+            }
+
             refreshData();
 
         } catch (error) {
@@ -234,12 +267,11 @@ export function PendingInvoicesPanel() {
             toast({ title: 'Error', description: 'No se pudo rechazar la factura', variant: 'destructive' });
         } else {
             toast({ title: 'Factura rechazada', description: 'Se ha eliminado de la lista.' });
-            // Optimistic update
             setInvoices(prev => prev.filter(i => i.id !== id));
         }
     };
 
-    if (loading || invoices.length === 0) return null;
+    if (loading || invoices.length === 0) { return null; }
 
     return (
         <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-6 animate-in slide-in-from-top-2">
@@ -250,13 +282,14 @@ export function PendingInvoicesPanel() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-lg text-orange-900">Facturas Pendientes</h3>
-                        <p className="text-sm text-orange-700">Tienes {invoices.length} nuevo(s) documento(s) por revisar.</p>
+                        <p className="text-base text-orange-700">Tienes {invoices.length} nuevo(s) documento(s) por revisar.</p>
                     </div>
                 </div>
 
                 <div className="space-y-3">
                     {invoices.map(invoice => {
                         const isEditing = editingId === invoice.id;
+                        const categoryLabel = resolveCategoryName(invoice);
 
                         return (
                             <div key={invoice.id} className="bg-white/80 p-4 rounded-xl border border-orange-200 shadow-sm flex flex-col gap-4">
@@ -334,18 +367,18 @@ export function PendingInvoicesPanel() {
                                             </div>
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2 flex-wrap">
-                                            <Button size="sm" variant="default" onClick={handleCancelEdit}>Cancelar</Button>
                                             <Button
                                                 size="sm"
                                                 onClick={() => handleApprove(invoice)}
                                                 disabled={!editForm.payment_method_id}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                                aria-label="Aprobar"
-                                                title="Aprobar"
+                                                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                                                aria-label="Guardar y Aprobar"
+                                                title="Guardar y Aprobar"
                                             >
                                                 <Check className="w-4 h-4" />
-                                                <span className="hidden sm:inline ml-1">{!editForm.payment_method_id ? 'Selecciona método de pago' : 'Guardar y Aprobar'}</span>
+                                                <span className="hidden sm:inline ml-1">{!editForm.payment_method_id ? 'Selecciona método' : 'Guardar y Aprobar'}</span>
                                             </Button>
+                                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
                                         </div>
                                     </div>
                                 ) : (
@@ -353,9 +386,9 @@ export function PendingInvoicesPanel() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-lg text-slate-800">${invoice.amount.toLocaleString('es-CO')}</span>
-                                                {invoice.category && (
+                                                {categoryLabel && (
                                                     <span className="text-xs text-orange-600 font-medium px-2 py-0.5 bg-orange-100 rounded-full truncate max-w-[150px]">
-                                                        {invoice.category}
+                                                        {categoryLabel}
                                                     </span>
                                                 )}
                                             </div>
@@ -367,13 +400,9 @@ export function PendingInvoicesPanel() {
                                         </div>
 
                                         <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                                            <Button size="sm" variant="destructive" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleReject(invoice.id)}>
-                                                <X className="w-4 h-4 mr-1" />
-                                            </Button>
                                             <Button
                                                 size="sm"
-                                                variant="default"
-                                                className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                                className="text-white bg-slate-600 hover:bg-slate-700 shadow-sm border-none"
                                                 onClick={() => handleStartEdit(invoice)}
                                                 aria-label="Editar"
                                                 title="Editar"
@@ -390,6 +419,15 @@ export function PendingInvoicesPanel() {
                                             >
                                                 <Check className="w-4 h-4" />
                                                 <span className="hidden sm:inline ml-1">Aprobar</span>
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="text-white bg-red-500 hover:bg-red-600 shadow-sm border-none"
+                                                onClick={() => handleReject(invoice.id)}
+                                                aria-label="Eliminar"
+                                                title="Eliminar"
+                                            >
+                                                <X className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     </div>

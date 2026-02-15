@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import {
@@ -67,7 +67,7 @@ export const TransactionRow = memo(({
     // Helper logic moved from TransactionList
     const toInputDate = (iso: string) => {
         const d = new Date(iso);
-        if (isNaN(d.getTime())) return '';
+        if (isNaN(d.getTime())) {return '';}
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -76,7 +76,7 @@ export const TransactionRow = memo(({
 
     const formatDate = (dateString: string) => {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) return '';
+        if (isNaN(d.getTime())) {return '';}
         const day = String(d.getDate()).padStart(2, '0');
         const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         const month = months[d.getMonth()] || '';
@@ -85,7 +85,7 @@ export const TransactionRow = memo(({
     };
 
     const getPaymentMethodName = (pmId: string | null | undefined) => {
-        if (!pmId) return null;
+        if (!pmId) {return null;}
         const pm = paymentMethods.find(p => p.id === pmId);
         return pm?.name || null;
     };
@@ -326,7 +326,7 @@ export const TransactionRow = memo(({
                                 );
                             }
                             const parts = formatted.split(',');
-                            if (parts.length === 1) return formatted;
+                            if (parts.length === 1) {return formatted;}
                             const integerPart = parts[0].replace(symbol, '').trim();
                             const decimalPart = parts[1];
                             return (

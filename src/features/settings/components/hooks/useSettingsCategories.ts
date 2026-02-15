@@ -7,7 +7,7 @@ export function useSettingsCategories() {
         addCategory,
         updateCategory,
         deleteCategory,
-        loading
+        categoriesLoading
     } = useFinanceData();
 
     const getCategoriesByType = useCallback((type: string) => {
@@ -20,7 +20,7 @@ export function useSettingsCategories() {
         addCategory,
         updateCategory,
         deleteCategory,
-        loading
+        loading: categoriesLoading
     };
 }
 

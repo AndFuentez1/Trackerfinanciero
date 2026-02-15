@@ -30,7 +30,7 @@ export function useScrollRestoration<T extends HTMLElement>(keyPrefix = 'scroll-
     // 2. Save scroll position on scroll (debounced for performance)
     useEffect(() => {
         const container = scrollContainerRef.current;
-        if (!container) return;
+        if (!container) {return;}
 
         let debounceTimer: NodeJS.Timeout;
 

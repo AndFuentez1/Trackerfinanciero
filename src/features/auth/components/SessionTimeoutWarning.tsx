@@ -34,7 +34,7 @@ export function SessionTimeoutWarning({
     const [countdown, setCountdown] = useState('');
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {return;}
 
         const updateCountdown = () => {
             const totalSeconds = Math.floor(remainingTime / 1000);

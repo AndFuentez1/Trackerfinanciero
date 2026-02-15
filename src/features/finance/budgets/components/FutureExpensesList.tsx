@@ -67,7 +67,7 @@ export function FutureExpensesList() {
         }
 
         const parts = formatted.split(',');
-        if (parts.length === 1) return formatted;
+        if (parts.length === 1) { return formatted; }
 
         const integerPart = parts[0].replace(symbol, '').trim();
         const decimalPart = parts[1];
@@ -84,7 +84,7 @@ export function FutureExpensesList() {
     };
 
     const getStepValue = () => {
-        if (decimalPlaces === 0) return "1";
+        if (decimalPlaces === 0) { return "1"; }
         return `0.${'0'.repeat(decimalPlaces - 1)}1`;
     };
 
@@ -129,7 +129,7 @@ export function FutureExpensesList() {
     const [expenseToDelete, setExpenseToDelete] = useState<FutureExpense | null>(null);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) { return; }
         fetchExpenses();
 
         // Realtime Subscription
@@ -153,7 +153,7 @@ export function FutureExpensesList() {
             .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) setExpenses(data as any as FutureExpense[]);
+        if (data) { setExpenses(data as any as FutureExpense[]); }
         setLoading(false);
     };
 
@@ -279,7 +279,7 @@ export function FutureExpensesList() {
     };
 
     const handlePay = async () => {
-        if (!selectedExpense || !selectedPaymentMethod || !paymentDate) return;
+        if (!selectedExpense || !selectedPaymentMethod || !paymentDate) { return; }
 
         try {
             // 1. Create Transaction (Deduct balance)
@@ -330,7 +330,7 @@ export function FutureExpensesList() {
                         payment_date: format(nextDate, 'yyyy-MM-dd')
                     })
                     .eq('id', selectedExpense.id);
-                if (error) throw error;
+                if (error) { throw error; }
                 toast({ title: 'Suscripción Pagada', description: `Se registró el pago. Próximo cobro: ${format(nextDate, 'dd/MM/yyyy')}` });
 
             } else {
@@ -338,7 +338,7 @@ export function FutureExpensesList() {
                     .from('future_expenses' as any)
                     .update({ status: 'paid' })
                     .eq('id', selectedExpense.id);
-                if (error) throw error;
+                if (error) { throw error; }
                 toast({ title: 'Pagado', description: 'El gasto ha sido registrado y descontado.' });
             }
 
@@ -352,7 +352,7 @@ export function FutureExpensesList() {
     };
 
     const handleDelete = async () => {
-        if (!expenseToDelete) return;
+        if (!expenseToDelete) { return; }
 
         try {
             const { error } = await supabase
@@ -360,7 +360,7 @@ export function FutureExpensesList() {
                 .delete()
                 .eq('id', expenseToDelete.id);
 
-            if (error) throw error;
+            if (error) { throw error; }
 
             toast({ title: 'Eliminado', description: 'El gasto futuro ha sido eliminado.' });
             setIsDeleteAlertOpen(false);
@@ -574,7 +574,7 @@ export function FutureExpensesList() {
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
                                         <h4 className="font-semibold text-slate-800">{expense.description}</h4>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <p className="text-sm text-muted-foreground flex items-center gap-1">
                                             <CalendarIcon className="w-3 h-3" />
                                             {format(new Date(expense.payment_date), "d 'de' MMMM", { locale: es })}
                                         </p>
@@ -634,7 +634,7 @@ export function FutureExpensesList() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-base text-muted-foreground">
                             ¿Estás seguro de que quieres eliminar <strong>{expenseToDelete?.description}</strong>?
                             Esta acción no se puede deshacer.
                         </p>
@@ -659,7 +659,7 @@ export function FutureExpensesList() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-base text-muted-foreground">
                             Estás a punto de pagar <strong>{selectedExpense?.description}</strong> por valor de <strong>{selectedExpense && formatCurrency80(selectedExpense.amount)}</strong>.
                             Selecciona la cuenta de origen:
                         </p>

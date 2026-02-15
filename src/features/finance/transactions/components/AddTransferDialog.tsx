@@ -105,7 +105,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     };
 
     const formatDisplayedAmount = (value: number) => {
-        if (value === 0) return '';
+        if (value === 0) {return '';}
         return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     };
 

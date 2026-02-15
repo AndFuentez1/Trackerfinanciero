@@ -1,4 +1,4 @@
-import { CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { Target, TrendingUp, Plus } from 'lucide-react';
 import { cn } from '@/core/utils';
 import { useState } from 'react';
@@ -29,7 +29,7 @@ export function SavingsGoalsSection({ categories, onUpdateGoal }: SavingsGoalsSe
         }).format(value);
     };
 
-    if (savingsCategories.length === 0) return null;
+    if (savingsCategories.length === 0) {return null;}
 
     return (
         <div className="finance-card bg-white">

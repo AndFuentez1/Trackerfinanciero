@@ -1,4 +1,4 @@
-import { Budget, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Budget, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';

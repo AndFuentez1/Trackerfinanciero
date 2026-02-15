@@ -24,7 +24,8 @@ import {
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { budgetSchema, BudgetFormValues } from '@/lib/schemas';
+import type { BudgetFormValues } from '@/lib/schemas';
+import { budgetSchema } from '@/lib/schemas';
 import { useQueryClient } from '@tanstack/react-query';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
@@ -105,7 +106,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     categories
       .filter(c => {
         // If editing, always include the budget's category even if type doesn't match default filter
-        if (editingBudget && editingBudget.category_id === c.id) return true;
+        if (editingBudget && editingBudget.category_id === c.id) {return true;}
 
         // Include both expenses and income categories
         return c.type === 'expense' || c.type === 'income';
@@ -163,7 +164,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   };
 
   const handleDelete = async () => {
-    if (!editingBudget?.id || !onDelete) return;
+    if (!editingBudget?.id || !onDelete) {return;}
 
     if (confirm('¿Estás seguro de que deseas eliminar este presupuesto?')) {
       const result = await onDelete(editingBudget.id);

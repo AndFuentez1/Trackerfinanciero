@@ -17,7 +17,7 @@ import {
 import { cn } from '@/core/utils';
 import { AddSavingsAccountDialog } from './AddSavingsAccountDialog';
 import { AddSavingsTransactionDialog } from './AddSavingsTransactionDialog';
-import { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
+import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
 
 interface AccountPerformance extends SavingsAccount {
   totalDeposits: number;
@@ -53,7 +53,7 @@ interface SavingsPerformanceProps {
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr + 'T00:00:00');
-  if (isNaN(date.getTime())) return '';
+  if (isNaN(date.getTime())) { return ''; }
   const day = String(date.getDate()).padStart(2, '0');
   const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const month = months[date.getMonth()] || '';
@@ -103,7 +103,7 @@ export function SavingsPerformance({
     }
 
     const parts = formatted.split(',');
-    if (parts.length === 1) return formatted;
+    if (parts.length === 1) { return formatted; }
 
     const integerPart = parts[0].replace(symbol, '').trim();
     const decimalPart = parts[1];
@@ -142,7 +142,7 @@ export function SavingsPerformance({
     }
 
     const parts = formatted.split(',');
-    if (parts.length === 1) return formatted;
+    if (parts.length === 1) { return formatted; }
 
     const integerPart = parts[0].replace(symbol, '').trim();
     const decimalPart = parts[1];
@@ -181,7 +181,7 @@ export function SavingsPerformance({
     }
 
     const parts = formatted.split(',');
-    if (parts.length === 1) return formatted;
+    if (parts.length === 1) { return formatted; }
 
     const integerPart = parts[0].replace(symbol, '').trim();
     const decimalPart = parts[1];
@@ -218,7 +218,7 @@ export function SavingsPerformance({
   };
 
   const handleSaveEdit = async (id: string) => {
-    if (!draft) return;
+    if (!draft) { return; }
     const amount = Number(draft.amount) || 0;
     if (amount <= 0) {
       return; // Prevent saving with invalid amount
@@ -252,15 +252,15 @@ export function SavingsPerformance({
   // Compute initial balance by reversing all transactions from current balance
   const getInitialBalance = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
+    if (!account) { return 0; }
 
     let balance = account.balance;
     transactions
       .filter(t => t.payment_method_id === accountId)
       .forEach(t => {
         const amt = Number(t.amount) || 0;
-        if (t.type === 'withdrawal') balance += amt; // reverse withdrawal
-        else balance -= amt; // reverse deposit/interest
+        if (t.type === 'withdrawal') { balance += amt; } // reverse withdrawal
+        else { balance -= amt; } // reverse deposit/interest
       });
     return balance;
   };
@@ -281,9 +281,9 @@ export function SavingsPerformance({
       .filter(t => t.payment_method_id === accountId && parseDate(t.date).getTime() < cutoff)
       .forEach(t => {
         const amt = Number(t.amount) || 0;
-        if (t.type === 'deposit') deposits += amt;
-        else if (t.type === 'withdrawal') withdrawals += amt;
-        else if (t.type === 'interest') interests += amt;
+        if (t.type === 'deposit') { deposits += amt; }
+        else if (t.type === 'withdrawal') { withdrawals += amt; }
+        else if (t.type === 'interest') { interests += amt; }
       });
     return { balance: initialBalance + deposits - withdrawals + interests, deposits, withdrawals, interests, initialBalance };
   };
@@ -291,18 +291,21 @@ export function SavingsPerformance({
     <div className="space-y-6">
       {/* Header with total */}
       <Card className="bg-card border border-border/50 shadow-md">
-        <CardContent className="pt-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+            <PiggyBank className="h-5 w-5 text-primary" />
+            Total en ahorros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Total en ahorros</p>
               <p className="text-3xl font-bold">{formatCurrencyCard70(totalBalance)}</p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-base text-muted-foreground mt-1">
                 {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-primary/10">
-              <PiggyBank className="h-8 w-8 text-primary" />
-            </div>
+            {/* Keeping the visual balance but maybe simpler or removed if the icon is now in title */}
           </div>
         </CardContent>
       </Card>
@@ -349,7 +352,7 @@ export function SavingsPerformance({
             </CardHeader>
             <CardContent className="space-y-3">
               {account.interest_rate > 0 && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">
                     Rentabilidad estimada: {account.interest_rate.toFixed(decimalPlaces)}%
@@ -389,7 +392,7 @@ export function SavingsPerformance({
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
-            <p className="text-sm text-muted-foreground/70 mb-4">
+            <p className="text-base text-muted-foreground/70 mb-4">
               Crea una cuenta para empezar a registrar tus ahorros
             </p>
           </CardContent>
@@ -418,7 +421,7 @@ export function SavingsPerformance({
                   const isEditing = editingTxId === tx.id;
                   const toInputDate = (dateStr: string) => {
                     const d = new Date(dateStr + 'T00:00:00');
-                    if (isNaN(d.getTime())) return '';
+                    if (isNaN(d.getTime())) { return ''; }
                     const yyyy = d.getFullYear();
                     const mm = String(d.getMonth() + 1).padStart(2, '0');
                     const dd = String(d.getDate()).padStart(2, '0');

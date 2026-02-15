@@ -32,30 +32,30 @@ export function useFinanceMutations(userId: string | undefined) {
     };
 
     const invalidateTransactions = () => {
-        if (!userId) return;
+        if (!userId) {return;}
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.transactions(userId) });
         queryClient.invalidateQueries({ queryKey: ['finance', 'allTransactions', userId] });
     };
 
     const invalidateCategories = () => {
-        if (!userId) return;
+        if (!userId) {return;}
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.categories(userId) });
     };
 
     const invalidatePaymentMethods = () => {
-        if (!userId) return;
+        if (!userId) {return;}
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(userId) });
     };
 
     const invalidateBudgets = () => {
-        if (!userId) return;
+        if (!userId) {return;}
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.budgets(userId) });
     };
 
     // 1. Transaction Mutations
     const addTransaction = useMutation({
         mutationFn: async (txn: Omit<Transaction, 'id' | 'created_at'>) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Remove frontend-only fields like 'installments' if they don't exist in DB
             const { installments, ...dbData } = txn as any;
@@ -64,8 +64,8 @@ export function useFinanceMutations(userId: string | undefined) {
                 .insert([{ ...dbData, user_id: userId }])
                 .select();
 
-            if (error) throw error;
-            if (!data || data.length === 0) throw new Error('No data returned');
+            if (error) {throw error;}
+            if (!data || data.length === 0) {throw new Error('No data returned');}
             return data[0];
         },
         onSuccess: () => {
@@ -77,14 +77,14 @@ export function useFinanceMutations(userId: string | undefined) {
 
     const updateTransaction = useMutation({
         mutationFn: async ({ id, updates }: { id: string, updates: Partial<Transaction> }) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             const { installments, ...dbUpdates } = updates as any;
 
             const { error } = await supabase.from('transactions')
                 .update(dbUpdates)
                 .eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => {
             invalidateTransactions();
@@ -94,9 +94,9 @@ export function useFinanceMutations(userId: string | undefined) {
 
     const deleteTransaction = useMutation({
         mutationFn: async (id: string) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
             const { error } = await supabase.from('transactions').delete().eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => {
             invalidateTransactions();
@@ -105,34 +105,53 @@ export function useFinanceMutations(userId: string | undefined) {
     });
 
     // 2. Category Mutations
-    const addCategory = useMutation({
+    const addCategoryMutation = useMutation({
         mutationFn: async (cat: { name: string, type: TransactionType, color: string }) => {
-            if (!userId) throw new Error('Unauthenticated');
-            const { error } = await supabase.from('categories').insert([{
-                name: cat.name,
-                type: cat.type,
-                color: cat.color,
-                user_id: userId
-            }]);
-            if (error) throw error;
+            if (!userId) {throw new Error('Unauthenticated');}
+            const { data, error } = await supabase.from('categories')
+                .insert([{
+                    name: cat.name,
+                    type: cat.type,
+                    color: cat.color,
+                    user_id: userId
+                }])
+                .select()
+                .single();
+            if (error) {throw error;}
+            if (!data) {throw new Error('No data returned');}
+            return data as CategoryItem;
         },
         onSuccess: () => invalidateCategories()
     });
 
     const initializeDefaultCategories = useMutation({
         mutationFn: async (defaultCategories: Omit<CategoryItem, 'id'>[]) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
-            const categoriesToInsert = defaultCategories.map(cat => ({
-                name: cat.name,
-                type: cat.type,
-                color: cat.color || '#475569',
-                user_id: userId
-            }));
+            const { data: existing, error: existingError } = await supabase
+                .from('categories')
+                .select('name, type')
+                .eq('user_id', userId);
+            if (existingError) {throw existingError;}
+
+            const existingKey = new Set(
+                (existing ?? []).map(cat => `${cat.name}`.toLowerCase() + '|' + `${cat.type}`.toLowerCase())
+            );
+            const categoriesToInsert = defaultCategories
+                .filter(cat => !existingKey.has(`${cat.name}`.toLowerCase() + '|' + `${cat.type}`.toLowerCase()))
+                .slice(0, 10)
+                .map(cat => ({
+                    name: cat.name,
+                    type: cat.type,
+                    color: cat.color || '#475569',
+                    user_id: userId
+                }));
+
+            if (categoriesToInsert.length === 0) {return;}
 
             const { error } = await supabase.from('categories')
                 .upsert(categoriesToInsert, { onConflict: 'user_id, name' });
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => {
             invalidateCategories();
@@ -140,9 +159,9 @@ export function useFinanceMutations(userId: string | undefined) {
         }
     });
 
-    const addPaymentMethod = useMutation({
+    const addPaymentMethodMutation = useMutation({
         mutationFn: async (pm: Omit<PaymentMethod, 'id'>) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Explicitly pick allowed columns for DB
             const dbData = {
@@ -159,15 +178,20 @@ export function useFinanceMutations(userId: string | undefined) {
                 color: pm.color
             };
 
-            const { error } = await supabase.from('payment_methods').insert([dbData]);
-            if (error) throw error;
+            const { data, error } = await supabase.from('payment_methods')
+                .insert([dbData])
+                .select()
+                .single();
+            if (error) {throw error;}
+            if (!data) {throw new Error('No data returned');}
+            return data as PaymentMethod;
         },
         onSuccess: () => invalidatePaymentMethods()
     });
 
     const updatePaymentMethod = useMutation({
         mutationFn: async ({ id, updates }: { id: string, updates: Partial<PaymentMethod> }) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Only update valid columns and ensure id/user_id are not overwritten
             const dbUpdates: any = {};
@@ -186,16 +210,16 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('payment_methods')
                 .update(dbUpdates)
                 .eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidatePaymentMethods()
     });
 
     const deletePaymentMethod = useMutation({
         mutationFn: async (id: string) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
             const { error } = await supabase.from('payment_methods').delete().eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidatePaymentMethods()
     });
@@ -203,7 +227,7 @@ export function useFinanceMutations(userId: string | undefined) {
     // 4. Budget Mutations
     const addBudget = useMutation({
         mutationFn: async (budget: Omit<Budget, 'id'>) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Filter only valid database columns
             const dbData = {
@@ -217,16 +241,16 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('budgets').upsert(dbData, {
                 onConflict: 'user_id,category,month'
             });
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidateBudgets()
     });
 
     const deleteBudget = useMutation({
         mutationFn: async (id: string) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
             const { error } = await supabase.from('budgets').delete().eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidateBudgets()
     });
@@ -234,7 +258,7 @@ export function useFinanceMutations(userId: string | undefined) {
     // 5. Bulk & Special Actions
     const addTransactionsBulk = useMutation({
         mutationFn: async (transactions: Omit<Transaction, 'id' | 'created_at'>[]) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             const dataToInsert = transactions.map(t => {
                 const { installments, ...dbData } = t as any;
@@ -242,7 +266,7 @@ export function useFinanceMutations(userId: string | undefined) {
             });
 
             const { error } = await supabase.from('transactions').insert(dataToInsert);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => {
             invalidateTransactions();
@@ -258,7 +282,7 @@ export function useFinanceMutations(userId: string | undefined) {
             date: string,
             description?: string
         }) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Create two transactions: one out, one in
             const transactions = [
@@ -283,7 +307,7 @@ export function useFinanceMutations(userId: string | undefined) {
             ];
 
             const { error } = await supabase.from('transactions').insert(transactions);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => {
             invalidateTransactions();
@@ -291,30 +315,57 @@ export function useFinanceMutations(userId: string | undefined) {
         }
     });
 
-    const updateCategory = useMutation({
+    const updateCategoryMutation = useMutation({
         mutationFn: async ({ id, updates }: { id: string, updates: Partial<CategoryItem> }) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
 
             // Only update fields that exist in categories table
             const dbUpdates: any = {};
-            if (updates.name !== undefined) dbUpdates.name = updates.name;
-            if (updates.type !== undefined) dbUpdates.type = updates.type;
-            if (updates.color !== undefined) dbUpdates.color = updates.color;
+            if (updates.name !== undefined) {dbUpdates.name = updates.name;}
+            if (updates.type !== undefined) {dbUpdates.type = updates.type;}
+            if (updates.color !== undefined) {dbUpdates.color = updates.color;}
 
             const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidateCategories()
     });
 
     const deleteCategory = useMutation({
         mutationFn: async (id: string) => {
-            if (!userId) throw new Error('Unauthenticated');
+            if (!userId) {throw new Error('Unauthenticated');}
             const { error } = await supabase.from('categories').delete().eq('id', id);
-            if (error) throw error;
+            if (error) {throw error;}
         },
         onSuccess: () => invalidateCategories()
     });
+
+    const addCategory = async (cat: { name: string, type: TransactionType, color: string }) => {
+        try {
+            const data = await addCategoryMutation.mutateAsync(cat);
+            return { error: null, data };
+        } catch (error) {
+            return { error };
+        }
+    };
+
+    const updateCategory = async ({ id, updates }: { id: string, updates: Partial<CategoryItem> }) => {
+        try {
+            await updateCategoryMutation.mutateAsync({ id, updates });
+            return { error: null };
+        } catch (error) {
+            return { error };
+        }
+    };
+
+    const addPaymentMethod = async (pm: Omit<PaymentMethod, 'id'>) => {
+        try {
+            const data = await addPaymentMethodMutation.mutateAsync(pm);
+            return { error: null, data };
+        } catch (error) {
+            return { error };
+        }
+    };
 
     return {
         addTransaction: addTransaction.mutateAsync,
@@ -322,11 +373,11 @@ export function useFinanceMutations(userId: string | undefined) {
         deleteTransaction: deleteTransaction.mutateAsync,
         addTransactionsBulk: addTransactionsBulk.mutateAsync,
         addTransfer: addTransfer.mutateAsync,
-        addCategory: addCategory.mutateAsync,
-        updateCategory: updateCategory.mutateAsync,
+        addCategory,
+        updateCategory,
         deleteCategory: deleteCategory.mutateAsync,
         initializeDefaultCategories: initializeDefaultCategories.mutateAsync,
-        addPaymentMethod: addPaymentMethod.mutateAsync,
+        addPaymentMethod,
         updatePaymentMethod: updatePaymentMethod.mutateAsync,
         deletePaymentMethod: deletePaymentMethod.mutateAsync,
         addBudget: addBudget.mutateAsync,

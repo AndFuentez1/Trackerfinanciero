@@ -5,7 +5,8 @@ import { useToast } from '@/shared/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import type { Database } from '@/integrations/supabase/types';
-import { useFinanceData, Transaction, TransactionType } from './useFinanceData';
+import type { Transaction} from './useFinanceData';
+import { useFinanceData, TransactionType } from './useFinanceData';
 import { startOfMonth, parseISO } from 'date-fns';
 import { formatLocalDate } from '@/core/utils';
 
@@ -65,13 +66,13 @@ export function useBudgetsData() {
         budgets.forEach(b => {
             if (b.month) {
                 const y = Number(b.month.substring(0, 4));
-                if (!Number.isNaN(y)) years.add(y);
+                if (!Number.isNaN(y)) {years.add(y);}
             }
         });
         // También incluir años detectados en transacciones para que el filtro cubra todo el histórico
         allTransactions?.forEach(t => {
             const y = new Date(t.date).getFullYear();
-            if (!Number.isNaN(y)) years.add(y);
+            if (!Number.isNaN(y)) {years.add(y);}
         });
         if (years.size === 0) {
             years.add(new Date().getFullYear());
@@ -81,7 +82,7 @@ export function useBudgetsData() {
 
     // Ensure selected year stays within available options
     useEffect(() => {
-        if (availableYears.length === 0) return;
+        if (availableYears.length === 0) {return;}
         if (budgetYear !== 'all' && !availableYears.includes(budgetYear)) {
             setBudgetYear(availableYears[0]);
         }
@@ -89,7 +90,7 @@ export function useBudgetsData() {
 
     // Subscribe to changes to refresh finance data (which contains budgets)
     useEffect(() => {
-        if (!user) return;
+        if (!user) {return;}
 
         const channel = supabase
             .channel('budgets_changes')
@@ -119,8 +120,8 @@ export function useBudgetsData() {
         const filteredBudgets = budgets.filter(b => {
             const year = Number(b.month?.substring(0, 4));
             const month = Number(b.month?.substring(5, 7));
-            if (budgetYear !== 'all' && !Number.isNaN(year) && year !== budgetYear) return false;
-            if (budgetMonth !== 'all' && !Number.isNaN(month) && month !== budgetMonth) return false;
+            if (budgetYear !== 'all' && !Number.isNaN(year) && year !== budgetYear) {return false;}
+            if (budgetMonth !== 'all' && !Number.isNaN(month) && month !== budgetMonth) {return false;}
             return true;
         });
 
@@ -139,15 +140,15 @@ export function useBudgetsData() {
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
                 const tMonth = tDate.getMonth() + 1;
-                if (budgetYear !== 'all' && tYear !== budgetYear) return false;
-                if (budgetMonth !== 'all' && tMonth !== budgetMonth) return false;
+                if (budgetYear !== 'all' && tYear !== budgetYear) {return false;}
+                if (budgetMonth !== 'all' && tMonth !== budgetMonth) {return false;}
 
                 // Must match category_id
-                if (t.category_id !== budget.category_id) return false;
+                if (t.category_id !== budget.category_id) {return false;}
 
                 // NEW: Validate type match if category info is available
                 if (category) {
-                    if (t.type !== category.type) return false;
+                    if (t.type !== category.type) {return false;}
                 }
 
                 return true;
@@ -159,8 +160,8 @@ export function useBudgetsData() {
             const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
 
             let status: 'ok' | 'warning' | 'overspent' = 'ok';
-            if (percentage >= 100) status = 'overspent';
-            else if (percentage >= 80) status = 'warning';
+            if (percentage >= 100) {status = 'overspent';}
+            else if (percentage >= 80) {status = 'warning';}
 
             stats.push({
                 budget,
@@ -184,8 +185,8 @@ export function useBudgetsData() {
         const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
         let status: 'ok' | 'warning' | 'overspent' = 'ok';
-        if (percentage >= 100) status = 'overspent';
-        else if (percentage >= 80) status = 'warning';
+        if (percentage >= 100) {status = 'overspent';}
+        else if (percentage >= 80) {status = 'warning';}
 
         return {
             totalBudgeted,
@@ -197,7 +198,7 @@ export function useBudgetsData() {
     }, [budgetsStats]);
 
     const saveBudget = async (budgetData: { category_id: string; amount: number; category_name?: string; month?: string }) => {
-        if (!user) return { error: 'No autenticado' };
+        if (!user) {return { error: 'No autenticado' };}
 
         // BUSCAR EL NOMBRE DE LA CATEGORÍA SI NO VIENE
         const categoryDetails = categories.find(c => c.id === budgetData.category_id);
@@ -234,7 +235,7 @@ export function useBudgetsData() {
     };
 
     const deleteBudget = async (budgetId: string) => {
-        if (!user) return { error: 'No autenticado' };
+        if (!user) {return { error: 'No autenticado' };}
 
         const { error } = await supabase
             .from('budgets')

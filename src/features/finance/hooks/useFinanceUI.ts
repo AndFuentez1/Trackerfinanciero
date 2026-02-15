@@ -5,7 +5,7 @@
  * Includes pagination, filters, onboarding, and import progress.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Transaction } from '../types/financeTypes';
 
 export function useFinanceUI() {
@@ -31,10 +31,46 @@ export function useFinanceUI() {
     }>({ column: 'date', ascending: false });
 
     // Onboarding state
-    const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
+    const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('onboarding_decision');
+            return (stored === 'pending' || stored === 'from_scratch' || stored === 'imported') ? stored : null;
+        }
+        return null;
+    });
     const [hasPendingImport, setHasPendingImport] = useState(false);
-    const [welcomeCompleted, setWelcomeCompleted] = useState(false);
+
+    const [welcomeCompleted, setWelcomeCompleted] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('welcome_completed') === 'true';
+        }
+        return false;
+    });
+
     const [highlightedCard, setHighlightedCard] = useState<'categories' | 'payment-methods' | null>(null);
+
+    // Sync state to localStorage
+    useEffect(() => {
+        if (welcomeCompleted) {
+            localStorage.setItem('welcome_completed', 'true');
+        } else {
+            // Optional: remove if falsy, but careful with initial load which might be false before profile loads.
+            // Actually, if it starts false, we want it false. If starts true from storage, it stays true.
+            // If profile says true, it stays true.
+            // If profile says false (new user), we might want to clear it?
+            // But usually it goes false -> true.
+            // Let's stick to setting it true.
+            localStorage.removeItem('welcome_completed');
+        }
+    }, [welcomeCompleted]);
+
+    useEffect(() => {
+        if (onboardingDecision) {
+            localStorage.setItem('onboarding_decision', onboardingDecision);
+        } else {
+            localStorage.removeItem('onboarding_decision');
+        }
+    }, [onboardingDecision]);
 
     // Import/Export state
     const [importProgress, setImportProgress] = useState<{

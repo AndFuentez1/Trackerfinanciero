@@ -4,7 +4,6 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
-import { ExportExcelButton } from '@/features/finance/transactions/components/ExportExcelButton';
 import { SummaryTab } from '@/features/dashboard/components/SummaryTab';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { format } from 'date-fns';
@@ -28,7 +27,6 @@ export default function Index() {
     addTransfer,
     deletePaymentMethod,
     categories,
-    updateCategoryGoal,
     updateTransaction,
     onboardingDecision,
     hasPendingImport,
@@ -45,7 +43,11 @@ export default function Index() {
     baseColor,
     themeOptions,
     setAppThemePreference,
+    updateProfile,
+    setImportProgress,
   } = useFinanceData();
+
+  console.log('Dashboard Render:', { allTransactions, currency, financeLoading, authLoading }); // DEBUG log
 
   const { lastModification: budgetLastUpdated, loading: budgetsLoading } = useBudgetsData();
 
@@ -71,9 +73,9 @@ export default function Index() {
   }, [chartTransactions, chartExpensesByCategory, paymentMethods, budgets, currency]);
 
   const lastUpdated = useMemo(() => {
-    if (!financeLastUpdated && !budgetLastUpdated) return null;
-    if (!financeLastUpdated) return budgetLastUpdated;
-    if (!budgetLastUpdated) return financeLastUpdated;
+    if (!financeLastUpdated && !budgetLastUpdated) { return null; }
+    if (!financeLastUpdated) { return budgetLastUpdated; }
+    if (!budgetLastUpdated) { return financeLastUpdated; }
     return financeLastUpdated > budgetLastUpdated ? financeLastUpdated : budgetLastUpdated;
   }, [financeLastUpdated, budgetLastUpdated]);
 
@@ -99,11 +101,12 @@ export default function Index() {
   );
 
   // Loading state (High Fidelity Skeleton Reveal)
-  if (isLoading) {
+  // Removed global blocking to allow layout to render immediately
+  /* if (isLoading) {
     return <SkeletonLoader tab="dashboard" fullPage={false} withLayoutWrapper />;
-  }
+  } */
 
-  if (!user) return null;
+  if (!user) { return null; }
 
   const onboardingSkeleton = (
     <SkeletonLoader
@@ -130,14 +133,21 @@ export default function Index() {
       <>
         {onboardingSkeleton}
         <OnboardingDecisionPanel
-          onStartFromScratch={async () => { await setOnboardingDecision('from_scratch'); }}
+          onStartFromScratch={async () => {
+            await updateProfile({ onboarding_decision: 'from_scratch' });
+          }}
           hasPendingImport={hasPendingImport}
           onConfirmImport={async () => { await confirmImportData(); }}
           pendingImportCount={pendingImportData.length}
           importProgress={importProgress}
           onCancelImport={async () => { await cancelImport(); }}
           paymentMethods={paymentMethods}
-          onImportComplete={(data) => startImport(data)}
+          onImportComplete={async (data) => {
+            // Persist the import intent and data
+            setImportProgress(prev => ({ ...prev, status: 'completed' }));
+            await updateProfile({ has_pending_import: true });
+            // The data is confirmed in OnboardingDecisionPanel via onConfirmImport
+          }}
           showCompletionCard={showCompletionCard}
           baseColor={baseColor}
           themeOptions={themeOptions}
@@ -165,7 +175,6 @@ export default function Index() {
             <div className="flex flex-wrap items-center gap-2">
               <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
               <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-              <ExportExcelButton transactions={transactions} paymentMethods={paymentMethods} />
             </div>
           </div>
         </header>
@@ -181,10 +190,10 @@ export default function Index() {
             onDeleteBudget={deleteBudget}
             onDeletePaymentMethod={deletePaymentMethod}
             categories={categories}
-            onUpdateCategoryGoal={updateCategoryGoal}
             onUpdateTransaction={updateTransaction}
             dateFilter={{ period: 'all', from: null, to: null }}
             updateFilter={() => { }}
+            loading={isLoading}
           />
         </section>
         {lastUpdated && (

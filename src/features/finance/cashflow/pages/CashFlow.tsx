@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCashFlow } from '@/features/finance/cashflow/hooks/useCashFlow';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
@@ -6,9 +6,25 @@ import { CashFlowFilters } from '@/features/finance/cashflow/components/CashFlow
 import { CashFlowSummaryCards } from '@/features/finance/cashflow/components/CashFlowSummaryCards';
 import { CashFlowChart } from '@/features/finance/cashflow/components/CashFlowChart';
 import { CashFlowTimeline } from "@/features/finance/cashflow/components/CashFlowTimeline";
-import { Wallet, BarChart3 } from 'lucide-react';
+import { Wallet, Link, Unlink } from 'lucide-react';
+import { Switch } from '@/shared/ui/switch';
+import { Label } from '@/shared/ui/label';
+import { cn } from '@/core/utils';
+import { useToast } from '@/shared/hooks/use-toast';
+import { getBackendUrl } from '@/core/api/backend';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/core/api/queryKeys';
+import { useUserConfigStatus } from '@/features/settings/components/hooks/useUserConfigStatus';
+
+const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
+const BACKEND_URL = getBackendUrl();
 
 export default function CashFlow() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: configStatus } = useUserConfigStatus(user?.id);
+
   // Filtros de año/mes/rango
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [month, setMonth] = useState<number | 'all'>('all');
@@ -17,8 +33,19 @@ export default function CashFlow() {
   // Estado para fila expandida en la tabla de desglose mensual
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
+  // Estado para sincronizar con saldo real
+  const [useRealBalance, setUseRealBalance] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {return false;}
+    const stored = localStorage.getItem(CASHFLOW_REAL_BALANCE_KEY);
+    return stored === 'true';
+  });
+  const [isRealBalanceHydrated, setIsRealBalanceHydrated] = useState(() => {
+    if (typeof window === 'undefined') {return false;}
+    return localStorage.getItem(CASHFLOW_REAL_BALANCE_KEY) !== null;
+  });
+
   // Datos reales del hook
-  const { cashFlowSeries, balance_actual, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning } = useCashFlow(year, month, range);
+  const { cashFlowSeries, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning } = useCashFlow(year, month, range, 'real', useRealBalance);
   const loading = !cashFlowSeries;
 
   // Años/meses disponibles (debería venir de los datos)
@@ -33,12 +60,12 @@ export default function CashFlow() {
 
   // Formateador global de moneda
   const formatCOP = (v: number | null | undefined) => {
-    if (typeof v !== 'number' || isNaN(v)) return <span className="text-muted-foreground">$ 0,00</span>;
+    if (typeof v !== 'number' || isNaN(v)) { return <span className="text-muted-foreground">$ 0,00</span>; }
 
     const formatted = v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 });
     const parts = formatted.split(',');
 
-    if (parts.length === 1) return <span>{formatted}</span>;
+    if (parts.length === 1) { return <span>{formatted}</span>; }
 
     return (
       <span className="inline-flex items-baseline">
@@ -46,6 +73,58 @@ export default function CashFlow() {
         <span className="text-[0.85em] opacity-85">,{parts[1]}</span>
       </span>
     );
+  };
+
+  useEffect(() => {
+    if (isRealBalanceHydrated) {return;}
+    if (configStatus?.cashflowUseRealBalance === undefined) {return;}
+    const serverValue = !!configStatus.cashflowUseRealBalance;
+    setUseRealBalance(serverValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CASHFLOW_REAL_BALANCE_KEY, String(serverValue));
+    }
+    setIsRealBalanceHydrated(true);
+  }, [configStatus?.cashflowUseRealBalance, isRealBalanceHydrated]);
+
+  const handleRealBalanceChange = async (value: boolean) => {
+    setUseRealBalance(value);
+    setIsRealBalanceHydrated(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CASHFLOW_REAL_BALANCE_KEY, String(value));
+    }
+
+    if (!user?.id) {return;}
+
+    try {
+      const body: { userId: string; cashflowUseRealBalance: boolean; email?: string } = {
+        userId: user.id,
+        cashflowUseRealBalance: value
+      };
+      if (!configStatus?.hasEmail && user.email) {
+        body.email = user.email;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/user/config/cashflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {throw new Error('Failed to save cashflow preference');}
+
+      queryClient.setQueryData(queryKeys.user.config(user.id), // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (old: Record<string, any> | undefined) => {
+          if (!old) {return old;}
+          return { ...old, cashflowUseRealBalance: value };
+        });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la preferencia de flujo de caja',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -91,7 +170,26 @@ export default function CashFlow() {
         </div>
         {/* Tabla de Desglose Mensual */}
         <div className="w-full">
-          <h3 className="text-lg font-semibold mb-2 text-foreground">Desglose Mensual</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+            <h3 className="text-lg font-semibold text-foreground">Desglose Mensual</h3>
+
+            <div className="flex items-center gap-2.5 bg-card/60 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-xl shadow-sm">
+              <div className={cn(
+                "p-1.5 rounded-lg transition-colors",
+                useRealBalance ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              )}>
+                {useRealBalance ? <Link className="h-3.5 w-3.5" /> : <Unlink className="h-3.5 w-3.5" />}
+              </div>
+              <Label htmlFor="sync-balance" className="text-xs font-bold cursor-pointer select-none">
+                Mostrar ajuste de balance inicial
+              </Label>
+              <Switch
+                id="sync-balance"
+                checked={useRealBalance}
+                onCheckedChange={handleRealBalanceChange}
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-input bg-card">
             <table className="min-w-full text-sm">
               <thead className="bg-muted/40">
@@ -116,7 +214,7 @@ export default function CashFlow() {
                       <td className="px-3 py-2 text-center">
                         <button
                           type="button"
-                          className="text-xs underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
+                          className="text-sm underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
                           onClick={() => setExpandedRow(expandedRow === i ? null : i)}
                         >
                           {expandedRow === i ? 'Ocultar' : 'Ver detalle'}

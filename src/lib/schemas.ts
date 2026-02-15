@@ -12,11 +12,11 @@ export const insertTransactionSchema = z.object({
     description: z.string().nullable().optional(),
     date: z.string().refine((val) => {
         // Validar formato yyyy-MM-dd
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return false;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {return false;}
 
         // Validar que sea fecha real
         const parsed = parseLocalDate(val);
-        if (!parsed) return false;
+        if (!parsed) {return false;}
 
         // Validar rango razonable (10 años atrás, 1 año adelante)
         const now = new Date();

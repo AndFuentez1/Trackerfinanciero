@@ -96,7 +96,8 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-weight: var(--weight-regular);
+    font-weight: var(--weight-semiregular);
+    /* Increased from 400 to 450 */
     font-size: var(--text-base);
     background-image:
       radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent-soft-bg)) 0%, transparent 60%),
@@ -138,7 +139,8 @@
   }
 
   h4 {
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
+    /* Was xl, reducing to lg to keep hierarchy tight with 18px base */
   }
 
   h5 {
@@ -168,7 +170,8 @@
     font-family: var(--font-base);
     font-weight: var(--weight-medium);
     letter-spacing: -0.01em;
-    /* Removed aggressive spacing */
+    font-size: var(--text-base);
+    /* Sync with body text matches */
   }
 
   label {

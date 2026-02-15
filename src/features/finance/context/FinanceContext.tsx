@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useFinanceDataLogic } from '../hooks/useFinanceDataLogic';
 
 const FinanceContext = createContext<ReturnType<typeof useFinanceDataLogic> | undefined>(undefined);

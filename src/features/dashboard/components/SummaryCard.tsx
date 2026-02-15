@@ -1,4 +1,4 @@
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/core/utils';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFinance } from '@/features/finance/context/FinanceContext';
@@ -52,8 +52,8 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
   };
 
   const getFontSize = (length: number) => {
-    if (length > 18) return 'text-lg lg:text-xl';
-    if (length > 15) return 'text-xl lg:text-2xl';
+    if (length > 18) { return 'text-lg lg:text-xl'; }
+    if (length > 15) { return 'text-xl lg:text-2xl'; }
     return 'text-2xl lg:text-3xl';
   };
 
@@ -62,9 +62,9 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
   };
 
   const getIconColor = () => {
-    if (variant === 'positive') return 'text-emerald-500';
-    if (variant === 'negative') return 'text-red-500';
-    if (variant === 'warning') return 'text-amber-500';
+    if (variant === 'positive') { return 'text-primary'; }
+    if (variant === 'negative') { return 'text-destructive'; }
+    if (variant === 'warning') { return 'text-orange-500'; }
     return 'text-muted-foreground';
   };
 

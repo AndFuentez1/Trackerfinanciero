@@ -11,7 +11,34 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useToast } from '@/shared/hooks/use-toast';
 import { CURRENCIES, getDefaultDecimals } from '../constants/currencyConstants';
 import { queryKeys } from '@/core/api/queryKeys';
+import { getBackendUrl } from '@/core/api/backend';
 import type { ProfileSelect } from './useFinanceQueries';
+
+export type ResetProfileOptions = {
+    transactions: boolean;
+    budgets: boolean;
+    savings: boolean;
+    loans: boolean;
+    futureExpenses: boolean;
+    paymentMethods: boolean;
+    categories: boolean;
+    profileFlags: boolean;
+    gmailPermissions: boolean;
+    telegramConfig: boolean;
+};
+
+const DEFAULT_RESET_PROFILE_OPTIONS: ResetProfileOptions = {
+    transactions: true,
+    budgets: true,
+    savings: true,
+    loans: true,
+    futureExpenses: true,
+    paymentMethods: true,
+    categories: true,
+    profileFlags: true,
+    gmailPermissions: false,
+    telegramConfig: false,
+};
 
 export function useProfileManagement(profile?: ProfileSelect | null) {
     const { user } = useAuth();
@@ -32,10 +59,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
     // Sync local profile state with fetched profile
     useEffect(() => {
-        if (!profile) return;
+        if (!profile) {return;}
         setProfileData(profile);
-        if (profile.currency) setCurrency(profile.currency);
-        if (typeof profile.decimal_places === 'number') setDecimalPlaces(profile.decimal_places);
+        setCurrency(profile.currency ?? '');
+        if (typeof profile.decimal_places === 'number') {setDecimalPlaces(profile.decimal_places);}
+        if (profile.decimal_places === null) {setDecimalPlaces(0);}
     }, [profile]);
 
     /**
@@ -60,11 +88,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .update(updates)
                 .eq('id', user.id);
 
-            if (error) throw error;
+            if (error) {throw error;}
 
             // Update local state
-            if (updates.currency !== undefined) setCurrency(updates.currency);
-            if (updates.decimal_places !== undefined) setDecimalPlaces(updates.decimal_places);
+            if (updates.currency !== undefined) {setCurrency(updates.currency);}
+            if (updates.decimal_places !== undefined) {setDecimalPlaces(updates.decimal_places);}
             const nextProfile = { ...(profileData || {}), ...updates };
             setProfileData(nextProfile);
 
@@ -88,7 +116,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
      * Reset operational data (transactions, budgets, etc.) but keep configuration (categories, payment methods)
      */
     const resetOperationalData = useCallback(async () => {
-        if (!user) return { error: 'No autenticado' };
+        if (!user) {return { error: 'No autenticado' };}
 
         const errors: string[] = [];
         try {
@@ -107,7 +135,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .from('payment_methods')
                 .update({ balance: 0 })
                 .eq('user_id', user.id);
-            if (pmError) errors.push(`métodos de pago: ${pmError.message}`);
+            if (pmError) {errors.push(`métodos de pago: ${pmError.message}`);}
 
             if (errors.length > 0) {
                 toast({
@@ -130,49 +158,174 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
     /**
      * Reset all profile data (dangerous operation)
      */
-    const resetProfileData = useCallback(async () => {
-        if (!user) return { error: 'No autenticado' };
+    const resetProfileData = useCallback(async (options?: Partial<ResetProfileOptions>) => {
+        if (!user) {return { error: 'No autenticado' };}
+
+        const resolvedOptions: ResetProfileOptions = {
+            ...DEFAULT_RESET_PROFILE_OPTIONS,
+            ...(options ?? {})
+        };
+
+        const enforcedOptions: ResetProfileOptions = {
+            ...resolvedOptions,
+            budgets: resolvedOptions.budgets || resolvedOptions.categories,
+            savings: resolvedOptions.savings || resolvedOptions.paymentMethods,
+        };
+
+        if (!Object.values(enforcedOptions).some(Boolean)) {
+            toast({ title: 'Sin cambios', description: 'Selecciona al menos una opción para borrar.' });
+            return { error: 'Sin opciones seleccionadas' };
+        }
 
         const errors: string[] = [];
 
         try {
-            // Delete in correct order to respect foreign key constraints
-            const tablesToReset = [
-                'transactions',
-                'budgets',
-                'savings_transactions',
-                'savings_accounts',
-                'loans',
-                'future_expenses',
-                'payment_methods',
-                'categories',
-            ];
-
-            for (const table of tablesToReset) {
-                const { error } = await supabase
-                    .from(table as any)
-                    .delete()
-                    .eq('user_id', user.id);
-
+            // 1) Finanzas - eliminar datos seleccionados (orden seguro)
+            if (enforcedOptions.transactions) {
+                const { error } = await supabase.from('transactions').delete().eq('user_id', user.id);
                 if (error) {
-                    console.error(`Error deleting ${table}:`, error);
-                    errors.push(`${table}: ${error.message}`);
+                    console.error('Error deleting transactions:', error);
+                    errors.push(`transactions: ${error.message}`);
                 }
             }
 
-            // Reset profile settings
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                    onboarding_decision: null,
-                    has_pending_import: false,
-                    welcome_completed: false,
-                })
-                .eq('id', user.id);
-
-            if (profileError) {
-                errors.push(`profile: ${profileError.message}`);
+            if (enforcedOptions.transactions || enforcedOptions.categories) {
+                const { error: pendingInvoicesDeleteError } = await supabase
+                    .from('pending_invoices')
+                    .delete()
+                    .eq('user_id', user.id);
+                if (pendingInvoicesDeleteError) {
+                    console.error('Error deleting pending_invoices:', pendingInvoicesDeleteError);
+                    errors.push(`pending_invoices: ${pendingInvoicesDeleteError.message}`);
+                }
             }
+
+            if (enforcedOptions.budgets) {
+                const { error } = await supabase.from('budgets').delete().eq('user_id', user.id);
+                if (error) {
+                    console.error('Error deleting budgets:', error);
+                    errors.push(`budgets: ${error.message}`);
+                }
+            }
+
+            if (enforcedOptions.savings) {
+                const { error: savingsTxError } = await supabase.from('savings_transactions').delete().eq('user_id', user.id);
+                if (savingsTxError) {
+                    console.error('Error deleting savings_transactions:', savingsTxError);
+                    errors.push(`savings_transactions: ${savingsTxError.message}`);
+                }
+
+                const { error: savingsAccountsError } = await supabase.from('savings_accounts').delete().eq('user_id', user.id);
+                if (savingsAccountsError) {
+                    console.error('Error deleting savings_accounts:', savingsAccountsError);
+                    errors.push(`savings_accounts: ${savingsAccountsError.message}`);
+                }
+            }
+
+            if (enforcedOptions.loans) {
+                const { error } = await supabase.from('loans').delete().eq('user_id', user.id);
+                if (error) {
+                    console.error('Error deleting loans:', error);
+                    errors.push(`loans: ${error.message}`);
+                }
+            }
+
+            if (enforcedOptions.futureExpenses) {
+                const { error } = await supabase.from('future_expenses').delete().eq('user_id', user.id);
+                if (error) {
+                    console.error('Error deleting future_expenses:', error);
+                    errors.push(`future_expenses: ${error.message}`);
+                }
+            }
+
+            if (enforcedOptions.paymentMethods) {
+                const { error } = await supabase.from('payment_methods').delete().eq('user_id', user.id);
+                if (error) {
+                    console.error('Error deleting payment_methods:', error);
+                    errors.push(`payment_methods: ${error.message}`);
+                }
+            } else if (enforcedOptions.transactions) {
+                // Mantener métodos de pago pero reiniciar saldos si se borran transacciones
+                const { error } = await supabase
+                    .from('payment_methods')
+                    .update({ balance: 0 })
+                    .eq('user_id', user.id);
+                if (error) {
+                    console.error('Error resetting payment method balances:', error);
+                    errors.push(`payment_methods_balance: ${error.message}`);
+                }
+            }
+
+            if (enforcedOptions.categories) {
+                const { error } = await supabase.from('categories').delete().eq('user_id', user.id);
+                if (error) {
+                    console.error('Error deleting categories:', error);
+                    errors.push(`categories: ${error.message}`);
+                }
+            }
+
+            // 2) Perfil - reiniciar banderas de onboarding
+            if (enforcedOptions.profileFlags) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({
+                        onboarding_decision: null,
+                        has_pending_import: false,
+                        welcome_completed: false,
+                        currency: null,
+                        decimal_places: null,
+                        base_color: null,
+                    })
+                    .eq('id', user.id);
+
+                if (profileError) {
+                    errors.push(`profile: ${profileError.message}`);
+                } else {
+                    setCurrency('');
+                    setDecimalPlaces(0);
+                    setProfileData(prev => prev ? ({
+                        ...prev,
+                        onboarding_decision: null,
+                        has_pending_import: false,
+                        welcome_completed: false,
+                        currency: null,
+                        decimal_places: null,
+                        base_color: null,
+                    }) : prev);
+                }
+            }
+
+            // 3) Integraciones - Gmail / Telegram
+            const backendUrl = getBackendUrl();
+
+            if (enforcedOptions.gmailPermissions) {
+                const response = await fetch(`${backendUrl}/api/user/config/gmail/disconnect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                if (!response.ok) {
+                    const responseData = await response.json().catch(() => ({}));
+                    const message = responseData?.error || 'No se pudo desconectar Gmail';
+                    errors.push(`gmail: ${message}`);
+                }
+            }
+
+            if (enforcedOptions.telegramConfig) {
+                const response = await fetch(`${backendUrl}/api/user/config/telegram/disconnect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                if (!response.ok) {
+                    const responseData = await response.json().catch(() => ({}));
+                    const message = responseData?.error || 'No se pudo desconectar Telegram';
+                    errors.push(`telegram: ${message}`);
+                }
+            }
+
+            queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
 
             if (errors.length > 0) {
                 toast({
@@ -183,8 +336,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 return { error: errors.join(', ') };
             }
 
-            toast({ title: 'Perfil reseteado', description: 'Todos los datos han sido eliminados' });
-            queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+            toast({ title: 'Perfil reseteado', description: 'Se eliminaron los datos seleccionados.' });
             return { success: true };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Error desconocido';
@@ -198,7 +350,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
      * Convert currency for all transactions
      */
     const convertCurrency = useCallback(async (rate: number, newCurrency: string, dryRun = false) => {
-        if (!user) return { error: 'No autenticado' };
+        if (!user) {return { error: 'No autenticado' };}
 
         try {
             // Fetch all transactions
@@ -207,7 +359,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .select('*')
                 .eq('user_id', user.id);
 
-            if (fetchError) throw fetchError;
+            if (fetchError) {throw fetchError;}
 
             const updates = transactions?.map(t => ({
                 id: t.id,
@@ -225,7 +377,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                     .update({ amount: update.amount })
                     .eq('id', update.id);
 
-                if (error) throw error;
+                if (error) {throw error;}
             }
 
             // Update profile currency

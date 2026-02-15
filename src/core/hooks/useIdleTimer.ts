@@ -62,7 +62,7 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
 
     // Reset the idle timer
     const resetTimer = useCallback(() => {
-        if (!enabled) return;
+        if (!enabled) {return;}
 
         clearTimers();
         lastActivityRef.current = Date.now();
@@ -100,7 +100,7 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
 
     // Activity event handler
     const handleActivity = useCallback(() => {
-        if (!enabled || isWarning) return; // Don't reset during warning period
+        if (!enabled || isWarning) {return;} // Don't reset during warning period
         resetTimer();
     }, [enabled, isWarning, resetTimer]);
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import {
   Dialog,
   DialogContent,

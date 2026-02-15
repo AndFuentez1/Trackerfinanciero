@@ -60,7 +60,7 @@ export function useLoansDataLogic() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
-        if (!user) return;
+        if (!user) {return;}
 
         setLoading(true);
         setError(null);

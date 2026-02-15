@@ -35,9 +35,9 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: paymentMethods = [], isLoading: pmLoading } = useQuery({
         queryKey: queryKeys.finance.paymentMethods(userId ?? ''),
         queryFn: async () => {
-            if (!userId) return [];
+            if (!userId) {return [];}
             const { data, error } = await supabase.from('payment_methods').select('*').eq('user_id', userId);
-            if (error) throw error;
+            if (error) {throw error;}
             return data.map((pm: PaymentMethodRow) => ({
                 id: pm.id,
                 name: pm.name,
@@ -60,9 +60,9 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: categories = [], isLoading: catsLoading } = useQuery({
         queryKey: queryKeys.finance.categories(userId ?? ''),
         queryFn: async () => {
-            if (!userId) return [];
+            if (!userId) {return [];}
             const { data, error } = await supabase.from('categories').select('*').eq('user_id', userId);
-            if (error) throw error;
+            if (error) {throw error;}
             return data.map(c => ({
                 id: c.id,
                 name: c.name,
@@ -78,9 +78,9 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
         queryKey: queryKeys.finance.budgets(userId ?? ''),
         queryFn: async () => {
-            if (!userId) return [];
+            if (!userId) {return [];}
             const { data, error } = await supabase.from('budgets').select('*').eq('user_id', userId);
-            if (error) throw error;
+            if (error) {throw error;}
             return data.map(b => ({
                 id: b.id,
                 category: b.category as string,
@@ -100,14 +100,14 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: profile = null, isLoading: profileLoading } = useQuery({
         queryKey: queryKeys.finance.profile(userId ?? ''),
         queryFn: async () => {
-            if (!userId) return null;
+            if (!userId) {return null;}
             const { data, error } = await supabase
                 .from('profiles')
                 .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
                 .eq('id', userId)
                 .single();
             if (error) {
-                if (error.code === 'PGRST116') return null; // No profile found
+                if (error.code === 'PGRST116') {return null;} // No profile found
                 throw error;
             }
             return data as ProfileSelect;

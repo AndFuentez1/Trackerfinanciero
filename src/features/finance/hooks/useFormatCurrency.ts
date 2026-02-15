@@ -1,6 +1,6 @@
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { formatCurrency as formatCurrencyUtil, formatCurrencySmall as formatCurrencySmallUtil } from '@/core/utils';
-import React from 'react';
+import type React from 'react';
 
 /**
  * Hook que proporciona formatCurrency y formatCurrencySmall con la moneda del usuario

@@ -73,7 +73,7 @@ export function WelcomePanel() {
       icon: Tag,
       title: 'Categorías',
       description: 'Organiza tus ingresos y gastos',
-      completed: categories.length > 0,
+      completed: categories.length >= 3,
       action: (
         <div className="flex flex-col gap-2">
           <Button
@@ -118,7 +118,7 @@ export function WelcomePanel() {
   return (
     <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
       <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-        <div className="w-full max-w-xl space-y-4 sm:space-y-8 py-4 sm:py-0">
+        <div className="w-full max-w-xl lg:max-w-3xl space-y-4 sm:space-y-8 py-4 sm:py-0">
           <div className="text-center space-y-2">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Bienvenido</h1>
             <p className="text-muted-foreground">Configura lo básico para empezar</p>

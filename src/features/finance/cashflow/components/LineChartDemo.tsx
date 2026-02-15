@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Badge } from '@/shared/ui/badge-2';
-import { ChartConfig, ChartContainer, ChartTooltip } from '@/shared/ui/line-charts-1';
+import type { ChartConfig} from '@/shared/ui/line-charts-1';
+import { ChartContainer, ChartTooltip } from '@/shared/ui/line-charts-1';
 import { Button } from '@/shared/ui/button-1';
 import { Card, CardContent, CardHeader, CardTitle, CardToolbar } from '@/shared/ui/card-custom';
 import {

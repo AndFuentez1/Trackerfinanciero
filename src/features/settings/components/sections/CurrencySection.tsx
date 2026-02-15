@@ -17,7 +17,7 @@ export function CurrencySection() {
     const { toast } = useToast();
 
     // Currency State
-    const [selectedCurrency, setSelectedCurrency] = useState(currency || 'COP');
+    const [selectedCurrency, setSelectedCurrency] = useState(currency ?? '');
     const [conversionRate, setConversionRate] = useState('1');
     const [isConverting, setIsConverting] = useState(false);
     const [showConversion, setShowConversion] = useState(false);
@@ -28,8 +28,8 @@ export function CurrencySection() {
 
     // Sync state when profile loads
     useEffect(() => {
-        if (currency) setSelectedCurrency(currency);
-        if (decimalPlaces !== undefined) setTempDecimals(decimalPlaces);
+        if (currency !== undefined) { setSelectedCurrency(currency ?? ''); }
+        if (decimalPlaces !== undefined) { setTempDecimals(decimalPlaces); }
     }, [currency, decimalPlaces]);
 
     // Currency Actions
@@ -88,15 +88,15 @@ export function CurrencySection() {
                     <Globe className="h-5 w-5 text-primary" />
                     Moneda y Formato
                 </CardTitle>
-                <CardDescription>Configura tu moneda principal y la visualización de cifras</CardDescription>
+                <CardDescription className="text-base text-muted-foreground">Configura tu moneda principal y la visualización de cifras</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
 
                 {/* Currency Selection */}
                 <div className="flex flex-col sm:flex-row items-end gap-4">
                     <div className="flex-1 space-y-2 w-full">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest pl-1">Moneda actual: {currency}</label>
-                        <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest pl-1">Moneda actual: {currency ?? 'Sin definir'}</label>
+                        <Select value={selectedCurrency || undefined} onValueChange={setSelectedCurrency}>
                             <SelectTrigger className="h-11 rounded-xl">
                                 <SelectValue placeholder="Selecciona una moneda" />
                             </SelectTrigger>

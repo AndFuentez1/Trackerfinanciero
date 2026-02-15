@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import {
     Trash2,
@@ -29,7 +29,7 @@ export const TransactionCard = memo(({
     // Helpers duplicated/shared logic
     const formatDate = (dateString: string) => {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) return '';
+        if (isNaN(d.getTime())) {return '';}
         const day = String(d.getDate()).padStart(2, '0');
         const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         const month = months[d.getMonth()] || '';
@@ -38,7 +38,7 @@ export const TransactionCard = memo(({
     };
 
     const getPaymentMethodName = (pmId: string | null | undefined) => {
-        if (!pmId) return null;
+        if (!pmId) {return null;}
         const pm = paymentMethods.find(p => p.id === pmId);
         return pm?.name || null;
     };

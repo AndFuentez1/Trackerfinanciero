@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { useSettingsCategories } from '../hooks/useSettingsCategories';
 import { CategoryDialog } from '../dialogs/CategoryDialog';
-import { CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { Badge } from '@/shared/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
@@ -21,7 +21,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/shared/ui/alert-dialog";
-import { useCategoryPagination, AlphabetTab } from '../hooks/useCategoryPagination';
+import type { AlphabetTab } from '../hooks/useCategoryPagination';
+import { useCategoryPagination } from '../hooks/useCategoryPagination';
+
+import { CategoriesGridSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 
 interface CategoriesSectionProps {
     highlighted?: boolean;
@@ -31,7 +34,7 @@ interface CategoriesSectionProps {
 const DEFAULT_CATEGORY_COLOR = '#64748b'; // Slate 500
 
 export function CategoriesSection({ highlighted, onCategoryCreated }: CategoriesSectionProps = {}) {
-    const { categories, addCategory, updateCategory, deleteCategory } = useSettingsCategories();
+    const { categories, addCategory, updateCategory, deleteCategory, loading } = useSettingsCategories();
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
@@ -64,11 +67,11 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
     const handleSave = async (category: Omit<CategoryItem, 'id'>, id?: string) => {
         let result;
         if (id) {
-            result = await updateCategory(id, category);
+            result = await updateCategory({ id, updates: category });
         } else {
             result = await addCategory(category);
             // Trigger callback if creating new category (not editing)
-            if (onCategoryCreated && !result.error) {
+            if (onCategoryCreated && !result?.error) {
                 onCategoryCreated();
             }
         }
@@ -96,11 +99,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                 />
                 <div className="flex flex-col overflow-hidden">
                     <span className="text-sm font-semibold truncate" title={cat.name}>{cat.name}</span>
-                    <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium uppercase tracking-wider h-4 bg-muted/50 text-muted-foreground border-none">
-                            {typeLabels[cat.type] || cat.type}
-                        </Badge>
-                    </div>
+
                 </div>
             </div>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
@@ -157,7 +156,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                             <Tags className="h-5 w-5 text-primary" />
                             Categorías ({filteredCategories.length}/{categories.length})
                         </CardTitle>
-                        <CardDescription>Organiza tus transacciones por temas</CardDescription>
+                        <CardDescription className="text-base">Organiza tus transacciones por tipo</CardDescription>
                     </div>
                     <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0">
                         <Plus className="h-4 w-4" />
@@ -193,13 +192,15 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                         <TabsTrigger value="expense" className="rounded-lg data-[state=active]:bg-destructive/15 data-[state=active]:text-destructive">
                             Gastos
                         </TabsTrigger>
-                        <TabsTrigger value="saving" className="rounded-lg data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+                        <TabsTrigger value="saving" className="rounded-lg data-[state=active]:bg-sky-100/70 data-[state=active]:text-sky-700">
                             Ahorros
                         </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value={activeTab} className="mt-4 space-y-4">
-                        {typeFilteredCategories.length >= 20 ? (
+                        {loading ? (
+                            <CategoriesGridSkeleton count={6} />
+                        ) : typeFilteredCategories.length >= 20 ? (
                             /* Show pagination tabs when 20+ categories */
                             <Tabs value={alphabetTab} onValueChange={(v) => setAlphabetTab(v as AlphabetTab)} className="w-full">
                                 <TabsList className="grid w-full grid-cols-3 h-10 rounded-xl bg-muted/20">

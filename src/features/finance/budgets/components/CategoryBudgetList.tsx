@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { BudgetState, useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
+import type { BudgetState } from "@/features/finance/hooks/useBudgetsData";
+import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { cn } from "@/core/utils";
 import { Pencil } from "lucide-react";
 import { AddBudgetDialog } from "./AddBudgetDialog";
 import { Button } from "@/shared/ui/button";
-import { PaymentMethod } from "@/features/finance/hooks/useFinanceData";
+import type { PaymentMethod } from "@/features/finance/hooks/useFinanceData";
 import { useFormatCurrency } from "@/features/finance/hooks/useFormatCurrency";
 import { useFinance } from "@/features/finance/context/FinanceContext";
 import { CURRENCIES } from "@/features/finance/constants/currencyConstants";
@@ -24,7 +25,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
         return (
             <div className="text-center py-12 bg-muted/10 rounded-xl border border-dashed border-border">
                 <p className="text-muted-foreground">No hay presupuestos configurados.</p>
-                <p className="text-xs text-muted-foreground mt-1">Crea uno en Configuración</p>
+                <p className="text-base text-muted-foreground mt-1">Crea uno en Configuración</p>
             </div>
         );
     }
@@ -35,12 +36,12 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
                 <table className="w-full table-fixed">
                     <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
                         <tr>
-                            <th className="py-4 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Categoría</th>
-                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Presupuesto</th>
-                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Gastado</th>
-                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Restante</th>
-                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Progreso</th>
-                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-arquitectura-2/30">Editar</th>
+                            <th className="py-4 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Categoría</th>
+                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Presupuesto</th>
+                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Gastado</th>
+                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Restante</th>
+                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Progreso</th>
+                            <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Editar</th>
                             <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">{expandedCount > 0 ? 'Cerrar' : 'Abrir'}</th>
                         </tr>
                     </thead>
@@ -94,7 +95,8 @@ function CategoryBudgetRow({
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals,
             currencyDisplay: 'code',
-        }).format(value).replace(currCode, symbol);
+            useGrouping: true,
+        }).format(Number(value)).replace(currCode, symbol);
 
         if (decimals === 0) {
             return (
@@ -106,7 +108,7 @@ function CategoryBudgetRow({
         }
 
         const parts = formatted.split(',');
-        if (parts.length === 1) return formatted;
+        if (parts.length === 1) { return formatted; }
 
         const integerPart = parts[0].replace(symbol, '').trim();
         const decimalPart = parts[1];
@@ -133,31 +135,31 @@ function CategoryBudgetRow({
     return (
         <>
             <tr className={cn(
-                "border-b border-arquitectura-2/30 hover:bg-muted/20 transition-colors cursor-pointer",
+                "border-b border-border hover:bg-muted/20 transition-colors cursor-pointer",
                 expanded ? "bg-muted/10" : "",
                 (budget.categoryName === 'Ahorros' || budget.categoryName === 'Savings') && !expanded ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
             )} onClick={toggleExpanded}>
-                <td className="px-4 py-3 border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 border-r border-border">
                     <div className="flex items-center gap-2">
                         <div className={cn("w-3 h-3 rounded-full", budget.categoryColor?.startsWith('#') ? '' : budget.categoryColor)} style={{ backgroundColor: budget.categoryColor?.startsWith('#') ? budget.categoryColor : undefined }} />
                         <span className="font-medium text-sm">{budget.categoryName}</span>
                     </div>
                 </td>
-                <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-r border-border">
                     <span className="font-medium text-sm">{formatCurrency80(budget.budget.amount)}</span>
                 </td>
-                <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-r border-border">
                     <span className="font-medium text-sm">{formatCurrency80(budget.spent)}</span>
                 </td>
-                <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-r border-border">
                     <span className={cn("font-medium text-sm", budget.remaining >= 0 ? "text-emerald-600" : "text-destructive")}>
                         {formatCurrency80(budget.remaining)}
                     </span>
                 </td>
-                <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-r border-border">
                     <div className="text-sm font-bold">{budget.percentage.toFixed(decimalPlaces)}%</div>
                 </td>
-                <td className="px-4 py-3 text-center border-r border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-r border-border">
                     <AddBudgetDialog
                         editingBudget={{
                             id: budget.budget.id,
@@ -183,7 +185,7 @@ function CategoryBudgetRow({
                         </Button>
                     </AddBudgetDialog>
                 </td>
-                <td className="px-4 py-3 text-center border-arquitectura-2/30">
+                <td className="px-4 py-3 text-center border-border">
                     <button
                         className="w-8 h-8 rounded-sm border border-primary/80 flex items-center justify-center mx-auto hover:bg-primary/10 transition-colors"
                         onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
@@ -197,7 +199,7 @@ function CategoryBudgetRow({
                     <td colSpan={7} className="p-0 bg-card/50 border-b">
                         <div className="space-y-2 px-4 py-3">
                             {budget.transactions.length === 0 ? (
-                                <p className="text-xs text-muted-foreground">No hay gastos recientes en este periodo.</p>
+                                <p className="text-base text-muted-foreground">No hay gastos recientes en este periodo.</p>
                             ) : (
                                 <div className="overflow-x-auto max-h-40 overflow-y-auto">
                                     <table className="w-full min-w-full table-fixed text-xs">

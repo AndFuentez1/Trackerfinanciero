@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useToast } from '@/shared/hooks/use-toast';
-import { PaymentMethodRow } from '@/features/finance/types/financeTypes';
+import type { PaymentMethodRow } from '@/features/finance/types/financeTypes';
 import type { Database } from '@/integrations/supabase/types';
-import { SavingsAccount, SavingsTransaction } from './useSavingsData';
+import type { SavingsAccount, SavingsTransaction } from './useSavingsData';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 
@@ -22,7 +22,7 @@ export function useSavingsDataLogic() {
 
   // Calculate previous balance for yield percentage calculation
   const calculatePreviousSavingsBalance = useCallback(async (paymentMethodId: string, beforeDate: string): Promise<number> => {
-    if (!user) return 0;
+    if (!user) {return 0;}
 
     const { data: priorTxs } = await supabase
       .from('savings_transactions')
@@ -32,17 +32,17 @@ export function useSavingsDataLogic() {
       .lt('date', beforeDate)
       .order('date', { ascending: true });
 
-    if (!priorTxs) return 0;
+    if (!priorTxs) {return 0;}
 
     return priorTxs.reduce((balance, tx) => {
       const amount = Number(tx.amount);
-      if (tx.type === 'withdrawal') return balance - amount;
+      if (tx.type === 'withdrawal') {return balance - amount;}
       return balance + amount; // deposit or interest
     }, 0);
   }, [user]);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {return;}
 
     setLoading(true);
     setError(null);
@@ -122,7 +122,7 @@ export function useSavingsDataLogic() {
   }, [user, fetchData]);
 
   const addSavingsAccount = async (account: { name: string; balance?: number; interest_rate?: number; estimated_yield?: number; savings_goal?: number }) => {
-    if (!user) return { error: 'No autenticado' };
+    if (!user) {return { error: 'No autenticado' };}
 
     // Create a Payment Method of type 'debit' (or cash) but marked as savings
     const { data, error } = await supabase
@@ -179,7 +179,7 @@ export function useSavingsDataLogic() {
   };
 
   const addSavingsTransaction = async (transaction: Omit<SavingsTransaction, 'id'>) => {
-    if (!user) return { error: 'No autenticado' };
+    if (!user) {return { error: 'No autenticado' };}
 
     // 0. Debit/Balance Validation
     const account = savingsAccounts.find(a => a.id === transaction.payment_method_id);
@@ -253,14 +253,14 @@ export function useSavingsDataLogic() {
   };
 
   const updateSavingsTransaction = async (id: string, newAmount: number) => {
-    if (!user) return { error: 'No autenticado' };
+    if (!user) {return { error: 'No autenticado' };}
 
     // 1. Get current transaction
     const oldTx = savingsTransactions.find(t => t.id === id);
-    if (!oldTx) return { error: 'Transacción no encontrada' };
+    if (!oldTx) {return { error: 'Transacción no encontrada' };}
 
     const account = savingsAccounts.find(a => a.id === oldTx.payment_method_id);
-    if (!account) return { error: 'Cuenta no encontrada' };
+    if (!account) {return { error: 'Cuenta no encontrada' };}
 
     // 2. Calculate balance difference
     const oldContribution = (oldTx.type === 'withdrawal') ? -oldTx.amount : oldTx.amount;
@@ -316,14 +316,14 @@ export function useSavingsDataLogic() {
     type?: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id?: string;
   }) => {
-    if (!user) return { error: 'No autenticado' };
+    if (!user) {return { error: 'No autenticado' };}
 
     // 1. Get current transaction
     const oldTx = savingsTransactions.find(t => t.id === id);
-    if (!oldTx) return { error: 'Transacción no encontrada' };
+    if (!oldTx) {return { error: 'Transacción no encontrada' };}
 
     const oldAccount = savingsAccounts.find(a => a.id === oldTx.payment_method_id);
-    if (!oldAccount) return { error: 'Cuenta no encontrada' };
+    if (!oldAccount) {return { error: 'Cuenta no encontrada' };}
 
     // Use new values or keep old ones
     const newAmount = updates.amount ?? oldTx.amount;
@@ -374,7 +374,7 @@ export function useSavingsDataLogic() {
     // If account changed, also update new account
     if (newAccountId !== oldTx.payment_method_id) {
       const newAccount = savingsAccounts.find(a => a.id === newAccountId);
-      if (!newAccount) return { error: 'Nueva cuenta no encontrada' };
+      if (!newAccount) {return { error: 'Nueva cuenta no encontrada' };}
 
       const newAccountBalance = newAccount.balance + newContribution;
       const { error: pmError2 } = await supabase
@@ -388,8 +388,8 @@ export function useSavingsDataLogic() {
       }
 
       setSavingsAccounts(prev => prev.map(a => {
-        if (a.id === oldAccount.id) return { ...a, balance: newOldAccountBalance };
-        if (a.id === newAccountId) return { ...a, balance: newAccountBalance };
+        if (a.id === oldAccount.id) {return { ...a, balance: newOldAccountBalance };}
+        if (a.id === newAccountId) {return { ...a, balance: newAccountBalance };}
         return a;
       }));
     } else {
@@ -414,7 +414,7 @@ export function useSavingsDataLogic() {
   };
 
   const deleteSavingsTransaction = async (id: string) => {
-    if (!user) return;
+    if (!user) {return;}
 
     // 1. Get current transaction to rollback balance
     const tx = savingsTransactions.find(t => t.id === id);

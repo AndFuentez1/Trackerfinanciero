@@ -84,12 +84,12 @@ export function useFinanceDataLogic() {
   }, [queryClient, ui]);
 
   const loadMore = useCallback(() => {
-    if (!tx.hasMore) return;
+    if (!tx.hasMore) { return; }
     ui.setPage(prev => prev + 1);
   }, [tx.hasMore, ui]);
 
   const confirmPendingImport = useCallback(async () => {
-    if (!user || ui.pendingImportData.length === 0) return { error: 'Sin datos' };
+    if (!user || ui.pendingImportData.length === 0) { return { error: 'Sin datos' }; }
 
     ui.setImportProgress(prev => ({ ...prev, status: 'loading', message: 'Importando registros...' }));
 
@@ -127,7 +127,7 @@ export function useFinanceDataLogic() {
 
   // Sync onboarding/profile flags into UI state
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) { return; }
     ui.setOnboardingDecision((profile.onboarding_decision ?? null) as 'pending' | 'from_scratch' | 'imported' | null);
     ui.setHasPendingImport(Boolean(profile.has_pending_import));
     ui.setWelcomeCompleted(Boolean(profile.welcome_completed));
@@ -156,6 +156,12 @@ export function useFinanceDataLogic() {
 
     // --- UI STATE ---
     loading: ui.loading || queriesLoading || tx.transactionsLoading,
+    categoriesLoading: catsLoading,
+    paymentMethodsLoading: pmLoading,
+    budgetsLoading,
+    profileLoading,
+    queriesLoading,
+    transactionsLoading: tx.transactionsLoading,
     manualLoading: ui.manualLoading,
     actionLoading: ui.actionLoading,
     dateFilter: ui.dateFilter,
@@ -173,6 +179,7 @@ export function useFinanceDataLogic() {
     pendingImportData: ui.pendingImportData,
     startImport: ui.startImport,
     cancelImport: ui.cancelImport,
+    setImportProgress: ui.setImportProgress,
     confirmPendingImport,
     confirmImportData: confirmPendingImport, // Alias
 
@@ -221,6 +228,21 @@ export function useFinanceDataLogic() {
     totalBudget: tx.budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
     totalSpentCurrentMonth: tx.budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
   }), [
-    tx, queriesLoading, paymentMethods, categories, ui, profileMgmt, theme, mut, refreshData, confirmPendingImport, resetOperationalData, loadMore
+    tx,
+    queriesLoading,
+    catsLoading,
+    pmLoading,
+    budgetsLoading,
+    profileLoading,
+    paymentMethods,
+    categories,
+    ui,
+    profileMgmt,
+    theme,
+    mut,
+    refreshData,
+    confirmPendingImport,
+    resetOperationalData,
+    loadMore
   ]);
 }

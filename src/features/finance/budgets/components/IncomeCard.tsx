@@ -41,7 +41,7 @@ export function IncomeCard() {
         }
 
         const parts = formatted.split(',');
-        if (parts.length === 1) return formatted;
+        if (parts.length === 1) { return formatted; }
 
         const integerPart = parts[0].replace(symbol, '').trim();
         const decimalPart = parts[1];
@@ -85,25 +85,25 @@ export function IncomeCard() {
             const tDate = parseISO(t.date);
             const tYear = tDate.getFullYear();
             const tMonth = tDate.getMonth() + 1;
-            
+
             // Check year filter
             const yearMatch = budgetYear === 'all' || (typeof budgetYear === 'number' && tYear === budgetYear);
-            if (!yearMatch) return false;
-            
+            if (!yearMatch) { return false; }
+
             // Check month filter
             const monthMatch = budgetMonth === 'all' || (typeof budgetMonth === 'number' && tMonth === budgetMonth);
-            if (!monthMatch) return false;
-            
+            if (!monthMatch) { return false; }
+
             return true;
         });
     };
 
     const filteredTransactions = getFilteredTransactions();
-    
+
     const totalIncome = filteredTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalExpenses = filteredTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
@@ -115,49 +115,13 @@ export function IncomeCard() {
     return (
         <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
             <CardHeader className="pb-4">
-                <div className="flex flex-col gap-3">
-                    <CardTitle className="text-lg font-bold text-primary">Balance</CardTitle>
-                    <div className="flex flex-col gap-2">
-                        <Select
-                            value={selectedMonth}
-                            onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Mes" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {monthOptions.map((m) => (
-                                    <SelectItem key={m.value} value={m.value}>
-                                        {m.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Select
-                            value={selectedYear}
-                            onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Año" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos los años</SelectItem>
-                                {availableYears.map((year) => (
-                                    <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+                <CardTitle className="text-lg font-bold text-primary">Balance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 flex-1 flex flex-col">
                 {/* Main Metric: Savings Rate */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-muted-foreground">Tasa de Ahorro</span>
+                        <span className="text-base font-medium text-muted-foreground">Tasa de Ahorro</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-foreground">
                                 {savingsRate.toFixed(decimalPlaces)}%
@@ -174,15 +138,15 @@ export function IncomeCard() {
                 {/* Data Grid */}
                 <div className="grid grid-cols-1 gap-3">
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                        <span className="text-sm text-muted-foreground font-medium">Ingresos Reales</span>
+                        <span className="text-base text-muted-foreground font-medium">Ingresos Reales</span>
                         <span className="text-lg font-bold text-foreground">{formatCurrency70(totalIncome)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
-                        <span className="text-sm text-muted-foreground font-medium">Gastos Reales</span>
+                        <span className="text-base text-muted-foreground font-medium">Gastos Reales</span>
                         <span className="text-lg font-bold text-foreground">{formatCurrency70(totalExpenses)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-muted-foreground font-medium">Flujo Neto</span>
+                        <span className="text-base text-muted-foreground font-medium">Flujo Neto</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-foreground">
                                 {formatCurrency70(netFlow)}
@@ -194,7 +158,7 @@ export function IncomeCard() {
 
                 {/* Bottom Message */}
                 <div className="text-center pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground font-medium">
+                    <p className="text-base text-muted-foreground font-medium">
                         Has gastado {expensePercentage.toFixed(decimalPlaces)}% de tus ingresos totales
                     </p>
                 </div>

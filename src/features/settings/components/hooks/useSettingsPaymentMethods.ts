@@ -6,7 +6,7 @@ export function useSettingsPaymentMethods() {
         addPaymentMethod,
         updatePaymentMethod,
         deletePaymentMethod,
-        loading
+        paymentMethodsLoading
     } = useFinanceData();
 
     return {
@@ -14,7 +14,7 @@ export function useSettingsPaymentMethods() {
         addPaymentMethod,
         updatePaymentMethod,
         deletePaymentMethod,
-        loading
+        loading: paymentMethodsLoading
     };
 }
 

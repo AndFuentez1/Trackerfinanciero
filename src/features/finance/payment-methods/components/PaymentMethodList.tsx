@@ -1,4 +1,6 @@
-import { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { PayCreditCardDialog } from './PayCreditCardDialog';
 import { Plus, CreditCard, Wallet, Banknote, PiggyBank, Landmark, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/core/utils';
@@ -27,7 +29,7 @@ const getTextColor = (hexColor: string): string => {
 };
 
 const getAccountType = (type: string, isSavings: boolean): string => {
-  if (isSavings) return 'AHORRO';
+  if (isSavings) { return 'AHORRO'; }
   switch (type) {
     case 'debit':
       return 'DÉBITO';
@@ -54,32 +56,24 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
   const decimalPlaces = useDecimalPlaces();
   const { formatCurrencySmall, currency } = useFormatCurrency();
   const { currency: ctxCurrency } = useFinance();
+  const { addTransfer } = useFinanceData();
 
-  const formatCurrencyPayment = (value: number) => {
-    const currCode = ctxCurrency || currency || 'COP';
-    const symbol = CURRENCIES.find(c => c.code === currCode)?.symbol || currCode;
-
-    const formatted = new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: currCode,
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces,
-      currencyDisplay: 'code',
-    }).format(value).replace(currCode, symbol);
-
-    const parts = formatted.split(',');
-    if (parts.length === 1) return <span className="text-3xl font-semibold" style={{ color: getTextColor(pm.color || '#64748b') }}>{formatted}</span>;
-
-    const integerPart = parts[0].replace(symbol, '').trim();
-    const decimalPart = parts[1];
-
-    return (
-      <div className="flex items-baseline" style={{ color: getTextColor(pm.color || '#64748b') }}>
-        <span className="text-3xl font-semibold">{symbol} {integerPart}</span>
-        <span className="text-2xl font-semibold opacity-85">,{decimalPart}</span>
-      </div>
-    );
+  const handlePayCard = async (sourceId: string, targetId: string, amount: number, description: string, date: string) => {
+    try {
+      await addTransfer({
+        fromId: sourceId,
+        toId: targetId,
+        amount,
+        description,
+        date
+      });
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
+
+
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -151,36 +145,58 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
             {/* Bottom Level: Secondary Info + Action Icons */}
             <div className="relative z-10 flex items-center justify-between">
               <p className="text-xs opacity-75" style={{ color: textColor }}>Principal</p>
-              {(onEdit || onDelete) && (
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  {onEdit && (
-                    <button
-                      title="Editar"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(pm);
-                      }}
-                      className="h-8 w-8 rounded-lg bg-white/20 hover:bg-white/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
-                      style={{ color: textColor }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      title="Eliminar"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(pm);
-                      }}
-                      className="h-8 w-8 rounded-lg bg-white/20 hover:bg-red-500/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
-                      style={{ color: textColor }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              )}
+
+              <div className="flex gap-2">
+                {/* Pay Button for Credit Cards */}
+                {variant === 'dashboard' && pm.type === 'credit' && (
+                  <PayCreditCardDialog
+                    card={pm}
+                    onPay={handlePayCard}
+                    trigger={
+                      <button
+                        title="Pagar Tarjeta"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-8 px-3 rounded-lg bg-white/20 hover:bg-white/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30 text-xs font-semibold mr-1"
+                        style={{ color: textColor }}
+                      >
+                        Pagar
+                      </button>
+                    }
+                  />
+                )}
+
+                {(onEdit || onDelete) && (
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {onEdit && (
+                      <button
+                        title="Editar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(pm);
+                        }}
+                        className="h-8 w-8 rounded-lg bg-white/20 hover:bg-white/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
+                        style={{ color: textColor }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        title="Eliminar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(pm);
+                        }}
+                        className="h-8 w-8 rounded-lg bg-white/20 hover:bg-red-500/40 text-inherit flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/30"
+                        style={{ color: textColor }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              )
             </div>
           </div>
         );

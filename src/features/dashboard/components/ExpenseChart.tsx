@@ -1,4 +1,4 @@
-import { CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
@@ -14,7 +14,7 @@ export function ExpenseChart({ data, categories }: ExpenseChartProps) {
   const decimalPlaces = useDecimalPlaces();
   const { currency } = useFinance();
   const chartData = useMemo(() => {
-    if (data.length === 0) return [];
+    if (data.length === 0) {return [];}
 
     // Sort by amount descending
     const sortedData = [...data].sort((a, b) => b.amount - a.amount);

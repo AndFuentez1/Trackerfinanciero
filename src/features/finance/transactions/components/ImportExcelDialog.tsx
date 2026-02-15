@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
-import { Transaction, TransactionType, PaymentMethod } from '@/features/finance/types/financeTypes';
+import type { Transaction, TransactionType, PaymentMethod } from '@/features/finance/types/financeTypes';
 import { MASTER_PALETTE } from '@/features/finance/hooks/useFinanceDataLogic';
 import { useToast } from '@/shared/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/core/api/queryKeys';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
@@ -161,7 +163,7 @@ const parseDate = (value: string | number): string | null => {
     return null;
   }
 
-  if (!value || typeof value !== 'string') return null;
+  if (!value || typeof value !== 'string') { return null; }
 
   // Remove time / timezone parts if present (e.g., 2026-01-05T03:00:00Z or 05/01/2026 10:00)
   const str = value.trim().split(/[T\s]/)[0];
@@ -205,6 +207,7 @@ export function ImportExcelDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const { currency, decimalPlaces } = useFinance();
+  const queryClient = useQueryClient();
 
   const getCurrencySymbol = () => {
     const curr = CURRENCIES.find(c => c.code === currency);
@@ -270,7 +273,7 @@ export function ImportExcelDialog({
       const match = sheetNames.find(name =>
         name.toLowerCase().includes(keyword)
       );
-      if (match) return match;
+      if (match) { return match; }
     }
 
     // Buscar la hoja con más datos
@@ -356,7 +359,9 @@ export function ImportExcelDialog({
     const parsed: ParsedRow[] = rows.map((row: unknown[]) => {
       const rawDate = mapping.date !== null ? row[mapping.date] : undefined;
       const date = parseDate((typeof rawDate === 'string' || typeof rawDate === 'number') ? rawDate : '');
-      const description = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
+      const rawDescription = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
+      // Remove common labels from description if present
+      const description = rawDescription.replace(/^(descripci[óo]n|description|concepto|detalle|memo):\s*/i, '');
       const category = mapping.category !== null ? String(row[mapping.category] || '').trim() : '';
       const rawValue = mapping.amount !== null ? String(row[mapping.amount] || '0').trim() : '0';
 
@@ -408,9 +413,9 @@ export function ImportExcelDialog({
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (!date) errors.push('Fecha inválida');
-      if (!description) errors.push('Sin descripción');
-      if (isNaN(amount) || amount === 0) errors.push('Monto inválido');
+      if (!date) { errors.push('Fecha inválida'); }
+      if (!description) { errors.push('Sin descripción'); }
+      if (isNaN(amount) || amount === 0) { errors.push('Monto inválido'); }
 
       // Solo advertir sobre montos excesivos, no rechazar
       if (absAmount > MAX_AMOUNT) {
@@ -435,7 +440,7 @@ export function ImportExcelDialog({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { return; }
 
     setFileName(file.name);
     setParsedRows([]);
@@ -479,7 +484,7 @@ export function ImportExcelDialog({
 
   // Confirmar mapeo y procesar datos
   const handleConfirmMapping = () => {
-    if (!workbookData || !selectedSheet) return;
+    if (!workbookData || !selectedSheet) { return; }
 
     // Validar que al menos los campos requeridos estén mapeados
     if (columnMapping.date === null || columnMapping.description === null || columnMapping.amount === null) {
@@ -505,6 +510,73 @@ export function ImportExcelDialog({
     });
   };
 
+  const parseAmountSample = (rawValue: string): number | null => {
+    const val = rawValue.replace(/\$/g, '').trim();
+    if (!val) { return null; }
+
+    const lastCommaIdx = val.lastIndexOf(',');
+    const lastPeriodIdx = val.lastIndexOf('.');
+
+    if (lastCommaIdx === -1 && lastPeriodIdx === -1) {
+      const parsed = parseFloat(val);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (lastCommaIdx > lastPeriodIdx) {
+      const parsed = parseFloat(val.replace(/\./g, '').replace(/,/, '.'));
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (lastPeriodIdx > lastCommaIdx) {
+      const parsed = parseFloat(val.replace(/,/g, ''));
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (lastCommaIdx !== -1) {
+      const beforeComma = val.substring(0, lastCommaIdx).replace(/\./g, '');
+      const afterComma = val.substring(lastCommaIdx + 1);
+      const normalized = afterComma.length > 2
+        ? beforeComma + afterComma
+        : beforeComma + '.' + afterComma;
+      const parsed = parseFloat(normalized);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    const beforePeriod = val.substring(0, lastPeriodIdx).replace(/,/g, '');
+    const afterPeriod = val.substring(lastPeriodIdx + 1);
+    const normalized = afterPeriod.length <= 3 ? beforePeriod + '.' + afterPeriod : beforePeriod + afterPeriod;
+    const parsed = parseFloat(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const getColumnLabel = (col: ColumnPreview, type?: 'date' | 'amount') => {
+    const sample = col.samples[0];
+    if (sample) {
+      if (type === 'date') {
+        const numeric = Number(sample);
+        const parsed = parseDate(!Number.isNaN(numeric) ? numeric : sample);
+        if (parsed) {
+          const d = parse(parsed, 'yyyy-MM-dd', new Date());
+          return isValid(d) ? formatDateFns(d, 'dd/MM/yyyy') : parsed;
+        }
+      }
+
+      if (type === 'amount') {
+        const amount = parseAmountSample(sample);
+        if (amount !== null) {
+          return amount.toLocaleString(undefined, {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
+          });
+        }
+      }
+
+      return sample;
+    }
+
+    return col.header || `Columna ${col.index + 1}`;
+  };
+
   const handleImport = async () => {
     if (!user) {
       alert("No autenticado");
@@ -512,7 +584,7 @@ export function ImportExcelDialog({
     }
 
     const validRows = parsedRows.filter(r => r.isValid);
-    if (validRows.length === 0) return;
+    if (validRows.length === 0) { return; }
 
     setIsImporting(true);
 
@@ -560,49 +632,6 @@ export function ImportExcelDialog({
           }
         }
       }
-
-      // Detectar duplicados
-      const duplicateCategories = new Set<string>();
-      const duplicatePaymentMethods = new Set<string>();
-
-      validRows.forEach(row => {
-        const catName = row.category.trim();
-        if (catName && catMap.has(catName.toLowerCase())) {
-          duplicateCategories.add(catName);
-        }
-
-        if (row.paymentMethod) {
-          const pmName = row.paymentMethod.trim();
-          if (pmMap.has(pmName.toLowerCase())) {
-            duplicatePaymentMethods.add(pmName);
-          }
-        }
-      });
-
-      // BLOQUEAR si hay duplicados
-      if (duplicateCategories.size > 0 || duplicatePaymentMethods.size > 0) {
-        const duplicatesList = [];
-
-        if (duplicateCategories.size > 0) {
-          duplicatesList.push(`Categorías duplicadas: ${duplicateCategories.size}`);
-        }
-
-        if (duplicatePaymentMethods.size > 0) {
-          duplicatesList.push(`Métodos de pago duplicados: ${duplicatePaymentMethods.size}`);
-        }
-
-        toast({
-          title: "❌ Importación bloqueada",
-          description: `${duplicatesList.join(', ')}. Elimina los duplicados del Excel y vuelve a intentarlo.`,
-          variant: "destructive",
-          duration: 10000,
-        });
-
-        setIsImporting(false);
-        localStorage.removeItem(importKey);
-        return { error: 'Duplicados detectados', count: 0 };
-      }
-
 
       const transactionsToImport: Omit<Transaction, 'id'>[] = [];
       const errors: string[] = [];
@@ -931,6 +960,8 @@ export function ImportExcelDialog({
         });
       }
 
+      await queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+
       setParsedRows([]);
       setFileName('');
       setOpen(false);
@@ -962,17 +993,17 @@ export function ImportExcelDialog({
           <Button
             variant="default"
             size="sm"
-            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center"
+            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
             aria-label="Importar Excel"
             title="Importar Excel"
           >
-            <span className="hidden sm:flex flex-row items-center gap-2">Importar Excel <Upload className="h-3 w-3" /></span>
-            <span className="sm:hidden flex flex-row items-center gap-2">Importar Excel <Upload className="h-3 w-3" /></span>
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Importar Excel</span>
           </Button>
         </DialogTrigger>
       )}
       <DialogContent
-        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-2xl h-[85vh] max-h-[85vh] overflow-hidden flex flex-col"
         onInteractOutside={(e) => {
           // Prevenir cierre cuando se hace clic fuera o se cambia de aplicación
           e.preventDefault();
@@ -990,22 +1021,26 @@ export function ImportExcelDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 sm:space-y-4 mt-4">
-          <div className="p-4 bg-accent-soft-bg/50 rounded-xl text-sm space-y-2 border border-accent-soft-border/30">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="mt-4 pb-2 flex min-h-0 flex-col gap-3 sm:gap-4">
+            <div className="p-4 bg-accent-soft-bg/50 rounded-xl text-sm space-y-2 border border-accent-soft-border/30">
             <p className="font-semibold text-foreground/90">Formato esperado:</p>
-            <p className="text-muted-foreground/80">
-              Columnas: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
+            <p className="text-muted-foreground/80 font-medium">
+              Formato de columnas esperado:
             </p>
-            <p className="text-xs text-muted-foreground/70 italic">
-              Ejemplo: 15/01/2026 | Supermercado | Comida | {getExampleAmountDisplay()} | Débito BBVA
+            <p className="text-[11px] sm:text-xs text-muted-foreground/80 leading-relaxed font-medium">
+              15/01/2026 | Supermercado | Comida | {getExampleAmountDisplay()} | Débito BBVA
             </p>
-          </div>
+            </div>
 
-          <div className="space-y-2">
+            <div className="space-y-2 flex-1 min-h-0 flex flex-col">
             <Label className="text-sm font-medium">Archivo Excel</Label>
             <div
               className={cn(
-                "border-2 border-dashed border-border/60 rounded-xl p-4 sm:p-8 text-center transition-all duration-300 relative group",
+                "border-2 border-dashed border-border/60 rounded-xl p-6 sm:p-10 text-center transition-all duration-300 relative group flex-1 flex flex-col items-center justify-center",
+                parsedRows.length > 0 || showMappingStep
+                  ? "min-h-[10vh] sm:min-h-[10vh]"
+                  : "min-h-[38vh] sm:min-h-[42vh]",
                 !isImporting && "cursor-pointer hover:border-primary/40 hover:bg-accent-soft-bg/20",
                 isImporting && "opacity-50 cursor-not-allowed"
               )}
@@ -1102,7 +1137,7 @@ export function ImportExcelDialog({
                 {availableSheets.length > 1 && (
                   <Select value={selectedSheet} onValueChange={(sheetName) => {
                     setSelectedSheet(sheetName);
-                    if (workbookData) processSheet(workbookData, sheetName);
+                    if (workbookData) { processSheet(workbookData, sheetName); }
                   }}>
                     <SelectTrigger className="w-36 h-8 text-xs">
                       <SelectValue placeholder="Cambiar hoja" />
@@ -1146,7 +1181,7 @@ export function ImportExcelDialog({
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
+                          {getColumnLabel(col, 'date')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1167,7 +1202,7 @@ export function ImportExcelDialog({
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
+                          {getColumnLabel(col)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1188,7 +1223,7 @@ export function ImportExcelDialog({
                     <SelectContent>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
+                          {getColumnLabel(col, 'amount')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1208,7 +1243,7 @@ export function ImportExcelDialog({
                       <SelectItem value="none">No mapear</SelectItem>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
+                          {getColumnLabel(col)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1228,7 +1263,7 @@ export function ImportExcelDialog({
                       <SelectItem value="none">No mapear (usar predeterminado)</SelectItem>
                       {columnPreviews.map((col) => (
                         <SelectItem key={col.index} value={col.index.toString()}>
-                          {col.header} <span className="text-[10px] opacity-60 ml-1">({col.samples[0]})</span>
+                          {getColumnLabel(col)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1283,83 +1318,92 @@ export function ImportExcelDialog({
                 </div>
               )}
 
-              <div className="max-h-56 overflow-hidden border border-border/40 rounded-xl bg-muted/5">
-                <div className="overflow-y-auto max-h-56">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/30 sticky top-0 backdrop-blur-sm">
-                      <tr className="border-b border-border/30">
-                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Fecha</th>
-                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Descripción</th>
-                        <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Categoría</th>
-                        <th className="p-2.5 text-right font-semibold text-muted-foreground/80">Monto</th>
-                        <th className="p-2.5 text-center font-semibold text-muted-foreground/80">Cdo.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/20">
-                      {parsedRows.slice(0, 50).map((row, i) => (
-                        <tr key={i} className={cn(
-                          "hover:bg-accent-soft-bg/10 transition-colors",
-                          !row.isValid && 'bg-expense/5'
-                        )}>
-                          <td className="p-2.5 text-muted-foreground/90 font-medium">{row.date || '-'}</td>
-                          <td className="p-2.5 truncate max-w-[120px] font-medium" title={row.description}>{row.description || '-'}</td>
-                          <td className="p-2.5 text-muted-foreground/70">{row.category || '-'}</td>
-                          <td className="p-2.5 text-right font-bold text-foreground/80">
-                            {getCurrencySymbol()} {row.amount.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}
-                          </td>
-                          <td className="p-2.5 text-center">
-                            {row.isValid ? (
-                              <div className="flex justify-center">
-                                <CheckCircle className="h-3.5 w-3.5 text-income shadow-sm" />
-                              </div>
-                            ) : (
-                              <div className="flex justify-center" title={row.error}>
-                                <AlertCircle className="h-3.5 w-3.5 text-expense" />
-                              </div>
-                            )}
-                          </td>
+              <div className="h-[24rem] flex flex-col gap-3">
+                <div className="border border-border/40 rounded-xl bg-muted/5 overflow-hidden flex-1 flex flex-col">
+                  <div className="flex-1 overflow-y-auto">
+                    <table className="w-full text-xs table-fixed">
+                      <thead className="bg-muted sticky top-0">
+                        <tr className="border-b border-border/30">
+                          <th className="w-24 p-2.5 text-left font-semibold text-muted-foreground/80">Fecha</th>
+                          <th className="p-2.5 text-left font-semibold text-muted-foreground/80">Descripción</th>
+                          <th className="w-28 p-2.5 text-left font-semibold text-muted-foreground/80">Categoría</th>
+                          <th className="w-24 p-2.5 text-right font-semibold text-muted-foreground/80">Monto</th>
+                          <th className="w-12 p-2.5 text-center font-semibold text-muted-foreground/80">Cdo.</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {parsedRows.length > 50 && (
-                    <p className="p-2 text-[10px] text-center text-muted-foreground italic border-t border-border/10">
-                      Mostrando las primeras 50 de {parsedRows.length} filas...
-                    </p>
+                      </thead>
+                      <tbody className="divide-y divide-border/20">
+                        {parsedRows.slice(0, 50).map((row, i) => (
+                          <tr key={i} className={cn(
+                            "hover:bg-accent-soft-bg/10 transition-colors",
+                            !row.isValid && 'bg-expense/5'
+                          )}>
+                            <td className="w-24 p-2.5 text-muted-foreground/90 font-medium">
+                              {row.date ? (() => {
+                                const d = parse(row.date, 'yyyy-MM-dd', new Date());
+                                return isValid(d) ? formatDateFns(d, 'dd/MM/yyyy') : row.date;
+                              })() : '-'}
+                            </td>
+                            <td className="p-2.5 truncate font-medium" title={row.description}>{row.description || '-'}</td>
+                            <td className="w-28 p-2.5 text-muted-foreground/70">{row.category || '-'}</td>
+                            <td className="w-24 p-2.5 text-right font-bold text-foreground/80">
+                              {getCurrencySymbol()} {row.amount.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}
+                            </td>
+                            <td className="w-12 p-2.5 text-center">
+                              {row.isValid ? (
+                                <div className="flex justify-center">
+                                  <CheckCircle className="h-3.5 w-3.5 text-income shadow-sm" />
+                                </div>
+                              ) : (
+                                <div className="flex justify-center" title={row.error}>
+                                  <AlertCircle className="h-3.5 w-3.5 text-expense" />
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {parsedRows.length > 50 && (
+                      <p className="p-2 text-[10px] text-center text-muted-foreground italic border-t border-border/10">
+                        Mostrando las primeras 50 de {parsedRows.length} filas...
+                      </p>
+                    )}
+                  </div>
+                  {isImporting && (
+                    <div className="space-y-3 py-2 px-3 border-t border-border/20">
+                      <div className="flex justify-between items-center text-[11px] font-semibold text-primary/80 px-1">
+                        <span>Procesando transacciones...</span>
+                        <span>{progress}%</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
+                        <div
+                          className="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-center text-muted-foreground animate-pulse">
+                        Por favor no cierres esta ventana hasta terminar la carga
+                      </p>
+                    </div>
                   )}
                 </div>
-              </div>
 
-              {isImporting ? (
-                <div className="space-y-3 py-2">
-                  <div className="flex justify-between items-center text-[11px] font-semibold text-primary/80 px-1">
-                    <span>Procesando transacciones...</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
-                    <div
-                      className="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-center text-muted-foreground animate-pulse">
-                    Por favor no cierres esta ventana hasta terminar la carga
-                  </p>
-                </div>
-              ) : (
-                <Button
-                  onClick={() => handleImport()}
-                  className="w-full h-11 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 rounded-xl transition-all active:scale-[0.99] group overflow-hidden"
-                  disabled={validCount === 0}
-                >
-                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                  <span className="relative z-10 flex items-center gap-2">
-                    Completar Importación {validCount > 0 && `(${validCount} filas)`}
-                  </span>
-                </Button>
-              )}
+                {!isImporting && (
+                  <Button
+                    onClick={() => handleImport()}
+                    className="w-full h-11 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 rounded-xl transition-all active:scale-[0.99] group overflow-hidden"
+                    disabled={validCount === 0}
+                  >
+                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    <span className="relative z-10 flex items-center gap-2">
+                      Completar Importación {validCount > 0 && `(${validCount} filas)`}
+                    </span>
+                  </Button>
+                )}
+              </div>
             </div>
           )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

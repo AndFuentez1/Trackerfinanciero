@@ -57,6 +57,13 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
 - **Importación Excel:** Mecanismo robusto con validación de tipos y manejo de errores.
 - **Optimización de UI:** Eliminación de componentes redundantes en Presupuestos para mejorar UX.
 - **Fixes de Tipado:** Corrección estricta de errores TypeScript en gráficos y contextos.
+- **Integración Gmail Avanzada:**
+    - Búsqueda con rango de fechas y filtros de estado (Leídas/Aprobadas).
+    - Feedback instantáneo (Optimistic UI) al conectar/desconectar.
+    - Lógica de selección inteligente (excluye facturas ya aprobadas).
+- **Calidad de Código:**
+    - Implementación de 10 reglas estrictas de Linter (ESLint).
+    - Limpieza de deuda técnica en módulos críticos (`Loans`, `Settings`).
 
 ## 🚀 Hoja de Ruta (Roadmap) & Próximos Pasos
 
@@ -81,11 +88,36 @@ Se ha diseñado un plan para futuras mejoras críticas que optimizarán la flexi
 - **Portabilidad:** Opción para exportar e importar la configuración personalizada de la aplicación (temas, feature toggles, preferencias) para facilitar la migración entre dispositivos.
 
 ### 5. QA & Performance (Pendiente)
-- [ ] Ejecutar Lighthouse en entorno productivo y registrar scores (Performance, Accessibility, Best Practices, SEO).
-- [ ] Configurar suite de tests (Unit/Integration/E2E) y pipeline de CI.
+- [x] Ejecutar Lighthouse en entorno productivo y registrar scores (Performance, Accessibility, Best Practices, SEO).
+- [x] Configurar suite de tests (Unit/Integration/E2E) y pipeline de CI.
 - [ ] Revisar CLS/TTI con datasets reales y optimizar carga de módulos pesados (charts/excel).
 - [ ] Auditoría de accesibilidad completa (teclado, aria-labels, contraste).
 - [ ] Backlog de tests guardado en `docs/tests-backlog.md` para reactivar la suite.
+
+## 🧪 Pruebas y QA
+
+La aplicación cuenta con una suite de pruebas robusta que garantiza la estabilidad de las funcionalidades críticas.
+
+### Ejecución de Pruebas
+
+```bash
+# Ejecutar todas las pruebas
+npm run test
+
+# Ejecutar pruebas en modo UI (interactivo)
+npm run test:ui
+
+# Ejecutar pruebas y generar reporte de cobertura
+npm run coverage
+```
+
+### Estructura de Pruebas
+
+- **Unitarias (`src/features/**/utils/*.test.ts`)**: Validan la lógica de negocio pura, como cálculos de flujo de caja y formateadores.
+- **Integración (`src/test/integration/*.test.tsx`)**: Validan la interacción entre componentes y hooks en las páginas principales (`Dashboard`, `History`, `Loans`, `Savings`).
+- **Configuración**:
+    - `vitest.config.ts`: Configuración principal de Vitest.
+    - `src/test/setup.ts`: Mocks globales y configuración del entorno de pruebas.
 
 ## Estructura del Código
 
@@ -269,6 +301,7 @@ export function useFeatureData() {
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Arquitectura técnica detallada
 - **[THEME_CONTEXT.md](./THEME_CONTEXT.md)** - Guía de diseño visual y tema
+- **[TESTS_BACKLOG.md](./docs/tests-backlog.md)** - Banco de pruebas E2E y Unitarias (incluye escenarios Gmail).
 
 ## Instalación y Desarrollo
 
@@ -332,6 +365,7 @@ npm run dev
 La única documentación de referencia obligatoria para el theme base y lineamientos visuales es:
 
 - [THEME_CONTEXT.md](./THEME_CONTEXT.md)
+- [TESTS_BACKLOG.md](./docs/tests-backlog.md)
 
 Toda la información de theme, tipografía, colores y accesibilidad está centralizada en ese archivo.
 Para cualquier ajuste visual, consulta y sigue exclusivamente lo definido en `THEME_CONTEXT.md`.

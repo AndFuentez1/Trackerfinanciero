@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/shared/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/core/utils';
-import { CategoryItem } from '@/features/finance/hooks/useFinanceData';
+import type { CategoryItem } from '@/features/finance/hooks/useFinanceData';
 
 interface CategoryRowProps {
   category: CategoryItem;

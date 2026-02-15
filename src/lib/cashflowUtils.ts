@@ -14,8 +14,8 @@ const TRANSFER_CATEGORY_PATTERN = /transferencia|transfer/i;
  * (no debe contar como ingreso ni gasto para flujo neto).
  */
 export function isTransferTransaction(t: TransactionLike): boolean {
-  if (TRANSFER_TYPES.includes(t.type as (typeof TRANSFER_TYPES)[number])) return true;
-  if (t.category && TRANSFER_CATEGORY_PATTERN.test(t.category)) return true;
+  if (TRANSFER_TYPES.includes(t.type as (typeof TRANSFER_TYPES)[number])) {return true;}
+  if (t.category && TRANSFER_CATEGORY_PATTERN.test(t.category)) {return true;}
   return false;
 }
 

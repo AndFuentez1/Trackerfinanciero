@@ -1,5 +1,5 @@
 import { useLoans as useLoansContext } from '@/features/finance/loans/context/LoansContext';
-import { Loan, LoanRow } from '@/features/finance/hooks/useLoansLogic';
+import type { Loan, LoanRow } from '@/features/finance/hooks/useLoansLogic';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
@@ -19,7 +19,7 @@ export function useCreateLoan() {
     const { addTransaction } = useFinanceData();
 
     const createLoan = async (loan: Omit<Loan, 'id' | 'created_at' | 'user_id' | 'paid_amount' | 'payments'> & { is_disbursed?: boolean }, initialPaidAmount: number = 0) => {
-        if (!user) return { error: 'No autenticado' };
+        if (!user) {return { error: 'No autenticado' };}
 
         // 1. Create the loan with exact validated database column names (snake_case)
         // Ensure due_date is a simple string 'YYYY-MM-DD' or null

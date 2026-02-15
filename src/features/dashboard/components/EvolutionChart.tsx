@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { cn } from '@/core/utils';
-import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
-import { useFinance } from '@/features/finance/context/FinanceContext';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { cn, formatCurrencyCompact } from '@/core/utils';
+import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
+import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
+import { excludeTransfers } from '@/lib/cashflowUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Button } from '@/shared/ui/button';
-import { ChevronDown, Filter, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,23 +15,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/shared/ui/dropdown-menu";
-import { format, parseISO, isSameMonth, subMonths, isAfter, isBefore } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-const COLORS = [
-  '#0ea5e9', // sky-500 (Primary-ish blue)
-  '#8b5cf6', // violet-500
-  '#f59e0b', // amber-500
-  '#10b981', // emerald-500
-  '#ec4899', // pink-500
-  '#f43f5e', // rose-500
-];
 
 interface Transaction {
   id: string;
   date: string;
   type: string;
   amount: number;
+}
+
+interface EvolutionChartPoint {
+  name: string;
+  monthIndex?: number;
+  year: number;
+  displayName: string;
+  balance: number | null;
+  income: number;
+  expense: number;
+  fullDate: Date;
+}
+
+interface AxisTickProps {
+  x: number;
+  y: number;
+  payload: { value: string };
 }
 
 interface EvolutionChartProps {
@@ -41,7 +49,6 @@ interface EvolutionChartProps {
   selectedMonth?: string;
   onSelectedMonthChange?: (month: string) => void;
   onSelectAllYears?: () => void;
-  currentBalance?: number;
 }
 
 export function EvolutionChart({
@@ -51,10 +58,8 @@ export function EvolutionChart({
   selectedMonth: controlledMonth,
   onSelectedMonthChange,
   onSelectAllYears,
-  currentBalance = 0,
 }: EvolutionChartProps) {
-  const decimalPlaces = useDecimalPlaces();
-  const { currency } = useFinance();
+  const { currency } = useFormatCurrency();
   const currentYear = new Date().getFullYear();
 
   // --- State for Filters ---
@@ -73,7 +78,7 @@ export function EvolutionChart({
 
   const selectedMonth = controlledMonth ?? internalMonth;
 
-  useEffect(() => { if (controlledMonth) setInternalMonth(controlledMonth); }, [controlledMonth]);
+  useEffect(() => { if (controlledMonth) {setInternalMonth(controlledMonth);} }, [controlledMonth]);
 
   const setMonth = (value: string) => {
     setInternalMonth(value);
@@ -86,7 +91,7 @@ export function EvolutionChart({
       : [...selectedYears, year];
 
     // Prevent empty selection? 
-    if (newSelection.length === 0) return;
+    if (newSelection.length === 0) {return;}
 
     onSelectedYearsChange(newSelection);
   };
@@ -109,34 +114,24 @@ export function EvolutionChart({
 
   // --- Data Processing ---
   const chartData = useMemo(() => {
-    if (transactions.length === 0) return [];
+    if (transactions.length === 0) {return [];}
 
-    const sortedTxs = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const baseTransactions = excludeTransfers(transactions)
+      .filter(tx => !(tx.type === 'expense' && (tx.installments || 1) > 1));
 
-    // Process deltas
-    const txsWithDelta = sortedTxs.map(tx => {
+    if (baseTransactions.length === 0) {return [];}
+
+    // Process deltas (solo transacciones reales, sin anclaje a saldo real)
+    const txsWithDelta = baseTransactions.map(tx => {
       let delta = 0;
       const amt = Number(tx.amount);
-      if (tx.type === 'income' || tx.type === 'transfer_in') delta = amt;
-      else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') delta = -amt;
+      if (tx.type === 'income' || tx.type === 'transfer_in') {delta = amt;}
+      else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') {delta = -amt;}
       return { ...tx, delta, dateObj: new Date(tx.date) };
     });
 
-    const getDataForPeriod = (periodEnd: Date, periodStart: Date) => {
-      // Balance at end
-      const futureTxs = txsWithDelta.filter(t => t.dateObj > periodEnd);
-      const diff = futureTxs.reduce((sum, t) => sum + t.delta, 0);
-      const balanceAtEnd = currentBalance - diff;
-
-      // Flows within period
-      const periodTxs = txsWithDelta.filter(t => t.dateObj >= periodStart && t.dateObj <= periodEnd);
-      const income = periodTxs.reduce((sum, t) => sum + (t.delta > 0 ? t.delta : 0), 0);
-      const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? -t.delta : 0), 0);
-
-      return { balance: balanceAtEnd, income, expense };
-    };
-
-    const points: any[] = [];
+    const points: EvolutionChartPoint[] = [];
+    let runningBalance = 0;
 
     // Sort selected years strictly ascending for chart continuity
     const sortedSelectedYears = [...selectedYears].sort((a, b) => Number(a) - Number(b));
@@ -149,7 +144,12 @@ export function EvolutionChart({
           const start = new Date(y, m, 1, 0, 0, 0);
           const end = new Date(y, m + 1, 0, 23, 59, 59);
 
-          const point: any = {
+          const periodTxs = txsWithDelta.filter(t => t.dateObj >= start && t.dateObj <= end);
+          const income = periodTxs.reduce((sum, t) => sum + (t.delta > 0 ? t.delta : 0), 0);
+          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? -t.delta : 0), 0);
+          runningBalance += income - expense;
+
+          const point: EvolutionChartPoint = {
             name: format(new Date(y, m, 1), 'MMM', { locale: es }),
             monthIndex: m,
             year: y,
@@ -160,10 +160,9 @@ export function EvolutionChart({
               : format(new Date(y, m, 1), 'MMM', { locale: es })
           };
 
-          const d = getDataForPeriod(end, start);
-          point.balance = d.balance;
-          point.income = d.income;
-          point.expense = d.expense;
+          point.balance = runningBalance;
+          point.income = income;
+          point.expense = expense;
           point.fullDate = start;
 
           points.push(point);
@@ -175,7 +174,12 @@ export function EvolutionChart({
         for (let d = 1; d <= daysInMonth; d++) {
           const start = new Date(y, m, d, 0, 0, 0);
           const end = new Date(y, m, d, 23, 59, 59);
-          const point: any = {
+          const periodTxs = txsWithDelta.filter(t => t.dateObj >= start && t.dateObj <= end);
+          const income = periodTxs.reduce((sum, t) => sum + (t.delta > 0 ? t.delta : 0), 0);
+          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? -t.delta : 0), 0);
+          runningBalance += income - expense;
+
+          const point: EvolutionChartPoint = {
             name: `${d}`,
             year: y,
             displayName: sortedSelectedYears.length > 1
@@ -183,10 +187,9 @@ export function EvolutionChart({
               : `${d}`
           };
 
-          const dat = getDataForPeriod(end, start);
-          point.balance = dat.balance;
-          point.income = dat.income;
-          point.expense = dat.expense;
+          point.balance = runningBalance;
+          point.income = income;
+          point.expense = expense;
           point.fullDate = start;
 
           points.push(point);
@@ -197,7 +200,7 @@ export function EvolutionChart({
     // Post-process: Cut balance line after last record (Strict "no future balance line")
     let lastActiveIndex = -1;
     points.forEach((p, i) => {
-      if (p.income !== 0 || p.expense !== 0) lastActiveIndex = i;
+      if (p.income !== 0 || p.expense !== 0) {lastActiveIndex = i;}
     });
 
     if (lastActiveIndex !== -1) {
@@ -209,31 +212,23 @@ export function EvolutionChart({
     }
 
     return points;
-  }, [transactions, selectedYears, selectedMonth, currentBalance, currentYear]);
+  }, [transactions, selectedYears, selectedMonth, currentYear]);
 
   // --- Helpers ---
-  const formatCurrency = (val: number) => new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: currency || 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
-  }).format(val);
-
-  const formatLargeCurrency = (val: number) => {
-    if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-    if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-    return `$${val}`;
-  };
+  const formatAxisCurrency = (val: number) => formatCurrencyCompact(val, currency || 'COP');
 
   // Calculate dynamic domain from data
   const yDomain = useMemo(() => {
-    if (!chartData || chartData.length === 0) return [0, 1000000];
+    if (!chartData || chartData.length === 0) {return [0, 1000000];}
 
     const allValues: number[] = [];
     chartData.forEach(d => {
-      if (d.income != null) allValues.push(d.income);
-      if (d.expense != null) allValues.push(d.expense);
-      if (d.balance != null) allValues.push(d.balance);
+      if (d.income != null) {allValues.push(d.income);}
+      if (d.expense != null) {allValues.push(d.expense);}
+      if (d.balance != null) {allValues.push(d.balance);}
     });
 
-    if (allValues.length === 0) return [0, 1000000];
+    if (allValues.length === 0) {return [0, 1000000];}
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
@@ -257,7 +252,7 @@ export function EvolutionChart({
               variant={showIncome ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-xs gap-1.5", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
+              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[90px] justify-center", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
             >
               {showIncome && <Check className="h-3 w-3" />} Ingresos
             </Button>
@@ -265,7 +260,7 @@ export function EvolutionChart({
               variant={showExpense ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-xs gap-1.5", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
+              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[85px] justify-center", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
             >
               {showExpense && <Check className="h-3 w-3" />} Gastos
             </Button>
@@ -273,7 +268,7 @@ export function EvolutionChart({
               variant={showBalance ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-xs gap-1.5", showBalance && "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20")}
+              className={cn("h-7 text-xs gap-1.5 hover:text-current w-[85px] justify-center", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
             >
               {showBalance && <Check className="h-3 w-3" />} Balance
             </Button>
@@ -325,12 +320,18 @@ export function EvolutionChart({
       <div className="w-full h-[350px] mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+            <defs>
+              <linearGradient id="balanceHistoryGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.1} />
             <XAxis
               dataKey="displayName"
               axisLine={false}
               tickLine={false}
-              tick={(props) => {
+              tick={(props: AxisTickProps) => {
                 const { x, y, payload } = props;
                 const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
                 let label = payload.value;
@@ -355,7 +356,7 @@ export function EvolutionChart({
               minTickGap={30}
             />
             <YAxis
-              tickFormatter={formatLargeCurrency}
+              tickFormatter={formatAxisCurrency}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
@@ -364,9 +365,7 @@ export function EvolutionChart({
             />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
-              contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--popover))', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-              labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '8px' }}
-              formatter={(value: number, name: string) => [formatCurrency(value), name]}
+              content={<FinanceChartTooltip />}
             />
             <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px' }} />
 
@@ -391,12 +390,14 @@ export function EvolutionChart({
               />
             )}
             {showBalance && (
-              <Line
+              <Area
                 type="monotone"
                 dataKey="balance"
                 name="Balance"
                 stroke="hsl(var(--primary))"
-                strokeWidth={3}
+                strokeWidth={2.5}
+                fill="url(#balanceHistoryGradient)"
+                fillOpacity={1}
                 dot={false}
                 connectNulls={false}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}

@@ -1,4 +1,4 @@
-import { Insight } from '@/features/finance/hooks/useFinanceData';
+import type { Insight } from '@/features/finance/hooks/useFinanceData';
 import { AlertTriangle, Lightbulb, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/core/utils';
 

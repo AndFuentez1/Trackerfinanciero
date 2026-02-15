@@ -21,8 +21,8 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
         // Format a number to "1.000.000,00" or similar
         const formatValue = (val: number, isBlur = false) => {
-            if (val === 0 && !isBlur) return ''; // Empty if 0 while typing (optional, maybe keep 0?)
-            if (isNaN(val)) return '';
+            if (val === 0 && !isBlur) {return '';} // Empty if 0 while typing (optional, maybe keep 0?)
+            if (isNaN(val)) {return '';}
 
             // Use Intl for standard formatting then swap if needed or custom implementation
             // Simplest for "1.000,00" (ES-CO style)
@@ -32,7 +32,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
             const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
             // If activeDecimals is 0, just integer
-            if (activeDecimals === 0) return integerPart;
+            if (activeDecimals === 0) {return integerPart;}
 
             const decimalPart = parts[1];
             return `${integerPart},${decimalPart}`;
@@ -61,7 +61,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
             const internalAsNumber = parseCurrencyString(displayValue);
             if (internalAsNumber !== value) {
                 // If completely different, reset to formatted.
-                if (value === 0 && displayValue === '') return; // Keep empty if 0
+                if (value === 0 && displayValue === '') {return;} // Keep empty if 0
                 setDisplayValue(formatValue(value, true));
             }
         }, [value, activeDecimals]);
@@ -74,13 +74,13 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         };
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            let raw = e.target.value;
+            const raw = e.target.value;
 
             // Allow only numbers, dots, commas
-            if (!/^[\d.,]*$/.test(raw)) return;
+            if (!/^[\d.,]*$/.test(raw)) {return;}
 
             // Prevent multiple commas
-            if ((raw.match(/,/g) || []).length > 1) return;
+            if ((raw.match(/,/g) || []).length > 1) {return;}
 
             // Handle simple formatting while typing (optional, often better to just allow raw digits + comma)
             // Here we will just let user type and only add dots on Blur to avoid checking cursor position hell.
@@ -96,8 +96,8 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         const handleBlur = () => {
             const parsed = parseCurrencyString(displayValue);
             // Re-format nicely on blur
-            if (parsed === 0) setDisplayValue('');
-            else setDisplayValue(formatValue(parsed, true));
+            if (parsed === 0) {setDisplayValue('');}
+            else {setDisplayValue(formatValue(parsed, true));}
         };
 
         // Auto-formatting helper while typing (Naïve approach: formatting only integer part if no comma)
@@ -112,13 +112,13 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
         // Improved HandleChange for dots:
         const handleChangeWithDots = (e: React.ChangeEvent<HTMLInputElement>) => {
-            let val = e.target.value;
+            const val = e.target.value;
 
             // Remove invalid chars
-            if (!/^[\d.,]*$/.test(val)) return;
+            if (!/^[\d.,]*$/.test(val)) {return;}
 
             // Handle multiple commas
-            if ((val.match(/,/g) || []).length > 1) return;
+            if ((val.match(/,/g) || []).length > 1) {return;}
 
             // Split into integer and decimal parts
             const parts = val.split(',');

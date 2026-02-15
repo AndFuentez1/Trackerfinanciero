@@ -24,14 +24,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, loading, colorV
   return (
     <div className="flex-1 min-w-[180px] p-0 bg-muted/40 rounded-xl relative px-5 py-4 flex flex-col gap-2">
       <span className="absolute top-3 right-3 text-muted-foreground/60"><Icon className="w-5 h-5" /></span>
-      <span className="text-xs text-muted-foreground font-medium mb-1">{title}</span>
+      <span className="text-base text-muted-foreground font-medium mb-1">{title}</span>
       {loading ? (
         <Skeleton className="h-8 w-2/3" />
       ) : (
         <div className="flex items-baseline text-2xl font-bold text-foreground">
           {(() => {
             const parts = formatCurrency(value).split(',');
-            if (parts.length === 1) return parts[0];
+            if (parts.length === 1) { return parts[0]; }
             return (
               <>
                 <span>{parts[0]}</span>

@@ -30,6 +30,16 @@ export function useTheme(initialColor?: string) {
 
     // Sync with initialColor from profile
     useEffect(() => {
+        if (initialColor === null) {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('theme-base-color');
+            }
+            if (baseColor !== DEFAULT_BASE_COLOR) {
+                setBaseColor(DEFAULT_BASE_COLOR);
+            }
+            return;
+        }
+
         if (initialColor && initialColor !== baseColor) {
             setBaseColor(initialColor);
         }

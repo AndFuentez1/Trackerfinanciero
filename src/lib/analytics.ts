@@ -1,4 +1,5 @@
-import mixpanel, { Dict, Query } from './mixpanel-shim';
+import type { Dict} from './mixpanel-shim';
+import mixpanel, { Query } from './mixpanel-shim';
 
 // Constants
 const MIXPANEL_TOKEN = 'ed2dc14829d7b4d24069695b97131c0d';
@@ -46,7 +47,7 @@ interface TrackingProps extends Dict {
  * Track a specific event with properties
  */
 export const trackEvent = (eventName: EventName, props?: TrackingProps) => {
-    if (!MIXPANEL_TOKEN) return;
+    if (!MIXPANEL_TOKEN) {return;}
 
     try {
         mixpanel.track(eventName, props);
@@ -59,7 +60,7 @@ export const trackEvent = (eventName: EventName, props?: TrackingProps) => {
  * Identify a user (call on login)
  */
 export const identifyUser = (userId: string, traits?: Dict) => {
-    if (!MIXPANEL_TOKEN) return;
+    if (!MIXPANEL_TOKEN) {return;}
 
     mixpanel.identify(userId);
     if (traits) {
@@ -71,7 +72,7 @@ export const identifyUser = (userId: string, traits?: Dict) => {
  * Set global user properties (people profile)
  */
 export const setUserProperties = (props: Dict) => {
-    if (!MIXPANEL_TOKEN) return;
+    if (!MIXPANEL_TOKEN) {return;}
     mixpanel.people.set(props);
 };
 
@@ -79,7 +80,7 @@ export const setUserProperties = (props: Dict) => {
  * Start a timer for an event (e.g., Time-to-Transaction)
  */
 export const startEventTimer = (eventName: EventName) => {
-    if (!MIXPANEL_TOKEN) return;
+    if (!MIXPANEL_TOKEN) {return;}
     mixpanel.time_event(eventName);
 };
 
@@ -87,7 +88,7 @@ export const startEventTimer = (eventName: EventName) => {
  * Reset analytics on logout
  */
 export const resetAnalytics = () => {
-    if (!MIXPANEL_TOKEN) return;
+    if (!MIXPANEL_TOKEN) {return;}
     mixpanel.reset();
 };
 

@@ -5,6 +5,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 // import { useInactivityLogout } from "@/hooks/useInactivityLogout"; // Deshabilitado: solo cerrar sesión manual
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Mail, AlertCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { SkeletonLoader } from "@/shared/components/skeletons/SkeletonLoader";
@@ -13,9 +14,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
 import { useScrollRestoration } from "@/shared/hooks/useScrollRestoration";
 import { getOnboardingGateState, isOnboardingAllowedRoute } from "@/core/utils";
+import { queryKeys } from "@/core/api/queryKeys";
+import { fetchUserConfigStatus } from "@/features/settings/components/hooks/useUserConfigStatus";
 
 export default function MainLayout() {
     const { user, loading, signOut } = useAuth();
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const location = useLocation();
     const {
@@ -38,6 +42,15 @@ export default function MainLayout() {
             navigate("/auth");
         }
     }, [user, loading, navigate]);
+
+    useEffect(() => {
+        if (!user?.id) {return;}
+        queryClient.prefetchQuery({
+            queryKey: queryKeys.user.config(user.id),
+            queryFn: () => fetchUserConfigStatus(user.id),
+            staleTime: Infinity,
+        });
+    }, [user?.id, queryClient]);
 
     const { isOnboardingLocked } = getOnboardingGateState({
         currency,
@@ -66,7 +79,7 @@ export default function MainLayout() {
     // Check if user has password set
     useEffect(() => {
         const checkUserPassword = async () => {
-            if (!user || !user.email_confirmed_at || hasCheckedPassword) return;
+            if (!user || !user.email_confirmed_at || hasCheckedPassword) {return;}
 
             try {
                 const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -96,7 +109,7 @@ export default function MainLayout() {
         return <SkeletonLoader fullPage tab={skeletonType} withLayoutWrapper={false} />;
     }
 
-    if (!user) return null;
+    if (!user) {return null;}
 
     // Email Confirmation Guard
     if (!user.email_confirmed_at) {

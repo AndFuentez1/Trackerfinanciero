@@ -13,7 +13,7 @@ export function ThemeSection() {
                     <Settings className="h-5 w-5 text-primary" />
                     Tema de la app
                 </CardTitle>
-                <CardDescription>Personaliza el color principal de la interfaz</CardDescription>
+                <CardDescription className="text-base text-muted-foreground">Personaliza el color principal de la interfaz y el texto</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center">
@@ -34,7 +34,7 @@ export function ThemeSection() {
                                     <Check className="h-5 w-5 md:h-6 md:w-6 text-white drop-shadow-md" />
                                 )}
                             </div>
-                            <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <span className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 {option.label}
                             </span>
                             {baseColor === option.hex && (

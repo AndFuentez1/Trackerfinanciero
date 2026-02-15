@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PaymentMethod, PaymentMethodType } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod, PaymentMethodType } from '@/features/finance/hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { Button } from '@/shared/ui/button';
@@ -80,7 +80,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!name) {return;}
 
     setIsSubmitting(true);
     const result = await onAdd({
