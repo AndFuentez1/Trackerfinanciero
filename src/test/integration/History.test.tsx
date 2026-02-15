@@ -42,6 +42,14 @@ vi.mock('@/features/finance/hooks/useFinanceData', () => ({
     }))
 }));
 
+vi.mock('@/features/finance/context/FinanceContext', () => ({
+    useFinance: vi.fn(() => ({
+        currency: 'COP',
+        decimalPlaces: 2
+    })),
+    FinanceProvider: ({ children }: any) => <>{children}</>
+}));
+
 // Mock child components
 vi.mock('@/features/finance/transactions/components/AddTransactionDialog', () => ({
     AddTransactionDialog: () => <button>Agregar Transacción</button>
@@ -69,35 +77,37 @@ describe('HistoryPage', () => {
     const mockUpdateFilter = vi.fn();
     const mockLoadMore = vi.fn();
 
+    const defaultFinanceData = {
+        transactions: [],
+        paymentMethods: [{ id: 'pm1', name: 'Efectivo' }],
+        categories: [{ id: 'c1', name: 'Comida', type: 'expense' }],
+        loading: false,
+        dateFilter: { period: 'all' },
+        updateFilter: mockUpdateFilter,
+        loadMore: mockLoadMore,
+        hasMore: false,
+        importProgress: { status: 'idle' },
+        pendingImportData: [],
+        rangeTransactions: [],
+        allTransactions: [],
+        totalTransactionsCount: 0,
+        deleteTransaction: vi.fn(),
+        addTransaction: vi.fn(),
+        addTransactionsBulk: vi.fn(),
+        updateTransaction: vi.fn(),
+        startImport: vi.fn(),
+        cancelImport: vi.fn(),
+        confirmImportData: vi.fn(),
+        addCategory: vi.fn(),
+        addPaymentMethod: vi.fn(),
+        addTransfer: vi.fn(),
+        hasPendingImport: false,
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
         (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-        (useFinanceData as any).mockReturnValue({
-            transactions: [],
-            paymentMethods: [{ id: 'pm1', name: 'Efectivo' }],
-            categories: [{ id: 'c1', name: 'Comida', type: 'expense' }],
-            loading: false,
-            dateFilter: { period: 'all' }, // Ensure this is definitely here
-            updateFilter: mockUpdateFilter,
-            loadMore: mockLoadMore,
-            hasMore: false,
-            importProgress: { status: 'idle' },
-            pendingImportData: [],
-            rangeTransactions: [],
-            allTransactions: [],
-            totalTransactionsCount: 0,
-            deleteTransaction: vi.fn(),
-            addTransaction: vi.fn(),
-            addTransactionsBulk: vi.fn(),
-            updateTransaction: vi.fn(),
-            startImport: vi.fn(),
-            cancelImport: vi.fn(),
-            confirmImportData: vi.fn(),
-            addCategory: vi.fn(),
-            addPaymentMethod: vi.fn(),
-            addTransfer: vi.fn(),
-            hasPendingImport: false, // Add missing prop
-        });
+        (useFinanceData as any).mockReturnValue(defaultFinanceData);
     });
 
     it('renders header and controls', () => {
@@ -144,7 +154,7 @@ describe('HistoryPage', () => {
 
     it('shows Load More button when hasMore is true', () => {
         (useFinanceData as any).mockReturnValue({
-            ...((useFinanceData as any).mock.results[0]?.value || {}),
+            ...defaultFinanceData,
             hasMore: true
         });
 
@@ -154,7 +164,7 @@ describe('HistoryPage', () => {
 
     it('calls loadMore when button clicked', () => {
         (useFinanceData as any).mockReturnValue({
-            ...((useFinanceData as any).mock.results[0]?.value || {}),
+            ...defaultFinanceData,
             hasMore: true
         });
 

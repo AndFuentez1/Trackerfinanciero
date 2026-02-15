@@ -1,0 +1,210 @@
+
+> vite_react_shadcn_ts@0.0.0 test:run
+> vitest run src/test/integration/History.test.tsx
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero[39m
+
+[90mstdout[2m | src/test/integration/History.test.tsx
+[22m[39m­ƒöÁ [client.ts] Auth event: INITIAL_SESSION Session: null
+
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/test/integration/History.test.tsx > HistoryPage > renders header and controls
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:59)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/test/integration/History.test.tsx > HistoryPage > updates search term and passes it to HistoryTab
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:59)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/test/integration/History.test.tsx > HistoryPage > updates type filter and passes it to HistoryTab
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:59)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/test/integration/History.test.tsx > HistoryPage > shows Load More button when hasMore is true
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:59)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinance (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:62:26)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/test/integration/History.test.tsx > HistoryPage > calls loadMore when button clicked
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:59)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [31mÔØ»[39m src/test/integration/History.test.tsx [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 94[2mms[22m[39m
+[31m     [31m├ù[31m renders header and controls[39m[32m 55[2mms[22m[39m
+[31m     [31m├ù[31m updates search term and passes it to HistoryTab[39m[32m 8[2mms[22m[39m
+[31m     [31m├ù[31m updates type filter and passes it to HistoryTab[39m[32m 10[2mms[22m[39m
+[31m     [31m├ù[31m shows Load More button when hasMore is true[39m[32m 7[2mms[22m[39m
+[31m     [31m├ù[31m calls loadMore when button clicked[39m[32m 11[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 5 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > renders header and controls
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > updates search term and passes it to HistoryTab
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > updates type filter and passes it to HistoryTab
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > shows Load More button when hasMore is true
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > calls loadMore when button clicked
+Error: useFinance must be used within a FinanceProvider
+ ÔØ» useFinance src/features/finance/context/FinanceContext.tsx:19:15
+     17|     const context = useContext(FinanceContext);
+     18|     if (context === undefined) {
+     19|         throw new Error('useFinance must be used within a FinanceProviÔÇª
+       |               ^
+     20|     }
+     21|     return context;
+ ÔØ» HistoryPage src/features/finance/transactions/pages/History.tsx:62:26
+ ÔØ» renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ÔØ» mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ÔØ» beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ÔØ» beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ÔØ» performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ÔØ» workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ÔØ» renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ÔØ» recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/5]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[90m (5)[39m
+[2m   Start at [22m 17:21:16
+[2m   Duration [22m 8.20s[2m (transform 1.52s, setup 572ms, import 2.87s, tests 94ms, environment 4.02s)[22m
+

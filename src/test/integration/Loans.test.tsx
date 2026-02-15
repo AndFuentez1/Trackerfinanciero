@@ -12,7 +12,9 @@ import { MemoryRouter } from 'react-router-dom';
 // Mocks
 vi.mock('@/features/auth/hooks/useAuth');
 vi.mock('@/features/finance/loans/hooks/useLoans');
-vi.mock('@/features/finance/hooks/useFinanceData');
+vi.mock('@/features/finance/hooks/useFinanceData', () => ({
+    useFinanceData: vi.fn()
+}));
 vi.mock('@/features/finance/hooks/useDecimalPlaces');
 vi.mock('@/features/finance/hooks/useFormatCurrency');
 vi.mock('@/features/finance/context/FinanceContext');
@@ -24,40 +26,7 @@ const mockDeleteLoan = vi.fn();
 const mockCreatePayment = vi.fn();
 const mockRefetch = vi.fn();
 
-describe('LoansPage', () => {
-    const mockUser = { id: 'u1' };
 
-    beforeEach(() => {
-        vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-
-        // Mock the complex useLoans hook return structure
-        (useLoans as any).mockReturnValue({
-            loans: [
-                {
-                    id: 'l1',
-                    name: 'Préstamo Auto',
-                    total_amount: 10000,
-                    paid_amount: 2000,
-                    interest_rate: 5,
-                    type: 'borrowed',
-                    is_disbursed: true,
-                    payment_method_id: 'pm1',
-                    created_at: '2024-01-01'
-                }
-            ],
-            loading: false,
-            error: null,
-            refetch: mockRefetch
-        });
-
-        // Mock the separate hooks imported from same file
-        // Note: In the file, they are imported as named exports. 
-        // We need to mock the MODULE return for those named exports if they are hooks.
-        // We can't easily mock named exports individually if we already mocked the whole module above.
-        // We need to ensure the module mock includes them.
-    });
-});
 
 // Since we need to mock multiple exports from useLoans.ts:
 vi.mock('@/features/finance/loans/hooks/useLoans', async (importOriginal) => {
@@ -78,6 +47,7 @@ describe('LoansPage Integration', () => {
             updateTransaction: vi.fn(),
             transactions: [],
             allTransactions: [], // Add if needed
+            budgets: []
         });
         (useDecimalPlaces as any).mockReturnValue(2);
         (useFormatCurrency as any).mockReturnValue({
@@ -134,6 +104,11 @@ describe('LoansPage Integration', () => {
             loans: [],
             loading: false,
             error: 'Error al cargar'
+        });
+        (useFinanceData as any).mockReturnValue({
+            paymentMethods: [],
+            updateTransaction: vi.fn(),
+            transactions: []
         });
 
         render(<LoansPage />, { wrapper: MemoryRouter });

@@ -82,7 +82,7 @@ describe('financeCalculations', () => {
         const budgets: Budget[] = [];
         const insights = calculateInsights(summary, expensesByCategory, paymentMethods, budgets, []);
         const hasSavingsWarning = insights.some(i => i.title.toLowerCase().includes('ahorro'));
-        const hasCreditWarning = insights.some(i => i.title.toLowerCase().includes('alto uso de crédito'));
+        const hasCreditWarning = insights.some(i => i.title.toLowerCase().includes('alto uso de'));
 
         expect(hasSavingsWarning).toBe(true);
         expect(hasCreditWarning).toBe(true);

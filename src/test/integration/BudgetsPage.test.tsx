@@ -77,7 +77,9 @@ describe('BudgetsPage', () => {
             loading: true,
             totalBudget: 0,
             budgets: [],
-            availableYears: []
+            availableYears: [],
+            budgetYear: 2024,
+            budgetMonth: 'all'
         });
 
         // We check for absence of main content or presence of skeletons (usually identifiable by class or mocked)
