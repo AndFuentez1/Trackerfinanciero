@@ -1493,7 +1493,11 @@ export function AdvancedSettings({
                                         const isLatest = searchRange === 'latest';
                                         const daysToSearch = isLatest ? '60' : searchRange;
                                         const res = await fetch(`${BACKEND_URL}/api/gmail/search?userId=${user?.id}&days=${daysToSearch}&markRead=1`);
-                                        const data = await res.json();
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok) {
+                                            const message = data?.error || data?.details || 'No se pudo buscar en el historial';
+                                            throw new Error(message);
+                                        }
                                         let rawResults = (data.results || []) as GmailHistoryItem[];
 
                                         setSearchCache({ days: requestedDays, results: (data.results || []) });
@@ -1506,8 +1510,9 @@ export function AdvancedSettings({
                                                 ? (finalResults.length > 0 ? 'Se encontró el registro más reciente.' : 'No se encontraron registros en los últimos 60 días.')
                                                 : `Se encontraron ${data.count || finalResults.length} posibles facturas.`
                                         });
-                                    } catch {
-                                        toast({ title: 'Error', description: 'No se pudo buscar en el historial', variant: 'destructive' });
+                                    } catch (err: any) {
+                                        const message = err?.message || 'No se pudo buscar en el historial';
+                                        toast({ title: 'Error', description: message, variant: 'destructive' });
                                     } finally {
                                         setSearching(false);
                                     }

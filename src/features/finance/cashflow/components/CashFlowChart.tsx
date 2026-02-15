@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Button } from '@/shared/ui/button';
@@ -28,9 +28,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
   }, [currency]);
 
   const renderBalanceAdjustmentLabel = ({ x, y, payload }: BalanceAdjustmentLabelProps) => {
-    if (typeof x !== 'number' || typeof y !== 'number') {return null;}
+    if (typeof x !== 'number' || typeof y !== 'number') { return null; }
     const delta = payload?.balanceAjusteDelta;
-    if (typeof delta !== 'number' || delta === 0) {return null;}
+    if (typeof delta !== 'number' || delta === 0) { return null; }
     return (
       <text
         x={x}
@@ -44,27 +44,68 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     );
   };
 
-  // Calculate dynamic domain from data
-  const yDomain = React.useMemo(() => {
-    if (!data || data.length === 0) {return [0, 1000000];} // Fallback when no data
+  // Calculate dynamic domain from data ensuring 7 even grid lines
+  const { yDomain, yTicks } = React.useMemo(() => {
+    const fallback = { yDomain: [-1000000, 1000000] as [number, number], yTicks: [-1000000, -666667, -333333, 0, 333333, 666667, 1000000] };
+    if (!data || data.length === 0) return fallback;
 
     const allValues: number[] = [];
     data.forEach(d => {
-      if (d.ingresos != null) {allValues.push(d.ingresos);}
-      if (d.egresos != null) {allValues.push(d.egresos);}
-      if (d.balanceReal != null) {allValues.push(d.balanceReal);}
-      if (d.balanceProyectado != null) {allValues.push(d.balanceProyectado);}
-      if (d.balanceSimulated != null) {allValues.push(d.balanceSimulated);}
+      if (d.ingresos != null) allValues.push(d.ingresos);
+      if (d.egresos != null) allValues.push(d.egresos);
+      if (d.balanceReal != null) allValues.push(d.balanceReal);
+      if (d.balanceProyectado != null) allValues.push(d.balanceProyectado);
+      if (d.balanceSimulated != null) allValues.push(d.balanceSimulated);
     });
 
-    if (allValues.length === 0) {return [0, 1000000];} // Fallback when no valid values
+    if (allValues.length === 0) return fallback;
 
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
+    const minVal = Math.min(...allValues, 0);
+    const maxVal = Math.max(...allValues, 0);
 
-    // Add 10% padding
-    const padding = (max - min) * 0.1;
-    return [Math.floor(min - padding), Math.ceil(max + padding)];
+    // Nice step calculation
+    const rawRange = maxVal - minVal;
+    const rawStep = rawRange / 6 || 1000;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const firstDigit = rawStep / magnitude;
+    let step = magnitude;
+    if (firstDigit > 5) step = 10 * magnitude;
+    else if (firstDigit > 2) step = 5 * magnitude;
+    else if (firstDigit > 1) step = 2 * magnitude;
+
+    // Distribute 6 intervals around zero
+    const stepsBelow = minVal < 0 ? Math.ceil(Math.abs(minVal) / step) : 0;
+    const stepsAbove = maxVal > 0 ? Math.ceil(maxVal / step) : 0;
+
+    let kBelow = stepsBelow;
+    let total = stepsBelow + stepsAbove;
+
+    if (total > 6) {
+      const ratio = Math.abs(minVal) / (Math.abs(minVal) + maxVal);
+      kBelow = Math.round(ratio * 6);
+      const kAbove = 6 - kBelow;
+      const s = Math.max(
+        kBelow > 0 ? Math.ceil(Math.abs(minVal) / kBelow) : 0,
+        kAbove > 0 ? Math.ceil(maxVal / kAbove) : 0
+      );
+      const m = Math.pow(10, Math.floor(Math.log10(s || 1)));
+      const f = s / m;
+      step = m * (f > 5 ? 10 : f > 2 ? 5 : f > 1 ? 2 : 1);
+    } else {
+      const extra = 6 - total;
+      kBelow = stepsBelow + Math.floor(extra / 2);
+    }
+
+    const start = -kBelow * step;
+    const ticks: number[] = [];
+    for (let i = 0; i <= 6; i++) {
+      ticks.push(start + i * step);
+    }
+
+    return {
+      yDomain: [ticks[0], ticks[6]] as [number, number],
+      yTicks: ticks
+    };
   }, [data]);
 
   // Filter States
@@ -140,16 +181,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="balanceHistoryGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="balanceProjectionGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                </linearGradient>
+
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.1} />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.15} />
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -180,11 +214,13 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                 tickLine={false}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 width={60}
+                ticks={yTicks}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
                 content={<FinanceChartTooltip />}
               />
+              <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
 
               {/* Bars & Lines controlled by Toggles */}
 
@@ -213,13 +249,11 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               {showBalance && (
                 <>
                   {/* Balance Real (Histórico Descriptivo) */}
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="balanceReal"
                     stroke="hsl(var(--primary))"
                     strokeWidth={2.5}
-                    fill="url(#balanceHistoryGradient)"
-                    fillOpacity={1}
                     dot={false}
                     connectNulls={false}
                     name="Balance Histórico"
@@ -228,7 +262,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   <Line
                     type="monotone"
                     dataKey="balanceProyectado"
-                    stroke={isWarning ? "hsl(var(--destructive))" : "url(#balanceProjectionGradient)"}
+                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
                     strokeWidth={2}
                     dot={false}
                     strokeDasharray="5 5"

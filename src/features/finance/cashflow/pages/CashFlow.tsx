@@ -35,12 +35,12 @@ export default function CashFlow() {
 
   // Estado para sincronizar con saldo real
   const [useRealBalance, setUseRealBalance] = useState<boolean>(() => {
-    if (typeof window === 'undefined') {return false;}
+    if (typeof window === 'undefined') { return false; }
     const stored = localStorage.getItem(CASHFLOW_REAL_BALANCE_KEY);
     return stored === 'true';
   });
   const [isRealBalanceHydrated, setIsRealBalanceHydrated] = useState(() => {
-    if (typeof window === 'undefined') {return false;}
+    if (typeof window === 'undefined') { return false; }
     return localStorage.getItem(CASHFLOW_REAL_BALANCE_KEY) !== null;
   });
 
@@ -76,8 +76,8 @@ export default function CashFlow() {
   };
 
   useEffect(() => {
-    if (isRealBalanceHydrated) {return;}
-    if (configStatus?.cashflowUseRealBalance === undefined) {return;}
+    if (isRealBalanceHydrated) { return; }
+    if (configStatus?.cashflowUseRealBalance === undefined) { return; }
     const serverValue = !!configStatus.cashflowUseRealBalance;
     setUseRealBalance(serverValue);
     if (typeof window !== 'undefined') {
@@ -93,7 +93,7 @@ export default function CashFlow() {
       localStorage.setItem(CASHFLOW_REAL_BALANCE_KEY, String(value));
     }
 
-    if (!user?.id) {return;}
+    if (!user?.id) { return; }
 
     try {
       const body: { userId: string; cashflowUseRealBalance: boolean; email?: string } = {
@@ -110,11 +110,11 @@ export default function CashFlow() {
         body: JSON.stringify(body)
       });
 
-      if (!response.ok) {throw new Error('Failed to save cashflow preference');}
+      if (!response.ok) { throw new Error('Failed to save cashflow preference'); }
 
       queryClient.setQueryData(queryKeys.user.config(user.id), // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (old: Record<string, any> | undefined) => {
-          if (!old) {return old;}
+          if (!old) { return old; }
           return { ...old, cashflowUseRealBalance: value };
         });
       queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
@@ -172,23 +172,6 @@ export default function CashFlow() {
         <div className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
             <h3 className="text-lg font-semibold text-foreground">Desglose Mensual</h3>
-
-            <div className="flex items-center gap-2.5 bg-card/60 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-xl shadow-sm">
-              <div className={cn(
-                "p-1.5 rounded-lg transition-colors",
-                useRealBalance ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              )}>
-                {useRealBalance ? <Link className="h-3.5 w-3.5" /> : <Unlink className="h-3.5 w-3.5" />}
-              </div>
-              <Label htmlFor="sync-balance" className="text-xs font-bold cursor-pointer select-none">
-                Mostrar ajuste de balance inicial
-              </Label>
-              <Switch
-                id="sync-balance"
-                checked={useRealBalance}
-                onCheckedChange={handleRealBalanceChange}
-              />
-            </div>
           </div>
           <div className="overflow-x-auto rounded-xl border border-input bg-card">
             <table className="min-w-full text-sm">
@@ -238,7 +221,7 @@ export default function CashFlow() {
                               <div className="font-semibold mb-1 text-destructive">Gastos</div>
                               <div><span className="font-semibold">Gastos Futuros:</span> {formatCOP(row.gastosFuturos)}</div>
                               <div><span className="font-semibold">Cuotas Préstamos:</span> {formatCOP(row.egresosPrestamos)} <span className="ml-2">(Capital: {formatCOP(row.egresosPrestamosCapital)}, Interés: {formatCOP(row.egresosPrestamosInteres)})</span></div>
-                              <div><span className="font-semibold">Cuotas Tarjeta:</span> {formatCOP(row.egresosTarjeta)} <span className="ml-2">(Capital: {formatCOP(row.egresosTarjetaCapital)}, Interés: {formatCOP(row.egresosTarjetaInteres)})</span></div>
+                              <div><span className="font-semibold">Cuotas Tarjeta:</span> {formatCOP(row.egresosTarjeta)}</div>
                               <div><span className="font-semibold">Gastos:</span> {formatCOP(row.egresosReales)}</div>
                               <div><span className="font-semibold">Ahorros e Inv.:</span> {formatCOP(row.egresosAhorro)}</div>
                             </div>

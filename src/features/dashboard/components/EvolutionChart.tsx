@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
@@ -17,13 +17,7 @@ import {
 } from "@/shared/ui/dropdown-menu";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-interface Transaction {
-  id: string;
-  date: string;
-  type: string;
-  amount: number;
-}
+import { Transaction } from '@/features/finance/types/financeTypes';
 
 interface EvolutionChartPoint {
   name: string;
@@ -78,7 +72,7 @@ export function EvolutionChart({
 
   const selectedMonth = controlledMonth ?? internalMonth;
 
-  useEffect(() => { if (controlledMonth) {setInternalMonth(controlledMonth);} }, [controlledMonth]);
+  useEffect(() => { if (controlledMonth) { setInternalMonth(controlledMonth); } }, [controlledMonth]);
 
   const setMonth = (value: string) => {
     setInternalMonth(value);
@@ -91,7 +85,7 @@ export function EvolutionChart({
       : [...selectedYears, year];
 
     // Prevent empty selection? 
-    if (newSelection.length === 0) {return;}
+    if (newSelection.length === 0) { return; }
 
     onSelectedYearsChange(newSelection);
   };
@@ -114,19 +108,19 @@ export function EvolutionChart({
 
   // --- Data Processing ---
   const chartData = useMemo(() => {
-    if (transactions.length === 0) {return [];}
+    if (transactions.length === 0) { return []; }
 
     const baseTransactions = excludeTransfers(transactions)
       .filter(tx => !(tx.type === 'expense' && (tx.installments || 1) > 1));
 
-    if (baseTransactions.length === 0) {return [];}
+    if (baseTransactions.length === 0) { return []; }
 
-    // Process deltas (solo transacciones reales, sin anclaje a saldo real)
+    // Process deltas (relying on excludeTransfers for clean data)
     const txsWithDelta = baseTransactions.map(tx => {
       let delta = 0;
       const amt = Number(tx.amount);
-      if (tx.type === 'income' || tx.type === 'transfer_in') {delta = amt;}
-      else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') {delta = -amt;}
+      if (tx.type === 'income') { delta = amt; }
+      else if (tx.type === 'expense' || tx.type === 'loan') { delta = -amt; }
       return { ...tx, delta, dateObj: new Date(tx.date) };
     });
 
@@ -146,24 +140,21 @@ export function EvolutionChart({
 
           const periodTxs = txsWithDelta.filter(t => t.dateObj >= start && t.dateObj <= end);
           const income = periodTxs.reduce((sum, t) => sum + (t.delta > 0 ? t.delta : 0), 0);
-          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? -t.delta : 0), 0);
-          runningBalance += income - expense;
+          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? t.delta : 0), 0); // Already negative
+          runningBalance += income + expense; // Use + because expense is negative
 
           const point: EvolutionChartPoint = {
             name: format(new Date(y, m, 1), 'MMM', { locale: es }),
             monthIndex: m,
             year: y,
-            // Unique key for recharts if needed, but name is usually XAxis
-            // If multiple years have same month name 'Ene', we might want unique XAxis labels like 'Ene 23'
             displayName: sortedSelectedYears.length > 1
               ? `${format(new Date(y, m, 1), 'MMM', { locale: es })} '${y.toString().slice(2)}`
-              : format(new Date(y, m, 1), 'MMM', { locale: es })
+              : format(new Date(y, m, 1), 'MMM', { locale: es }),
+            balance: runningBalance,
+            income: income,
+            expense: expense,
+            fullDate: start
           };
-
-          point.balance = runningBalance;
-          point.income = income;
-          point.expense = expense;
-          point.fullDate = start;
 
           points.push(point);
         }
@@ -176,21 +167,20 @@ export function EvolutionChart({
           const end = new Date(y, m, d, 23, 59, 59);
           const periodTxs = txsWithDelta.filter(t => t.dateObj >= start && t.dateObj <= end);
           const income = periodTxs.reduce((sum, t) => sum + (t.delta > 0 ? t.delta : 0), 0);
-          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? -t.delta : 0), 0);
-          runningBalance += income - expense;
+          const expense = periodTxs.reduce((sum, t) => sum + (t.delta < 0 ? t.delta : 0), 0); // Already negative
+          runningBalance += income + expense; // Use + because expense is negative
 
           const point: EvolutionChartPoint = {
             name: `${d}`,
             year: y,
             displayName: sortedSelectedYears.length > 1
               ? `${d}/${m + 1}/${y.toString().slice(2)}`
-              : `${d}`
+              : `${d}`,
+            balance: runningBalance,
+            income: income,
+            expense: expense,
+            fullDate: start
           };
-
-          point.balance = runningBalance;
-          point.income = income;
-          point.expense = expense;
-          point.fullDate = start;
 
           points.push(point);
         }
@@ -200,7 +190,7 @@ export function EvolutionChart({
     // Post-process: Cut balance line after last record (Strict "no future balance line")
     let lastActiveIndex = -1;
     points.forEach((p, i) => {
-      if (p.income !== 0 || p.expense !== 0) {lastActiveIndex = i;}
+      if (p.income !== 0 || p.expense !== 0) { lastActiveIndex = i; }
     });
 
     if (lastActiveIndex !== -1) {
@@ -217,24 +207,68 @@ export function EvolutionChart({
   // --- Helpers ---
   const formatAxisCurrency = (val: number) => formatCurrencyCompact(val, currency || 'COP');
 
-  // Calculate dynamic domain from data
-  const yDomain = useMemo(() => {
-    if (!chartData || chartData.length === 0) {return [0, 1000000];}
+  // Calculate dynamic domain from data ensuring 7 even grid lines
+  const { yDomain, yTicks } = useMemo(() => {
+    const fallback = { yDomain: [-1000000, 1000000] as [number, number], yTicks: [-1000000, -666667, -333333, 0, 333333, 666667, 1000000] };
+    if (!chartData || chartData.length === 0) return fallback;
 
     const allValues: number[] = [];
     chartData.forEach(d => {
-      if (d.income != null) {allValues.push(d.income);}
-      if (d.expense != null) {allValues.push(d.expense);}
-      if (d.balance != null) {allValues.push(d.balance);}
+      if (d.income != null) allValues.push(d.income);
+      if (d.expense != null) allValues.push(d.expense);
+      if (d.balance != null) allValues.push(d.balance);
     });
 
-    if (allValues.length === 0) {return [0, 1000000];}
+    if (allValues.length === 0) return fallback;
 
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
+    const minVal = Math.min(...allValues, 0);
+    const maxVal = Math.max(...allValues, 0);
 
-    const padding = (max - min) * 0.1;
-    return [Math.floor(min - padding), Math.ceil(max + padding)];
+    // Calculate nice step
+    const rawRange = maxVal - minVal;
+    const rawStep = rawRange / 6 || 1000;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const firstDigit = rawStep / magnitude;
+    let step = magnitude;
+    if (firstDigit > 5) step = 10 * magnitude;
+    else if (firstDigit > 2) step = 5 * magnitude;
+    else if (firstDigit > 1) step = 2 * magnitude;
+
+    // Distribute 6 steps around 0
+    const stepsBelow = minVal < 0 ? Math.ceil(Math.abs(minVal) / step) : 0;
+    const stepsAbove = maxVal > 0 ? Math.ceil(maxVal / step) : 0;
+
+    let kBelow = stepsBelow;
+    let total = stepsBelow + stepsAbove;
+
+    // Adjust to exactly 6 intervals
+    if (total > 6) {
+      // Find better step
+      const ratio = Math.abs(minVal) / (Math.abs(minVal) + maxVal);
+      kBelow = Math.round(ratio * 6);
+      const kAbove = 6 - kBelow;
+      const s = Math.max(
+        kBelow > 0 ? Math.ceil(Math.abs(minVal) / kBelow) : 0,
+        kAbove > 0 ? Math.ceil(maxVal / kAbove) : 0
+      );
+      const m = Math.pow(10, Math.floor(Math.log10(s || 1)));
+      const f = s / m;
+      step = m * (f > 5 ? 10 : f > 2 ? 5 : f > 1 ? 2 : 1);
+    } else {
+      const extra = 6 - total;
+      kBelow = stepsBelow + Math.floor(extra / 2);
+    }
+
+    const start = -kBelow * step;
+    const ticks: number[] = [];
+    for (let i = 0; i <= 6; i++) {
+      ticks.push(start + i * step);
+    }
+
+    return {
+      yDomain: [ticks[0], ticks[6]] as [number, number],
+      yTicks: ticks
+    };
   }, [chartData]);
 
   return (
@@ -320,13 +354,8 @@ export function EvolutionChart({
       <div className="w-full h-[350px] mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="balanceHistoryGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.1} />
+
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.15} />
             <XAxis
               dataKey="displayName"
               axisLine={false}
@@ -362,6 +391,7 @@ export function EvolutionChart({
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
               width={60}
               domain={yDomain}
+              ticks={yTicks}
             />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
@@ -389,15 +419,14 @@ export function EvolutionChart({
                 fillOpacity={0.7}
               />
             )}
+            <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
             {showBalance && (
-              <Area
+              <Line
                 type="monotone"
                 dataKey="balance"
                 name="Balance"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
-                fill="url(#balanceHistoryGradient)"
-                fillOpacity={1}
                 dot={false}
                 connectNulls={false}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}

@@ -271,7 +271,7 @@ export function PendingInvoicesPanel() {
         }
     };
 
-    if (loading || invoices.length === 0) { return null; }
+    if (!loading && invoices.length === 0) { return null; }
 
     return (
         <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-6 animate-in slide-in-from-top-2">
@@ -326,26 +326,22 @@ export function PendingInvoicesPanel() {
                                                 </Select>
                                             </div>
                                             <div>
-                                                <label className="text-xs font-medium text-slate-500 flex justify-between">
-                                                    Categoría
-                                                    {editForm.category && !categories.find(c => c.name.toLowerCase() === editForm.category.toLowerCase().trim()) && (
-                                                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                                            Nueva
-                                                        </span>
-                                                    )}
-                                                </label>
-                                                <div className="relative mt-1">
-                                                    <input
-                                                        className="w-full p-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500"
-                                                        value={editForm.category}
-                                                        onChange={e => setEditForm({ ...editForm, category: e.target.value })}
-                                                        placeholder="Escribe para buscar o crear..."
-                                                        list={`cat-list-${invoice.id}`}
-                                                    />
-                                                    <datalist id={`cat-list-${invoice.id}`}>
-                                                        {categories.filter(c => c.type === editForm.type).map(c => <option key={c.id} value={c.name} />)}
-                                                    </datalist>
-                                                </div>
+                                                <label className="text-xs font-medium text-slate-500">Categoría</label>
+                                                <Select
+                                                    value={editForm.category || ''}
+                                                    onValueChange={(v) => setEditForm({ ...editForm, category: v })}
+                                                >
+                                                    <SelectTrigger className="mt-1 h-10 bg-background/50 border-gray-100">
+                                                        <SelectValue placeholder="Seleccionar categoría" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {categories.filter(c => c.type === editForm.type).map(c => (
+                                                            <SelectItem key={c.id} value={c.name}>
+                                                                {c.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                             <div>
                                                 <label className="text-xs font-medium text-slate-500">Método de Pago *</label>
@@ -359,7 +355,7 @@ export function PendingInvoicesPanel() {
                                                     <SelectContent>
                                                         {paymentMethods.map(pm => (
                                                             <SelectItem key={pm.id} value={pm.id}>
-                                                                {pm.name} ({pm.type})
+                                                                {pm.name}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -371,14 +367,22 @@ export function PendingInvoicesPanel() {
                                                 size="sm"
                                                 onClick={() => handleApprove(invoice)}
                                                 disabled={!editForm.payment_method_id}
-                                                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                                                className="bg-primary hover:bg-primary/60 text-primary-foreground shadow-sm"
                                                 aria-label="Guardar y Aprobar"
                                                 title="Guardar y Aprobar"
                                             >
                                                 <Check className="w-4 h-4" />
-                                                <span className="hidden sm:inline ml-1">{!editForm.payment_method_id ? 'Selecciona método' : 'Guardar y Aprobar'}</span>
                                             </Button>
-                                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleCancelEdit}
+                                                className="hover:bg-primary/60 hover:text-primary-foreground"
+                                                aria-label="Cancelar"
+                                                title="Cancelar"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </Button>
                                         </div>
                                     </div>
                                 ) : (
@@ -402,27 +406,25 @@ export function PendingInvoicesPanel() {
                                         <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
                                             <Button
                                                 size="sm"
-                                                className="text-white bg-slate-600 hover:bg-slate-700 shadow-sm border-none"
-                                                onClick={() => handleStartEdit(invoice)}
-                                                aria-label="Editar"
-                                                title="Editar"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                                <span className="hidden sm:inline ml-1">Editar</span>
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                className="bg-orange-500 hover:bg-orange-600 text-white border-none shadow-orange-200 shadow-md"
+                                                className="bg-orange-500 hover:bg-orange-500/60 text-white border-none shadow-orange-200 shadow-md"
                                                 onClick={() => handleApprove(invoice)}
                                                 aria-label="Aprobar"
                                                 title="Aprobar"
                                             >
                                                 <Check className="w-4 h-4" />
-                                                <span className="hidden sm:inline ml-1">Aprobar</span>
                                             </Button>
                                             <Button
                                                 size="sm"
-                                                className="text-white bg-red-500 hover:bg-red-600 shadow-sm border-none"
+                                                className="text-white bg-slate-600 hover:bg-slate-600/60 shadow-sm border-none"
+                                                onClick={() => handleStartEdit(invoice)}
+                                                aria-label="Editar"
+                                                title="Editar"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="text-white bg-red-500 hover:bg-red-500/60 shadow-sm border-none"
                                                 onClick={() => handleReject(invoice.id)}
                                                 aria-label="Eliminar"
                                                 title="Eliminar"

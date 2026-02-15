@@ -1,13 +1,36 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Lock, LogOut, Shield, Key } from 'lucide-react';
+import { Lock, LogOut, Shield, Key, Mail } from 'lucide-react';
 import { Button } from "@/shared/ui/button";
 import { SetPasswordDialog } from "@/features/auth/components/SetPasswordDialog";
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useGmailTokenStatus } from '@/features/settings/hooks/useGmailTokenStatus';
 
 export function SecuritySection() {
     const { user, signOut } = useAuth();
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const { status: gmailStatus, loading: gmailLoading } = useGmailTokenStatus();
+
+    const formatExpiryTime = (expiresIn: number | null) => {
+        if (!expiresIn || expiresIn <= 0) return 'Expirado';
+
+        const hours = Math.floor(expiresIn / 3600);
+        const minutes = Math.floor((expiresIn % 3600) / 60);
+
+        if (hours > 24) {
+            const days = Math.floor(hours / 24);
+            return `${days} día${days > 1 ? 's' : ''}`;
+        }
+        if (hours > 0) {
+            return `${hours} hora${hours > 1 ? 's' : ''}`;
+        }
+        return `${minutes} minuto${minutes > 1 ? 's' : ''}`;
+    };
+
+    const handleGmailConnect = () => {
+        if (!user?.id || !user?.email) return;
+        window.open(`/auth/google?userId=${user.id}&email=${user.email}`, '_blank', 'width=600,height=700');
+    };
 
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
@@ -36,6 +59,48 @@ export function SecuritySection() {
                         className="w-full sm:w-[220px] font-medium"
                     >
                         Cambiar / Establecer
+                    </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/30 gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`flex items-center justify-center p-2.5 rounded-xl shrink-0 ${gmailStatus?.requiresReauth
+                                ? 'bg-destructive/10'
+                                : gmailStatus?.connected
+                                    ? 'bg-primary/10'
+                                    : 'bg-muted'
+                            }`}>
+                            <Mail className={`h-5 w-5 ${gmailStatus?.requiresReauth
+                                    ? 'text-destructive'
+                                    : gmailStatus?.connected
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground'
+                                }`} />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-base font-semibold leading-none">Gmail</p>
+                            {gmailLoading ? (
+                                <p className="text-base text-muted-foreground leading-snug">Cargando...</p>
+                            ) : gmailStatus?.connected ? (
+                                <p className="text-base text-muted-foreground leading-snug">
+                                    {gmailStatus.requiresReauth
+                                        ? '⚠️ Sesión expirada - Reconecta'
+                                        : `✅ Conectado - Expira en ${formatExpiryTime(gmailStatus.expiresIn)}`
+                                    }
+                                </p>
+                            ) : (
+                                <p className="text-base text-muted-foreground leading-snug">No conectado</p>
+                            )}
+                        </div>
+                    </div>
+                    <Button
+                        variant={gmailStatus?.requiresReauth ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={handleGmailConnect}
+                        disabled={!user?.id || !user?.email}
+                        className="w-full sm:w-[220px] font-medium"
+                    >
+                        {gmailStatus?.connected ? 'Reconectar' : 'Conectar Gmail'}
                     </Button>
                 </div>
 

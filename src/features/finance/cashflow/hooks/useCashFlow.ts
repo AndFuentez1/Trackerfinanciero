@@ -152,8 +152,10 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   });
 
   const pivotPoint = cashFlowSeries.find(p => p.isSamePivot);
-  const projectionAnchor = cashFlowSeries.find(p => !p.isBeforePivot);
-  const projectionOffset = projectionAnchor ? round(balance_actual - projectionAnchor.balanceProyectado_Raw) : 0;
+  // Find the last point BEFORE pivot (last month with complete real data)
+  const lastHistoricalPoint = cashFlowSeries.slice().reverse().find(p => p.isBeforePivot);
+  // Use last historical point as anchor for projection continuity
+  const projectionOffset = lastHistoricalPoint ? round(balance_actual - lastHistoricalPoint.balanceProyectado_Raw) : 0;
   const balanceAdjustment = pivotPoint ? round(balance_actual - pivotPoint.balanceReal_Raw) : 0;
   const showBalanceAdjustment = useRealBalance && Math.abs(balanceAdjustment) > 0.01;
   const pendingPastExpensesTotal = futureExpenses
@@ -165,6 +167,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     return {
       ...p,
       balanceReal: p.isAfterPivot ? null : p.balanceReal_Raw,
+      // Include pivot point in projection so lines connect
       balanceProyectado: p.isBeforePivot ? null : projected,
       balanceSimulated: (pendingPastExpensesTotal > 0 && !p.isBeforePivot)
         ? round(projected - pendingPastExpensesTotal)
