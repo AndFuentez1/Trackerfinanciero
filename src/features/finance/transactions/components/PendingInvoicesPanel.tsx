@@ -20,6 +20,7 @@ import { AddTransactionDialog } from './AddTransactionDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getBackendUrl } from '@/core/api/backend';
 
 interface PendingInvoice {
     id: string;
@@ -234,7 +235,7 @@ export function PendingInvoicesPanel() {
             // Retroalimentación para el clasificador (Aprendizaje)
             if (finalCategory.toLowerCase() !== originalCategory.toLowerCase()) {
                 try {
-                    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/classifier/learn`, {
+                    await fetch(`${getBackendUrl()}/api/classifier/learn`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
