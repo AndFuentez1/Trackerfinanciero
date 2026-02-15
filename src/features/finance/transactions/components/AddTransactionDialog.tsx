@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import type { TransactionType, Transaction, CategoryItem, PaymentMethod} from '@/features/finance/hooks/useFinanceData';
+import type { TransactionType, Transaction, CategoryItem, PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
@@ -178,7 +178,7 @@ export function AddTransactionDialog({
 
   // Validation before opening form
   const validateBeforeOpen = () => {
-    if (loading) {return;}
+    if (loading) { return; }
 
     if (categories.length === 0 || paymentMethods.length === 0) {
       setShowAlert(true);
@@ -347,7 +347,13 @@ export function AddTransactionDialog({
       if (error) {
         toast({
           title: 'Error al agregar transacción',
-          description: typeof error === 'string' ? error : (error.message || 'Ocurrió un error inesperado.'),
+          description: typeof error === 'string'
+            ? error
+            : (error instanceof Error
+              ? error.message
+              : (typeof error === 'object' && error !== null && 'message' in error
+                ? String((error as { message: unknown }).message)
+                : 'Ocurrió un error inesperado.')),
           variant: 'destructive',
         });
       } else {
@@ -399,7 +405,8 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
-          className="gap-2 border border-input text-[15px] py-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
+          size="sm"
+          className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >
@@ -463,7 +470,7 @@ export function AddTransactionDialog({
                             field.onChange(val);
                             // Sync the category name for legacy support
                             const cat = availableCategories.find(c => c.value === val);
-                            if (cat) {setValue('category', cat.label);}
+                            if (cat) { setValue('category', cat.label); }
                           }}
                           value={field.value || ''}
                         >

@@ -70,21 +70,6 @@ describe('Dashboard (Index)', () => {
     it('renders loading state when auth is loading', () => {
         (useAuth as any).mockReturnValue({ user: null, loading: true });
         // The component returns null if !user (after hooks), but triggers isLoading check.
-        // Wait, logic says: if (isLoading) return Skeleton.
-        // But useAuth loading makes isLoading true.
-        // However, if !user returns, it might return null BEFORE Skeleton if logic order is wrong?
-        // Let's check code:
-        // const isLoading = ...
-        // if (showWelcomePanel) ...
-        // ... (Skeleton check was commented out in the file I read! Lines 103-105)
-        // Then: if (!user) return null;
-
-        // So if loading=true and user=null, it returns NULL? 
-        // Ah, the file I read had lines 103-105 commented out!
-        // "Removed global blocking to allow layout to render immediately"
-        // So validation: render(<Dashboard />) -> container empty?
-        // Or if user is null, it returns null.
-
         const { container } = render(<Dashboard />, { wrapper: MemoryRouter });
         expect(container).toBeEmptyDOMElement();
     });
@@ -99,10 +84,17 @@ describe('Dashboard (Index)', () => {
 
     it('renders WelcomePanel when onboarding NOT complete', async () => {
         (useFinanceData as any).mockReturnValue({
-            ...((useFinanceData as any).mock.results[0]?.value || {}),
-            welcomeCompleted: false,
-            paymentMethods: [],
-            categories: []
+            loading: false,
+            transactions: [],
+            allTransactions: [],
+            budgets: [],
+            paymentMethods: [], // Empty for empty state
+            categories: [], // Empty for empty state
+            welcomeCompleted: false, // Target condition
+            onboardingDecision: 'from_scratch',
+            currency: 'COP',
+            pendingImportData: [],
+            importProgress: { status: 'idle' }
         });
 
         render(<Dashboard />, { wrapper: MemoryRouter });
@@ -114,11 +106,18 @@ describe('Dashboard (Index)', () => {
 
     it('renders DecisionPanel when decision is pending', async () => {
         (useFinanceData as any).mockReturnValue({
-            ...((useFinanceData as any).mock.results[0]?.value || {}),
+            loading: false,
+            transactions: [],
+            allTransactions: [],
+            budgets: [],
             welcomeCompleted: true,
             onboardingDecision: null, // Pending decision
-            paymentMethods: [{ id: 'p1' }], // Has data
-            categories: [{ id: 'c1' }]
+            paymentMethods: [{ id: 'p1', name: 'Test PM', type: 'cash', balance: 0 }], // Has data
+            categories: [{ id: 'c1', name: 'Test Cat', type: 'expense', color: '#000' }],
+            currency: 'COP',
+            pendingImportData: [],
+            importProgress: { status: 'idle' },
+            hasPendingImport: false
         });
 
         render(<Dashboard />, { wrapper: MemoryRouter });

@@ -271,7 +271,7 @@ export function PendingInvoicesPanel() {
         }
     };
 
-    if (!loading && invoices.length === 0) { return null; }
+    if (loading || invoices.length === 0) { return null; }
 
     return (
         <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-6 animate-in slide-in-from-top-2">

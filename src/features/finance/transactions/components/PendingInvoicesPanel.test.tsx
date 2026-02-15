@@ -91,11 +91,14 @@ describe('PendingInvoicesPanel', () => {
 
     it('renders pending invoices', async () => {
         render(<PendingInvoicesPanel />);
+
+        // Wait for the loading state to complete and data to appear
         await waitFor(() => {
             expect(screen.getByText('Test Invoice')).toBeInTheDocument();
-            // Expect formatted currency (might differ based on locale/implementation, checking partial match)
-            expect(screen.getByText(/\$ 50.000/)).toBeInTheDocument();
-        });
+        }, { timeout: 3000 });
+
+        // Check for amount with flexible separator (dot or comma)
+        expect(screen.getByText(/\$50[.,]000/)).toBeInTheDocument();
     });
 
     it('approves invoice successfully', async () => {

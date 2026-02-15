@@ -84,16 +84,21 @@ export default function Index() {
     [authLoading, financeLoading, budgetsLoading]
   );
 
-  const { showWelcomePanel, showDecisionPanel } = useMemo(
-    () => getOnboardingGateState({
+  const { showWelcomePanel, showDecisionPanel } = useMemo(() => {
+    // STRICT GATING: Never show onboarding panels while loading
+    // This prevents the "flash" of the Welcome Panel for existing users
+    if (isLoading) {
+      return { showWelcomePanel: false, showDecisionPanel: false };
+    }
+
+    return getOnboardingGateState({
       currency,
       paymentMethods,
       categories,
       onboardingDecision,
       welcomeCompleted,
-    }),
-    [currency, paymentMethods.length, categories.length, onboardingDecision, welcomeCompleted]
-  );
+    });
+  }, [isLoading, currency, paymentMethods, categories, onboardingDecision, welcomeCompleted]);
 
   const showCompletionCard = useMemo(
     () => hasPendingImport && importProgress.status === 'completed',
