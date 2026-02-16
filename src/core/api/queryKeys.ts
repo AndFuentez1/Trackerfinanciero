@@ -13,6 +13,7 @@ export const queryKeys = {
         categories: (userId: string) => [...queryKeys.finance.all, 'categories', userId] as const,
         futureExpenses: (userId: string) => [...queryKeys.finance.all, 'futureExpenses', userId] as const,
         profile: (userId: string) => [...queryKeys.finance.all, 'profile', userId] as const,
+        pendingInvoices: (userId: string) => [...queryKeys.finance.all, 'pendingInvoices', userId] as const,
     },
     savings: {
         all: ['savings'] as const,

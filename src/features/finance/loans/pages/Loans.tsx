@@ -287,7 +287,7 @@ export default function LoansPage() {
                                         <HandCoins className="h-6 w-6" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">Préstamos y Deudas</h1>
+                                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Préstamos y Deudas</h1>
                                         <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Gestiona tus préstamos personales y deudas</p>
                                     </div>
                                 </div>
@@ -592,7 +592,7 @@ export default function LoansPage() {
                                             <ArrowDownCircle className="h-4 w-4 text-destructive" strokeWidth={2.5} />
                                         </div>
                                         <div className="flex flex-col">
-                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none uppercase tracking-wider text-[11px]">
+                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground leading-none tracking-tight">
                                                 Mis Deudas Pendientes
                                             </p>
                                         </div>
@@ -615,7 +615,7 @@ export default function LoansPage() {
                                             <ArrowUpCircle className="h-4 w-4 text-emerald-600" strokeWidth={2.5} />
                                         </div>
                                         <div className="flex flex-col">
-                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none uppercase tracking-wider text-[11px]">
+                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground leading-none tracking-tight">
                                                 Por Cobrar (Prestado)
                                             </p>
                                         </div>

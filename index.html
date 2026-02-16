@@ -417,7 +417,11 @@
         }
       });
 
+      let isUnloading = false;
+      window.addEventListener('beforeunload', () => { isUnloading = true; });
+
       import.meta.hot.on('vite:ws:disconnect', () => {
+        if (isUnloading) return;
         window.__tf_showError({
           err: {
             message: 'Se perdió la conexión con el servidor de desarrollo Vite.',

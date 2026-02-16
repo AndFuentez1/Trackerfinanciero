@@ -36,13 +36,13 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
     const [remainingTime, setRemainingTime] = useState(timeout);
     const [isWarning, setIsWarning] = useState(false);
 
-    const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-    const warningTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const warningTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastActivityRef = useRef<number>((() => {
         const stored = localStorage.getItem('lastActivity');
         return stored ? parseInt(stored, 10) : Date.now();
     })());
-    const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Clear all timers
     const clearTimers = useCallback(() => {
@@ -62,7 +62,7 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
 
     // Reset the idle timer
     const resetTimer = useCallback(() => {
-        if (!enabled) {return;}
+        if (!enabled) { return; }
 
         clearTimers();
         lastActivityRef.current = Date.now();
@@ -100,7 +100,7 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
 
     // Activity event handler
     const handleActivity = useCallback(() => {
-        if (!enabled || isWarning) {return;} // Don't reset during warning period
+        if (!enabled || isWarning) { return; } // Don't reset during warning period
         resetTimer();
     }, [enabled, isWarning, resetTimer]);
 

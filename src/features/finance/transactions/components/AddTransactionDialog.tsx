@@ -61,7 +61,7 @@ export interface AddTransactionDialogProps {
   onOpenChange?: (open: boolean) => void;
   categories?: CategoryItem[];
   paymentMethods?: PaymentMethod[];
-  onAddTransfer?: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: unknown }>;
+  onAddTransfer?: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: unknown }>;
 }
 
 const typeOptions: { value: TransactionType; label: string }[] = [
@@ -83,6 +83,7 @@ export function AddTransactionDialog({
   onAddTransfer
 }: AddTransactionDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
@@ -156,11 +157,21 @@ export function AddTransactionDialog({
 
   // Filter categories based on selected type
   const availableCategories = useMemo(() => {
-    return categories
+    // Combine prop/context categories with locally added ones
+    const combinedCategories = [...categories];
+
+    // Add local categories if they don't exist in the main list
+    localCategories.forEach(localCat => {
+      if (!combinedCategories.some(c => c.id === localCat.id)) {
+        combinedCategories.push(localCat);
+      }
+    });
+
+    return combinedCategories
       .filter(c => c.type === currentType)
       .map(c => ({ value: c.id, label: c.name }))
       .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
-  }, [currentType, categories]);
+  }, [currentType, categories, localCategories]);
 
   // Set first available category when type changes
   useEffect(() => {
@@ -212,13 +223,13 @@ export function AddTransactionDialog({
         return;
       }
 
-      const result = await onAddTransfer(
-        values.payment_method_id,
-        values.to_payment_method_id,
-        values.amount,
-        values.description || 'Transferencia',
-        values.date
-      );
+      const result = await onAddTransfer({
+        fromId: values.payment_method_id,
+        toId: values.to_payment_method_id,
+        amount: values.amount,
+        description: values.description || 'Transferencia',
+        date: values.date
+      });
 
       if (!result?.error) {
         toast({ title: 'Éxito', description: 'Transferencia realizada correctamente.' });
@@ -490,6 +501,7 @@ export function AddTransactionDialog({
                                 type={currentType}
                                 onAdd={addCategory}
                                 onSuccess={(cat) => {
+                                  setLocalCategories(prev => [...prev, cat]);
                                   setValue('category_id', cat.id);
                                   setValue('category', cat.name);
                                 }}

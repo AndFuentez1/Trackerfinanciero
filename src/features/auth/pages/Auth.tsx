@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Checkbox } from '@/shared/ui/checkbox';
+import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 
 const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [lastEmailSentTime, setLastEmailSentTime] = useState(0);
   const [rateLimitError, setRateLimitError] = useState(false);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [isProcessingTokens, setIsProcessingTokens] = useState(false);
 
   // Password flow states
   const [passwordStep, setPasswordStep] = useState<'email' | 'login' | 'create' | 'set-password'>('email');
@@ -40,7 +42,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (emailSent && resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer((prev) => prev - 1);
@@ -51,7 +53,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
   // Rate limit countdown effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (rateLimitCountdown > 0) {
       interval = setInterval(() => {
         setRateLimitCountdown((prev) => {
@@ -79,11 +81,27 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   // }, [user, loading, navigate]);
 
   useEffect(() => {
+    // Detect if we are in an OAuth callback or recovery flow
+    const hash = window.location.hash || '';
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
-    if (mode === 'reset-password' || mode === 'set-password' || window.location.hash.includes('type=recovery')) {
-      setActiveTab('password');
-      setPasswordStep('set-password');
+
+    const hasOAuthTokens =
+      hash.includes('access_token') ||
+      hash.includes('refresh_token') ||
+      hash.includes('type=recovery') ||
+      window.location.search.includes('code=');
+
+    if (hasOAuthTokens || mode === 'reset-password' || mode === 'set-password') {
+      setIsProcessingTokens(true);
+      if (mode === 'reset-password' || mode === 'set-password' || hash.includes('type=recovery')) {
+        setActiveTab('password');
+        setPasswordStep('set-password');
+      }
+
+      // Safety timeout: if after 10s we haven't redirected, show the form
+      const timer = setTimeout(() => setIsProcessingTokens(false), 10000);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -132,7 +150,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   };
 
   const handleSendMagicLink = async (e?: React.FormEvent | React.MouseEvent) => {
-    if (e) {e.preventDefault();}
+    if (e) { e.preventDefault(); }
     setError('');
 
     // Validar rate limit antes de proceder
@@ -433,12 +451,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     }
   };
 
-  if (loading) {
-    return (
-      <div ref={ref} className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
-      </div>
-    );
+  if (loading || isProcessingTokens) {
+    return <SkeletonLoader tab="auth" fullPage />;
   }
 
   if (needsVerification) {

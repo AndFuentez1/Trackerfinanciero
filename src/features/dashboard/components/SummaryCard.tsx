@@ -28,22 +28,22 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
 
   return (
     <div className={cn(
-      "summary-card p-4 sm:p-5 flex flex-col gap-1 h-full min-h-[110px] justify-between bg-slate-50/50 backdrop-blur-sm",
+      "summary-card p-4 sm:p-5 flex flex-col gap-2 h-full min-h-[100px] justify-between bg-slate-50/50 backdrop-blur-sm",
       className
     )}>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {/* Header: Icon & Title Area */}
-        <div className="flex items-start gap-3">
-          <div className="flex shrink-0 items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
-            <Icon className={cn("h-4 w-4 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
+        <div className="flex items-start gap-4">
+          <div className="flex shrink-0 items-center justify-center p-1 rounded-md bg-background/50 ring-1 ring-border/50">
+            <Icon className={cn("h-5 w-5 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
           </div>
           <div className="flex flex-col min-w-0">
-            <p className="text-sm font-medium text-muted-foreground tracking-tight leading-none">
+            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
               {title}
             </p>
             {description && (
-              <p className="text-[11px] text-muted-foreground font-normal leading-none mt-1">
+              <p className="text-xs text-muted-foreground font-normal leading-none mt-1.5">
                 {description}
               </p>
             )}
@@ -57,7 +57,7 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
             currencyCode={currency}
             className={cn(
               'font-bold tracking-tight leading-none',
-              "text-2xl",
+              "text-3xl", // Keep number size relative but ensure it fits larger card
               getTextColor()
             )}
           />

@@ -41,8 +41,9 @@ export function DangerZone() {
         futureExpenses: true,
     });
     const [profileResetOptions, setProfileResetOptions] = useState({
-        deleteProfile: true,
+        deleteProfile: false, // Default to FALSE to ensure user choice
         transactions: true,
+        bgudgets: true,
         budgets: true,
         savings: true,
         loans: true,
@@ -564,7 +565,10 @@ export function DangerZone() {
                             <AlertDialogFooter>
                                 <AlertDialogCancel className="rounded-xl bg-primary/60 text-white hover:bg-primary/60 hover:text-white">Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                    onClick={handleResetTotal}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleResetTotal();
+                                    }}
                                     className="bg-destructive text-white hover:bg-destructive/60 hover:text-white hover:border-transparent rounded-xl"
                                     disabled={!canDeleteProfile || loading}
                                 >

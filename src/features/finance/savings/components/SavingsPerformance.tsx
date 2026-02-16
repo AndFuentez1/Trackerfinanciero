@@ -48,7 +48,7 @@ interface SavingsPerformanceProps {
     type?: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id?: string;
   }) => Promise<{ error: any }>;
-  onAddTransfer: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: any }>;
+  onAddTransfer: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: any }>;
   onDeleteTransaction: (id: string) => Promise<void>;
 }
 

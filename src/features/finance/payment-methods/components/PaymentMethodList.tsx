@@ -30,16 +30,16 @@ const getTextColor = (hexColor: string): string => {
 };
 
 const getAccountType = (type: string, isSavings: boolean): string => {
-  if (isSavings) { return 'AHORRO'; }
+  if (isSavings) { return 'ahorro'; }
   switch (type) {
     case 'debit':
-      return 'DÉBITO';
+      return 'débito';
     case 'credit':
-      return 'CRÉDITO';
+      return 'crédito';
     case 'cash':
-      return 'EFECTIVO';
+      return 'efectivo';
     default:
-      return 'DIGITAL';
+      return 'digital';
   }
 };
 
@@ -107,22 +107,19 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
             className="relative h-48 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between group"
             style={{ backgroundColor: bgColor }}
           >
-            {/* Icono círculo sólido */}
-            <div className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/30 flex items-center justify-center shadow-md text-inherit">
-              <span style={{ color: textColor }}>{getIconForType(pm.type)}</span>
-            </div>
-
-            {/* Top Level: Name (Left) + Account Type (Right) */}
-            <div className="relative z-10 flex items-center justify-between pl-12">
-              <p className="text-base font-semibold ml-2" style={{ color: textColor }}>{pm.name}</p>
-              <span className="text-xs font-bold uppercase tracking-wide opacity-90" style={{ color: textColor }}>{accountType}</span>
+            {/* Top Level: Icon + Name (Perfect Alignment) + Account Type (Capitalized) */}
+            <div className="relative z-10 flex items-start justify-between w-full shrink-0">
+              <div className="flex items-start gap-3 truncate">
+                <div className="text-white flex items-center justify-center shrink-0 mt-[1px]">
+                  {getIconForType(pm.type)}
+                </div>
+                <p className="text-base font-bold truncate leading-none mt-[3.5px]" style={{ color: textColor }}>{pm.name}</p>
+              </div>
+              <span className="text-sm font-semibold tracking-tight opacity-90 whitespace-nowrap capitalize leading-none mt-[4px]" style={{ color: textColor }}>{accountType}</span>
             </div>
 
             {/* Middle Level: Balance (Prominent, Centered) */}
             <div className="relative z-10 flex flex-col items-start">
-              <p className="text-xs font-normal mb-2 opacity-90" style={{ color: textColor }}>
-                {pm.type === 'credit' ? 'Disponible' : 'Saldo en débito'}
-              </p>
               <div className="" style={{ color: textColor }}>
                 {pm.is_savings_account || pm.type === 'debit' || pm.type === 'cash'
                   ? renderBalance(pm.balance)
@@ -134,7 +131,9 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
 
             {/* Bottom Level: Secondary Info + Action Icons */}
             <div className="relative z-10 flex items-center justify-between">
-              <p className="text-xs opacity-75" style={{ color: textColor }}>Principal</p>
+              <p className="text-[10px] font-medium uppercase tracking-wider opacity-80" style={{ color: textColor }}>
+                {pm.type === 'credit' ? 'Disponible en crédito' : 'Saldo en débito'}
+              </p>
 
               <div className="flex gap-2">
                 {/* Pay Button for Credit Cards */}

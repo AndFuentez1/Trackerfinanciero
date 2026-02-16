@@ -5,7 +5,6 @@ import type { Database } from '@/integrations/supabase/types';
 import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, Budget } from '../types/financeTypes';
 
 // Supabase row types
-type PaymentMethodRow = Database['public']['Tables']['payment_methods']['Row'];
 export type ProfileSelect = Pick<
     Database['public']['Tables']['profiles']['Row'],
     'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color'
@@ -17,28 +16,26 @@ export interface UseFinanceQueriesReturn {
     categories: CategoryItem[];
     budgets: Budget[];
     profile: ProfileSelect | null;
+    pendingInvoices: any[];
 
     // Loading states
     pmLoading: boolean;
     catsLoading: boolean;
     budgetsLoading: boolean;
     profileLoading: boolean;
+    pendingInvoicesLoading: boolean;
     queriesLoading: boolean;
 }
 
-/**
- * Hook for all TanStack Query data fetching
- * Manages payment methods, categories, budgets, and profile queries
- */
 export function useFinanceQueries(userId: string | undefined): UseFinanceQueriesReturn {
     // 1. Payment Methods Query
     const { data: paymentMethods = [], isLoading: pmLoading } = useQuery({
         queryKey: queryKeys.finance.paymentMethods(userId ?? ''),
         queryFn: async () => {
-            if (!userId) {return [];}
+            if (!userId) { return []; }
             const { data, error } = await supabase.from('payment_methods').select('*').eq('user_id', userId);
-            if (error) {throw error;}
-            return data.map((pm: PaymentMethodRow) => ({
+            if (error) { throw error; }
+            return data.map((pm: any) => ({
                 id: pm.id,
                 name: pm.name,
                 type: pm.type as PaymentMethodType,
@@ -60,9 +57,9 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: categories = [], isLoading: catsLoading } = useQuery({
         queryKey: queryKeys.finance.categories(userId ?? ''),
         queryFn: async () => {
-            if (!userId) {return [];}
+            if (!userId) { return []; }
             const { data, error } = await supabase.from('categories').select('*').eq('user_id', userId);
-            if (error) {throw error;}
+            if (error) { throw error; }
             return data.map(c => ({
                 id: c.id,
                 name: c.name,
@@ -78,9 +75,9 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
         queryKey: queryKeys.finance.budgets(userId ?? ''),
         queryFn: async () => {
-            if (!userId) {return [];}
+            if (!userId) { return []; }
             const { data, error } = await supabase.from('budgets').select('*').eq('user_id', userId);
-            if (error) {throw error;}
+            if (error) { throw error; }
             return data.map(b => ({
                 id: b.id,
                 category: b.category as string,
@@ -100,14 +97,14 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
     const { data: profile = null, isLoading: profileLoading } = useQuery({
         queryKey: queryKeys.finance.profile(userId ?? ''),
         queryFn: async () => {
-            if (!userId) {return null;}
+            if (!userId) { return null; }
             const { data, error } = await supabase
                 .from('profiles')
                 .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
                 .eq('id', userId)
                 .single();
             if (error) {
-                if (error.code === 'PGRST116') {return null;} // No profile found
+                if (error.code === 'PGRST116') { return null; }
                 throw error;
             }
             return data as ProfileSelect;
@@ -116,17 +113,37 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
         staleTime: Infinity,
     });
 
-    const queriesLoading = pmLoading || catsLoading || budgetsLoading || profileLoading;
+    // 5. Pending Invoices Query
+    const { data: pendingInvoices = [], isLoading: pendingInvoicesLoading } = useQuery({
+        queryKey: queryKeys.finance.pendingInvoices(userId ?? ''),
+        queryFn: async () => {
+            if (!userId) { return []; }
+            const { data, error } = await supabase
+                .from('pending_invoices')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('status', 'pending')
+                .or('source.is.null,source.eq.ai,source.eq.gmail');
+            if (error) { throw error; }
+            return data || [];
+        },
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const queriesLoading = pmLoading || catsLoading || budgetsLoading || profileLoading || pendingInvoicesLoading;
 
     return {
         paymentMethods,
         categories,
         budgets,
         profile,
+        pendingInvoices,
         pmLoading,
         catsLoading,
         budgetsLoading,
         profileLoading,
+        pendingInvoicesLoading,
         queriesLoading,
     };
 }

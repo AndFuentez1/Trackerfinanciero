@@ -11,6 +11,9 @@ import { useToast } from '@/shared/hooks/use-toast';
 import { CalendarIcon, Plus, DollarSign, Wallet, Trash2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { Calendar } from '@/shared/ui/calendar';
+import { cn } from '@/core/utils';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
@@ -502,18 +505,66 @@ export function FutureExpensesList() {
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Inicio</label>
                                             <Input
-                                                type="date"
+                                                type="text"
+                                                className="hidden"
+                                                readOnly
                                                 value={newExpense.start_date}
-                                                onChange={e => setNewExpense({ ...newExpense, start_date: e.target.value })}
                                             />
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full justify-start text-left font-normal",
+                                                            !newExpense.start_date && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                        {newExpense.start_date ? format(new Date(newExpense.start_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={newExpense.start_date ? new Date(newExpense.start_date) : undefined}
+                                                        onSelect={(d) => d && setNewExpense({ ...newExpense, start_date: format(d, 'yyyy-MM-dd') })}
+                                                        initialFocus
+                                                        locale={es}
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">Fin (opcional)</label>
                                             <Input
-                                                type="date"
+                                                type="text"
+                                                className="hidden"
+                                                readOnly
                                                 value={newExpense.end_date}
-                                                onChange={e => setNewExpense({ ...newExpense, end_date: e.target.value })}
                                             />
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full justify-start text-left font-normal",
+                                                            !newExpense.end_date && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                        {newExpense.end_date ? format(new Date(newExpense.end_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={newExpense.end_date ? new Date(newExpense.end_date) : undefined}
+                                                        onSelect={(d) => d && setNewExpense({ ...newExpense, end_date: format(d, 'yyyy-MM-dd') })}
+                                                        initialFocus
+                                                        locale={es}
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
                                         </div>
                                     </div>
                                 </>
@@ -521,10 +572,34 @@ export function FutureExpensesList() {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Fecha de Pago</label>
                                     <Input
-                                        type="date"
+                                        type="text"
+                                        className="hidden"
+                                        readOnly
                                         value={newExpense.payment_date}
-                                        onChange={e => setNewExpense({ ...newExpense, payment_date: e.target.value })}
                                     />
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !newExpense.payment_date && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {newExpense.payment_date ? format(new Date(newExpense.payment_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={newExpense.payment_date ? new Date(newExpense.payment_date) : undefined}
+                                                onSelect={(d) => d && setNewExpense({ ...newExpense, payment_date: format(d, 'yyyy-MM-dd') })}
+                                                initialFocus
+                                                locale={es}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             )}
 
@@ -667,11 +742,29 @@ export function FutureExpensesList() {
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Fecha de Pago</label>
-                                <Input
-                                    type="date"
-                                    value={paymentDate}
-                                    onChange={(e) => setPaymentDate(e.target.value)}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !paymentDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {paymentDate ? format(new Date(paymentDate), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={paymentDate ? new Date(paymentDate) : undefined}
+                                            onSelect={(d) => d && setPaymentDate(format(d, 'yyyy-MM-dd'))}
+                                            initialFocus
+                                            locale={es}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
 
                             <div className="space-y-2">

@@ -10,3 +10,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20.11.0
+
+  - type: web
+    name: tracker-financiero-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    publishDir: dist_deploy
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0

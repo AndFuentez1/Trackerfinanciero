@@ -50,10 +50,12 @@ export function useFinanceDataLogic() {
     categories,
     budgets,
     profile,
+    pendingInvoices,
     pmLoading,
     catsLoading,
     budgetsLoading,
     profileLoading,
+    pendingInvoicesLoading,
     queriesLoading
   } = useFinanceQueries(user?.id);
 
@@ -149,6 +151,7 @@ export function useFinanceDataLogic() {
     insights: tx.insights,
     summary: tx.summary,
     filteredSummary: tx.filteredSummary,
+    pendingInvoices,
     expensesByCategory: tx.expensesByCategory,
     yieldStatistics: tx.yieldStatistics,
     orphanedTransactions: tx.orphanedTransactions,
@@ -162,6 +165,7 @@ export function useFinanceDataLogic() {
     profileLoading,
     queriesLoading,
     transactionsLoading: tx.transactionsLoading,
+    pendingInvoicesLoading,
     manualLoading: ui.manualLoading,
     actionLoading: ui.actionLoading,
     dateFilter: ui.dateFilter,

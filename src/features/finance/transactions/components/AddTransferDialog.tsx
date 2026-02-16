@@ -49,7 +49,7 @@ const transferSchema = z.object({
 type TransferFormValues = z.infer<typeof transferSchema>;
 
 interface AddTransferDialogProps {
-    onAdd: (fromId: string, toId: string, amount: number, description: string, date: string) => Promise<{ error: unknown }>;
+    onAdd: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: unknown }>;
 }
 
 export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
@@ -83,13 +83,13 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     const { control, handleSubmit, reset, formState: { isSubmitting } } = form;
 
     const onFormSubmit = async (values: TransferFormValues) => {
-        const { error } = await onAdd(
-            values.fromId,
-            values.toId,
-            values.amount,
-            values.description || 'Transferencia',
-            values.date
-        );
+        const { error } = await onAdd({
+            fromId: values.fromId,
+            toId: values.toId,
+            amount: values.amount,
+            description: values.description || 'Transferencia',
+            date: values.date
+        });
 
         if (!error) {
             reset();
@@ -105,7 +105,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
     };
 
     const formatDisplayedAmount = (value: number) => {
-        if (value === 0) {return '';}
+        if (value === 0) { return ''; }
         return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     };
 

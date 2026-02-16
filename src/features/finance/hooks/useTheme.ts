@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { calculateProportionalTheme } from '../utils/themeCalculations';
 import { THEME_OPTIONS, MASTER_PALETTE } from '../constants/themeConstants';
 
-const DEFAULT_BASE_COLOR = '#64748b'; // Gray
+const DEFAULT_BASE_COLOR = '#0f172a'; // Deep Navy Slate
 
 /**
  * Hook to manage application theme

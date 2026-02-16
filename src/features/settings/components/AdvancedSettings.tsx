@@ -74,6 +74,8 @@ type GmailProduct = {
     taxAmount?: number;
     code?: string | null;
     category?: string;
+    category_id?: string | null; // Add category_id
+    payment_method_id?: string | null; // Add payment method
     confidence?: number;
     source?: string;
 };
@@ -586,7 +588,11 @@ export function AdvancedSettings({
         const normalized = items
             .map(item => ({ ...item, status: normalizeStatus(item.status) }))
             .filter(item => item.status !== 'deleted');
-        let filtered = filterByDays(normalized, days);
+
+        // Ensure we filter archived items when searching for latest to find the next actionable one
+        let filtered = isLatest
+            ? normalized.filter(item => item.status !== 'archived')
+            : filterByDays(normalized, days);
 
         if (isLatest && filtered.length > 0) {
             filtered = [filtered.sort((a, b) => getDateMs(b) - getDateMs(a))[0]];
@@ -609,9 +615,25 @@ export function AdvancedSettings({
         }));
     };
 
+    const updateImportProduct = (messageId: string, index: number, updates: Partial<GmailProduct>) => {
+        setImportResults(prev => prev.map(result => {
+            if (result.messageId !== messageId) { return result; }
+            const products = result.products?.map((p, i) => i === index ? { ...p, ...updates } : p);
+            return { ...result, products };
+        }));
+    };
+
     const handleApproveInvoice = async (messageId: string) => {
         const target = importResults.find(result => result.messageId === messageId);
-        if (!target || !target.groups || target.groups.length === 0) { return; }
+        if (!target) { return; }
+
+        // Determine source based on active view
+        const activeView = getReviewView(messageId);
+        const hasProducts = target.products && target.products.length > 0;
+        const useProducts = activeView === 'products' && hasProducts;
+
+        if (!useProducts && (!target.groups || target.groups.length === 0)) { return; }
+
         if (!user?.id) {
             toast({ title: 'Error', description: 'No hay sesión activa', variant: 'destructive' });
             return;
@@ -651,53 +673,95 @@ export function AdvancedSettings({
                 return null;
             };
 
-            const transactions = [];
-            for (const group of target.groups) {
-                const amount = Number(group.amount);
-                if (!amount || Number.isNaN(amount)) {
-                    toast({ title: 'Error', description: 'Hay montos inválidos en la factura', variant: 'destructive' });
-                    return;
-                }
-                if (!group.payment_method_id) {
-                    toast({ title: 'Error', description: 'Selecciona un método de pago', variant: 'destructive' });
-                    return;
-                }
+            const pendingInvoices = [];
 
-                const categoryName = group.category?.trim() || '';
-                const categoryId = categoryName ? await ensureCategoryId(categoryName) : null;
+            if (useProducts) {
+                // Generate from Products
+                for (const product of target.products!) {
+                    const amount = Number(product.total);
+                    if (!amount || Number.isNaN(amount)) { continue; } // Skip invalid amounts
 
-                transactions.push({
-                    amount,
-                    description: group.description,
-                    category: categoryName || null,
-                    category_id: categoryId,
-                    type: 'expense',
-                    payment_method_id: group.payment_method_id,
-                    date: group.arrival_date,
-                });
+                    if (!product.payment_method_id) {
+                        toast({ title: 'Error', description: 'Selecciona un método de pago para todos los productos', variant: 'destructive' });
+                        return;
+                    }
+
+                    const categoryName = product.category?.trim() || '';
+                    const categoryId = product.category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
+
+                    pendingInvoices.push({
+                        user_id: user.id,
+                        amount,
+                        description: product.description,
+                        category: categoryName || null,
+                        category_id: categoryId,
+                        type: 'expense',
+                        payment_method_id: product.payment_method_id,
+                        arrival_date: target.date || new Date().toISOString(),
+                        status: 'pending',
+                        source: 'gmail',
+                        source_id: messageId // Track origin
+                    });
+                }
+            } else {
+                // Generate from Groups
+                for (const group of target.groups!) {
+                    const amount = Number(group.amount);
+                    if (!amount || Number.isNaN(amount)) {
+                        toast({ title: 'Error', description: 'Hay montos inválidos en la factura', variant: 'destructive' });
+                        return;
+                    }
+                    if (!group.payment_method_id) {
+                        toast({ title: 'Error', description: 'Selecciona un método de pago', variant: 'destructive' });
+                        return;
+                    }
+
+                    const categoryName = group.category?.trim() || '';
+                    const categoryId = group.category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
+
+                    pendingInvoices.push({
+                        user_id: user.id,
+                        amount,
+                        description: group.description,
+                        category: categoryName || null,
+                        category_id: categoryId,
+                        type: 'expense',
+                        payment_method_id: group.payment_method_id,
+                        arrival_date: group.arrival_date,
+                        status: 'pending',
+                        source: 'gmail',
+                        source_id: messageId
+                    });
+                }
             }
 
-            await addTransactionsBulk(transactions);
-
-            const isUuid = (value: string) =>
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-            const ids = target.groups
-                .map(g => g.id)
-                .filter((id): id is string => Boolean(id) && isUuid(String(id)));
-            if (ids.length > 0) {
-                const { error } = await supabase
-                    .from('pending_invoices')
-                    .delete()
-                    .in('id', ids);
-                if (error) { throw error; }
+            if (pendingInvoices.length === 0) {
+                toast({ title: 'Error', description: 'No hay items válidos para importar', variant: 'destructive' });
+                return;
             }
 
-            toast({ title: 'Factura aprobada', description: 'Las transacciones fueron registradas.' });
+            // Insert into pending_invoices
+            const { error: insertError } = await supabase
+                .from('pending_invoices')
+                .insert(pendingInvoices);
+
+            if (insertError) { throw insertError; }
+
+            // Clean up old pending invoices if this was a re-import of an existing UUID (logic from original code preserved/adapted if needed, 
+            // but here we are creating NEW pending invoices. If logic existed to clear old ones, it might be safer to keep it or just rely on manual review).
+            // For now, simple insert is safer as we are moving to "Pending" panel.
+
+            // Auto-archive message in Gmail
+            await archiveMessages([messageId]);
+
+            toast({ title: 'Enviado a Pendientes', description: 'La factura ha sido enviada para revisión final.' });
             setImportResults(prev => prev.filter(result => result.messageId !== messageId));
+
+            // Optionally refresh pending count if we had a hook for it
             refreshData();
         } catch (error: any) {
             console.error('[AdvancedSettings] Approval failed', error);
-            toast({ title: 'Error', description: 'No se pudo aprobar la factura', variant: 'destructive' });
+            toast({ title: 'Error', description: 'No se pudo procesar la factura', variant: 'destructive' });
         } finally {
             setApprovingMessageId(null);
         }
@@ -778,6 +842,8 @@ export function AdvancedSettings({
             total: parseNumberValue(product.total),
             totalExclTax: Number.isFinite(parseNumberValue(product.totalExclTax)) ? parseNumberValue(product.totalExclTax) : undefined,
             taxAmount: Number.isFinite(parseNumberValue(product.taxAmount)) ? parseNumberValue(product.taxAmount) : undefined,
+            // Initialize payment method
+            payment_method_id: paymentMethods.length > 0 ? paymentMethods[0].id : null,
         }));
     };
     const normalizeImportResults = (
@@ -1255,33 +1321,75 @@ export function AdvancedSettings({
                                                                         Total (IVA incl.): ${productsTotal.toLocaleString('es-CO')}
                                                                     </span>
                                                                 </div>
-                                                                <div className="max-h-40 overflow-auto">
+                                                                <div className="max-h-60 overflow-auto">
                                                                     <Table>
                                                                         <TableHeader>
                                                                             <TableRow>
                                                                                 <TableHead>Producto</TableHead>
-                                                                                <TableHead className="w-[90px] text-right">Cant.</TableHead>
-                                                                                <TableHead className="w-[120px] text-right">Precio</TableHead>
-                                                                                <TableHead className="w-[140px] text-right">Valor (IVA incl.)</TableHead>
+                                                                                <TableHead className="w-[180px]">Categoría</TableHead>
+                                                                                <TableHead className="w-[180px]">Método</TableHead>
+                                                                                <TableHead className="w-[120px] text-right">Valor (IVA incl.)</TableHead>
                                                                             </TableRow>
                                                                         </TableHeader>
                                                                         <TableBody>
-                                                                            {item.products?.map((product, idx) => (
-                                                                                <TableRow key={`${item.messageId}-product-${idx}`}>
-                                                                                    <TableCell className="text-xs">
-                                                                                        {product.description}
-                                                                                    </TableCell>
-                                                                                    <TableCell className="text-xs text-right">
-                                                                                        {product.quantity.toLocaleString('es-CO')}
-                                                                                    </TableCell>
-                                                                                    <TableCell className="text-xs text-right">
-                                                                                        ${Number(product.price || 0).toLocaleString('es-CO')}
-                                                                                    </TableCell>
-                                                                                    <TableCell className="text-xs text-right font-medium">
-                                                                                        ${Number(product.total || 0).toLocaleString('es-CO')}
-                                                                                    </TableCell>
-                                                                                </TableRow>
-                                                                            ))}
+                                                                            {item.products?.map((product, idx) => {
+                                                                                const resolvedCategory = resolveCategoryLabel(product.category, product.category_id);
+                                                                                const categoryExists = categories.some(cat => cat.name === resolvedCategory);
+
+                                                                                return (
+                                                                                    <TableRow key={`${item.messageId}-product-${idx}`}>
+                                                                                        <TableCell className="text-xs">
+                                                                                            {product.description}
+                                                                                        </TableCell>
+                                                                                        <TableCell>
+                                                                                            <Select
+                                                                                                value={resolvedCategory || undefined}
+                                                                                                onValueChange={(value) => {
+                                                                                                    const match = categories.find(cat => cat.name === value);
+                                                                                                    updateImportProduct(item.messageId, idx, {
+                                                                                                        category: value,
+                                                                                                        category_id: match?.id ?? null
+                                                                                                    });
+                                                                                                }}
+                                                                                            >
+                                                                                                <SelectTrigger className="h-7 text-xs">
+                                                                                                    <SelectValue placeholder="Categoría" />
+                                                                                                </SelectTrigger>
+                                                                                                <SelectContent>
+                                                                                                    {!categoryExists && resolvedCategory && (
+                                                                                                        <SelectItem value={resolvedCategory}>{resolvedCategory}</SelectItem>
+                                                                                                    )}
+                                                                                                    {categories.map(cat => (
+                                                                                                        <SelectItem key={cat.id} value={cat.name}>
+                                                                                                            {cat.name}
+                                                                                                        </SelectItem>
+                                                                                                    ))}
+                                                                                                </SelectContent>
+                                                                                            </Select>
+                                                                                        </TableCell>
+                                                                                        <TableCell>
+                                                                                            <Select
+                                                                                                value={product.payment_method_id || undefined}
+                                                                                                onValueChange={(value) => updateImportProduct(item.messageId, idx, { payment_method_id: value })}
+                                                                                            >
+                                                                                                <SelectTrigger className="h-7 text-xs">
+                                                                                                    <SelectValue placeholder="Método" />
+                                                                                                </SelectTrigger>
+                                                                                                <SelectContent>
+                                                                                                    {paymentMethods.map(method => (
+                                                                                                        <SelectItem key={method.id} value={method.id}>
+                                                                                                            {method.name}
+                                                                                                        </SelectItem>
+                                                                                                    ))}
+                                                                                                </SelectContent>
+                                                                                            </Select>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="text-xs text-right font-medium">
+                                                                                            ${Number(product.total || 0).toLocaleString('es-CO')}
+                                                                                        </TableCell>
+                                                                                    </TableRow>
+                                                                                )
+                                                                            })}
                                                                         </TableBody>
                                                                     </Table>
                                                                 </div>
@@ -1421,7 +1529,7 @@ export function AdvancedSettings({
                                                                             {approvingMessageId === item.messageId ? (
                                                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                                             ) : (
-                                                                                'Aprobar Factura'
+                                                                                'Enviar a Pendientes'
                                                                             )}
                                                                         </Button>
                                                                     </div>

@@ -64,6 +64,8 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
 - **Calidad de Código:**
     - Implementación de 10 reglas estrictas de Linter (ESLint).
     - Limpieza de deuda técnica en módulos críticos (`Loans`, `Settings`).
+- **Refactor de Transferencias:** Actualización de la firma de `addTransfer` para usar objetos, mejorando la mantenibilidad y resolviendo errores en la página de Ahorros.
+- **Alineación Visual:** Ajustes estructurales en encabezados y tarjetas para garantizar una alineación perfecta sin hacks de CSS.
 
 ## 🚀 Hoja de Ruta (Roadmap) & Próximos Pasos
 
@@ -110,6 +112,13 @@ npm run test:ui
 # Ejecutar pruebas y generar reporte de cobertura
 npm run coverage
 ```
+
+### Infraestructura de Despliegue (Render)
+
+La aplicación está configurada para desplegarse automáticamente en **Render** mediante el archivo `render.yaml`:
+- **Frontend:** Estático alojado desde la carpeta `dist_deploy`.
+- **Backend:** Servicio Node.js ejecutado desde la carpeta `backend`.
+- **Base de Datos:** Integración nativa con Supabase.
 
 ### Estructura de Pruebas
 

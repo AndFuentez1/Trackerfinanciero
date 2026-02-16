@@ -48,12 +48,13 @@ interface SummaryTabProps {
   };
   expensesByCategory: { category: string; amount: number }[];
   insights: Insight[];
-  onDeleteBudget: (id: string) => Promise<void>;
-  onDeletePaymentMethod: (id: string) => Promise<void>;
+  onDeleteBudget: (id: string) => Promise<{ error: any }>;
+  onDeletePaymentMethod: (id: string) => Promise<{ error: any }>;
   categories: CategoryItem[];
-  onUpdateTransaction: (id: string, updates: any) => Promise<any>;
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<{ error: any }>;
   dateFilter: { period: string; from: string | null; to: string | null };
   updateFilter: (period: string, from?: string, to?: string) => void;
+  pendingInvoices: any[];
   loading?: boolean;
 }
 
@@ -71,6 +72,7 @@ export function SummaryTab({
   onUpdateTransaction,
   dateFilter,
   updateFilter,
+  pendingInvoices,
   loading = false
 }: SummaryTabProps) {
   // Get current date values first
@@ -179,67 +181,58 @@ export function SummaryTab({
     );
   }, [transactions]);
 
-  // SECTION 1: Current Month Calculations
-  const currentMonthData = useMemo(() => {
+  // SECTION 2: Global Wealth & Debt (Row 1)
+  const dashboardStats = useMemo(() => {
+    // Row 1: Net Worth, Total Debt, Total Savings
+
+    // PATRIMONIO NETO: Dinero en cuentas, dinero que le deben y ahorros con sus rendimientos.
+    // Calculations: non-credit accounts (balance) + loans 'lent' (remaining)
+    const nonCreditAccounts = paymentMethods.filter(pm => pm.type !== 'credit');
+    const moneyInAccounts = nonCreditAccounts.reduce((sum, pm) => sum + pm.balance, 0);
+    const moneyLent = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + (l.total_amount - l.paid_amount), 0);
+    const netWorth = moneyInAccounts + moneyLent;
+
+    // DEUDA TOTAL: Deudas totales, creditos y dinero que debe.
+    // Calculations: loans 'borrowed' (remaining) + credit card balances
+    const moneyBorrowed = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + (l.total_amount - l.paid_amount), 0);
+    const creditBalances = paymentMethods.filter(pm => pm.type === 'credit').reduce((sum, pm) => sum + pm.balance, 0);
+    const totalDebt = moneyBorrowed + creditBalances;
+
+    // AHORROS TOTALES: Solo los valores que se encuentran en cuentas de ahorro y tarjetas designadas como ahorros con sus rendimientos.
+    const totalSavings = paymentMethods.filter(pm => pm.is_savings_account).reduce((sum, pm) => sum + pm.balance, 0);
+
+    // Row 2: Monthly Stats
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-indexed
+    const currentMonth_idx = now.getMonth();
+    const currentYear_idx = now.getFullYear();
 
     const currentMonthTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.date);
-      return transactionDate.getFullYear() === currentYear &&
-        transactionDate.getMonth() === currentMonth;
+      const d = new Date(t.date);
+      return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
     });
 
-    const monthIncome = currentMonthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+    const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const monthlyPaidExpenses = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-    const monthExpenses = currentMonthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+    // GASTOS PENDIENTES: Gastos del mes que aún no se pagan.
+    // We filter pending invoices for current month
+    const monthlyPendingExpenses = pendingInvoices.filter((inv: any) => {
+      const d = new Date(inv.arrival_date);
+      return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
+    }).reduce((sum: number, inv: any) => sum + inv.amount, 0);
 
-    // Debts for current month: loans + credit card balances
-    const myDebts = loans.filter(l => l.type === 'borrowed');
-    const monthDebts = myDebts.reduce((acc, l) => acc + (l.total_amount - l.paid_amount), 0);
-
-    const totalCreditDebt = paymentMethods
-      .filter(pm => pm.type === 'credit')
-      .reduce((sum, pm) => sum + pm.balance, 0);
-
-    const totalMonthDebts = monthDebts + totalCreditDebt;
-
-    const monthBalance = monthIncome - monthExpenses;
+    const monthlyBalance = monthlyIncome - (monthlyPaidExpenses + monthlyPendingExpenses);
 
     return {
-      monthIncome,
-      monthExpenses,
-      monthDebts: totalMonthDebts,
-      monthBalance,
+      netWorth,
+      totalDebt,
+      totalSavings,
+      monthlyIncome,
+      monthlyPaidExpenses,
+      monthlyPendingExpenses,
+      monthlyBalance
     };
-  }, [transactions, loans, paymentMethods]);
-
-  // SECTION 2: Accumulated Wealth & Health
-  const accumulatedData = useMemo(() => {
-    // Available Balance (Cash + Debit, excluding savings)
-    const availableBalance = paymentMethods
-      .filter(pm => (pm.type === 'cash' || pm.type === 'debit') && !pm.is_savings_account)
-      .reduce((sum, pm) => sum + pm.balance, 0);
-
-    // Savings Balance
-    const savingsBalance = paymentMethods
-      .filter(pm => pm.is_savings_account)
-      .reduce((sum, pm) => sum + pm.balance, 0);
-
-    // Available + Savings
-    const availablePlusSavings = availableBalance + savingsBalance;
-
-    return {
-      availableBalance,
-      availablePlusSavings,
-      savingsBalance
-    };
-  }, [paymentMethods]);
+  }, [paymentMethods, loans, transactions, pendingInvoices]);
 
   return (
     <div className="space-y-8 py-6 antialiased">
@@ -359,77 +352,75 @@ export function SummaryTab({
         </AlertDialog>
       </div>
 
-      {/* SECCIÓN 2: Disponibilidad y Ahorro */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {loading ? (
-          [...Array(4)].map((_, i) => (
-            <CardSkeleton key={i} height="100px" padding="1rem">
-              <PulseBlock height="0.75rem" width="60%" className="mb-2" />
-              <PulseBlock height="1.5rem" width="80%" />
-            </CardSkeleton>
-          ))
-        ) : (
-          <>
-            <SummaryCard
-              title="Saldo Disponible"
-              amount={accumulatedData.availableBalance}
-              icon={Wallet}
-              variant="positive"
-              description="Caja + Débito"
-            />
-            <SummaryCard
-              title="Patrimonio Líquido"
-              amount={accumulatedData.availablePlusSavings}
-              icon={PiggyBank}
-              variant="positive"
-              description="Total Global"
-            />
-            <SummaryCard
-              title="Balance del Mes"
-              amount={currentMonthData.monthBalance}
-              icon={Wallet}
-              variant={currentMonthData.monthBalance >= 0 ? 'positive' : 'negative'}
-              description="Ingresos vs Gastos"
-            />
-            <SummaryCard
-              title="Deudas del Mes"
-              amount={currentMonthData.monthDebts}
-              icon={DollarSign}
-              variant="warning"
-              description="Por pagar"
-            />
-          </>
-        )}
-      </div>
-
+      {/* SECTION 2: Resumen General */}
       <div className="flex flex-col gap-4">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-start gap-2 leading-none tracking-tight px-1">
           <CalendarIcon className="w-5 h-5 text-primary flex-shrink-0" />
-          <span className="truncate">Resumen del Mes</span>
+          <span className="truncate">Resumen General</span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <SummaryCard
-            title="Ingresos"
-            amount={currentMonthData.monthIncome}
-            icon={TrendingUp}
-            variant="positive"
-            description="Entradas este mes"
-          />
-          <SummaryCard
-            title="Gastos"
-            amount={currentMonthData.monthExpenses}
-            icon={TrendingDown}
-            variant="neutral"
-            description="Salidas este mes"
-          />
-          <SummaryCard
-            title="Ahorro Total"
-            amount={summary.totalSavings} // Using totalSavings from props which is usually monthly or global acc? Check logic later but keep prop usage
-            icon={PiggyBank}
-            variant="positive"
-            description="Acumulado"
-          />
-        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {[...Array(7)].map((_, i) => (
+              <CardSkeleton key={i} height="130px" padding="1.5rem">
+                <PulseBlock height="1rem" width="60%" className="mb-3" />
+                <PulseBlock height="2rem" width="80%" />
+              </CardSkeleton>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {/* ROW 1: 3 Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <SummaryCard
+                title="Patrimonio neto"
+                amount={dashboardStats.netWorth}
+                icon={Wallet}
+                variant="positive"
+              />
+              <SummaryCard
+                title="Deuda total"
+                amount={dashboardStats.totalDebt}
+                icon={DollarSign}
+                variant="negative"
+              />
+              <SummaryCard
+                title="Ahorros totales"
+                amount={dashboardStats.totalSavings}
+                icon={PiggyBank}
+                variant="positive"
+              />
+            </div>
+
+            {/* ROW 2: 4 Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <SummaryCard
+                title="Ingresos del mes"
+                amount={dashboardStats.monthlyIncome}
+                icon={TrendingUp}
+                variant="positive"
+              />
+              <SummaryCard
+                title="Gastos del mes"
+                amount={dashboardStats.monthlyPaidExpenses}
+                icon={TrendingDown}
+                variant="neutral"
+              />
+              <SummaryCard
+                title="Gastos pendientes"
+                amount={dashboardStats.monthlyPendingExpenses}
+                icon={AlertCircle}
+                variant="warning"
+              />
+              <SummaryCard
+                title="Balance del Mes"
+                amount={dashboardStats.monthlyBalance}
+                icon={BarChart3}
+                variant={dashboardStats.monthlyBalance >= 0 ? 'positive' : 'negative'}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Herramientas de Análisis y Detalles */}
