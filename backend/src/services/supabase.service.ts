@@ -41,7 +41,7 @@ export async function getCategoryId(categoryName: string, userId: string): Promi
         }
 
         // 1. Intento de match flexible
-        const match = categories.find(cat => {
+        const match = categories.find((cat: { name: string; id: string }) => {
             const catNorm = normalize(cat.name);
             return catNorm === normalizedSearch || catNorm.includes(normalizedSearch) || normalizedSearch.includes(catNorm);
         });
@@ -52,7 +52,7 @@ export async function getCategoryId(categoryName: string, userId: string): Promi
         }
 
         // 2. Fallback a "Otros"
-        const otrosMatch = categories.find(cat => normalize(cat.name) === 'otros');
+        const otrosMatch = categories.find((cat: { name: string; id: string }) => normalize(cat.name) === 'otros');
         if (otrosMatch) {
             logger.info(`ℹ️  Fallback 'Otros' para: ${nameToSearch} → ${otrosMatch.id}`);
             return otrosMatch.id;
@@ -90,7 +90,7 @@ export async function getPaymentMethodId(methodName: string, userId: string): Pr
         if (error) throw error;
 
         // Buscar coincidencia flexible
-        const match = methods.find(method => {
+        const match = methods.find((method: { name: string; id: string }) => {
             const methodNormalized = method.name
                 .toLowerCase()
                 .normalize('NFD')

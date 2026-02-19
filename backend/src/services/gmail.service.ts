@@ -458,7 +458,7 @@ export class GmailService {
                     threadId: m.threadId!,
                     snippet: details.data.snippet || '',
                     internalDate: details.data.internalDate!,
-                    date: dateHeader,
+                    date: dateHeader || undefined,
                     subject,
                     from,
                     hasZip: false, // Placeholder for metadata search
