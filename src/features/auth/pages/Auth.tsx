@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { Wallet, Mail, Lock, AlertCircle, CheckCircle2, Edit2, Check } from 'lucide-react';
+import { Wallet, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { SetPasswordStep } from '@/features/auth/components/SetPasswordStep';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Checkbox } from '@/shared/ui/checkbox';
+import { calculateProportionalTheme } from '@/features/finance/utils/themeCalculations';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 
 const Auth = forwardRef<HTMLDivElement>((_, ref) => {
@@ -24,9 +25,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [emailSent, setEmailSent] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [userName, setUserName] = useState('');
-  const [showPasswordField, setShowPasswordField] = useState(false);
-  const [userNotFound, setUserNotFound] = useState(false);
-  const [editingEmail, setEditingEmail] = useState(false);
   // Rate limiting states
   const [lastEmailSentTime, setLastEmailSentTime] = useState(0);
   const [rateLimitError, setRateLimitError] = useState(false);
@@ -35,11 +33,31 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
   // Password flow states
   const [passwordStep, setPasswordStep] = useState<'email' | 'login' | 'create' | 'set-password'>('email');
-  const [userExists, setUserExists] = useState(false);
-  const [userNeedsPassword, setUserNeedsPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('magic-link');
   const [resendTimer, setResendTimer] = useState(60);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+
+  // Normalizar el tema al color de marca sin importar el caché del localStorage
+  useEffect(() => {
+    const AUTH_BRAND_COLOR = '#64748b'; // Slate Gray (Color base de la App para Auth)
+    const brandTheme = calculateProportionalTheme(AUTH_BRAND_COLOR);
+    const root = document.documentElement;
+
+    for (const [key, value] of Object.entries(brandTheme)) {
+      root.style.setProperty(key, value);
+    }
+
+    // Al salir de Auth, intentar recuperar su preferencia para acelerar la carga del dashboard
+    return () => {
+      const stored = localStorage.getItem('theme-base-color');
+      if (stored) {
+        const restoredTheme = calculateProportionalTheme(stored);
+        for (const [key, value] of Object.entries(restoredTheme)) {
+          root.style.setProperty(key, value);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -161,14 +179,14 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await signInWithOtp(email, rememberMe);
-      if (error) {
+      const { error: otpError } = await signInWithOtp(email, rememberMe);
+      if (otpError) {
         const isOverEmailLimit =
-          error.message?.includes('over_email_send_rate_limit') ||
-          error.message?.includes('Email rate limit exceeded') ||
-          error.message?.includes('rate limit') ||
-          error.message?.includes('429') ||
-          error.message?.toLowerCase().includes('too many');
+          otpError.message?.includes('over_email_send_rate_limit') ||
+          otpError.message?.includes('Email rate limit exceeded') ||
+          otpError.message?.includes('rate limit') ||
+          otpError.message?.includes('429') ||
+          otpError.message?.toLowerCase().includes('too many');
 
         if (isOverEmailLimit) {
           // Tratamos como enviado para mostrar el estado genérico "Revisa tu correo"
@@ -178,7 +196,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           setRateLimitCountdown(120);
           setError('');
         } else {
-          setError(translateError(error.message || 'Error'));
+          setError(translateError(otpError.message || 'Error'));
         }
       } else {
         setEmailSent(true);
@@ -196,85 +214,29 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     try {
       // Construct dynamic redirect URL based on environment
       const origin = window.location.origin;
-      const baseUrl = import.meta.env.BASE_URL; // e.g., '/Trackerfinanciero/' or '/'
+      const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+      // If localhost, redirect to root '/'. Emulate prod BASE_URL only if actually in prod.
+      const baseUrl = isLocalhost ? '/' : import.meta.env.BASE_URL;
       const redirectTo = `${origin}${baseUrl}`; // Points to root, not /auth
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: googleError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
         }
       });
 
-      if (error) {
+      if (googleError) {
         setError('No se pudo iniciar con Google. Intenta de nuevo.');
       }
       // La redirección ocurre automáticamente si no hay error
-    } catch (err) {
+    } catch {
       setError('No se pudo iniciar con Google. Intenta de nuevo.');
     } finally {
       setIsGoogleSubmitting(false);
     }
   };
 
-  const handleEmailContinue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      // Detectar si usuario existe intentando login con password vacío
-      const { error } = await signInWithPassword(email, '', false);
-
-      if (error) {
-        const errorStatus = (error as any).status;
-        const errorError = (error as any).error;
-
-        // 400 invalid_grant = usuario existe pero sin contraseña
-        if (errorStatus === 400 && errorError === 'invalid_grant') {
-          // Auto-enviar Magic Link
-          setIsSubmitting(false);
-          setError('');
-          await handleSendMagicLink(e as any);
-          return;
-        }
-
-        // "Invalid login credentials" = usuario existe CON contraseña
-        if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid')) {
-          setUserExists(true);
-          setUserNeedsPassword(false);
-          setPasswordStep('login');
-        }
-        // Email not confirmed
-        else if ((error as any).code === 'email_not_confirmed' || error.message?.includes('Email not confirmed')) {
-          setUserExists(true);
-          setUserNeedsPassword(false);
-          setPasswordStep('login');
-        }
-        // Otros errores = usuario sin contraseña
-        else {
-          setIsSubmitting(false);
-          setError('');
-          await handleSendMagicLink(e as any);
-          return;
-        }
-      } else {
-        // Éxito con password vacío = usuario existe pero sin contraseña
-        setIsSubmitting(false);
-        setError('');
-        await handleSendMagicLink(e as any);
-        return;
-      }
-    } catch (err) {
-      // En caso de error, auto-enviar Magic Link
-      setIsSubmitting(false);
-      setError('');
-      await handleSendMagicLink(e as any);
-      return;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,38 +244,28 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await signInWithPassword(email.trim(), password, rememberMe);
+      const { data, error: authError } = await signInWithPassword(email.trim(), password, rememberMe);
 
-      if (error) {
-        // Detectar por status + error property (más robusto)
-        const errorStatus = (error as any).status;
-        const errorError = (error as any).error;
+      if (authError) {
+        const authErrObj = authError as { status?: number, error?: string, code?: string };
+        const errorStatus = authErrObj.status;
+        const errorError = authErrObj.error;
 
-        // 400 invalid_grant = usuario existe pero sin contraseña → Enviar Magic Link
         if (errorStatus === 400 && errorError === 'invalid_grant') {
           setIsSubmitting(false);
           setError('');
-          await handleSendMagicLink(e as any);
+          await handleSendMagicLink(e);
           return;
         }
 
-        // Credenciales incorrectas o usuario no existe
-        if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid')) {
+        if (authError.message?.includes('Invalid login credentials') || authError.message?.includes('invalid')) {
           setError('Correo o contraseña incorrectos.');
-          setUserNotFound(false);
-        }
-        // Email not confirmed
-        else if ((error as any).code === 'email_not_confirmed' || error.message?.includes('Email not confirmed')) {
+        } else if (authErrObj.code === 'email_not_confirmed' || authError.message?.includes('Email not confirmed')) {
           setNeedsVerification(true);
-          setUserNotFound(false);
-        }
-        // Otros errores
-        else {
-          setError(translateError(error.message || 'Error'));
-          setUserNotFound(false);
+        } else {
+          setError(translateError(authError.message || 'Error'));
         }
       } else if (data?.user) {
-        // ✅ Autenticación exitosa
         navigate('/');
       }
     } finally {
@@ -335,27 +287,35 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       return;
     }
 
+    if (!userName.trim()) {
+      setError('Por favor, ingresa tu nombre completo');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const origin = window.location.origin;
-      const baseUrl = import.meta.env.BASE_URL;
-      const separator = baseUrl.endsWith('/') ? '' : '/';
+      const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+      const baseUrl = isLocalhost ? '/' : import.meta.env.BASE_URL;
       const redirectUrl = `${origin}${baseUrl}`;
 
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
+          data: {
+            display_name: userName.trim(),
+          },
           emailRedirectTo: redirectUrl,
         }
       });
 
-      if (error) {
-        let translatedError = error.message || 'Error';
-        if (error.message?.includes('User already registered')) {
+      if (signUpError) {
+        let translatedError = signUpError.message || 'Error';
+        if (signUpError.message?.includes('User already registered')) {
           translatedError = 'Este correo ya está registrado. Intenta iniciar sesión.';
-        } else if (error.message?.includes('Password should be')) {
+        } else if (signUpError.message?.includes('Password should be')) {
           translatedError = 'La contraseña debe tener al menos 6 caracteres.';
         }
         setError(translatedError);
@@ -384,9 +344,9 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        setError(translateError(error.message || 'Error'));
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError(translateError(updateError.message || 'Error'));
       } else {
         navigate('/configuracion');
       }
@@ -395,61 +355,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     }
   };
 
-  const handleRegisterWithMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!userName.trim()) {
-      setError('Por favor, ingresa tu nombre');
-      return;
-    }
-
-    // Validar rate limit antes de proceder
-    if (!checkAndUpdateRateLimit()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Registro: Solo nombre + email, NO contraseña
-      // signInWithOtp es el único método válido
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          data: {
-            display_name: userName.trim(),
-          },
-          emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}?mode=confirm-signup`,
-        }
-      });
-
-      if (otpError) {
-        const isOverEmailLimit =
-          otpError.message?.includes('over_email_send_rate_limit') ||
-          otpError.message?.includes('429') ||
-          otpError.message?.toLowerCase().includes('too many');
-
-        if (isOverEmailLimit) {
-          setEmailSent(true);
-          setUserNotFound(false);
-          setRateLimitError(true);
-          setRateLimitCountdown(60);
-          setError('');
-        } else {
-          setError(translateError(otpError.message || 'Error'));
-        }
-      } else {
-        setEmailSent(true);
-        setUserNotFound(false);
-        setError('');
-      }
-    } catch (err) {
-      setError('Error al registrar. Por favor intenta de nuevo.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (loading || isProcessingTokens) {
     return <SkeletonLoader tab="auth" fullPage />;
@@ -523,12 +428,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           onValueChange={(value) => {
             setActiveTab(value);
             setError('');
-            if (value === 'password') {
-              setShowPasswordForm(true);
-              setEditingEmail(false);
-            } else {
-              setShowPasswordForm(false);
-            }
           }}
           className="w-full flex flex-col"
         >
@@ -628,8 +527,47 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           </TabsContent>
 
           <TabsContent value="password" className="animate-in fade-in duration-300">
-            {showPasswordForm && !emailSent && !userNotFound && (
-              <form onSubmit={handlePasswordLogin} className="space-y-5">
+            {emailSent ? (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="bg-muted border border-muted-foreground/30 p-6 rounded-2xl text-center space-y-3">
+                  <div className="w-12 h-12 bg-white border border-primary/60 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <CheckCircle2 className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-foreground">¡Verifica tu correo!</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Hemos enviado un enlace de confirmación a <span className="font-bold">{email}</span>.
+                    Abre el enlace para activar tu cuenta.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300"
+                  onClick={() => {
+                    setEmailSent(false);
+                    setEmail('');
+                    setUserName('');
+                  }}
+                >
+                  Continuar
+                </Button>
+              </div>
+            ) : passwordStep === 'set-password' ? null : (
+              <form onSubmit={isLoginMode ? handlePasswordLogin : handlePasswordCreate} className="space-y-5">
+                {!isLoginMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name-direct" className="text-sm font-medium">Nombre Completo</Label>
+                    <Input
+                      id="name-direct"
+                      type="text"
+                      placeholder="Tu nombre completo"
+                      className="h-11 border-default/80 rounded-[8.8px]"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="email-direct" className="text-sm font-medium">Correo electrónico</Label>
                   <div className="relative">
@@ -647,21 +585,85 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password-direct" className="text-sm font-medium">Contraseña</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password-direct" className="text-sm font-medium">Contraseña</Label>
+                    {isLoginMode && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!email) {
+                            setError('Por favor, ingresa tu correo primero.');
+                            return;
+                          }
+                          if (!checkAndUpdateRateLimit()) { return; }
+
+                          setError('');
+                          setIsSubmitting(true);
+                          try {
+                            const origin = window.location.origin;
+                            const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+                            const baseUrl = isLocalhost ? '/' : import.meta.env.BASE_URL;
+                            const { error: resetError } = await supabase.auth.signInWithOtp({
+                              email: email.trim(),
+                              options: {
+                                shouldCreateUser: false,
+                                emailRedirectTo: `${origin}${baseUrl}`,
+                              }
+                            });
+                            if (resetError) {
+                              const isOverEmailLimit = resetError.message?.includes('rate_limit') || resetError.message?.includes('429');
+                              if (isOverEmailLimit) {
+                                setEmailSent(true);
+                                setRateLimitError(true);
+                                setRateLimitCountdown(60);
+                              } else {
+                                setError(translateError(resetError.message || 'Error'));
+                              }
+                            } else {
+                              setEmailSent(true);
+                            }
+                          } finally {
+                            setIsSubmitting(false);
+                          }
+                        }}
+                        className="text-xs text-primary hover:underline"
+                        disabled={isSubmitting || rateLimitError}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="password-direct"
-                      type={showPasswordField ? 'text' : 'password'}
-                      placeholder="••••••••"
+                      type="password"
+                      placeholder={isLoginMode ? "••••••••" : "Mínimo 6 caracteres"}
                       className="pl-10 h-11 border-default/80 rounded-[8.8px]"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      autoFocus
                     />
                   </div>
                 </div>
+
+                {!isLoginMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password-direct" className="text-sm font-medium">Confirmar Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="confirm-password-direct"
+                        type="password"
+                        placeholder="Repite tu contraseña"
+                        className="pl-10 h-11 border-default/80 rounded-[8.8px]"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-2 py-1">
                   <Checkbox
@@ -677,426 +679,43 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
                 {error && (
                   <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2" role="alert">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Iniciando sesión...' : 'Entrar'}
-                </Button>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setActiveTab('magic-link');
-                    setError('');
-                    setShowPasswordForm(false);
-                    setUserNotFound(false);
-                  }}
-                  className="w-full text-xs text-muted-foreground hover:text-primary transition-colors underline pt-2"
-                  disabled={isSubmitting}
-                >
-                  Entrar con enlace mágico
-                </button>
-              </form>
-            )}
-
-            {showPasswordForm && userNotFound && !emailSent && (
-              <form onSubmit={handleRegisterWithMagicLink} className="space-y-5">
-                <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4">
-                  <p className="text-xs text-blue-800 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>Por favor escribe tu nombre y te enviaremos un link de acceso.</span>
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="name-register" className="text-sm font-medium">Nombre</Label>
-                  <Input
-                    id="name-register"
-                    type="text"
-                    placeholder="Tu nombre completo"
-                    className="h-11 border-slate-300 rounded-[8.8px]"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email-register" className="text-sm font-medium">Correo electrónico</Label>
-                    <div className="flex items-center gap-1">
-                      {!editingEmail && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingEmail(true)}
-                          aria-label="Editar correo electrónico"
-                          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                      )}
-                      {editingEmail && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingEmail(false)}
-                          aria-label="Confirmar correo electrónico"
-                          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-register"
-                      type="email"
-                      placeholder="nombre@ejemplo.com"
-                      className={`pl-10 h-11 transition-colors border-slate-300 rounded-[8.8px] ${editingEmail ? 'bg-background border-primary/50 focus:border-primary' : 'bg-muted/30 cursor-not-allowed'
-                        }`}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={!editingEmail}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 py-1">
-                  <Checkbox
-                    id="remember-register"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
-                  />
-                  <Label htmlFor="remember-register" className="text-sm text-muted-foreground cursor-pointer">
-                    Mantener sesión iniciada
-                  </Label>
-                </div>
-
-                {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2" role="alert">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
+                    <span>{error}</span>
                   </p>
                 )}
 
                 <Button
                   type="submit"
                   className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
-                  disabled={isSubmitting || rateLimitError}
-                >
-                  {isSubmitting ? 'Enviando link...' : rateLimitError ? `Espera un momento (${rateLimitCountdown}s)` : 'Registrarse y recibir enlace'}
-                </Button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserNotFound(false);
-                    setError('');
-                    setUserName('');
-                    setEditingEmail(false);
-                  }}
-                  className="w-full text-xs text-muted-foreground hover:text-primary transition-colors underline pt-2"
-                >
-                  Volver al login
-                </button>
-              </form>
-            )}
-
-            {showPasswordForm && emailSent && (
-              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                <div className="bg-muted border border-muted-foreground/30 p-6 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 bg-white border border-primary/60 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <CheckCircle2 className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground">¡Enlace enviado!</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Hemos enviado un enlace de confirmación a <span className="font-bold">{email}</span>.
-                    Abre el link para activar tu cuenta y acceder.
-                  </p>
-                </div>
-
-                <Button
-                  variant="outline"
-                  className="w-full border-primary/80 bg-white text-foreground hover:bg-primary/80 hover:text-white rounded-[8.8px] transition-all duration-300"
-                  onClick={() => {
-                    setEmailSent(false);
-                    setUserNotFound(false);
-                    setEmail('');
-                    setUserName('');
-                  }}
-                >
-                  Usar otro correo o método
-                </Button>
-              </div>
-            )}
-
-            {!showPasswordForm && passwordStep === 'email' && (
-              <form onSubmit={handleEmailContinue} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email-pwd" className="text-sm font-medium">Correo electrónico</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-pwd"
-                      type="email"
-                      placeholder="nombre@ejemplo.com"
-                      className="pl-10 h-11"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Verificando...' : 'Continuar'}
+                  {isSubmitting ? (isLoginMode ? 'Iniciando sesión...' : 'Creando cuenta...') : (isLoginMode ? 'Entrar' : 'Crear cuenta')}
                 </Button>
 
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setActiveTab('magic-link');
-                    setError('');
-                  }}
-                  className="w-full text-xs text-muted-foreground hover:text-primary transition-colors underline pt-2"
-                  disabled={isSubmitting}
-                >
-                  Entrar con enlace mágico
-                </button>
-              </form>
-            )}
-
-            {passwordStep === 'login' && (
-              <form onSubmit={handlePasswordLogin} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                      <span className="font-medium">{email}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setPasswordStep('email');
-                        setPassword('');
-                        setError('');
-                      }}
-                      className="h-8 text-xs"
-                    >
-                      Cambiar
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password-login" className="text-sm font-medium">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password-login"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 h-11 rounded-[8.8px]"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 py-1">
-                  <Checkbox
-                    id="remember-login"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="border border-slate-300 shadow-[0_0_48px_0_rgba(var(--color-primary),1)] hover:shadow-[0_0_56px_0_rgba(var(--color-primary),1)] transition-shadow"
-                  />
-                  <Label
-                    htmlFor="remember-login"
-                    className="text-sm text-muted-foreground cursor-pointer"
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLoginMode(!isLoginMode);
+                      setError('');
+                    }}
+                    className="w-full text-sm text-primary hover:underline transition-colors font-medium"
+                    disabled={isSubmitting}
                   >
-                    Mantener sesión iniciada
-                  </Label>
+                    {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('magic-link');
+                      setError('');
+                    }}
+                    className="w-full text-xs text-muted-foreground hover:text-primary transition-colors underline"
+                    disabled={isSubmitting}
+                  >
+                    Entrar con enlace mágico
+                  </button>
                 </div>
-
-                {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] rounded-[8.8px]"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Iniciando sesión...' : 'Entrar'}
-                </Button>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!email) {
-                      setError('Por favor, ingresa tu correo primero.');
-                      return;
-                    }
-
-                    if (!checkAndUpdateRateLimit()) {
-                      return;
-                    }
-
-                    setError('');
-                    setIsSubmitting(true);
-                    try {
-                      const origin = window.location.origin;
-                      const baseUrl = import.meta.env.BASE_URL;
-                      const redirectUrl = `${origin}${baseUrl}`;
-                      const { error } = await supabase.auth.signInWithOtp({
-                        email: email.trim(),
-                        options: {
-                          shouldCreateUser: false,
-                          emailRedirectTo: redirectUrl,
-                        }
-                      });
-
-                      if (error) {
-                        const isOverEmailLimit =
-                          error.message?.includes('over_email_send_rate_limit') ||
-                          error.message?.includes('429') ||
-                          error.message?.toLowerCase().includes('too many');
-
-                        if (isOverEmailLimit) {
-                          setEmailSent(true);
-                          setActiveTab('magic-link');
-                          setRateLimitError(true);
-                          setRateLimitCountdown(60);
-                          setError('');
-                        } else {
-                          setError(translateError(error.message || 'Error'));
-                        }
-                      } else {
-                        setEmailSent(true);
-                        setActiveTab('magic-link');
-                      }
-                    } catch (err) {
-                      setError('Error al enviar el correo. Por favor intenta de nuevo.');
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
-                  className="w-full text-xs text-muted-foreground hover:text-primary transition-colors underline pt-2"
-                  disabled={isSubmitting || rateLimitError}
-                >
-                  {isSubmitting ? 'Enviando...' : rateLimitError ? `Espera un momento (${rateLimitCountdown}s)` : '¿Olvidaste tu contraseña? Entrar con Magic Link'}
-                </button>
-              </form>
-            )}
-
-            {passwordStep === 'create' && (
-              <form onSubmit={handlePasswordCreate} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                      <span className="font-medium">{email}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setPasswordStep('email');
-                        setPassword('');
-                        setConfirmPassword('');
-                        setError('');
-                      }}
-                      className="h-8 text-xs"
-                    >
-                      Cambiar
-                    </Button>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg">
-                    <p className="text-xs text-blue-800 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>Crea una contraseña para tu nueva cuenta. Recibirás un correo de confirmación.</span>
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password-create" className="text-sm font-medium">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password-create"
-                        type="password"
-                        placeholder="Mínimo 6 caracteres"
-                        className="pl-10 h-11"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password-confirm" className="text-sm font-medium">Confirmar contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password-confirm"
-                        type="password"
-                        placeholder="Repite tu contraseña"
-                        className="pl-10 h-11"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
-                </Button>
               </form>
             )}
 

@@ -26,7 +26,6 @@ export const AuthGuard = () => {
             search.includes('error=');
 
         if (hasOAuthTokens) {
-            console.log('🔐 [AuthGuard] OAuth tokens detected, rendering Auth without redirect');
             setIsProcessingOAuth(true);
 
             // After 8 seconds, if still not authenticated, allow redirect

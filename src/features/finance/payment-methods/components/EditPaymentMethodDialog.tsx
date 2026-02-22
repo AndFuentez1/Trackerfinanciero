@@ -41,7 +41,7 @@ interface EditPaymentMethodDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   paymentMethod: PaymentMethod | null;
-  onSave?: (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => Promise<any>;
+  onSave?: (id: string, updates: Partial<Omit<PaymentMethod, 'id'>>) => Promise<unknown>;
   lockType?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function EditPaymentMethodDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'debit' as any,
+    type: 'debit' as PaymentMethod['type'],
     balance: '0',
     creditLimit: '',
     closingDate: '',
@@ -112,7 +112,7 @@ export function EditPaymentMethodDialog({
 
       const updates: Partial<Omit<PaymentMethod, 'id'>> = {
         name: formData.name,
-        type: formData.type as any,
+        type: formData.type as PaymentMethod['type'],
         balance: parseFloat(formData.balance) || 0,
         color: formData.color,
       };
@@ -183,7 +183,7 @@ export function EditPaymentMethodDialog({
             <Select
               value={formData.type}
               onValueChange={(value) =>
-                setFormData({ ...formData, type: value as any })
+                setFormData({ ...formData, type: value as PaymentMethod['type'] })
               }
               disabled={lockType}
             >
@@ -310,8 +310,8 @@ export function EditPaymentMethodDialog({
                   key={color}
                   onClick={() => setFormData({ ...formData, color })}
                   className={`w-8 h-8 rounded-lg border-2 transition-all ${formData.color === color
-                      ? 'border-foreground'
-                      : 'border-transparent'
+                    ? 'border-foreground'
+                    : 'border-transparent'
                     }`}
                   style={{ backgroundColor: color }}
                 />

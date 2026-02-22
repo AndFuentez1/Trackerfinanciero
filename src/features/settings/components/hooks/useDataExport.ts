@@ -137,12 +137,11 @@ export function useDataExport() {
                 title: 'Exportación exitosa',
                 description: `Se ha descargado el archivo ${fileName}`,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error exporting data:', error);
 
-            // More detailed error message
-            let errorMessage = 'No se pudo exportar los datos. Por favor, intenta de nuevo.';
-            if (error?.message) {
+            let errorMessage = 'Error al exportar los datos.';
+            if (error instanceof Error && error.message) {
                 errorMessage = `Error: ${error.message}`;
             }
 
@@ -200,7 +199,7 @@ export function useDataExport() {
             }
 
             const results = await Promise.all(promises);
-            const dataMap: Record<string, any> = {};
+            const dataMap: Record<string, unknown[]> = {};
 
             for (const res of results) {
                 if (res.error) { throw res.error; }
@@ -211,78 +210,96 @@ export function useDataExport() {
             const wb = XLSX.utils.book_new();
 
             if (selections.paymentMethods && dataMap.paymentMethods) {
-                const data = dataMap.paymentMethods.map((pm: any) => ({
-                    'Nombre': pm.name,
-                    'Tipo': pm.type,
-                    'Balance': pm.balance || 0,
-                    'Límite de Crédito': pm.credit_limit || 0,
-                    'Meta de Ahorro': pm.savings_goal || 0,
-                    'Fecha de Creación': pm.created_at ? new Date(pm.created_at) : null,
-                }));
+                const data = dataMap.paymentMethods.map((_pm) => {
+                    const pm = _pm as { name: string; type: string; balance: number; credit_limit: number; savings_goal: number; created_at: string | null };
+                    return {
+                        'Nombre': pm.name,
+                        'Tipo': pm.type,
+                        'Balance': pm.balance || 0,
+                        'Límite de Crédito': pm.credit_limit || 0,
+                        'Meta de Ahorro': pm.savings_goal || 0,
+                        'Fecha de Creación': pm.created_at ? new Date(pm.created_at) : null,
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Métodos de Pago');
             }
 
             if (selections.transactions && dataMap.transactions) {
-                const data = dataMap.transactions.map((t: any) => ({
-                    'Fecha': t.date ? new Date(t.date) : null,
-                    'Tipo': t.type,
-                    'Categoría': t.categories?.name || '',
-                    'Monto': t.amount || 0,
-                    'Descripción': t.description || '',
-                    'Método de Pago': t.payment_methods?.name || '',
-                    'Cuotas': t.installments || 0,
-                }));
+                const data = dataMap.transactions.map((_t) => {
+                    const t = _t as { date: string; type: string; categories?: { name: string }; amount: number; description: string; payment_methods?: { name: string }; installments: number };
+                    return {
+                        'Fecha': t.date ? new Date(t.date) : null,
+                        'Tipo': t.type,
+                        'Categoría': t.categories?.name || '',
+                        'Monto': t.amount || 0,
+                        'Descripción': t.description || '',
+                        'Método de Pago': t.payment_methods?.name || '',
+                        'Cuotas': t.installments || 0,
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Transacciones');
             }
 
             if (selections.categories && dataMap.categories) {
-                const data = dataMap.categories.map((c: any) => ({
-                    'Nombre': c.name,
-                    'Tipo': c.type,
-                    'Color': c.color,
-                    'Meta de Ahorro': c.savings_goal || 0,
-                }));
+                const data = dataMap.categories.map((_c) => {
+                    const c = _c as { name: string; type: string; color: string; savings_goal: number };
+                    return {
+                        'Nombre': c.name,
+                        'Tipo': c.type,
+                        'Color': c.color,
+                        'Meta de Ahorro': c.savings_goal || 0,
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Categorías');
             }
 
             if (selections.budgets && dataMap.budgets) {
-                const data = dataMap.budgets.map((b: any) => ({
-                    'Categoría': b.categories?.name || '',
-                    'Monto': b.amount || 0,
-                    'Período': b.period || '',
-                    'Fecha de Creación': b.created_at ? new Date(b.created_at) : null,
-                }));
+                const data = dataMap.budgets.map((_b) => {
+                    const b = _b as { categories?: { name: string }; amount: number; period: string; created_at: string | null };
+                    return {
+                        'Categoría': b.categories?.name || '',
+                        'Monto': b.amount || 0,
+                        'Período': b.period || '',
+                        'Fecha de Creación': b.created_at ? new Date(b.created_at) : null,
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Presupuestos');
             }
 
             if (selections.savings && dataMap.savingsTransactions) {
-                const data = dataMap.savingsTransactions.map((st: any) => ({
-                    'Cuenta de Ahorro': st.payment_methods?.name || '',
-                    'Tipo de Transacción': st.type || '',
-                    'Monto': st.amount || 0,
-                    'Fecha': st.date ? new Date(st.date) : null,
-                    'Descripción': st.description || '',
-                    'Rendimiento Calculado': st.calculated_yield || 0,
-                    'Balance Después': st.balance_after_transaction || 0,
-                }));
+                const data = dataMap.savingsTransactions.map((_st) => {
+                    const st = _st as { payment_methods?: { name: string }; type: string; amount: number; date: string | null; description: string; calculated_yield: number; balance_after_transaction: number };
+                    return {
+                        'Cuenta de Ahorro': st.payment_methods?.name || '',
+                        'Tipo de Transacción': st.type || '',
+                        'Monto': st.amount || 0,
+                        'Fecha': st.date ? new Date(st.date) : null,
+                        'Descripción': st.description || '',
+                        'Rendimiento Calculado': st.calculated_yield || 0,
+                        'Balance Después': st.balance_after_transaction || 0,
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Ahorros');
             }
 
             if (selections.futureExpenses && dataMap.futureExpenses) {
-                const data = dataMap.futureExpenses.map((fe: any) => ({
-                    'Descripción': fe.description || '',
-                    'Monto': fe.amount || 0,
-                    'Fecha de Pago': fe.payment_date ? new Date(fe.payment_date) : null,
-                    'Categoría': fe.categories?.name || '',
-                    'Es Suscripción': fe.is_subscription,
-                    'Frecuencia': fe.frequency || '',
-                    'Estado': fe.status || '',
-                }));
+                const data = dataMap.futureExpenses.map((_fe) => {
+                    const fe = _fe as { description: string; amount: number; payment_date: string | null; categories?: { name: string }; is_subscription: boolean; frequency: string; status: string };
+                    return {
+                        'Descripción': fe.description || '',
+                        'Monto': fe.amount || 0,
+                        'Fecha de Pago': fe.payment_date ? new Date(fe.payment_date) : null,
+                        'Categoría': fe.categories?.name || '',
+                        'Es Suscripción': fe.is_subscription,
+                        'Frecuencia': fe.frequency || '',
+                        'Estado': fe.status || '',
+                    };
+                });
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Gastos Futuros');
             }
@@ -304,11 +321,12 @@ export function useDataExport() {
                 title: 'Exportación exitosa',
                 description: `Se ha descargado el archivo ${fileName}`,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error exporting data:', error);
+            const err = error as Error;
             toast({
                 title: 'Error al exportar',
-                description: error?.message || 'No se pudo exportar los datos',
+                description: err?.message || 'No se pudo exportar los datos',
                 variant: 'destructive',
             });
         } finally {

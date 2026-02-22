@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from '@/features/dashboard/pages/Dashboard';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -47,8 +47,8 @@ describe('Dashboard (Index)', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-        (useFinanceData as any).mockReturnValue({
+        (useAuth as Mock).mockReturnValue({ user: mockUser, loading: false });
+        (useFinanceData as Mock).mockReturnValue({
             transactions: [],
             allTransactions: [],
             budgets: [],
@@ -61,14 +61,14 @@ describe('Dashboard (Index)', () => {
             pendingImportData: [],
             importProgress: { status: 'idle' }
         });
-        (useBudgetsData as any).mockReturnValue({
+        (useBudgetsData as Mock).mockReturnValue({
             loading: false,
             lastModification: null
         });
     });
 
     it('renders loading state when auth is loading', () => {
-        (useAuth as any).mockReturnValue({ user: null, loading: true });
+        (useAuth as Mock).mockReturnValue({ user: null, loading: true });
         // The component returns null if !user (after hooks), but triggers isLoading check.
         const { container } = render(<Dashboard />, { wrapper: MemoryRouter });
         expect(container).toBeEmptyDOMElement();
@@ -83,7 +83,7 @@ describe('Dashboard (Index)', () => {
     });
 
     it('renders WelcomePanel when onboarding NOT complete', async () => {
-        (useFinanceData as any).mockReturnValue({
+        (useFinanceData as Mock).mockReturnValue({
             loading: false,
             transactions: [],
             allTransactions: [],
@@ -105,7 +105,7 @@ describe('Dashboard (Index)', () => {
     });
 
     it('renders DecisionPanel when decision is pending', async () => {
-        (useFinanceData as any).mockReturnValue({
+        (useFinanceData as Mock).mockReturnValue({
             loading: false,
             transactions: [],
             allTransactions: [],

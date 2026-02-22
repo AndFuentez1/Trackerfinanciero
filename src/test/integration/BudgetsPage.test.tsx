@@ -13,7 +13,7 @@ vi.mock('@/features/finance/hooks/useFinanceData');
 
 // Mock child components
 vi.mock('@/features/finance/budgets/components/BudgetTotalCard', () => ({
-    BudgetTotalCard: ({ totalBudget }: any) => <div data-testid="budget-total">{totalBudget}</div>
+    BudgetTotalCard: ({ totalBudget }: { totalBudget: number }) => <div data-testid="budget-total">{totalBudget}</div>
 }));
 vi.mock('@/features/finance/budgets/components/IncomeCard', () => ({
     IncomeCard: () => <div data-testid="income-card">Ingresos</div>
@@ -40,8 +40,8 @@ describe('BudgetsPage', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-        (useBudgetsData as any).mockReturnValue({
+        vi.mocked(useAuth).mockReturnValue({ user: mockUser, loading: false } as ReturnType<typeof useAuth>);
+        vi.mocked(useBudgetsData).mockReturnValue({
             totalBudget: 500,
             budgets: [],
             loading: false,
@@ -49,8 +49,8 @@ describe('BudgetsPage', () => {
             budgetMonth: 5,
             setBudgetPeriod: mockSetBudgetPeriod,
             availableYears: [2023, 2024],
-        });
-        (useFinanceData as any).mockReturnValue({
+        } as unknown as ReturnType<typeof useBudgetsData>);
+        vi.mocked(useFinanceData).mockReturnValue({
             insights: [],
             categories: [],
             paymentMethods: [],
@@ -60,7 +60,7 @@ describe('BudgetsPage', () => {
             addBudget: vi.fn(),
             updateTransaction: vi.fn(),
             allTransactions: [],
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
     });
 
     it('renders main specific components', () => {
@@ -73,14 +73,14 @@ describe('BudgetsPage', () => {
     });
 
     it('renders loading skeleton when loading', () => {
-        (useBudgetsData as any).mockReturnValue({
+        vi.mocked(useBudgetsData).mockReturnValue({
             loading: true,
             totalBudget: 0,
             budgets: [],
             availableYears: [],
             budgetYear: 2024,
             budgetMonth: 'all'
-        });
+        } as unknown as ReturnType<typeof useBudgetsData>);
 
         // We check for absence of main content or presence of skeletons (usually identifiable by class or mocked)
         // Since we import SkeletonLoader components, we might want to check if they render.
@@ -108,11 +108,11 @@ describe('BudgetsPage', () => {
     });
 
     it('renders insights panel if budget insights exist', () => {
-        (useFinanceData as any).mockReturnValue({
+        vi.mocked(useFinanceData).mockReturnValue({
             insights: [{ id: 'budget-1', title: 'Alerta', type: 'warning' }],
             categories: [],
             paymentMethods: []
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         render(<BudgetsPage />, { wrapper: MemoryRouter });
         expect(screen.getByTestId('insights-panel')).toBeInTheDocument();

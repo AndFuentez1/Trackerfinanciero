@@ -150,13 +150,13 @@ export function FutureExpensesList() {
 
     const fetchExpenses = async () => {
         const { data } = await supabase
-            .from('future_expenses' as any)
+            .from('future_expenses' as never)
             .select('*')
             .eq('user_id', user!.id)
             .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) { setExpenses(data as any as FutureExpense[]); }
+        if (data) { setExpenses(data as unknown as FutureExpense[]); }
         setLoading(false);
     };
 
@@ -179,7 +179,7 @@ export function FutureExpensesList() {
             }
         }
 
-        const payload: any = {
+        const payload: Record<string, unknown> = {
             user_id: user!.id,
             description: newExpense.description,
             amount: parseFloat(newExpense.amount),
@@ -230,13 +230,13 @@ export function FutureExpensesList() {
 
         if (editingId) {
             const { error: updateError } = await supabase
-                .from('future_expenses' as any)
+                .from('future_expenses' as never)
                 .update(payload)
                 .eq('id', editingId);
             error = updateError;
         } else {
             const { error: insertError } = await supabase
-                .from('future_expenses' as any)
+                .from('future_expenses' as never)
                 .insert(payload);
             error = insertError;
         }
@@ -328,7 +328,7 @@ export function FutureExpensesList() {
                 }
 
                 const { error } = await supabase
-                    .from('future_expenses' as any)
+                    .from('future_expenses' as never)
                     .update({
                         payment_date: format(nextDate, 'yyyy-MM-dd')
                     })
@@ -338,7 +338,7 @@ export function FutureExpensesList() {
 
             } else {
                 const { error } = await supabase
-                    .from('future_expenses' as any)
+                    .from('future_expenses' as never)
                     .update({ status: 'paid' })
                     .eq('id', selectedExpense.id);
                 if (error) { throw error; }
@@ -359,7 +359,7 @@ export function FutureExpensesList() {
 
         try {
             const { error } = await supabase
-                .from('future_expenses' as any)
+                .from('future_expenses' as never)
                 .delete()
                 .eq('id', expenseToDelete.id);
 
@@ -486,7 +486,7 @@ export function FutureExpensesList() {
                                             <label className="text-sm font-medium">Periodicidad</label>
                                             <Select
                                                 value={newExpense.frequency || 'monthly'}
-                                                onValueChange={(val: any) => setNewExpense({ ...newExpense, frequency: val })}
+                                                onValueChange={(val: string) => setNewExpense({ ...newExpense, frequency: val })}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />

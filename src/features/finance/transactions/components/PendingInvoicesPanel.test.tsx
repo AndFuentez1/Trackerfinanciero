@@ -50,16 +50,16 @@ describe('PendingInvoicesPanel', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: { id: 'user1' } });
-        (useFinanceData as any).mockReturnValue({
+        vi.mocked(useAuth).mockReturnValue({ user: { id: 'user1' }, loading: false } as ReturnType<typeof useAuth>);
+        vi.mocked(useFinanceData).mockReturnValue({
             addTransaction: mockAddTransaction,
             paymentMethods: [{ id: 'pm1', name: 'Cash', type: 'cash' }],
             categories: [{ id: 'cat1', name: 'Food', type: 'expense' }],
             refreshData: mockRefreshData
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         // Setup default chain for select
-        const mockChain: any = {
+        const mockChain: { eq: ReturnType<typeof vi.fn>; or: ReturnType<typeof vi.fn>; order: ReturnType<typeof vi.fn> } = {
             eq: vi.fn(),
             or: vi.fn(),
             order: mockOrder

@@ -28,15 +28,15 @@ const queryClient = new QueryClient({
 });
 
 // Retry wrapper for lazy imports — retries up to 3 times on failure
-function lazyWithRetry(importFn: () => Promise<any>) {
+function lazyWithRetry<T extends React.ComponentType<unknown>>(importFn: () => Promise<{ default: T }>) {
   return lazy(() =>
     importFn().catch((err: Error) => {
       console.warn('[lazyWithRetry] Import failed, retrying...', err.message);
-      return new Promise<any>((resolve) => setTimeout(resolve, 1500))
+      return new Promise<void>((resolve) => setTimeout(resolve, 1500))
         .then(() => importFn())
         .catch((err2: Error) => {
           console.warn('[lazyWithRetry] 2nd attempt failed, retrying...', err2.message);
-          return new Promise<any>((resolve) => setTimeout(resolve, 2000))
+          return new Promise<void>((resolve) => setTimeout(resolve, 2000))
             .then(() => importFn());
         });
     })

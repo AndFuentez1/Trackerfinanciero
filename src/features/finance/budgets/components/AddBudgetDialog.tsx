@@ -41,8 +41,8 @@ import {
 } from '@/shared/ui/form';
 
 interface AddBudgetDialogProps {
-  onAdd: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>;
-  onDelete?: (budgetId: string) => Promise<{ error: any }>;
+  onAdd: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: unknown }>;
+  onDelete?: (budgetId: string) => Promise<{ error: unknown }>;
   monthOverride?: string;
   editingBudget?: {
     id: string;
@@ -106,7 +106,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     categories
       .filter(c => {
         // If editing, always include the budget's category even if type doesn't match default filter
-        if (editingBudget && editingBudget.category_id === c.id) {return true;}
+        if (editingBudget && editingBudget.category_id === c.id) { return true; }
 
         // Include both expenses and income categories
         return c.type === 'expense' || c.type === 'income';
@@ -164,7 +164,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   };
 
   const handleDelete = async () => {
-    if (!editingBudget?.id || !onDelete) {return;}
+    if (!editingBudget?.id || !onDelete) { return; }
 
     if (confirm('¿Estás seguro de que deseas eliminar este presupuesto?')) {
       const result = await onDelete(editingBudget.id);
@@ -181,7 +181,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       <DialogTrigger asChild>
         {children || (
           <Button
-            className="gap-2 shadow-sm border border-input text-[15px] py-2 flex items-center justify-center"
+            className="gap-2 shadow-sm border border-input text-[15px] md:text-[16px] py-2 flex items-center justify-center"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
             onClick={(e) => {

@@ -43,9 +43,7 @@ export function MobileNav() {
                         <div
                             key={item.name}
                             aria-disabled="true"
-                            className={cn(
-                                "flex items-center justify-center p-3 rounded-xl min-w-[48px] opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground"
-                            )}
+                            className="flex items-center justify-center p-3 rounded-xl min-w-[48px] opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground"
                         >
                             <item.icon className="w-6 h-6" />
                         </div>

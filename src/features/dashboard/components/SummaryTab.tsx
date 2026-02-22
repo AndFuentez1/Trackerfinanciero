@@ -48,13 +48,13 @@ interface SummaryTabProps {
   };
   expensesByCategory: { category: string; amount: number }[];
   insights: Insight[];
-  onDeleteBudget: (id: string) => Promise<{ error: any }>;
-  onDeletePaymentMethod: (id: string) => Promise<{ error: any }>;
+  onDeleteBudget: (id: string) => Promise<{ error: unknown }>;
+  onDeletePaymentMethod: (id: string) => Promise<{ error: unknown }>;
   categories: CategoryItem[];
-  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<{ error: any }>;
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<{ error: unknown }>;
   dateFilter: { period: string; from: string | null; to: string | null };
   updateFilter: (period: string, from?: string, to?: string) => void;
-  pendingInvoices: any[];
+  pendingInvoices: { amount: number; arrival_date: string;[key: string]: unknown }[];
   loading?: boolean;
 }
 
@@ -142,6 +142,14 @@ export function SummaryTab({
     }
   }, [availableYears, selectedYears, currentYear]);
 
+  // Estado para ocultar la alerta global de transacciones incompletas
+  const [isAlertHidden, setIsAlertHidden] = useState(() => sessionStorage.getItem('hideIncompleteAlert') === 'true');
+
+  const hideGlobalAlert = () => {
+    sessionStorage.setItem('hideIncompleteAlert', 'true');
+    setIsAlertHidden(true);
+  };
+
   // Transacciones filtradas según la selección de la gráfica (años/mes)
   const filteredChartTransactions = useMemo(() => {
     if (!allTransactions || allTransactions.length === 0) { return []; }
@@ -216,10 +224,10 @@ export function SummaryTab({
 
     // GASTOS PENDIENTES: Gastos del mes que aún no se pagan.
     // We filter pending invoices for current month
-    const monthlyPendingExpenses = pendingInvoices.filter((inv: any) => {
+    const monthlyPendingExpenses = pendingInvoices.filter((inv) => {
       const d = new Date(inv.arrival_date);
       return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
-    }).reduce((sum: number, inv: any) => sum + inv.amount, 0);
+    }).reduce((sum: number, inv) => sum + inv.amount, 0);
 
     const monthlyBalance = monthlyIncome - (monthlyPaidExpenses + monthlyPendingExpenses);
 
@@ -235,9 +243,9 @@ export function SummaryTab({
   }, [paymentMethods, loans, transactions, pendingInvoices]);
 
   return (
-    <div className="space-y-8 py-6 antialiased">
+    <div className="flex flex-col gap-6 pt-2 pb-6 antialiased">
       {/* SECTION 0: Global Alerts */}
-      {incompleteTransactions.length > 0 && (
+      {!isAlertHidden && incompleteTransactions.length > 0 && (
         <div className="bg-orange-50/50 border border-orange-200/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-orange-100 text-orange-600">
@@ -248,14 +256,31 @@ export function SummaryTab({
               <p className="text-xs text-orange-700 font-medium">Tienes {incompleteTransactions.length} transacciones sin categoría o método de pago.</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 bg-white/50 backdrop-blur-sm shadow-sm gap-2"
-            onClick={() => setEditingTransaction(incompleteTransactions[0])}
-          >
-            Corregir ahora <ArrowRight className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 bg-white/50 backdrop-blur-sm shadow-sm gap-2"
+              onClick={() => {
+                hideGlobalAlert();
+                const navEvent = new CustomEvent('navigate-to-tab', { detail: 'history' });
+                window.dispatchEvent(navEvent);
+                setTimeout(() => {
+                  window.location.href = '?reclassify=true';
+                }, 100);
+              }}
+            >
+              Corregir (Historial) <ArrowRight className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl text-orange-700/70 hover:bg-orange-100 hover:text-orange-800"
+              onClick={hideGlobalAlert}
+            >
+              Archivar
+            </Button>
+          </div>
         </div>
       )}
 
@@ -371,7 +396,7 @@ export function SummaryTab({
         ) : (
           <div className="flex flex-col gap-6">
             {/* ROW 1: 3 Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
               <SummaryCard
                 title="Patrimonio neto"
                 amount={dashboardStats.netWorth}
@@ -393,7 +418,7 @@ export function SummaryTab({
             </div>
 
             {/* ROW 2: 4 Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <SummaryCard
                 title="Ingresos del mes"
                 amount={dashboardStats.monthlyIncome}

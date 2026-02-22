@@ -1,8 +1,8 @@
 // Shim para Mixpanel cuando la librería no está instalada
-const noop = (..._args: any[]) => { };
+const noop = (..._args: unknown[]) => { };
 
-export interface Dict { [key: string]: any; }
-export interface Query { [key: string]: any; }
+export interface Dict { [key: string]: unknown; }
+export interface Query { [key: string]: unknown; }
 
 const mixpanel = {
     init: noop,

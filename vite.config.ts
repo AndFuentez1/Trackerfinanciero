@@ -24,7 +24,12 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: false,
         secure: false,
       },
-      '/auth': {
+      '/auth/google': {
+        target: 'http://localhost:3001',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/auth/status': {
         target: 'http://localhost:3001',
         changeOrigin: false,
         secure: false,
@@ -46,13 +51,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("@supabase/supabase-js")) {return "supabase";}
-            if (id.includes("lucide-react")) {return "icons";}
-            if (id.includes("@radix-ui")) {return "radix";}
-            if (id.includes("recharts")) {return "charts";}
-            if (id.includes("xlsx")) {return "excel";}
-            if (id.includes("@tanstack/react-query") || id.includes("react-hook-form")) {return "data";}
-            if (id.includes("react-router-dom")) {return "router";}
+            if (id.includes("@supabase/supabase-js")) { return "supabase"; }
+            if (id.includes("lucide-react")) { return "icons"; }
+            if (id.includes("@radix-ui")) { return "radix"; }
+            if (id.includes("recharts")) { return "charts"; }
+            if (id.includes("xlsx")) { return "excel"; }
+            if (id.includes("@tanstack/react-query") || id.includes("react-hook-form")) { return "data"; }
+            if (id.includes("react-router-dom")) { return "router"; }
           }
         },
       },

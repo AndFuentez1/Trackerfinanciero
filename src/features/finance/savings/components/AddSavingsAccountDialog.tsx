@@ -17,7 +17,7 @@ import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useToast } from '@/shared/hooks/use-toast';
 
 interface AddSavingsAccountDialogProps {
-  onAdd: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: any }>;
+  onAdd: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: unknown }>;
 }
 
 export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps) {
@@ -43,7 +43,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   };
 
   const getPlaceholderYield = () => {
-    if (decimalPlaces <= 0) {return '3';}
+    if (decimalPlaces <= 0) { return '3'; }
     return `3.${'0'.repeat(decimalPlaces)}`;
   };
 
@@ -66,8 +66,9 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       setEstimatedYield('');
       setOpen(false);
     } else {
+      const err = error as { code?: string; message?: string };
       // Check if it's a duplicate name error
-      if (error?.code === '23505' || error?.message?.includes('unique_payment_method_user')) {
+      if (err?.code === '23505' || err?.message?.includes('unique_payment_method_user')) {
         toast({
           title: 'Nombre duplicado',
           description: 'Ya existe una cuenta con ese nombre. Por favor usa un nombre diferente.',
@@ -76,7 +77,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       } else {
         toast({
           title: 'Error al crear cuenta',
-          description: error?.message || 'No se pudo crear la cuenta de ahorro',
+          description: err?.message || 'No se pudo crear la cuenta de ahorro',
           variant: 'destructive',
         });
       }
@@ -86,7 +87,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center">
+        <Button variant="default" size="sm" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] md:text-[16px] py-2 flex items-center justify-center">
           <Wallet className="h-4 w-4" />
           <span className="hidden sm:inline">Nueva cuenta</span>
         </Button>

@@ -67,9 +67,13 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
     const handleSave = async (category: Omit<CategoryItem, 'id'>, id?: string) => {
         let result;
         if (id) {
-            result = await updateCategory({ id, updates: category });
+            result = await updateCategory(id, category);
         } else {
-            result = await addCategory(category);
+            result = await addCategory({
+                name: category.name,
+                type: category.type,
+                color: category.color || DEFAULT_CATEGORY_COLOR
+            });
             // Trigger callback if creating new category (not editing)
             if (onCategoryCreated && !result?.error) {
                 onCategoryCreated();
@@ -158,9 +162,9 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                         </CardTitle>
                         <CardDescription className="text-base">Organiza tus transacciones por tipo</CardDescription>
                     </div>
-                    <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0">
+                    <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0 md:text-[15px]">
                         <Plus className="h-4 w-4" />
-                        Nueva
+                        Nueva<span className="hidden md:inline"> categoría</span>
                     </Button>
                 </div>
             </CardHeader>
@@ -217,7 +221,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
 
                                 <TabsContent value={alphabetTab} className="mt-4">
                                     <div className="flex-1 -mx-2 px-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-4 pb-2">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
                                             {filteredCategories.map(renderCategoryCard)}
                                             {filteredCategories.length === 0 && (
                                                 <div className="col-span-3 text-center py-8 text-muted-foreground">
@@ -231,7 +235,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                         ) : (
                             /* Show all categories directly when less than 20 */
                             <div className="flex-1 -mx-2 px-2">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-4 pb-2">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
                                     {typeFilteredCategories.map(renderCategoryCard)}
                                     {typeFilteredCategories.length === 0 && (
                                         <div className="col-span-3 text-center py-8 text-muted-foreground">

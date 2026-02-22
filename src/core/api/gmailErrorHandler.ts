@@ -37,5 +37,4 @@ window.fetch = async (...args) => {
 
 export function setupGmailErrorHandler() {
     // Handler is set up when this module is imported
-    console.log('✅ Gmail error handler initialized');
 }

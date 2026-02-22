@@ -22,16 +22,33 @@ export function useGmailTokenStatus() {
             return;
         }
 
+        const NORMAL_INTERVAL = 5 * 60 * 1000; // 5 min
+        const BACKOFF_STEPS = [30_000, 60_000, 120_000, 300_000]; // 30s, 1m, 2m, 5m
+        let failCount = 0;
+        let timeoutId: ReturnType<typeof setTimeout>;
+
+        const schedule = (delay: number) => {
+            timeoutId = setTimeout(fetchStatus, delay);
+        };
+
         const fetchStatus = async () => {
             try {
                 const response = await fetch(`/api/user/config/gmail/status?userId=${user.id}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch Gmail status');
-                }
+                if (!response.ok) { throw new Error('Failed to fetch Gmail status'); }
                 const data = await response.json();
                 setStatus(data);
+                failCount = 0;               // backend volvió — resetear backoff
+                schedule(NORMAL_INTERVAL);
             } catch (error) {
-                console.error('Error fetching Gmail token status:', error);
+                if (error instanceof TypeError) {
+                    // Error de red: backend no disponible — backoff silencioso
+                    const delay = BACKOFF_STEPS[Math.min(failCount, BACKOFF_STEPS.length - 1)];
+                    failCount++;
+                    schedule(delay);
+                } else {
+                    console.error('Error fetching Gmail token status:', error);
+                    schedule(NORMAL_INTERVAL);
+                }
                 setStatus(null);
             } finally {
                 setLoading(false);
@@ -40,10 +57,7 @@ export function useGmailTokenStatus() {
 
         fetchStatus();
 
-        // Poll every 5 minutes
-        const interval = setInterval(fetchStatus, 5 * 60 * 1000);
-
-        return () => clearInterval(interval);
+        return () => clearTimeout(timeoutId);
     }, [user?.id]);
 
     return { status, loading };

@@ -26,6 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
+    // Automatically recover from Vite HMR / Proxy Module errors
+    if (error.message && error.message.includes('No matching HTML proxy module found')) {
+      window.location.reload();
+      return { hasError: false };
+    }
     return { hasError: true, error };
   }
 
@@ -36,8 +41,8 @@ export class ErrorBoundary extends Component<Props, State> {
     // Also show in the global overlay (shared with Vite compile errors)
     // Wrap in try-catch to prevent error handling loop
     try {
-      if (typeof (window as any).__tf_showError === 'function') {
-        (window as any).__tf_showError({
+      if (typeof window.__tf_showError === 'function') {
+        window.__tf_showError({
           message: error.message,
           stack: error.stack,
           componentStack: errorInfo.componentStack,
@@ -61,18 +66,18 @@ export class ErrorBoundary extends Component<Props, State> {
   // We keep this component for React-specific lifecycle errors.
   componentDidMount() {
     // Host Verification - Detect mismatch between expected and current port in dev
-    const expectedPort = '8080';
+    const expectedPorts = ['8080', '8081'];
     const currentPort = window.location.port;
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    if (isLocal && currentPort && currentPort !== expectedPort) {
-      console.warn(`[ErrorBoundary] Port mismatch: expected ${expectedPort}, found ${currentPort}`);
-      if (typeof (window as any).__tf_showError === 'function') {
-        (window as any).__tf_showError({
+    if (isLocal && currentPort && !expectedPorts.includes(currentPort)) {
+      console.warn(`[ErrorBoundary] Port mismatch: expected one of ${expectedPorts.join(', ')}, found ${currentPort}`);
+      if (typeof window.__tf_showError === 'function') {
+        window.__tf_showError({
           err: {
             message: `Estás accediendo a la aplicación desde el puerto ${currentPort}.`,
             plugin: 'Advertencia de Puerto',
-            stack: `La configuración oficial de desarrollo espera el puerto ${expectedPort}.\n\nPor favor usa: http://localhost:${expectedPort}/`
+            stack: `La configuración oficial de desarrollo espera el puerto 8080 o 8081.\n\nPor favor usa: http://localhost:8080/ o http://localhost:8081/`
           }
         });
       }
@@ -143,8 +148,8 @@ function showRuntimeError(info: {
   componentStack?: string | null;
   source?: string;
 }) {
-  if (typeof (window as any).__tf_showError === 'function') {
-    (window as any).__tf_showError({
+  if (typeof window.__tf_showError === 'function') {
+    window.__tf_showError({
       err: {
         message: info.message,
         stack: info.stack,
@@ -159,6 +164,6 @@ function showRuntimeError(info: {
 
 function clearRuntimeError() {
   const overlay = document.getElementById(OVERLAY_ID);
-  if (overlay) {overlay.style.display = 'none';}
+  if (overlay) { overlay.style.display = 'none'; }
 }
 

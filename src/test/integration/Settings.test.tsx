@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import SettingsPage from '@/features/settings/pages/Settings';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -37,8 +37,8 @@ describe('SettingsPage', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-        (useFinanceData as any).mockReturnValue({
+        (useAuth as Mock).mockReturnValue({ user: mockUser, loading: false });
+        (useFinanceData as Mock).mockReturnValue({
             categories: [{ id: 'c1' }],
             loading: false,
             categoriesLoading: false,

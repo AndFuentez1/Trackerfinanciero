@@ -376,15 +376,6 @@ select {
     cursor: pointer;
   }
 
-  @media (max-width: 640px) {
-    .btn-base:has(svg) .button-text {
-      display: none;
-    }
-
-    .btn-base:has(svg) span:not(:has(svg)) {
-      display: none;
-    }
-  }
 }
 
 html,

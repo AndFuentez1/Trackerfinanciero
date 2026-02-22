@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LoansPage from '@/features/finance/loans/pages/Loans';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -41,26 +41,26 @@ vi.mock('@/features/finance/loans/hooks/useLoans', async (importOriginal) => {
 describe('LoansPage Integration', () => {
     // Re-setup inside describe to use locally defined variables if needed, or global
     beforeEach(() => {
-        (useAuth as any).mockReturnValue({ user: { id: 'u1' }, loading: false });
-        (useFinanceData as any).mockReturnValue({
+        (useAuth as Mock).mockReturnValue({ user: { id: 'u1' }, loading: false });
+        (useFinanceData as Mock).mockReturnValue({
             paymentMethods: [{ id: 'pm1', name: 'Banco', balance: 5000 }],
             updateTransaction: vi.fn(),
             transactions: [],
             allTransactions: [], // Add if needed
             budgets: []
         });
-        (useDecimalPlaces as any).mockReturnValue(2);
-        (useFormatCurrency as any).mockReturnValue({
+        (useDecimalPlaces as Mock).mockReturnValue(2);
+        (useFormatCurrency as Mock).mockReturnValue({
             formatCurrency: (val: number) => `$${val}`,
             formatCurrencySmall: (val: number) => `$${val}`,
             decimalPlaces: 2
         });
-        (useFinance as any).mockReturnValue({
+        (useFinance as Mock).mockReturnValue({
             currency: 'USD',
             decimalPlaces: 2
         });
 
-        (useLoans as any).mockReturnValue({
+        (useLoans as Mock).mockReturnValue({
             loans: [
                 {
                     id: 'l1',
@@ -100,12 +100,12 @@ describe('LoansPage Integration', () => {
     });
 
     it('displays error state', () => {
-        (useLoans as any).mockReturnValue({
+        (useLoans as Mock).mockReturnValue({
             loans: [],
             loading: false,
             error: 'Error al cargar'
         });
-        (useFinanceData as any).mockReturnValue({
+        (useFinanceData as Mock).mockReturnValue({
             paymentMethods: [],
             updateTransaction: vi.fn(),
             transactions: []

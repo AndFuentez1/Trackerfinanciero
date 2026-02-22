@@ -29,6 +29,7 @@ interface HistoryTabProps {
   statusFilter?: 'attention' | 'ok';
   paymentMethodFilter?: string;
   setStatusFilter?: (value: 'attention' | 'ok' | undefined) => void;
+  setPaymentMethodFilter?: (value: string | undefined) => void;
   loading?: boolean;
 }
 
@@ -49,6 +50,7 @@ export function HistoryTab({
   statusFilter,
   paymentMethodFilter,
   setStatusFilter,
+  setPaymentMethodFilter,
   loading = false
 }: HistoryTabProps) {
   const [localSearchTerm, setLocalSearchTerm] = useState('');
@@ -74,12 +76,22 @@ export function HistoryTab({
 
   const applyFilters = (list: Transaction[]) => {
     return list.filter(t => {
+      const isOrphan = !t.category && !t.category_id || !t.payment_method_id;
+
+      // Si estamos en modo reclasificación, mostramos siempre las huérfanas
+      // (a menos que haya una búsqueda de texto específica o filtro duro)
+      // Sin embargo, el comportamiento esperado de `highlightOrphaned` es mostrar
+      // estas transacciones prioritariamente.
+      if (highlightOrphaned && isOrphan) {
+        return true;
+      }
+
       // 1. Type Filter
       if (finalTypeFilter !== undefined) {
         if (finalTypeFilter === 'transfer') {
-          if (t.category !== 'Transferencia') {return false;}
+          if (t.category !== 'Transferencia') { return false; }
         } else if (finalTypeFilter === 'savings_investment') {
-          if (!['savings', 'investment'].includes(t.type)) {return false;}
+          if (!['savings', 'investment'].includes(t.type)) { return false; }
         } else if (t.type !== finalTypeFilter) {
           return false;
         }
@@ -87,33 +99,47 @@ export function HistoryTab({
 
       // 2. Category Filter
       if (finalCategoryFilter !== undefined) {
-        if (t.category_id !== finalCategoryFilter && t.category !== finalCategoryFilter) {return false;}
+        if (t.category_id !== finalCategoryFilter && t.category !== finalCategoryFilter) { return false; }
       }
 
       // 3. Payment Method Filter
       if (finalPaymentMethodFilter !== undefined) {
-        if (t.payment_method_id !== finalPaymentMethodFilter) {return false;}
+        if (finalPaymentMethodFilter === 'empty') {
+          if (t.payment_method_id) { return false; }
+        } else if (finalPaymentMethodFilter === 'credit' || finalPaymentMethodFilter === 'debit' || finalPaymentMethodFilter === 'cash') {
+          const pm = paymentMethods.find(p => p.id === t.payment_method_id);
+          if (!pm || pm.type !== finalPaymentMethodFilter) { return false; }
+        } else {
+          if (t.payment_method_id !== finalPaymentMethodFilter) { return false; }
+        }
       }
 
       // 4. Search Term (Description Only for precision)
       if (finalSearchTerm) {
         const term = finalSearchTerm.toLowerCase().trim();
-        if (!t.description.toLowerCase().includes(term)) {return false;}
+        if (!t.description.toLowerCase().includes(term)) { return false; }
       }
 
       // 5. Status Filter
       if (finalStatusFilter !== undefined) {
-        const isOrphan = !t.category && !t.category_id || !t.payment_method_id;
-        if (finalStatusFilter === 'attention' && !isOrphan) {return false;}
-        if (finalStatusFilter === 'ok' && isOrphan) {return false;}
+        if (finalStatusFilter === 'attention' && !isOrphan) { return false; }
+        if (finalStatusFilter === 'ok' && isOrphan) { return false; }
       }
 
       return true;
     });
   };
 
-  const filteredTransactions = useMemo(() => applyFilters(transactions), [transactions, finalSearchTerm, finalTypeFilter, finalCategoryFilter, finalStatusFilter, finalPaymentMethodFilter]);
+  const shouldLoadAll = finalStatusFilter === 'attention' || finalPaymentMethodFilter === 'empty';
+  const sourceList = (shouldLoadAll && allTransactions) ? allTransactions : transactions;
+
+  const filteredTransactions = useMemo(() => applyFilters(sourceList), [sourceList, finalSearchTerm, finalTypeFilter, finalCategoryFilter, finalStatusFilter, finalPaymentMethodFilter]);
   const filteredAllTransactions = useMemo(() => applyFilters(allTransactions || transactions), [allTransactions, transactions, finalSearchTerm, finalTypeFilter, finalCategoryFilter, finalStatusFilter, finalPaymentMethodFilter]);
+
+  const hasEmptyPaymentMethods = useMemo(() => {
+    const list = allTransactions || transactions;
+    return list.some(t => !t.payment_method_id && t.type !== 'saving' && t.type !== 'investment' && t.category !== 'Transferencia');
+  }, [allTransactions, transactions]);
 
   return (
     <div className="space-y-4">
@@ -124,6 +150,7 @@ export function HistoryTab({
 
       <TransactionList
         transactions={filteredTransactions}
+        hasEmptyPaymentMethods={hasEmptyPaymentMethods}
         onDelete={onDeleteTransaction}
         onUpdate={onUpdateTransaction}
         onEdit={onEditTransaction}
@@ -131,7 +158,9 @@ export function HistoryTab({
         categories={categories}
         highlightOrphaned={highlightOrphaned}
         statusFilter={finalStatusFilter}
-        setStatusFilter={setStatusFilter || (() => { })}
+        setStatusFilter={setStatusFilter || setLocalStatusFilter}
+        paymentMethodFilter={finalPaymentMethodFilter}
+        setPaymentMethodFilter={setPaymentMethodFilter || setLocalPaymentMethodFilter}
         loading={loading}
       />
     </div>

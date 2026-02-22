@@ -45,7 +45,7 @@ export default function CashFlow() {
   });
 
   // Datos reales del hook
-  const { cashFlowSeries, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning } = useCashFlow(year, month, range, 'real', useRealBalance);
+  const { cashFlowSeries, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning, balance_actual } = useCashFlow(year, month, range, 'real', useRealBalance);
   const loading = !cashFlowSeries;
 
   // Años/meses disponibles (debería venir de los datos)
@@ -174,9 +174,18 @@ export default function CashFlow() {
         <div className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
             <h3 className="text-lg font-semibold text-foreground">Desglose Mensual</h3>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/40 border border-border/50 rounded-lg px-3 py-1.5">
+              <span className="text-xs font-medium uppercase tracking-wide">Patrimonio actual:</span>
+              <span className={cn(
+                "font-semibold",
+                balance_actual >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {formatCOP(balance_actual)}
+              </span>
+            </div>
           </div>
           <div className="overflow-x-auto rounded-xl border border-input bg-card">
-            <table className="min-w-full text-sm">
+            <table className="hidden md:table min-w-full text-sm">
               <thead className="bg-muted/40">
                 <tr>
                   <th className="px-3 py-2 text-left">Mes/Año</th>
@@ -222,7 +231,7 @@ export default function CashFlow() {
                             <div>
                               <div className="font-semibold mb-1 text-destructive">Gastos</div>
                               <div><span className="font-semibold">Gastos Futuros:</span> {formatCOP(row.gastosFuturos)}</div>
-                              <div><span className="font-semibold">Cuotas Préstamos:</span> {formatCOP(row.egresosPrestamos)} <span className="ml-2">(Capital: {formatCOP(row.egresosPrestamosCapital)}, Interés: {formatCOP(row.egresosPrestamosInteres)})</span></div>
+                              <div><span className="font-semibold">Cuotas Préstamos:</span> {formatCOP(row.egresosPrestamos)} <span className="ml-2">(Cap: {formatCOP(row.egresosPrestamosCapital)}, Int: {formatCOP(row.egresosPrestamosInteres)})</span></div>
                               <div><span className="font-semibold">Cuotas Tarjeta:</span> {formatCOP(row.egresosTarjeta)}</div>
                               <div><span className="font-semibold">Gastos:</span> {formatCOP(row.egresosReales)}</div>
                               <div><span className="font-semibold">Ahorros e Inv.:</span> {formatCOP(row.egresosAhorro)}</div>
@@ -235,6 +244,69 @@ export default function CashFlow() {
                 ))}
               </tbody>
             </table>
+
+            {/* Mobile Cards for Breakdown */}
+            <div className="md:hidden flex flex-col divide-y divide-border">
+              {monthlyBreakdown.map((row, i) => (
+                <div key={i} className="flex flex-col p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-base">{row.mes}</span>
+                    <button
+                      type="button"
+                      className="text-xs font-medium underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
+                      onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                    >
+                      {expandedRow === i ? 'Ocultar' : 'Ver detalle'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-xs">Ingresos</span>
+                      <span className="text-success font-medium">{formatCOP(row.ingresosTotales)}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-muted-foreground text-xs">Egresos</span>
+                      <span className="text-destructive font-medium">{formatCOP(row.egresosTotales)}</span>
+                    </div>
+                    <div className="flex flex-col pt-1">
+                      <span className="text-muted-foreground text-xs">Neto</span>
+                      <span className="font-semibold">{formatCOP(row.balanceNetoMes)}</span>
+                    </div>
+                    <div className="flex flex-col items-end pt-1">
+                      <span className="text-muted-foreground text-xs">Acumulado</span>
+                      <span className="font-semibold text-primary">{formatCOP(row.balanceAcumulado)}</span>
+                    </div>
+                  </div>
+
+                  {expandedRow === i && (
+                    <div className="pt-3 mt-2 border-t border-border/50 grid grid-cols-1 gap-4 text-xs bg-muted/20 p-3 rounded-lg">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-success border-b border-success/20 pb-1 mb-2">Ingresos Detalle</div>
+                        <div className="flex justify-between"><span>Salario:</span> <span className="font-medium">{formatCOP(row.ingresosSalario)}</span></div>
+                        <div className="flex justify-between"><span>Intereses:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
+                        <div className="flex justify-between"><span>Préstamos a favor:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
+                        <div className="flex justify-between"><span>Otros:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-destructive border-b border-destructive/20 pb-1 mb-2">Gastos Detalle</div>
+                        <div className="flex justify-between"><span>Gastos Futuros:</span> <span className="font-medium">{formatCOP(row.gastosFuturos)}</span></div>
+                        <div className="flex flex-col">
+                          <div className="flex justify-between"><span>Cuotas Préstamos:</span> <span className="font-medium">{formatCOP(row.egresosPrestamos)}</span></div>
+                          <div className="text-[10px] text-muted-foreground flex justify-between pl-2">
+                            <span>Cap: {formatCOP(row.egresosPrestamosCapital)}</span>
+                            <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
+                        <div className="flex justify-between"><span>Gastos Reales:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
+                        <div className="flex justify-between"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>

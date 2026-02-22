@@ -39,6 +39,9 @@ interface TransactionListProps {
   highlightOrphaned?: boolean;
   statusFilter?: 'attention' | 'ok';
   setStatusFilter: (value: 'attention' | 'ok' | undefined) => void;
+  paymentMethodFilter?: string;
+  setPaymentMethodFilter?: (value: string | undefined) => void;
+  hasEmptyPaymentMethods?: boolean;
   currency?: string;
   loading?: boolean;
 }
@@ -56,6 +59,9 @@ export function TransactionList({
   highlightOrphaned = false,
   statusFilter,
   setStatusFilter,
+  paymentMethodFilter,
+  setPaymentMethodFilter,
+  hasEmptyPaymentMethods = false,
   currency = 'COP',
   loading = false,
 }: TransactionListProps) {
@@ -65,7 +71,7 @@ export function TransactionList({
 
   // State
   const [sortConfig, setSortConfig] = useState<{
-    key: 'date' | 'category' | 'amount' | 'status' | null;
+    key: 'date' | 'category' | 'amount' | 'status' | 'payment_method' | 'description' | 'type' | null;
     direction: 'asc' | 'desc';
   }>({ key: 'date', direction: 'desc' });
 
@@ -82,7 +88,7 @@ export function TransactionList({
       payment_method_id: t.payment_method_id || null,
       date: t.date,
     });
-    if (onEdit) {onEdit(t);}
+    if (onEdit) { onEdit(t); }
   }, [onEdit]);
 
   const cancelEdit = useCallback(() => {
@@ -91,7 +97,7 @@ export function TransactionList({
   }, []);
 
   const saveEdit = useCallback(async (t: Transaction) => {
-    if (!onUpdate || !draft || editingId !== t.id) {return;}
+    if (!onUpdate || !draft || editingId !== t.id) { return; }
 
     const updates: Partial<Omit<Transaction, 'id'>> = {
       description: draft.description,
@@ -118,7 +124,7 @@ export function TransactionList({
     setDraft(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
 
-  const handleSort = (key: 'date' | 'category' | 'amount' | 'status') => {
+  const handleSort = (key: 'date' | 'category' | 'amount' | 'status' | 'payment_method' | 'description' | 'type') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -126,8 +132,8 @@ export function TransactionList({
     setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: 'date' | 'category' | 'amount' | 'status') => {
-    if (sortConfig.key !== key) {return <ArrowUpDown className="ml-1 h-3 w-3" />;}
+  const getSortIcon = (key: 'date' | 'category' | 'amount' | 'status' | 'payment_method' | 'description' | 'type') => {
+    if (sortConfig.key !== key) { return <ArrowUpDown className="ml-1 h-3 w-3" />; }
     return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
@@ -157,6 +163,19 @@ export function TransactionList({
         const bCat = categories.find(c => c.id === b.category_id)?.name || b.category || '';
         aValue = aCat.toLowerCase();
         bValue = bCat.toLowerCase();
+      } else if (sortConfig.key === 'payment_method') {
+        const aMeth = paymentMethods.find(p => p.id === a.payment_method_id)?.name || '';
+        const bMeth = paymentMethods.find(p => p.id === b.payment_method_id)?.name || '';
+        if (!aMeth && bMeth) { return 1; }
+        if (aMeth && !bMeth) { return -1; }
+        aValue = aMeth.toLowerCase();
+        bValue = bMeth.toLowerCase();
+      } else if (sortConfig.key === 'description') {
+        aValue = a.description.toLowerCase();
+        bValue = b.description.toLowerCase();
+      } else if (sortConfig.key === 'type') {
+        aValue = typeLabels[a.type]?.toLowerCase() || '';
+        bValue = typeLabels[b.type]?.toLowerCase() || '';
       } else if (sortConfig.key === 'status') {
         const aIsOrphan = !a.category && !a.category_id || !a.payment_method_id;
         const bIsOrphan = !b.category && !b.category_id || !b.payment_method_id;
@@ -165,16 +184,16 @@ export function TransactionList({
       }
 
       if (sortConfig.key) {
-        if (aValue < bValue) {return sortConfig.direction === 'asc' ? -1 : 1;}
-        if (aValue > bValue) {return sortConfig.direction === 'asc' ? 1 : -1;}
+        if (aValue < bValue) { return sortConfig.direction === 'asc' ? -1 : 1; }
+        if (aValue > bValue) { return sortConfig.direction === 'asc' ? 1 : -1; }
         return 0;
       }
 
       const aIsOrphan = !a.category || !a.payment_method_id;
       const bIsOrphan = !b.category || !b.payment_method_id;
 
-      if (aIsOrphan && !bIsOrphan) {return -1;}
-      if (!aIsOrphan && bIsOrphan) {return 1;}
+      if (aIsOrphan && !bIsOrphan) { return -1; }
+      if (!aIsOrphan && bIsOrphan) { return 1; }
 
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
@@ -268,10 +287,24 @@ export function TransactionList({
                   </button>
                 </th>
                 <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px] border-r border-border">
-                  Descripción
+                  <button
+                    type="button"
+                    onClick={() => handleSort('description')}
+                    className="flex w-full items-center justify-center gap-1 hover:text-primary transition-colors"
+                  >
+                    Descripción
+                    <span>{getSortIcon('description')}</span>
+                  </button>
                 </th>
                 <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
-                  Tipo
+                  <button
+                    type="button"
+                    onClick={() => handleSort('type')}
+                    className="flex w-full items-center justify-center gap-1 hover:text-primary transition-colors"
+                  >
+                    Tipo
+                    <span>{getSortIcon('type')}</span>
+                  </button>
                 </th>
                 <th className="py-4 px-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider max-w-[80px] border-r border-border">
                   <button
@@ -285,7 +318,23 @@ export function TransactionList({
                   </button>
                 </th>
                 <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
-                  Método de Pago
+                  <div className="flex items-center justify-center gap-1">
+                    <Select value={paymentMethodFilter ? paymentMethodFilter : 'all'} onValueChange={(value) => setPaymentMethodFilter?.(value === 'all' ? undefined : value)}>
+                      <SelectTrigger className="h-6 w-[80px] text-[10px] border-none bg-transparent p-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Método</SelectItem>
+                        {hasEmptyPaymentMethods && <SelectItem value="empty">Vacíos</SelectItem>}
+                        <SelectItem value="credit">Crédito</SelectItem>
+                        <SelectItem value="debit">Débito</SelectItem>
+                        <SelectItem value="cash">Efectivo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <button onClick={() => handleSort('payment_method')} className="hover:text-primary transition-colors p-0 border-none bg-transparent" aria-label="Ordenar por método">
+                      {getSortIcon('payment_method')}
+                    </button>
+                  </div>
                 </th>
                 <th className="py-4 px-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
                   <button

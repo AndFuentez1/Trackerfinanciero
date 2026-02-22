@@ -58,7 +58,7 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             // Remove frontend-only fields like 'installments' if they don't exist in DB
-            const { installments, ...dbData } = txn as any;
+            const { installments, ...dbData } = txn as Record<string, unknown>;
 
             const { data, error } = await supabase.from('transactions')
                 .insert([{ ...dbData, user_id: userId }])
@@ -101,7 +101,7 @@ export function useFinanceMutations(userId: string | undefined) {
         mutationFn: async ({ id, updates }: { id: string, updates: Partial<Transaction> }) => {
             if (!userId) { throw new Error('Unauthenticated'); }
 
-            const { installments, ...dbUpdates } = updates as any;
+            const { installments, ...dbUpdates } = updates as Record<string, unknown>;
 
             // 1. Get old transaction to revert balance
             const { data: oldTxn } = await supabase
@@ -272,16 +272,16 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             // Only update valid columns and ensure id/user_id are not overwritten
-            const dbUpdates: any = {};
-            const allowed = [
+            const dbUpdates: Record<string, unknown> = {};
+            const allowed: (keyof PaymentMethod)[] = [
                 'name', 'type', 'balance', 'credit_limit',
                 'is_savings_account', 'savings_goal', 'estimated_yield',
                 'closing_date', 'payment_day', 'color'
             ];
 
             allowed.forEach(key => {
-                if ((updates as any)[key] !== undefined) {
-                    dbUpdates[key] = (updates as any)[key];
+                if (updates[key] !== undefined) {
+                    dbUpdates[key] = updates[key];
                 }
             });
 
@@ -339,7 +339,7 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             const dataToInsert = transactions.map(t => {
-                const { installments, created_at, ...dbData } = t as any;
+                const { installments, created_at, ...dbData } = t as Record<string, unknown>;
                 return { ...dbData, user_id: userId };
             });
 
@@ -413,7 +413,7 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             // Only update fields that exist in categories table
-            const dbUpdates: any = {};
+            const dbUpdates: Partial<CategoryItem> = {};
             if (updates.name !== undefined) { dbUpdates.name = updates.name; }
             if (updates.type !== undefined) { dbUpdates.type = updates.type; }
             if (updates.color !== undefined) { dbUpdates.color = updates.color; }

@@ -1,12 +1,12 @@
 import { useState } from "react";
+import type { Budget } from '@/features/finance/types/financeTypes';
 import type { BudgetState } from "@/features/finance/hooks/useBudgetsData";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { cn } from "@/core/utils";
 import { Pencil } from "lucide-react";
 import { AddBudgetDialog } from "./AddBudgetDialog";
 import { Button } from "@/shared/ui/button";
-import { Badge } from '@/shared/ui/badge';
-import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
+
 import type { PaymentMethod } from "@/features/finance/hooks/useFinanceData";
 import { useFormatCurrency } from "@/features/finance/hooks/useFormatCurrency";
 import { useFinance } from "@/features/finance/context/FinanceContext";
@@ -20,7 +20,7 @@ interface CategoryBudgetListProps {
 
 export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBudgetListProps) {
     const { refreshBudgets, saveBudget, deleteBudget } = useBudgetsData();
-    const { formatCurrencySmall } = useFormatCurrency();
+
     const [expandedCount, setExpandedCount] = useState(0);
 
     if (budgets.length === 0) {
@@ -75,9 +75,9 @@ function CategoryBudgetRow({
     onExpandChange
 }: {
     budget: BudgetState,
-    onSave: any,
-    onDelete: any,
-    onRefresh: any,
+    onSave: (budget: { category_id: string; category?: string; category_name?: string; amount: number; month?: string }) => Promise<any>,
+    onDelete: (id: string) => Promise<any>,
+    onRefresh: () => void,
     paymentMethods: PaymentMethod[],
     onExpandChange: (expanded: boolean) => void
 }) {

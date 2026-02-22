@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import type { TransactionType, CategoryItem} from '@/features/finance/hooks/useFinanceData';
+import type { TransactionType, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { useFinanceData, MASTER_PALETTE } from '@/features/finance/hooks/useFinanceData';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -16,7 +16,7 @@ import { Plus, Tag, Check } from 'lucide-react';
 import { cn } from '@/core/utils';
 
 interface AddCategoryDialogProps {
-    onAdd: (category: Omit<CategoryItem, 'id'>) => Promise<{ error: any; data?: CategoryItem }>;
+    onAdd: (category: Omit<CategoryItem, 'id'>) => Promise<{ error: unknown; data?: CategoryItem }>;
     type?: TransactionType;
     onSuccess?: (category: CategoryItem) => void;
     open?: boolean;
@@ -74,7 +74,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name) {return;}
+        if (!name) { return; }
 
         setIsSubmitting(true);
         const result = await onAdd({
@@ -143,7 +143,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                                         aria-disabled={isLocked}
                                         disabled={isLocked}
                                         onClick={() => {
-                                            if (isLocked) {return;}
+                                            if (isLocked) { return; }
                                             setType(option.value);
                                         }}
                                         className={cn(

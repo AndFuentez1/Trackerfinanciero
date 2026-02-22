@@ -138,10 +138,16 @@ export function ExpenseChart({
     return formatted; // Only string, no JSX
   };
 
-  const CustomLegend = ({ payload }: any) => {
+  interface LegendPayload {
+    value: string;
+    color: string;
+    payload: { name: string; value: number; color: string };
+  }
+
+  const CustomLegend = ({ payload }: { payload: LegendPayload[] }) => {
     return (
       <div className="flex flex-col gap-1 mt-6 w-full px-2">
-        {payload.map((entry: any, index: number) => {
+        {payload.map((entry: LegendPayload, index: number) => {
           const { symbol, amount } = formatCurrencyForLegend(entry.payload.value);
           const [integerPart, decimalPart] = amount.split(',');
 
@@ -181,57 +187,9 @@ export function ExpenseChart({
   return (
     <Card className="shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm h-full flex flex-col">
       <CardHeader className="pb-2">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg font-semibold text-foreground">Distribución</CardTitle>
-            <CardDescription className="text-sm text-muted-foreground">Gastos por categoría</CardDescription>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Select value={selectedMonth} onValueChange={onSelectedMonthChange}>
-              <SelectTrigger className="w-[130px] h-9 bg-background/50 border-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableMonths.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
-                  {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[150px]">
-                <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {onSelectAllYears && (
-                  <>
-                    <DropdownMenuCheckboxItem
-                      checked={selectedYears.length === availableYears.length}
-                      onCheckedChange={onSelectAllYears}
-                    >
-                      Todos
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {availableYears.map(year => (
-                  <DropdownMenuCheckboxItem
-                    key={year}
-                    checked={selectedYears.includes(year)}
-                    onCheckedChange={() => toggleYear(year)}
-                  >
-                    {year}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div>
+          <CardTitle className="text-lg font-semibold text-foreground">Distribución</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">Gastos por categoría</CardDescription>
         </div>
       </CardHeader>
 

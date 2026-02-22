@@ -8,6 +8,29 @@
   <link rel="icon" href="./favicon.ico" type="image/x-icon" />
   <title>TrackFinance</title>
 
+  <!-- Clean Console Logs and Prevent Self-XSS warnings by hiding console behavior in production -->
+  <script>
+    (function() {
+      // Only keep logs locally or if explicitly enabling debug
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalhost && !localStorage.getItem('TF_DEBUG')) {
+        const noop = () => {};
+        window.console.log = noop;
+        window.console.warn = noop;
+        window.console.info = noop;
+        window.console.debug = noop;
+        // Extend to block React DevTools Self-XSS warning style injections if possible, though mostly handled by silencing logs
+      }
+      
+      // Clear initial console to remove browser/extension injected warnings like Self-XSS
+      if (!isLocalhost) {
+          setTimeout(() => {
+              console.clear();
+          }, 1000);
+      }
+    })();
+  </script>
+
   <!-- Critical Error Handler - Must be loaded first and non-module to run immediately -->
   <script>
     (function () {

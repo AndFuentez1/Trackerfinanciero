@@ -77,7 +77,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
 
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {paymentMethods.map((pm) => {
         const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
@@ -155,7 +155,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
                 )}
 
                 {(onEdit || onDelete) && (
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="flex gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {onEdit && (
                       <button
                         title="Editar"

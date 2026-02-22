@@ -36,19 +36,19 @@ interface SavingsPerformanceProps {
   accountPerformance: AccountPerformance[];
   transactions: SavingsTransaction[];
   totalBalance: number;
-  onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: any }>;
+  onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: unknown }>;
   onDeleteAccount: (id: string) => Promise<void>;
   onEdit: (id: string) => void;
-  onAddTransaction: (transaction: Omit<SavingsTransaction, 'id'>) => Promise<{ error: any }>;
-  onUpdateTransactionAmount: (id: string, newAmount: number) => Promise<{ error: any }>;
+  onAddTransaction: (transaction: Omit<SavingsTransaction, 'id'>) => Promise<{ error: unknown }>;
+  onUpdateTransactionAmount: (id: string, newAmount: number) => Promise<{ error: unknown }>;
   onUpdateTransactionFull: (id: string, updates: {
     amount?: number;
     date?: string;
     description?: string;
     type?: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id?: string;
-  }) => Promise<{ error: any }>;
-  onAddTransfer: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: any }>;
+  }) => Promise<{ error: unknown }>;
+  onAddTransfer: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: unknown }>;
   onDeleteTransaction: (id: string) => Promise<void>;
 }
 

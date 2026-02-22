@@ -849,16 +849,16 @@ export function ImportExcelDialog({
       // Mostrar resultados de validación
       if (validationResults.failed > 0) {
         toast({
-          title: `⚠️ Validación del 10% (${sampleSize} registros)`,
-          description: `Pasaron: ${validationResults.passed}, Fallaron: ${validationResults.failed}\n${validationResults.issues.slice(0, 3).join('\n')}${validationResults.issues.length > 3 ? '\n...' : ''}`,
+          title: `⚠️ Revisión de formato con problemas`,
+          description: `Se detectaron inconsistencias en algunas filas de muestra:\n${validationResults.issues.slice(0, 3).join('\n')}${validationResults.issues.length > 3 ? '\n...' : ''}`,
           variant: "destructive",
           duration: 10000,
         });
       } else {
         toast({
-          title: `✅ Validación del 10% exitosa`,
-          description: `Se validaron ${sampleSize} registros aleatoriamente sin errores.`,
-          duration: 5000,
+          title: `✅ Revisión de formato exitosa`,
+          description: `El archivo fue revisado y no parece tener problemas graves ni filas repetidas en su formato básico.`,
+          duration: 4000,
         });
       }
 
@@ -993,7 +993,7 @@ export function ImportExcelDialog({
           <Button
             variant="default"
             size="sm"
-            className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
+            className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
             aria-label="Importar Excel"
             title="Importar Excel"
           >

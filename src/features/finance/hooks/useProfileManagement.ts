@@ -59,11 +59,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
     // Sync local profile state with fetched profile
     useEffect(() => {
-        if (!profile) {return;}
+        if (!profile) { return; }
         setProfileData(profile);
         setCurrency(profile.currency ?? '');
-        if (typeof profile.decimal_places === 'number') {setDecimalPlaces(profile.decimal_places);}
-        if (profile.decimal_places === null) {setDecimalPlaces(0);}
+        if (typeof profile.decimal_places === 'number') { setDecimalPlaces(profile.decimal_places); }
+        if (profile.decimal_places === null) { setDecimalPlaces(0); }
     }, [profile]);
 
     /**
@@ -88,11 +88,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .update(updates)
                 .eq('id', user.id);
 
-            if (error) {throw error;}
+            if (error) { throw error; }
 
             // Update local state
-            if (updates.currency !== undefined) {setCurrency(updates.currency);}
-            if (updates.decimal_places !== undefined) {setDecimalPlaces(updates.decimal_places);}
+            if (updates.currency !== undefined) { setCurrency(updates.currency); }
+            if (updates.decimal_places !== undefined) { setDecimalPlaces(updates.decimal_places); }
             const nextProfile = { ...(profileData || {}), ...updates };
             setProfileData(nextProfile);
 
@@ -116,7 +116,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
      * Reset operational data (transactions, budgets, etc.) but keep configuration (categories, payment methods)
      */
     const resetOperationalData = useCallback(async () => {
-        if (!user) {return { error: 'No autenticado' };}
+        if (!user) { return { error: 'No autenticado' }; }
 
         const errors: string[] = [];
         try {
@@ -135,7 +135,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .from('payment_methods')
                 .update({ balance: 0 })
                 .eq('user_id', user.id);
-            if (pmError) {errors.push(`métodos de pago: ${pmError.message}`);}
+            if (pmError) { errors.push(`métodos de pago: ${pmError.message}`); }
 
             if (errors.length > 0) {
                 toast({
@@ -148,10 +148,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
             toast({ title: 'Datos reseteados', description: 'Tus datos operativos han sido eliminados. Configuración conservada.' });
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Error desconocido';
             console.error('Error resetting operational data:', error);
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
-            return { error: error.message };
+            toast({ title: 'Error', description: message, variant: 'destructive' });
+            return { error: message };
         }
     }, [user, toast]);
 
@@ -159,7 +160,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
      * Reset all profile data (dangerous operation)
      */
     const resetProfileData = useCallback(async (options?: Partial<ResetProfileOptions>) => {
-        if (!user) {return { error: 'No autenticado' };}
+        if (!user) { return { error: 'No autenticado' }; }
 
         const resolvedOptions: ResetProfileOptions = {
             ...DEFAULT_RESET_PROFILE_OPTIONS,
@@ -350,7 +351,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
      * Convert currency for all transactions
      */
     const convertCurrency = useCallback(async (rate: number, newCurrency: string, dryRun = false) => {
-        if (!user) {return { error: 'No autenticado' };}
+        if (!user) { return { error: 'No autenticado' }; }
 
         try {
             // Fetch all transactions
@@ -359,7 +360,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 .select('*')
                 .eq('user_id', user.id);
 
-            if (fetchError) {throw fetchError;}
+            if (fetchError) { throw fetchError; }
 
             const updates = transactions?.map(t => ({
                 id: t.id,
@@ -377,7 +378,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                     .update({ amount: update.amount })
                     .eq('id', update.id);
 
-                if (error) {throw error;}
+                if (error) { throw error; }
             }
 
             // Update profile currency

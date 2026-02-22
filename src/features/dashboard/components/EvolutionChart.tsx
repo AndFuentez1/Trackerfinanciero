@@ -267,7 +267,7 @@ export function EvolutionChart({
     }
 
     return {
-      yDomain: [ticks[0], ticks[6]] as [number, number],
+      yDomain: [ticks[0] - step * 0.5, ticks[6] + step * 0.5] as [number, number],
       yTicks: ticks
     };
   }, [chartData]);
@@ -283,35 +283,47 @@ export function EvolutionChart({
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2 order-2 md:order-1">
-              <Button
-                variant={showIncome ? 'secondary' : 'ghost'}
-                size="sm"
+              <button
+                type="button"
                 onClick={() => setShowIncome(!showIncome)}
-                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200 opacity-100")}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showIncome
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
               >
-                {showIncome && <Check className="h-3 w-3" />} Ingresos
-              </Button>
-              <Button
-                variant={showExpense ? 'secondary' : 'ghost'}
-                size="sm"
+                Ingresos
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowExpense(!showExpense)}
-                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200 opacity-100")}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showExpense
+                    ? "bg-rose-100 text-rose-800 border border-rose-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
               >
-                {showExpense && <Check className="h-3 w-3" />} Gastos
-              </Button>
-              <Button
-                variant={showBalance ? 'secondary' : 'ghost'}
-                size="sm"
+                Gastos
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowBalance(!showBalance)}
-                className={cn("h-7 text-[10px] md:text-xs gap-1 opacity-80 hover:opacity-100", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200 opacity-100")}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showBalance
+                    ? "bg-sky-100 text-sky-800 border border-sky-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
               >
-                {showBalance && <Check className="h-3 w-3" />} Balance
-              </Button>
+                Balance
+              </button>
             </div>
 
             <div className="flex items-center gap-2 order-1 md:order-2">
               <Select value={selectedMonth} onValueChange={setMonth}>
-                <SelectTrigger className="w-[110px] md:w-[130px] h-9 bg-background/50 border-input">
+                <SelectTrigger className="w-auto min-w-[130px] h-9 bg-background/50 border-input">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,8 +335,8 @@ export function EvolutionChart({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
-                    {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
+                  <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2 whitespace-nowrap">
+                    {selectedYears.length === availableYears.length ? 'Todos los años' : `${selectedYears.length} Años`}
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -360,37 +372,69 @@ export function EvolutionChart({
       <CardContent className="flex-1 p-4 pt-2 min-h-[400px]">
 
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
 
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.15} />
+            {/* Líneas horizontales: una por tick visible del eje Y */}
+            {yTicks.map(tick => (
+              <ReferenceLine key={tick} y={tick} stroke="hsl(var(--border))" strokeOpacity={0.35} strokeWidth={1} />
+            ))}
             <XAxis
               dataKey="displayName"
               axisLine={false}
               tickLine={false}
+              padding={{ left: 20, right: 0 }}
               tick={(props: AxisTickProps) => {
                 const { x, y, payload } = props;
                 const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-                let label = payload.value;
-                if (isMobile && selectedMonth === 'all' && label) {
-                  // For monthly view on mobile, show first letter only
-                  label = label.charAt(0);
+                let label = payload.value as string;
+                let monthStr = label;
+                let yearStr = '';
+
+                const isMultiYear = selectedYears.length > 1;
+
+                if (isMultiYear && selectedMonth === 'all' && label.includes(" '")) {
+                  const parts = label.split(" '");
+                  monthStr = parts[0];
+                  yearStr = parts[1] ? `'${parts[1]}` : '';
                 }
+
+                // Multi-year: mostrar ene y jul de cada año
+                if (isMultiYear && selectedMonth === 'all') {
+                  const dataPoint = chartData.find(d => d.displayName === label);
+                  if (dataPoint && dataPoint.monthIndex !== 0 && dataPoint.monthIndex !== 6) {
+                    return null;
+                  }
+                }
+
+                // Single-year: mostrar ene, abr, jul, oct, dic (distribuido equitativamente)
+                if (!isMultiYear && selectedMonth === 'all') {
+                  const dataPoint = chartData.find(d => d.displayName === label);
+                  const visibleMonths = [0, 3, 6, 9, 11];
+                  if (dataPoint && !visibleMonths.includes(dataPoint.monthIndex ?? -1)) {
+                    return null;
+                  }
+                }
+
+                if (isMobile && selectedMonth === 'all' && !isMultiYear) {
+                  monthStr = monthStr.charAt(0);
+                }
+
                 return (
                   <text
                     x={x}
                     y={y}
-                    dy={10}
+                    dy={12}
                     textAnchor="middle"
                     fill="#475569"
                     fontSize={11}
                     fontWeight={500}
                   >
-                    {label}
+                    <tspan x={x} dy="0">{monthStr}</tspan>
+                    {yearStr && <tspan x={x} dy="14">{yearStr}</tspan>}
                   </text>
                 );
               }}
-              interval="preserveStartEnd"
-              minTickGap={30}
+              interval={0}
             />
             <YAxis
               tickFormatter={formatAxisCurrency}
@@ -421,6 +465,7 @@ export function EvolutionChart({
                 radius={[4, 4, 0, 0]}
                 maxBarSize={40}
                 fillOpacity={0.7}
+                isAnimationActive={false}
               />
             )}
             {showExpense && (
@@ -431,6 +476,7 @@ export function EvolutionChart({
                 radius={[4, 4, 0, 0]}
                 maxBarSize={40}
                 fillOpacity={0.7}
+                isAnimationActive={false}
               />
             )}
             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
@@ -441,7 +487,30 @@ export function EvolutionChart({
                 name="Balance"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
-                dot={false}
+                isAnimationActive={false}
+                dot={(props: { cx: number; cy: number; payload: EvolutionChartPoint; index: number }) => {
+                  const { cx, cy, payload } = props;
+                  if (payload.balance == null) return <g key={`dot-${payload.displayName}`} />;
+                  const isMultiYear = selectedYears.length > 1;
+                  const monthIdx = payload.monthIndex ?? -1;
+                  const isVisible = selectedMonth !== 'all'
+                    ? true
+                    : isMultiYear
+                      ? monthIdx === 0 || monthIdx === 6
+                      : [0, 3, 6, 9, 11].includes(monthIdx);
+                  if (!isVisible) return <g key={`dot-${payload.displayName}`} />;
+                  return (
+                    <circle
+                      key={`dot-${payload.displayName}`}
+                      cx={cx}
+                      cy={cy}
+                      r={3}
+                      fill="hsl(var(--primary))"
+                      stroke="hsl(var(--background))"
+                      strokeWidth={1.5}
+                    />
+                  );
+                }}
                 connectNulls={false}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
               />

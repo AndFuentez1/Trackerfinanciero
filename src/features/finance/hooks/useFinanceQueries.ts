@@ -16,7 +16,7 @@ export interface UseFinanceQueriesReturn {
     categories: CategoryItem[];
     budgets: Budget[];
     profile: ProfileSelect | null;
-    pendingInvoices: any[];
+    pendingInvoices: Record<string, unknown>[];
 
     // Loading states
     pmLoading: boolean;
@@ -35,18 +35,18 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
             if (!userId) { return []; }
             const { data, error } = await supabase.from('payment_methods').select('*').eq('user_id', userId);
             if (error) { throw error; }
-            return data.map((pm: any) => ({
-                id: pm.id,
-                name: pm.name,
+            return data.map((pm: Record<string, unknown>) => ({
+                id: pm.id as string,
+                name: pm.name as string,
                 type: pm.type as PaymentMethodType,
                 balance: Number(pm.balance),
                 credit_limit: pm.credit_limit ? Number(pm.credit_limit) : null,
-                is_savings_account: pm.is_savings_account || false,
+                is_savings_account: (pm.is_savings_account as boolean) || false,
                 savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
                 estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
-                closing_date: pm.closing_date || null,
-                payment_day: pm.payment_day || null,
-                color: pm.color || '#475569',
+                closing_date: (pm.closing_date as number) || null,
+                payment_day: (pm.payment_day as number) || null,
+                color: (pm.color as string) || '#475569',
             }));
         },
         enabled: !!userId,

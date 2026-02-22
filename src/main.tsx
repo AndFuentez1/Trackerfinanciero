@@ -4,6 +4,20 @@ import { calculateProportionalTheme } from "./features/finance/utils/themeCalcul
 import "./core/api/gmailErrorHandler"; // Initialize Gmail token error handler
 import "./index.css";
 
+// Prevent Vite from showing the error overlay for benign Supabase abort errors during HMR/Strict Mode
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const isAbortError =
+      event.reason?.name === 'AbortError' ||
+      (typeof event.reason?.message === 'string' && event.reason.message.includes('signal is aborted without reason'));
+
+    if (isAbortError) {
+      event.preventDefault(); // Stop the error from crashing the app/showing Vite overlay
+      console.warn('⚠️ [Global] Ignored unhandled AbortError (common in Supabase during React StrictMode/HMR)', event.reason);
+    }
+  });
+}
+
 const DEFAULT_BASE_COLOR = '#64748b';
 
 const bootstrapTheme = () => {
@@ -25,7 +39,6 @@ bootstrapTheme();
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
-  console.log('🚀 [main.tsx] Application starting...');
   try {
     createRoot(rootElement).render(<App />);
   } catch (error) {

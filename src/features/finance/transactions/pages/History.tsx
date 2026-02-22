@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { useFinanceData, CategoryItem } from '../../hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
@@ -16,6 +16,9 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
+    SelectGroup,
+    SelectLabel,
+    SelectSeparator
 } from "@/shared/ui/select";
 import { PendingInvoicesPanel } from '@/features/finance/transactions/components/PendingInvoicesPanel';
 import { ImportStatusBar } from '@/features/finance/transactions/components/ImportStatusBar';
@@ -29,7 +32,7 @@ export default function HistoryPage() {
     // ALL HOOKS AT TOP - BEFORE ANY CONDITIONALS
     // ============================================================================
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const highlightOrphaned = searchParams.get('reclassify') === 'true';
     const { user, loading: authLoading } = useAuth();
     const {
@@ -64,7 +67,7 @@ export default function HistoryPage() {
     // useState hooks - MUST be before any conditionals
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [reclassifyDrafts, setReclassifyDrafts] = useState<Record<string, any>>({});
+    const [reclassifyDrafts, setReclassifyDrafts] = useState<Record<string, Record<string, string | number>>>({});
     const [savingId, setSavingId] = useState<string | null>(null);
     const [creatingPMFor, setCreatingPMFor] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -162,16 +165,16 @@ export default function HistoryPage() {
     // Memoized values - transactions needing reclassification
     // CRITICAL: Exclude savings and investment types (managed in Savings tab only)
     const reclassifyTxs = useMemo(() => {
-        const safeTransactions = transactions || [];
+        const safeTransactions = allTransactions || [];
         return safeTransactions.filter(tx => {
             const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
             if (isTransfer) { return false; }
 
-            return !tx.category_id &&
+            return (!tx.category_id || !tx.payment_method_id) &&
                 tx.type !== 'saving' &&
                 tx.type !== 'investment';
         });
-    }, [transactions]);
+    }, [allTransactions]);
 
     // Memoized function to get filtered categories by type
     const getFilteredCategories = useMemo(() => {
@@ -203,7 +206,7 @@ export default function HistoryPage() {
         setIsEditDialogOpen(true);
     };
 
-    const handleReclassifyChange = (id: string, field: string, value: any) => {
+    const handleReclassifyChange = (id: string, field: string, value: string | number) => {
         setReclassifyDrafts(prev => ({
             ...prev,
             [id]: {
@@ -227,7 +230,7 @@ export default function HistoryPage() {
                 categoryId = existingCategory.id;
             } else if (draft.category_name) {
                 // Create category
-                const result = await addCategory({ name: draft.category_name, type: draft.type, color: '#475569' });
+                const result = await addCategory({ name: draft.category_name as string, type: draft.type as CategoryItem['type'], color: '#475569' });
                 if ('data' in result && result.data && 'id' in result.data) {
                     categoryId = result.data.id;
                 }
@@ -250,10 +253,10 @@ export default function HistoryPage() {
             // Update with all necessary fields - setting category_id removes from reclassification zone
             await updateTransaction(tx.id, {
                 category_id: categoryId,
-                type: draft.type,
-                description: draft.description,
+                type: draft.type as Transaction['type'],
+                description: draft.description as string,
                 amount: Number(draft.amount),
-                date: draft.date,
+                date: draft.date as string,
                 payment_method_id: paymentMethodId,
             });
 
@@ -278,6 +281,11 @@ export default function HistoryPage() {
     } */
 
     if (!user) { return null; }
+
+    const hasEmptyPaymentMethods = useMemo(() => {
+        const list = allTransactions || transactions;
+        return list.some(t => !t.payment_method_id && t.type !== 'saving' && t.type !== 'investment');
+    }, [allTransactions, transactions]);
 
     return (
         <div className="min-h-screen bg-background/30">
@@ -328,21 +336,36 @@ export default function HistoryPage() {
                         />
 
                         {/* Reclassification Zone Card */}
-                        {reclassifyTxs.length > 0 && (
+                        {reclassifyTxs.length > 0 && highlightOrphaned && (
                             <div className="border-2 border-amber-400 bg-amber-50/40 rounded-xl p-6 mb-2 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
-                                <h2 className="text-lg font-bold text-amber-800 mb-4 flex items-center gap-2 not-italic">
-                                    <AlertCircle className="h-5 w-5 text-amber-500" />
-                                    Zona de Reclasificación
-                                </h2>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-lg font-bold text-amber-800 flex items-center gap-2 not-italic">
+                                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                                        Zona de Reclasificación
+                                    </h2>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-amber-700 hover:bg-amber-100 h-8 w-8 p-0"
+                                        onClick={() => {
+                                            const newParams = new URLSearchParams(searchParams);
+                                            newParams.delete('reclassify');
+                                            setSearchParams(newParams);
+                                        }}
+                                        title="Cerrar zona de reclasificación"
+                                    >
+                                        <Plus className="h-5 w-5 rotate-45" />
+                                    </Button>
+                                </div>
                                 <div className="flex flex-col gap-4">
-                                    {reclassifyTxs.map(tx => {
+                                    {reclassifyTxs.slice(0, 3).map(tx => {
                                         const initialDraft = {
                                             description: tx.description || '',
                                             amount: tx.amount ?? '',
                                             date: tx.date || '',
                                             category_name: tx.category || '',
                                             type: tx.type || 'expense',
-                                            payment_method_name: (tx as any).payment_method || '',
+                                            payment_method_name: (tx as Record<string, unknown>).payment_method as string || '',
                                         };
                                         const draft = reclassifyDrafts[tx.id] ? { ...initialDraft, ...reclassifyDrafts[tx.id] } : initialDraft;
 
@@ -352,7 +375,7 @@ export default function HistoryPage() {
                                         const hasValidDate = tx.date && tx.date.trim() !== '';
                                         const hasValidDescription = tx.description && tx.description.trim() !== '';
                                         const hasValidType = false; // Permitir editar type siempre
-                                        const hasValidAmount = tx.amount !== null && tx.amount !== undefined && tx.amount !== 0;
+                                        const hasValidAmount = Boolean(tx.amount) && tx.amount !== 0;
 
                                         return (
                                             <div key={tx.id} className="bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm not-italic">
@@ -502,61 +525,84 @@ export default function HistoryPage() {
 
                             <div className="flex flex-col gap-3">
                                 {/* Primera fila: Búsqueda + Tipo/Categoría/Método */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
-                                    {/* Búsqueda */}
-                                    <div className="flex-1">
-                                        <Input
-                                            placeholder="Buscar descripción"
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="h-10 w-full bg-background/50 border-input"
-                                        />
-                                    </div>
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+                                        {/* Búsqueda */}
+                                        <div className="flex-1">
+                                            <Input
+                                                placeholder="Buscar descripción"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="h-10 w-full bg-background/50 border-zinc-300 focus:border-primary transition-colors"
+                                            />
+                                        </div>
 
-                                    {/* Tipo, Categoría, Método */}
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                                        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
-                                                <SelectValue placeholder="Tipo" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos</SelectItem>
-                                                <SelectItem value="income">Ingreso</SelectItem>
-                                                <SelectItem value="expense">Gasto</SelectItem>
-                                                <SelectItem value="transfer_in">Transferencia (entrada)</SelectItem>
-                                                <SelectItem value="transfer_out">Transferencia (salida)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
 
-                                        <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-input h-10">
-                                                <SelectValue placeholder="Categoría" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todas</SelectItem>
-                                                {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => (
-                                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
 
-                                        <Select value={paymentMethodFilter} onValueChange={(value) => setPaymentMethodFilter(value === 'all' ? undefined : value)}>
-                                            <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-input h-10">
-                                                <SelectValue placeholder="Método de pago" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos</SelectItem>
-                                                {paymentMethods.map(pm => (
-                                                    <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        {/* Tipo, Categoría, Método */}
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
+                                                <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
+                                                    <SelectValue placeholder="Tipo" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all" className="justify-center pl-2">Todos</SelectItem>
+                                                    <SelectItem value="income" className="justify-center pl-2">Ingreso</SelectItem>
+                                                    <SelectItem value="expense" className="justify-center pl-2">Gasto</SelectItem>
+                                                    <SelectItem value="transfer_in" className="justify-center pl-2">Transferencia (entrada)</SelectItem>
+                                                    <SelectItem value="transfer_out" className="justify-center pl-2">Transferencia (salida)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+
+                                            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
+                                                <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
+                                                    <SelectValue placeholder="Categoría" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all" className="justify-center pl-2">Todas</SelectItem>
+                                                    {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                                                        <SelectItem key={c.id} value={c.id} className="justify-center pl-2">{c.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Segunda fila: Mes/Año + Rápidos + Limpiar */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-end">
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-between">
+                                    {/* Grupo fecha: alerta + Mes + Año + botón limpiar (visible en mobile junto a los selects) */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {reclassifyTxs.length > 0 && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className={cn(
+                                                    "h-auto min-h-[52px] py-3 px-4 font-semibold transition-all w-full sm:flex-1 justify-center rounded-xl !whitespace-normal gap-2",
+                                                    highlightOrphaned
+                                                        ? "text-amber-800 bg-amber-100 border-amber-300 shadow-sm hover:bg-amber-200"
+                                                        : "text-orange-700 bg-orange-50 border-zinc-300 hover:bg-orange-100 hover:text-orange-800 hover:border-orange-400"
+                                                )}
+                                                onClick={() => {
+                                                    const newParams = new URLSearchParams(searchParams);
+                                                    if (highlightOrphaned) {
+                                                        newParams.delete('reclassify');
+                                                    } else {
+                                                        newParams.set('reclassify', 'true');
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }
+                                                    setSearchParams(newParams);
+                                                    if (!highlightOrphaned) clearAllFilters();
+                                                }}
+                                            >
+                                                <AlertCircle className="w-5 h-5 shrink-0" />
+                                                <span className="text-sm font-semibold">
+                                                    Faltan {reclassifyTxs.length} revisiones
+                                                </span>
+                                            </Button>
+                                        )}
+
+                                        {/* Mes */}
                                         <Select value={monthFilter} onValueChange={(value) => {
                                             setMonthFilter(value);
                                             const year = yearFilter === 'all' ? new Date().getFullYear().toString() : yearFilter;
@@ -577,7 +623,7 @@ export default function HistoryPage() {
                                                 updateFilter('custom', from, to);
                                             }
                                         }}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
+                                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
                                                 <SelectValue placeholder="Mes" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -589,6 +635,7 @@ export default function HistoryPage() {
                                             </SelectContent>
                                         </Select>
 
+                                        {/* Año */}
                                         <Select value={yearFilter} onValueChange={(value) => {
                                             setYearFilter(value);
                                             const month = monthFilter;
@@ -609,7 +656,7 @@ export default function HistoryPage() {
                                                 updateFilter('custom', from, to);
                                             }
                                         }}>
-                                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-input h-10">
+                                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[155px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
                                                 <SelectValue placeholder="Año" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -619,53 +666,65 @@ export default function HistoryPage() {
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                    </div>
 
-                                    <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
-                                        <div className="flex gap-2 justify-end">
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const now = new Date();
-                                                    const weekStart = new Date(now);
-                                                    weekStart.setDate(now.getDate() - 7);
-                                                    updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
-                                                }}
-                                                className="h-10 px-3 text-xs whitespace-nowrap"
-                                            >
-                                                Esta semana
-                                            </Button>
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const now = new Date();
-                                                    updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
-                                                }}
-                                                className="h-10 px-3 text-xs whitespace-nowrap"
-                                            >
-                                                Este mes
-                                            </Button>
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const now = new Date();
-                                                    const yearStart = toDateString(now.getFullYear(), 1, 1);
-                                                    const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                                                    updateFilter('custom', yearStart, today);
-                                                }}
-                                                className="h-10 px-3 text-xs whitespace-nowrap"
-                                            >
-                                                Este año
-                                            </Button>
-                                        </div>
-
+                                        {/* Botón limpiar filtros: visible en mobile al lado de los selects de fecha */}
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            className="h-10 w-10 border border-border/60"
+                                            className="h-10 w-10 border border-border/60 sm:hidden shrink-0"
+                                            onClick={clearAllFilters}
+                                            title="Quitar filtros"
+                                        >
+                                            <FilterX className="h-4 w-4" />
+                                            <span className="sr-only">Quitar filtros</span>
+                                        </Button>
+                                    </div>
+
+                                    {/* Botones rápidos + botón limpiar (desktop) */}
+                                    <div className="flex gap-2 justify-end">
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => {
+                                                const now = new Date();
+                                                const weekStart = new Date(now);
+                                                weekStart.setDate(now.getDate() - 7);
+                                                updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                            }}
+                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                        >
+                                            Esta semana
+                                        </Button>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => {
+                                                const now = new Date();
+                                                updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                            }}
+                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                        >
+                                            Este mes
+                                        </Button>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => {
+                                                const now = new Date();
+                                                const yearStart = toDateString(now.getFullYear(), 1, 1);
+                                                const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                                                updateFilter('custom', yearStart, today);
+                                            }}
+                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                        >
+                                            Este año
+                                        </Button>
+
+                                        {/* Botón limpiar filtros: solo visible en desktop (sm+) */}
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-10 w-10 border border-border/60 hidden sm:flex shrink-0"
                                             onClick={clearAllFilters}
                                             title="Quitar filtros"
                                         >
@@ -682,8 +741,8 @@ export default function HistoryPage() {
                             allTransactions={rangeTransactions}
                             totalCount={totalTransactionsCount}
                             paymentMethods={paymentMethods}
-                            onDeleteTransaction={deleteTransaction}
-                            onUpdateTransaction={updateTransaction}
+                            onDeleteTransaction={async (id) => { await deleteTransaction(id); }}
+                            onUpdateTransaction={async (id, updates) => { await updateTransaction(id, updates); }}
                             onEditTransaction={handleEdit}
                             categories={categories}
                             highlightOrphaned={highlightOrphaned}
@@ -692,6 +751,7 @@ export default function HistoryPage() {
                             categoryFilter={categoryFilter}
                             statusFilter={statusFilter as "attention" | "ok" | undefined}
                             paymentMethodFilter={paymentMethodFilter}
+                            setPaymentMethodFilter={setPaymentMethodFilter}
                             setStatusFilter={setStatusFilter}
                             loading={isLoading}
                         />
@@ -714,9 +774,10 @@ export default function HistoryPage() {
                             </div>
                         )}
                     </div>
-                )}
-            </main>
-        </div>
+                )
+                }
+            </main >
+        </div >
     );
 }
 

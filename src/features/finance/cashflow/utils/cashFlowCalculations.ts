@@ -49,7 +49,7 @@ export interface MonthlySnapshot {
     balanceAcumulado: number;
     newSavings: Record<string, number>;
     newLoans: Record<string, { saldo: number, cuotasRestantes: number }>;
-    newCardInstallments: Record<string, any>;
+    newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }>;
 }
 
 interface Category {
@@ -350,7 +350,7 @@ export function calculateMonthlySnapshot(
     });
 
     // --- Tarjetas (Multi-cuota) ---
-    const newCardInstallments: Record<string, any> = { ...prevCardInstallments };
+    const newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = { ...prevCardInstallments };
     let overdueInstallments = 0;
     transactions.filter(tx => tx.type === 'expense' && (tx.installments || 1) > 1).forEach(tx => {
         const totalInstallments = tx.installments || 1;

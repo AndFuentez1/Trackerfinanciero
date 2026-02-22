@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 const allowedOrigins = [
     'http://localhost:8080',
+    'http://localhost:8081',
     'http://localhost:5173',
     'https://andfuentez1.github.io'
 ];

@@ -6,7 +6,7 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { MemoryRouter } from 'react-router-dom';
 
 const { HistoryTabMock } = vi.hoisted(() => {
-    return { HistoryTabMock: vi.fn((props: any) => <div data-testid="history-tab">Tabla Historial</div>) };
+    return { HistoryTabMock: vi.fn((props: Record<string, unknown>) => <div data-testid="history-tab">Tabla Historial</div>) };
 });
 
 // Mocks
@@ -47,7 +47,7 @@ vi.mock('@/features/finance/context/FinanceContext', () => ({
         currency: 'COP',
         decimalPlaces: 2
     })),
-    FinanceProvider: ({ children }: any) => <>{children}</>
+    FinanceProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }));
 
 // Mock child components
@@ -66,7 +66,7 @@ vi.mock('@/features/finance/transactions/components/ImportStatusBar', () => ({
 
 // Mock HistoryTab to capture props
 vi.mock('@/features/finance/transactions/components/HistoryTab', () => ({
-    HistoryTab: (props: any) => {
+    HistoryTab: (props: Record<string, unknown>) => {
         HistoryTabMock(props);
         return <div data-testid="history-tab">Tabla Historial</div>;
     }
@@ -106,8 +106,8 @@ describe('HistoryPage', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as any).mockReturnValue({ user: mockUser, loading: false });
-        (useFinanceData as any).mockReturnValue(defaultFinanceData);
+        vi.mocked(useAuth).mockReturnValue({ user: mockUser, loading: false } as ReturnType<typeof useAuth>);
+        vi.mocked(useFinanceData).mockReturnValue(defaultFinanceData as unknown as ReturnType<typeof useFinanceData>);
     });
 
     it('renders header and controls', () => {
@@ -153,20 +153,20 @@ describe('HistoryPage', () => {
     });
 
     it('shows Load More button when hasMore is true', () => {
-        (useFinanceData as any).mockReturnValue({
+        vi.mocked(useFinanceData).mockReturnValue({
             ...defaultFinanceData,
             hasMore: true
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         render(<HistoryPage />, { wrapper: MemoryRouter });
         expect(screen.getByText('Cargar más transacciones')).toBeInTheDocument();
     });
 
     it('calls loadMore when button clicked', () => {
-        (useFinanceData as any).mockReturnValue({
+        vi.mocked(useFinanceData).mockReturnValue({
             ...defaultFinanceData,
             hasMore: true
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         render(<HistoryPage />, { wrapper: MemoryRouter });
         const btn = screen.getByText('Cargar más transacciones');

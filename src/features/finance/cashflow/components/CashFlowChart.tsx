@@ -103,7 +103,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     }
 
     return {
-      yDomain: [ticks[0], ticks[6]] as [number, number],
+      yDomain: [ticks[0] - step * 0.5, ticks[6] + step * 0.5] as [number, number],
       yTicks: ticks
     };
   }, [data]);
@@ -144,30 +144,30 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
             <CardDescription>Estimación futura basada en presupuestos y obligaciones</CardDescription>
           </div>
 
-          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50">
+          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 w-full md:w-auto flex-wrap sm:flex-nowrap gap-1">
             <Button
               variant={showIncome ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[90px] justify-center", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
+              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
             >
-              {showIncome && <Check className="h-3 w-3" />} Ingresos
+              <span className="truncate">Ingresos</span>
             </Button>
             <Button
               variant={showExpense ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[85px] justify-center", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
+              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
             >
-              {showExpense && <Check className="h-3 w-3" />} Egresos
+              <span className="truncate">Egresos</span>
             </Button>
             <Button
               variant={showBalance ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-xs gap-1.5 transition-all hover:text-current w-[85px] justify-center", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
+              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
             >
-              {showBalance && <Check className="h-3 w-3" />} Balance
+              <span className="truncate">Balance</span>
             </Button>
           </div>
         </div>
@@ -175,7 +175,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
       <CardContent className="p-4 pt-2">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.2} />
@@ -187,7 +187,10 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                 </linearGradient>
 
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.15} />
+              {/* Líneas horizontales: una por tick visible del eje Y */}
+              {yTicks.map(tick => (
+                <ReferenceLine key={tick} y={tick} stroke="hsl(var(--border))" strokeOpacity={0.35} strokeWidth={1} />
+              ))}
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -236,6 +239,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                   fillOpacity={0.7}
+                  isAnimationActive={false}
                 />
               )}
 
@@ -247,6 +251,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   radius={[0, 0, 4, 4]}
                   maxBarSize={40}
                   fillOpacity={0.7}
+                  isAnimationActive={false}
                 />
               )}
 
@@ -258,17 +263,64 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     dataKey="balanceReal"
                     stroke="hsl(var(--primary))"
                     strokeWidth={2.5}
-                    dot={false}
+                    isAnimationActive={false}
+                    dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.balanceReal == null) return <g key={`dot-br-${payload.name}`} />;
+                      return (
+                        <circle
+                          key={`dot-br-${payload.name}`}
+                          cx={cx} cy={cy} r={3}
+                          fill="hsl(var(--primary))"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={1.5}
+                        />
+                      );
+                    }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
                     connectNulls={false}
                     name="Balance Histórico"
                   />
+                  {/* Vertical Jump Line explicitly drawn between Real and Proyectado on pivot month */}
+                  {(() => {
+                    const pivotData = chartData.find(d => d.balanceReal != null && d.balanceProyectado != null);
+                    if (pivotData && pivotData.balanceReal !== pivotData.balanceProyectado) {
+                      return (
+                        <ReferenceLine
+                          segment={[
+                            { x: pivotData.name, y: pivotData.balanceReal },
+                            { x: pivotData.name, y: pivotData.balanceProyectado }
+                          ]}
+                          stroke="hsl(var(--muted-foreground))"
+                          strokeDasharray="4 4"
+                          strokeWidth={2}
+                          className="opacity-50"
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
                   {/* Balance Proyectado */}
                   <Line
                     type="monotone"
                     dataKey="balanceProyectado"
                     stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
                     strokeWidth={2}
-                    dot={false}
+                    isAnimationActive={false}
+                    dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.balanceProyectado == null) return <g key={`dot-bp-${payload.name}`} />;
+                      const color = isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))";
+                      return (
+                        <circle
+                          key={`dot-bp-${payload.name}`}
+                          cx={cx} cy={cy} r={3}
+                          fill={color}
+                          stroke="hsl(var(--background))"
+                          strokeWidth={1.5}
+                        />
+                      );
+                    }}
                     strokeDasharray="5 5"
                     name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
                     activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
@@ -279,6 +331,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     type="monotone"
                     dataKey="balanceAjuste"
                     stroke="transparent"
+                    isAnimationActive={false}
                     dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))" }}
                     activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
                     name="Ajuste de Balance Inicial"
@@ -293,6 +346,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                       dataKey="balanceSimulated"
                       stroke="hsl(var(--muted-foreground))"
                       strokeWidth={2}
+                      isAnimationActive={false}
                       dot={false}
                       strokeDasharray="4 4"
                       name="Proyección Ideal (Si se paga hoy)"

@@ -31,8 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const initAuth = async () => {
             try {
-                console.log('🟢 [AuthContext] initAuth started');
-
                 // 🔍 CRITICAL: Check for OAuth hash fragments FIRST
                 // When Google/Magic Link redirects, URL contains: #access_token=...&refresh_token=...
                 // We need to keep loading=true until onAuthStateChange processes these tokens
@@ -47,10 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (hasAuthTokens || hasAuthCode) {
                     // Don't set loading=false yet - let onAuthStateChange handle it
                     // This prevents App.tsx from evaluating user=null and redirecting to /auth
-                    console.log('🔐 [AuthContext] OAuth tokens/code detected in URL, waiting for Supabase to process...');
-                    if (hash) {
-                        console.log('🔐 [AuthContext] Hash preview:', hash.substring(0, 50) + '...');
-                    }
                     oauthTimeout = window.setTimeout(() => {
                         if (!ignore) {
                             console.warn('⚠️ [AuthContext] OAuth processing timeout, continuing without session');
@@ -60,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     return;
                 }
 
-                console.log('🟢 [AuthContext] No hash tokens, calling getSession()');
                 const { data: { session }, error } = await supabase.auth.getSession();
 
                 if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
@@ -71,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 if (!ignore) {
-                    console.log('🟢 [AuthContext] Setting session from getSession:', session?.user?.email || 'null');
                     setSession(session);
                     setUser(session?.user ?? null);
                     setLoading(false);
@@ -90,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
-                console.log('🔄 [AuthContext] Auth state changed:', event, 'User:', session?.user?.email || 'null');
                 if (!ignore) {
                     setSession(session);
                     setUser(session?.user ?? null);
@@ -100,7 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         return () => {
-            console.log('🔴 [AuthContext] Cleanup - unsubscribing');
             ignore = true;
             if (oauthTimeout) {
                 clearTimeout(oauthTimeout);

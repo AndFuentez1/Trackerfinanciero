@@ -164,9 +164,11 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
 
   const finalSeries: CashFlowChartPoint[] = cashFlowSeries.map(p => {
     const projected = round(p.balanceProyectado_Raw + projectionOffset);
+    // Apply the same offset to historical balance so both lines are anchored to the real account balance
+    const historicalReal = round(p.balanceReal_Raw + projectionOffset);
     return {
       ...p,
-      balanceReal: p.isAfterPivot ? null : p.balanceReal_Raw,
+      balanceReal: p.isAfterPivot ? null : historicalReal,
       // Include pivot point in projection so lines connect
       balanceProyectado: p.isBeforePivot ? null : projected,
       balanceSimulated: (pendingPastExpensesTotal > 0 && !p.isBeforePivot)

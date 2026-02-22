@@ -83,9 +83,10 @@ export function Sidebar() {
                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium",
                         isActive
                             ? "bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]"
-                            : "text-muted-foreground hover:bg-primary hover:text-white hover:shadow-md hover:translate-x-1"
+                            : "text-muted-foreground"
                     );
-                    const disabledClasses = "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground";
+                    const hoverClasses = !isDisabled ? "hover:bg-primary hover:text-white hover:shadow-md hover:translate-x-1" : "";
+                    const disabledClasses = isDisabled ? "opacity-50 cursor-not-allowed bg-muted/20" : "";
 
                     const content = (
                         <>
@@ -115,7 +116,7 @@ export function Sidebar() {
                         <Link
                             key={item.name}
                             to={item.href}
-                            className={baseClasses}
+                            className={cn(baseClasses, hoverClasses)}
                         >
                             {content}
                         </Link>

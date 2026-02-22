@@ -62,22 +62,12 @@ try {
 
   // Set up error handler for refresh token errors - handle silently
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('🔵 [client.ts] Auth event:', event, 'Session:', session?.user?.email || 'null');
-
     // Handle token refresh failures silently
     if (event === 'TOKEN_REFRESHED' && !session) {
       console.warn('⚠️ [client.ts] Token refresh failed, signing out');
       supabaseClient.auth.signOut().catch((err) => {
         console.warn('[Supabase] Failed to sign out during token refresh cleanup', err);
       });
-    }
-
-    if (event === 'SIGNED_IN') {
-      console.log('✅ [client.ts] User signed in:', session?.user?.email);
-    }
-
-    if (event === 'SIGNED_OUT') {
-      console.log('🚪 [client.ts] User signed out');
     }
   });
 

@@ -295,7 +295,7 @@ export default function LoansPage() {
                                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button
-                                                className="gap-2 border border-primary min-w-[44px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center p-2 sm:px-4" // Better touch target
+                                                className="gap-2 border border-primary min-w-[44px] sm:min-w-[140px] text-[15px] md:text-[16px] py-2 flex items-center justify-center p-2 sm:px-4" // Better touch target
                                                 aria-label="Nuevo préstamo"
                                                 title="Nuevo préstamo"
                                             >
