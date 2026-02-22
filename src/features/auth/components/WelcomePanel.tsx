@@ -40,9 +40,9 @@ export function WelcomePanel() {
         <div className="flex gap-2">
           <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
             <SelectTrigger className="flex-1">
-              <SelectValue />
+              <SelectValue placeholder="Selecciona una moneda" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[70]">
               {CURRENCIES.map(curr => (
                 <SelectItem key={curr.code} value={curr.code}>
                   {curr.name}
