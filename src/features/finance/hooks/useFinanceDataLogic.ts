@@ -97,8 +97,9 @@ export function useFinanceDataLogic() {
 
     try {
       await mut.addTransactionsBulk(ui.pendingImportData);
-      await profileMgmt.updateProfile({ has_pending_import: false });
+      await profileMgmt.updateProfile({ has_pending_import: false, onboarding_decision: 'imported' });
       ui.setHasPendingImport(false);
+      ui.setOnboardingDecision('imported');
       ui.setPendingImportData([]);
       ui.setImportProgress({ status: 'completed', progress: 100, message: '¡Importación exitosa!' });
       return { success: true };
