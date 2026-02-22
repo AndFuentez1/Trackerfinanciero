@@ -1003,7 +1003,7 @@ export function ImportExcelDialog({
         </DialogTrigger>
       )}
       <DialogContent
-        className="sm:max-w-2xl h-[85vh] max-h-[85vh] overflow-hidden flex flex-col"
+        className="sm:max-w-3xl md:max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col z-[100]"
         onInteractOutside={(e) => {
           // Prevenir cierre cuando se hace clic fuera o se cambia de aplicación
           e.preventDefault();

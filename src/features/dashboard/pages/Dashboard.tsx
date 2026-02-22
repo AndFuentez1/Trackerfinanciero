@@ -45,6 +45,7 @@ export default function Index() {
     setAppThemePreference,
     updateProfile,
     setImportProgress,
+    setPendingImportData,
     pendingInvoices,
   } = useFinanceData();
 
@@ -149,6 +150,7 @@ export default function Index() {
           onImportComplete={async (data) => {
             // Persist the import intent and data
             setImportProgress(prev => ({ ...prev, status: 'completed' }));
+            setPendingImportData(data);
             await updateProfile({ has_pending_import: true });
             // The data is confirmed in OnboardingDecisionPanel via onConfirmImport
           }}
@@ -197,7 +199,7 @@ export default function Index() {
             onUpdateTransaction={updateTransaction}
             dateFilter={{ period: 'all', from: null, to: null }}
             updateFilter={() => { }}
-            pendingInvoices={pendingInvoices}
+            pendingInvoices={pendingInvoices as { amount: number; arrival_date: string;[key: string]: unknown }[]}
             loading={isLoading}
           />
         </section>

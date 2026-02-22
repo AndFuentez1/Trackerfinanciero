@@ -181,6 +181,7 @@ export function useFinanceDataLogic() {
     highlightedCard: ui.highlightedCard,
     importProgress: ui.importProgress,
     pendingImportData: ui.pendingImportData,
+    setPendingImportData: ui.setPendingImportData,
     startImport: ui.startImport,
     cancelImport: ui.cancelImport,
     setImportProgress: ui.setImportProgress,
