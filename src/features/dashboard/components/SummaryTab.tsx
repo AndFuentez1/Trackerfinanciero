@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
 import { ExpenseChart } from './ExpenseChart';
@@ -75,6 +76,8 @@ export function SummaryTab({
   pendingInvoices,
   loading = false
 }: SummaryTabProps) {
+  const navigate = useNavigate();
+
   // Get current date values first
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -263,11 +266,7 @@ export function SummaryTab({
               className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 bg-white/50 backdrop-blur-sm shadow-sm gap-2"
               onClick={() => {
                 hideGlobalAlert();
-                const navEvent = new CustomEvent('navigate-to-tab', { detail: 'history' });
-                window.dispatchEvent(navEvent);
-                setTimeout(() => {
-                  window.location.href = '?reclassify=true';
-                }, 100);
+                navigate('/historial?reclassify=true');
               }}
             >
               Corregir (Historial) <ArrowRight className="w-4 h-4" />
