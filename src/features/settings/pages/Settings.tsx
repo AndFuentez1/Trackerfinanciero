@@ -1,4 +1,5 @@
 import { ThemeSection } from '../components/sections/ThemeSection';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { CategoriesSection } from '../components/sections/CategoriesSection';
 import { PaymentMethodsSection } from '../components/sections/PaymentMethodsSection';
 import { CurrencySection } from '../components/sections/CurrencySection';
@@ -17,6 +18,10 @@ import { cn } from '@/core/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export default function ConfiguracionPage() {
+    useSEO({
+        title: 'Configuración',
+        description: 'Application Settings - Manage your preferences, categories, and account security.'
+    });
     const { loading: authLoading } = useAuth();
     const { categories, categoriesLoading, paymentMethodsLoading, profileLoading } = useFinanceData();
     const navigate = useNavigate();
@@ -200,7 +205,7 @@ export default function ConfiguracionPage() {
                     {/* Footer */}
                     <footer className="text-center py-6">
                         <p className="text-muted-foreground" style={{ fontSize: '14px' }}>
-                            Hecho con <Heart className="inline h-3 w-3 text-red-500 fill-current animate-pulse" /> por Joan Fuentes
+                            Hecho con <Heart className="inline h-3 w-3 text-red-500 fill-current" /> por Joan Fuentes
                         </p>
                     </footer>
                 </div>

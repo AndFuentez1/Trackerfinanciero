@@ -8,6 +8,7 @@ import { SavingsProvider } from '@/features/finance/savings/context/SavingsConte
 import { Toaster } from '@/shared/ui/toaster';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { getSkeletonTypeFromPath } from '@/lib/skeletonUtils';
 
 // Auth is imported directly (not lazy) because:
 // 1. It's the first page unauthenticated users see — no benefit from lazy loading
@@ -62,9 +63,9 @@ const NotFound = lazyWithRetry(() => import('@/pages/NotFound'));
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
-  // While auth is loading (includes OAuth token processing), show skeleton
   if (loading) {
-    return <SkeletonLoader tab="dashboard" fullPage />;
+    const skeletonType = getSkeletonTypeFromPath(window.location.pathname) as any;
+    return <SkeletonLoader tab={skeletonType} fullPage />;
   }
 
   // Not authenticated → redirect to /auth
@@ -98,7 +99,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <SkeletonLoader tab="dashboard" fullPage />;
+    const skeletonType = getSkeletonTypeFromPath(window.location.pathname) as any;
+    return <SkeletonLoader tab={skeletonType} fullPage />;
   }
 
   if (user) {
@@ -114,7 +116,7 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <AuthProvider>
-            <Suspense fallback={<SkeletonLoader tab="dashboard" fullPage />}>
+            <Suspense fallback={<SkeletonLoader tab={getSkeletonTypeFromPath(window.location.pathname) as any} fullPage />}>
               <Routes>
                 {/* Public auth route */}
                 <Route
@@ -140,13 +142,14 @@ const App = () => {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<Index />} />
-                  <Route path="historial" element={<History />} />
-                  <Route path="presupuestos" element={<Budgets />} />
-                  <Route path="flujo-caja" element={<CashFlow />} />
-                  <Route path="ahorros" element={<Savings />} />
-                  <Route path="prestamos" element={<Loans />} />
-                  <Route path="configuracion" element={<Configuracion />} />
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<Index />} />
+                  <Route path="history" element={<History />} />
+                  <Route path="budgets" element={<Budgets />} />
+                  <Route path="cashflow" element={<CashFlow />} />
+                  <Route path="savings" element={<Savings />} />
+                  <Route path="loans" element={<Loans />} />
+                  <Route path="settings" element={<Configuracion />} />
                 </Route>
 
                 {/* Catch-all */}

@@ -339,44 +339,82 @@ manualChunks(id) {
 
 ## Seguridad
 
-### Row Level Security (RLS)
+### Capas de Seguridad (Defense in Depth)
 
-Todas las queries filtran automáticamente por `user_id`:
+El sistema implementa múltiples capas de protección independientes:
+
+#### 1. Row Level Security (RLS) — Capa de BD
+
+Todas las tablas tienen RLS habilitado con políticas `WITH CHECK`:
 
 ```sql
--- Política RLS en Supabase
-CREATE POLICY "Users can only see their own data"
-ON transactions
-FOR ALL
-USING (user_id = auth.uid());
+-- Política RLS con WITH CHECK en Supabase
+DROP POLICY IF EXISTS "Users can update their own loans" ON public.loans;
+CREATE POLICY "Users can update their own loans"
+ON public.loans FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id); -- Previene transfer attacks
 ```
 
-**Ejemplo en código**:
-```typescript
-const { data } = await supabase
-  .from('transactions')
-  .select('*')
-  .eq('user_id', user.id); // Redundante pero explícito
+Tablas protegidas: `loans`, `loan_payments`, `transactions`, `categories`, `payment_methods`, `profiles`, `savings_accounts`, `savings_transactions`, `pending_invoices`, `user_configs`.
+
+#### 2. Cifrado de Credenciales — Capa de Backend
+
+El backend (`encryption.service.js`) cifra todos los tokens sensibles antes de persistirlos:
+
+- **Algoritmo**: AES-256-CBC
+- **IV**: Aleatorio por registro (16 bytes)
+- **Key derivation**: `scrypt(ENCRYPTION_KEY, userId, 32)` — clave única por usuario
+- **Formato en BD**: `iv_hex:ciphertext_hex` (nunca texto plano)
+- **Protegido**: `gemini_api_key`, `telegram_bot_token`, `gmail_tokens`
+
+```javascript
+// encryption.service.js
+const key = crypto.scryptSync(ENCRYPTION_KEY, userId, 32);
+const iv = crypto.randomBytes(16);
+const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 ```
 
-### Validación
+Variable de entorno requerida: `ENCRYPTION_KEY` en el backend Node.js.
 
-#### Client-side (Zod)
+#### 3. Masked View — Capa de SQL
+
+`user_configs_masked` enmascara incluso el ciphertext al nivel de SQL:
+
+```sql
+CREATE VIEW public.user_configs_masked WITH (security_invoker = true) AS
+SELECT
+  CASE WHEN gemini_api_key IS NOT NULL THEN '***CONFIGURED***' ELSE NULL END AS gemini_api_key,
+  CASE WHEN telegram_bot_token IS NOT NULL THEN '***CONFIGURED***' ELSE NULL END AS telegram_bot_token,
+  -- ...
+FROM public.user_configs
+WHERE auth.uid() = id;
+```
+
+#### 4. Unique Constraints — Integridad de Datos
+
+Constraints a nivel de BD que previenen duplicados incluso ante race conditions del frontend:
+
+```sql
+ALTER TABLE public.loans ADD CONSTRAINT loans_user_name_unique UNIQUE (user_id, name);
+```
+
+#### 5. Validación
+
+##### Client-side (Zod)
 ```typescript
 const transactionSchema = z.object({
   amount: z.number().positive(),
   type: z.enum(['income', 'expense', 'transfer']),
-  // ...
 });
 ```
 
-#### Server-side (PostgreSQL)
+##### Server-side (PostgreSQL)
 ```sql
-ALTER TABLE transactions
-ADD CONSTRAINT positive_amount CHECK (amount > 0);
+ALTER TABLE transactions ADD CONSTRAINT positive_amount CHECK (amount > 0);
 ```
 
-### Autenticación
+#### 6. Autenticación
 
 - **Magic Link**: Email sin contraseña
 - **Google OAuth**: Login social
@@ -593,7 +631,7 @@ src/
 #### Data Consistency
 - [ ] **User Isolation**: Queries filtran por `user_id`
 - [ ] **Cascade Deletes**: Eliminación de datos relacionados funciona
-- [ ] **Unique Constraints**: No hay duplicados donde no deberían existir
+- [x] **Unique Constraints**: `loans(user_id, name)` — previene duplicados incluso ante race conditions
 - [ ] **Default Values**: Valores por defecto correctos en columnas
 
 #### Migrations

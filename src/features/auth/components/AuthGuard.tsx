@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Auth from '@/features/auth/pages/Auth';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 /**
  * AuthGuard component that prevents redirect loops during OAuth callback
@@ -12,6 +13,7 @@ import Auth from '@/features/auth/pages/Auth';
  * This uses proper React patterns with useEffect and useState.
  */
 export const AuthGuard = () => {
+    const { user, loading: isLoading } = useAuth();
     const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
 
     useEffect(() => {
@@ -27,23 +29,19 @@ export const AuthGuard = () => {
 
         if (hasOAuthTokens) {
             setIsProcessingOAuth(true);
-
-            // After 8 seconds, if still not authenticated, allow redirect
-            // This prevents infinite loops if token processing fails
-            const timeout = setTimeout(() => {
-                console.warn('⚠️ [AuthGuard] OAuth processing timeout, allowing redirect');
-                setIsProcessingOAuth(false);
-            }, 8000);
-
-            return () => clearTimeout(timeout);
         }
     }, []);
 
-    if (isProcessingOAuth) {
-        // Render Auth page directly to allow Supabase to process tokens
+    // If still loading auth state from Supabase, or processing OAuth tokens, render Auth directly
+    if (isLoading || isProcessingOAuth) {
         return <Auth />;
     }
 
-    // No tokens, redirect to /auth
+    // If authenticated, AuthContext should ideally redirect to dashboard, but just in case:
+    if (user) {
+        return <Navigate to="/" replace />;
+    }
+
+    // No tokens and not authenticated, redirect to /auth
     return <Navigate to="/auth" replace />;
 };

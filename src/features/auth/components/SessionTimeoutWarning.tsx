@@ -34,7 +34,7 @@ export function SessionTimeoutWarning({
     const [countdown, setCountdown] = useState('');
 
     useEffect(() => {
-        if (!open) {return;}
+        if (!open) { return; }
 
         const updateCountdown = () => {
             const totalSeconds = Math.floor(remainingTime / 1000);
@@ -54,7 +54,7 @@ export function SessionTimeoutWarning({
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="p-3 bg-primary/10 rounded-full text-primary animate-pulse">
+                        <div className="p-3 bg-primary/10 rounded-full text-primary">
                             <AlertTriangle className="w-6 h-6" />
                         </div>
                         <DialogTitle className="text-xl">Sesión por expirar</DialogTitle>
@@ -66,7 +66,7 @@ export function SessionTimeoutWarning({
 
                 <div className="flex flex-col items-center justify-center py-6 gap-4">
                     <div className="relative">
-                        <Clock className="w-16 h-16 text-primary animate-pulse" />
+                        <Clock className="w-16 h-16 text-primary" />
                     </div>
                     <div className="text-5xl font-bold text-primary tabular-nums">
                         {countdown}

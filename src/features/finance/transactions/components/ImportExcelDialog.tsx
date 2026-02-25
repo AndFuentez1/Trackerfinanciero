@@ -1381,7 +1381,7 @@ export function ImportExcelDialog({
                             style={{ width: `${progress}%` }}
                           />
                         </div>
-                        <p className="text-[10px] text-center text-muted-foreground animate-pulse">
+                        <p className="text-[10px] text-center text-muted-foreground">
                           Por favor no cierres esta ventana hasta terminar la carga
                         </p>
                       </div>

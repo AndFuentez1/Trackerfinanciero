@@ -14,21 +14,28 @@ const readText = (value) => {
 const parseNumber = (value) => {
     const text = readText(value);
     if (!text) { return 0; }
-    const raw = text.toString().trim();
-    if (!raw) { return 0; }
-    let normalized = raw;
-    const hasComma = raw.includes(',');
-    const hasDot = raw.includes('.');
+    // Remove currency symbols, thousands separators and handle decimal commas
+    let normalized = text.toString().trim()
+        .replace(/[^\d.,-]/g, ''); // Keep numbers, dots, commas and minus
+
+    if (!normalized) { return 0; }
+
+    const hasComma = normalized.includes(',');
+    const hasDot = normalized.includes('.');
+
     if (hasComma && hasDot) {
-        // If comma appears after dot, assume dot thousands + comma decimal
-        if (raw.lastIndexOf(',') > raw.lastIndexOf('.')) {
-            normalized = raw.replace(/\./g, '').replace(/,/g, '.');
+        // If comma appears after dot, assume dot is thousands separator (e.g. 1.234,56)
+        if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+            normalized = normalized.replace(/\./g, '').replace(/,/g, '.');
         } else {
-            normalized = raw.replace(/,/g, '');
+            // Assume comma is thousands separator (e.g. 1,234.56)
+            normalized = normalized.replace(/,/g, '');
         }
     } else if (hasComma && !hasDot) {
-        normalized = raw.replace(/,/g, '.');
+        // Only comma: treat as decimal (e.g. 1234,56)
+        normalized = normalized.replace(/,/g, '.');
     }
+
     const parsed = parseFloat(normalized);
     return Number.isNaN(parsed) ? 0 : parsed;
 };
@@ -224,16 +231,13 @@ const extractEmbeddedInvoiceXml = (xmlData) => {
     }
 };
 
-/**
- * Parsea un XML de factura electrónica colombiana
- */
 export async function parseInvoiceXML(xmlString) {
     try {
         const parser = new xml2js.Parser({ explicitArray: false });
         const result = await parser.parseStringPromise(xmlString);
 
         // La estructura puede variar, pero generalmente es AttachedDocument o Invoice
-        const doc = result.AttachedDocument || result.Invoice || result;
+        const doc = result.AttachedDocument || result.Invoice || result.CreditNote || result.DebitNote || result.ApplicationResponse || result;
 
         return doc;
     } catch (error) {
@@ -358,23 +362,26 @@ export function extractMetadata(xmlData) {
  * Limpia el nombre de la tienda (quitar caracteres especiales, etc)
  */
 function cleanStoreName(name) {
-    if (!name) return 'Desconocida';
+    if (!name) return 'TIENDA DESCONOCIDA';
 
     let cleaned = name.toString().trim();
 
     // Manejar formato DIAN NIT;NOMBRE;ID (ej: 890900608;ALMACENES ÉXITO S.A;SC84...)
     if (cleaned.includes(';')) {
         const parts = cleaned.split(';');
-        // Intentar buscar la parte que no sea solo numérica (NIT) ni códigos cortos
-        cleaned = parts.find(p => p.trim().length > 10 && /[A-Z]/.test(p)) || parts[1] || parts[0];
+        // Buscar la parte que parezca más un nombre (más de 3 letras, no solo números)
+        cleaned = parts.find(p => {
+            const trimmed = p.trim();
+            return trimmed.length > 3 && /[A-Z]/.test(trimmed.toUpperCase()) && !/^\d+$/.test(trimmed);
+        }) || parts[1] || parts[0];
     }
 
     return cleaned
         .trim()
         .replace(/\s+/g, ' ')
-        .replace(/[^\w\s-ÁÉÍÓÚÑ]/gi, '') // Permitir tildes y Ñ
+        .replace(/[^\w\s-ÁÉÍÓÚÑ]/gi, '')
         .toUpperCase()
-        .substring(0, 100);
+        .substring(0, 100) || 'TIENDA DESCONOCIDA';
 }
 
 /**
@@ -397,40 +404,46 @@ export function extractProducts(xmlData) {
             lines = [lines];
         }
 
-        const products = lines.filter(Boolean).map(line => {
-            const item = line['cac:Item'] || {};
+        const products = lines.filter(Boolean).map((line, index) => {
+            const item = line['cac:Item'] || line['Item'] || {};
             const description =
                 readText(item['cbc:Description']) ||
                 readText(item['cbc:Name']) ||
-                'Producto sin nombre';
+                readText(item['Description']) ||
+                readText(item['Name']) ||
+                `Producto ${index + 1}`;
 
             const code =
                 readText(item?.['cac:StandardItemIdentification']?.['cbc:ID']) ||
                 readText(item?.['cac:SellersItemIdentification']?.['cbc:ID']) ||
+                readText(item?.['StandardItemIdentification']?.['ID']) ||
                 null;
 
-            const quantity = parseNumber(line['cbc:InvoicedQuantity']) || parseNumber(line['cbc:CreditedQuantity']) || 1;
+            const quantity = parseNumber(line['cbc:InvoicedQuantity']) || parseNumber(line['cbc:CreditedQuantity']) || parseNumber(line['InvoicedQuantity']) || 1;
 
-            const price = parseNumber(line['cac:Price']?.['cbc:PriceAmount']);
+            const priceAmountNode = line['cac:Price'] || line['Price'] || {};
+            const price = parseNumber(priceAmountNode['cbc:PriceAmount']) || parseNumber(priceAmountNode['PriceAmount']) || 0;
 
-            const lineTotal = parseNumber(line['cbc:LineExtensionAmount']) || (price * quantity);
+            const lineExtensionAmount = parseNumber(line['cbc:LineExtensionAmount']) || parseNumber(line['LineExtensionAmount']) || (price * quantity);
 
-            const taxTotals = ensureArray(line['cac:TaxTotal']);
+            const taxTotals = ensureArray(line['cac:TaxTotal'] || line['TaxTotal']);
             const taxTotal = taxTotals.length > 0 ? taxTotals[0] : null;
+            const taxSubtotal = ensureArray(taxTotal?.['cac:TaxSubtotal'] || taxTotal?.['TaxSubtotal'])[0];
+
             const taxAmount =
                 parseNumber(taxTotal?.['cbc:TaxAmount']) ||
-                parseNumber(ensureArray(taxTotal?.['cac:TaxSubtotal'])[0]?.['cbc:TaxAmount']) ||
+                parseNumber(taxTotal?.['TaxAmount']) ||
+                parseNumber(taxSubtotal?.['cbc:TaxAmount']) ||
                 0;
 
-            // En DIAN, LineExtensionAmount suele ser subtotal. El total de línea incluye impuestos.
-            const totalWithTax = lineTotal + taxAmount;
+            const totalWithTax = lineExtensionAmount + taxAmount;
 
             return {
                 description: description.toString().trim(),
                 quantity,
                 price,
                 total: Number(totalWithTax.toFixed(2)),
-                totalExclTax: Number(lineTotal.toFixed(2)),
+                totalExclTax: Number(lineExtensionAmount.toFixed(2)),
                 taxAmount: Number(taxAmount.toFixed(2)),
                 code
             };
@@ -470,9 +483,9 @@ export async function processInvoiceXML(xmlString) {
 
         // 3.1 Fallback si no hay productos pero hay total (Para asegurar que se genere al menos un registro)
         if (products.length === 0 && metadata.total > 0) {
-            logger.info('⚠️ No se detectaron productos, creando item genérico basado en total');
+            logger.warn(`⚠️ No se detectaron productos individuales, usando fallback para total $${metadata.total}`);
             products = [{
-                description: `FACTURA ${metadata.tienda}`,
+                description: `Compra en ${metadata.tienda}`,
                 quantity: 1,
                 price: metadata.total,
                 total: metadata.total,
@@ -482,24 +495,20 @@ export async function processInvoiceXML(xmlString) {
             }];
         }
 
-        // 4. Generar descripción concatenada
-        const productNames = products.map(p => p.description).join(', ');
-
         return {
-            fecha: metadata.fecha,
-            tienda: metadata.tienda,
-            proveedor: metadata.proveedor,
-            ciudad: metadata.ciudad,
-            direccion: metadata.direccion,
-            paymentMeansCode: metadata.paymentMeansCode,
-            paymentNote: metadata.paymentNote,
-            paymentMethod: metadata.paymentMethod,
-            total: metadata.total,
+            ...metadata,
             productos: products,
-            productNames: productNames,
+            productNames: products.map(p => p.description).join(', ')
         };
     } catch (error) {
-        logger.error('❌ Error procesando XML:', error);
-        throw error;
+        logger.error('❌ Error procesando factura XML:', error);
+        // Fallback mínimo para no romper el flujo
+        return {
+            fecha: new Date().toISOString().split('T')[0],
+            tienda: 'ERROR AL PROCESAR',
+            total: 0,
+            productos: [],
+            error: error.message
+        };
     }
 }

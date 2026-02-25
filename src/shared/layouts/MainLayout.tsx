@@ -58,19 +58,20 @@ export default function MainLayout() {
         categories,
         onboardingDecision,
         welcomeCompleted,
+        isLoading: financeLoading,
     });
     const isAllowedRoute = isOnboardingAllowedRoute(location.pathname);
 
     useEffect(() => {
         if (!financeLoading && user && isOnboardingLocked && !isAllowedRoute) {
-            navigate("/");
+            navigate("/dashboard");
         }
     }, [financeLoading, user, isOnboardingLocked, isAllowedRoute, navigate]);
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
             if (event === 'PASSWORD_RECOVERY') {
-                navigate("/configuracion?highlight=password");
+                navigate("/settings?highlight=password");
             }
         });
         return () => subscription.unsubscribe();

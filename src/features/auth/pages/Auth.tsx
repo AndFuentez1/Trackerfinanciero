@@ -1,7 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { useEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { getBackendUrl } from '@/core/api/backend';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Wallet, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { SetPasswordStep } from '@/features/auth/components/SetPasswordStep';
@@ -13,6 +15,10 @@ import { calculateProportionalTheme } from '@/features/finance/utils/themeCalcul
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 
 const Auth = forwardRef<HTMLDivElement>((_, ref) => {
+  useSEO({
+    title: 'Ingreso',
+    description: 'Securely access your financial tracker account.'
+  });
   const navigate = useNavigate();
   const { user, loading, signInWithOtp, signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
@@ -37,26 +43,11 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [resendTimer, setResendTimer] = useState(60);
   const [isLoginMode, setIsLoginMode] = useState(true);
 
-  // Normalizar el tema al color de marca sin importar el caché del localStorage
   useEffect(() => {
-    const AUTH_BRAND_COLOR = '#64748b'; // Slate Gray (Color base de la App para Auth)
-    const brandTheme = calculateProportionalTheme(AUTH_BRAND_COLOR);
-    const root = document.documentElement;
-
-    for (const [key, value] of Object.entries(brandTheme)) {
-      root.style.setProperty(key, value);
-    }
-
-    // Al salir de Auth, intentar recuperar su preferencia para acelerar la carga del dashboard
-    return () => {
-      const stored = localStorage.getItem('theme-base-color');
-      if (stored) {
-        const restoredTheme = calculateProportionalTheme(stored);
-        for (const [key, value] of Object.entries(restoredTheme)) {
-          root.style.setProperty(key, value);
-        }
-      }
-    };
+    // Wake up backend ping
+    try {
+      fetch(`${getBackendUrl()}/health`).catch(() => { });
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -266,7 +257,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           setError(translateError(authError.message || 'Error'));
         }
       } else if (data?.user) {
-        navigate('/');
+        navigate('/dashboard');
       }
     } finally {
       setIsSubmitting(false);
@@ -348,7 +339,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       if (updateError) {
         setError(translateError(updateError.message || 'Error'));
       } else {
-        navigate('/configuracion');
+        navigate('/settings');
       }
     } finally {
       setIsSubmitting(false);

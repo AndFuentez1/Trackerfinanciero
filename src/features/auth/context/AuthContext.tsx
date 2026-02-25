@@ -27,30 +27,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         let ignore = false;
-        let oauthTimeout: number | undefined;
 
         const initAuth = async () => {
             try {
-                // 🔍 CRITICAL: Check for OAuth hash fragments FIRST
-                // When Google/Magic Link redirects, URL contains: #access_token=...&refresh_token=...
-                // We need to keep loading=true until onAuthStateChange processes these tokens
+                // Check if we're processing OAuth tokens in URL
                 const hash = window.location.hash || '';
                 const search = window.location.search || '';
                 const hasAuthTokens =
                     hash.includes('access_token') ||
                     hash.includes('refresh_token') ||
-                    hash.includes('type=recovery');
-                const hasAuthCode = search.includes('code=') || search.includes('error=');
+                    hash.includes('type=recovery') ||
+                    search.includes('code=') ||
+                    search.includes('error=');
 
-                if (hasAuthTokens || hasAuthCode) {
-                    // Don't set loading=false yet - let onAuthStateChange handle it
-                    // This prevents App.tsx from evaluating user=null and redirecting to /auth
-                    oauthTimeout = window.setTimeout(() => {
-                        if (!ignore) {
-                            console.warn('⚠️ [AuthContext] OAuth processing timeout, continuing without session');
-                            setLoading(false);
-                        }
-                    }, 8000);
+                if (hasAuthTokens) {
+                    // Do not set loading to false yet.
+                    // Let onAuthStateChange handle the completion of the token flow.
                     return;
                 }
 
@@ -92,9 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => {
             ignore = true;
-            if (oauthTimeout) {
-                clearTimeout(oauthTimeout);
-            }
             subscription.unsubscribe();
         };
     }, []);
@@ -122,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signOut();
         localStorage.removeItem('sb_remember_me');
         localStorage.removeItem('lastActiveTime');
+        localStorage.removeItem('theme-base-color');
         return { error };
     }, []);
 

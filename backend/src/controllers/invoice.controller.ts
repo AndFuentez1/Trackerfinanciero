@@ -14,8 +14,7 @@ import {
     getPaymentMethodId
 } from '../services/supabase.service.js';
 import logger from '../utils/logger.js';
-
-const gmailService = new GmailService();
+import { translateErrorMessage } from '../utils/errorTranslator.ts';
 
 const QUOTA_REASONS = new Set([
     'quotaExceeded',
@@ -37,7 +36,11 @@ const extractGmailError = (error: any) => {
     const reason = error?.response?.data?.error?.errors?.[0]?.reason;
     const message = error?.response?.data?.error?.message || error?.message;
     const retryAfter = error?.response?.headers?.['retry-after'];
-    return { status, reason, message, retryAfter };
+
+    // Auth token errors (like 'invalid_grant') come as string in data.error instead of an array of errors
+    const oauthError = typeof error?.response?.data?.error === 'string' ? error.response.data.error : null;
+
+    return { status, reason: reason || oauthError, message, retryAfter };
 };
 
 const isQuotaError = (error: any) => {
@@ -202,7 +205,8 @@ export async function processGmailInvoices(req: Request, res: Response) {
         }
 
         // Configurar servicio con los tokens del usuario
-        gmailService.setTokens(tokens);
+        const gmailService = new GmailService();
+        gmailService.setTokens(tokens, userId);
 
         // 1. Obtener correos con facturas
         const emails = await gmailService.fetchInvoiceEmails(userId);
@@ -432,11 +436,19 @@ export async function listPendingInvoices(req: Request, res: Response) {
  * Busca facturas en el historial de Gmail
  */
 export async function searchGmailHistory(req: Request, res: Response) {
+    const { userId } = req.query as any;
     try {
-        const { userId, days = 30, markRead } = req.query as any;
+        const { markRead } = req.query as any;
+        let { days, maxResults } = req.query as any;
+
         if (!userId) {
             return res.status(400).json({ error: 'userId requerido' });
         }
+
+        const parsedDays = days ? parseInt(days as string, 10) : undefined;
+        const validDays = parsedDays && parsedDays > 0 ? Math.min(parsedDays, 365) : undefined;
+
+        const limit = maxResults ? parseInt(maxResults as string, 10) : undefined;
 
         const tokens = await loadGmailTokens(userId);
         if (!tokens) {
@@ -456,8 +468,9 @@ export async function searchGmailHistory(req: Request, res: Response) {
             });
         }
 
-        gmailService.setTokens(tokens);
-        const results = await gmailService.searchHistoricalMessages(Number(days));
+        const gmailService = new GmailService();
+        gmailService.setTokens(tokens, userId);
+        const results = await gmailService.searchHistoricalMessages(validDays, limit);
         const messageIds = results.map(r => r.id);
         const statusMap = await fetchMessageStatuses(userId, messageIds);
         const registeredSet = await fetchRegisteredMessageIds(userId, messageIds);
@@ -500,12 +513,24 @@ export async function searchGmailHistory(req: Request, res: Response) {
                 : 'La sesión de Gmail expiró o los permisos fueron revocados. Reconecta Gmail.';
             return res.status(401).json({
                 error: baseMessage,
+                code: 'TOKEN_EXPIRED',
+                requiresReauth: true,
                 details: details.message,
                 reason: details.reason
             });
         }
-        logger.error('❌ Error buscando en historial:', error);
-        res.status(500).json({ error: 'Error en búsqueda de historial', details: details.message || error.message });
+        const errorDetails = translateErrorMessage(details.message || error.message || 'Error desconocido');
+        logger.error(`❌ Error buscando en historial para user ${userId}:`, {
+            message: errorDetails,
+            stack: error.stack,
+            code: error.code
+        });
+
+        res.status(500).json({
+            error: 'Error en búsqueda de historial',
+            details: errorDetails,
+            message: 'La búsqueda de historial falló. Por favor intenta de nuevo o reconecta tu cuenta si el problema persiste.'
+        });
     }
 }
 
@@ -538,7 +563,8 @@ export async function importGmailBatch(req: Request, res: Response) {
             });
         }
 
-        gmailService.setTokens(tokens);
+        const gmailService = new GmailService();
+        gmailService.setTokens(tokens, userId);
         const emails = await gmailService.fetchSpecificMessages(messageIds);
 
         if (emails.length === 0) {
@@ -659,13 +685,18 @@ export async function importGmailBatch(req: Request, res: Response) {
 
                 const responseGroups = pendingRows.length > 0 ? pendingRows : reviewGroups;
 
+                let finalStatus = shouldNotify ? 'telegram' : 'pending';
+                if (pendingRows.length === 0 && reviewGroups.length === 0) {
+                    finalStatus = 'manual_review';
+                }
+
                 await gmailService.markAsProcessed(userId, email.messageId);
 
                 processedCount++;
                 approvedMessageIds.push(email.messageId);
                 results.push({
                     messageId: email.messageId,
-                    status: shouldNotify ? 'telegram' : 'pending',
+                    status: finalStatus,
                     stepOfFailure,
                     store: invoiceData.tienda,
                     total: invoiceData.total,
@@ -714,6 +745,8 @@ export async function importGmailBatch(req: Request, res: Response) {
                 : 'La sesión de Gmail expiró o los permisos fueron revocados. Reconecta Gmail.';
             return res.status(401).json({
                 error: baseMessage,
+                code: 'TOKEN_EXPIRED',
+                requiresReauth: true,
                 details: details.message,
                 reason: details.reason
             });

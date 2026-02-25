@@ -3,8 +3,6 @@ import { GmailService } from '../services/gmail.service.ts';
 import { saveGmailTokens, ensureUserConfig, loadGmailTokens } from '../services/userConfig.service.js';
 import logger from '../utils/logger.js';
 
-const gmailService = new GmailService();
-
 const renderErrorPage = (message: string) => `
   <!DOCTYPE html>
   <html>
@@ -119,6 +117,7 @@ export async function initiateOAuth(req: Request, res: Response) {
     // Generar URL de autenticación con userId en state (Base64 para mayor seguridad en transporte)
     const stateData = { userId, email };
     const state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+    const gmailService = new GmailService();
     const authUrl = gmailService.getAuthUrl(state, {
       prompt: 'consent', // Always force consent to ensure refresh_token
       includeGrantedScopes: true,
@@ -169,6 +168,7 @@ export async function handleOAuthCallback(req: Request, res: Response) {
     logger.info(`🔑 Intercambiando código por tokens para usuario ${userId}...`);
 
     // Intercambiar código por tokens usando GmailService
+    const gmailService = new GmailService();
     const tokens = await gmailService.setCredentials(code);
 
     // Asegurar que existe el registro de user_config

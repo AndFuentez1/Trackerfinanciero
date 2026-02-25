@@ -22,7 +22,7 @@ window.fetch = async (...args) => {
                     action: {
                         label: 'Ir a Configuración',
                         onClick: () => {
-                            window.location.href = '/configuracion';
+                            window.location.href = '/settings';
                         }
                     }
                 });

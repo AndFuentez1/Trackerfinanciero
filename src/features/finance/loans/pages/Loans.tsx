@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSEO } from '@/shared/hooks/useSEO';
 import type { Loan } from '../hooks/useLoans';
 import { useLoans, useCreateLoan, useUpdateLoan, useCreateLoanPayment } from '../hooks/useLoans';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
@@ -26,7 +27,7 @@ import {
     SelectValue
 } from '@/shared/ui/select';
 import { Progress } from '@/shared/ui/progress';
-import { Wallet, Trash2, Edit2, HandCoins, ArrowDownCircle, ArrowUpCircle, Calendar, AlertCircle, Percent, Save, CheckCircle2, XCircle } from 'lucide-react';
+import { Wallet, Trash2, Edit2, HandCoins, ArrowDownCircle, ArrowUpCircle, Calendar, AlertCircle, Percent, Save, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
@@ -40,6 +41,10 @@ import { getTodayLocalDate } from '@/core/utils';
 import { Badge } from '@/shared/ui/badge';
 
 export default function LoansPage() {
+    useSEO({
+        title: 'Préstamos',
+        description: 'Loans & Debts - Manage your personal loans and tracked debts.'
+    });
     const { user, loading: authLoading } = useAuth();
     const { loans, loading, error, refetch } = useLoans();
     const { createLoan } = useCreateLoan();
@@ -96,9 +101,12 @@ export default function LoansPage() {
     });
 
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) { return; }
+        setIsSubmitting(true);
 
         const payload = {
             name: formData.name,
@@ -126,6 +134,7 @@ export default function LoansPage() {
             setEditingId(null);
             refetch();
         }
+        setIsSubmitting(false);
     };
 
     const handleDelete = async (id: string) => {
@@ -432,7 +441,10 @@ export default function LoansPage() {
                                                     </Select>
                                                     <p className="text-sm text-muted-foreground mt-1">Cuenta donde se registra el movimiento inicial del préstamo.</p>
                                                 </div>
-                                                <Button type="submit" className="w-full min-w-[140px] flex items-center justify-center gap-2">Guardar <Save className="h-4 w-4" /></Button>
+                                                <Button type="submit" disabled={isSubmitting} className="w-full min-w-[140px] flex items-center justify-center gap-2">
+                                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                    {isSubmitting ? 'Guardando...' : 'Guardar'}
+                                                </Button>
                                             </form>
                                         </DialogContent>
                                     </Dialog>
@@ -673,7 +685,7 @@ export default function LoansPage() {
                                                                             (isDebt ? 'Deuda' : 'Por Cobrar')}
                                                                 </span>
                                                                 {overdue && !isPendingDisbursement && !isOrphaned && (
-                                                                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-orange-100 text-orange-600 animate-pulse">
+                                                                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-orange-100 text-orange-600">
                                                                         <AlertCircle className="h-3 w-3" />
                                                                         Vencido
                                                                     </span>
@@ -714,7 +726,7 @@ export default function LoansPage() {
                                                             {isPendingDisbursement ? (
                                                                 <Button
                                                                     size="sm"
-                                                                    className="gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
+                                                                    className="gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
                                                                     onClick={() => handleOpenDisbursement(loan)}
                                                                 >
                                                                     <CheckCircle2 className="h-4 w-4" />

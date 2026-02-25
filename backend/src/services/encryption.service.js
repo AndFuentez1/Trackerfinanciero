@@ -1,3 +1,4 @@
+import { promisify } from 'util';
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
 
@@ -8,19 +9,20 @@ import logger from '../utils/logger.js';
 
 const ALGORITHM = 'aes-256-cbc';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32ch';
+const scryptAsync = promisify(crypto.scrypt);
 
 /**
  * Encripta un texto usando AES-256-CBC
  * @param {string} text - Texto a encriptar
  * @param {string} userId - ID del usuario (usado como salt)
- * @returns {string} - Texto encriptado en formato "iv:encrypted"
+ * @returns {Promise<string>} - Texto encriptado en formato "iv:encrypted"
  */
-export function encrypt(text, userId) {
+export async function encrypt(text, userId) {
     try {
         if (!text) return null;
 
-        // Derivar key única por usuario
-        const key = crypto.scryptSync(ENCRYPTION_KEY, userId, 32);
+        // Derivar key única por usuario de forma asíncrona
+        const key = await scryptAsync(ENCRYPTION_KEY, userId, 32);
 
         // Generar IV aleatorio
         const iv = crypto.randomBytes(16);
@@ -44,9 +46,9 @@ export function encrypt(text, userId) {
  * Desencripta un texto encriptado con encrypt()
  * @param {string} encryptedText - Texto encriptado en formato "iv:encrypted"
  * @param {string} userId - ID del usuario (usado como salt)
- * @returns {string} - Texto desencriptado
+ * @returns {Promise<string>} - Texto desencriptado
  */
-export function decrypt(encryptedText, userId) {
+export async function decrypt(encryptedText, userId) {
     try {
         if (!encryptedText) return null;
 
@@ -57,8 +59,8 @@ export function decrypt(encryptedText, userId) {
             throw new Error('Formato de texto encriptado inválido');
         }
 
-        // Derivar key única por usuario
-        const key = crypto.scryptSync(ENCRYPTION_KEY, userId, 32);
+        // Derivar key única por usuario de forma asíncrona
+        const key = await scryptAsync(ENCRYPTION_KEY, userId, 32);
 
         // Convertir IV de hex a buffer
         const iv = Buffer.from(ivHex, 'hex');
@@ -81,20 +83,20 @@ export function decrypt(encryptedText, userId) {
  * Encripta un objeto JSON
  * @param {object} obj - Objeto a encriptar
  * @param {string} userId - ID del usuario
- * @returns {string} - JSON encriptado
+ * @returns {Promise<string>} - JSON encriptado
  */
-export function encryptJSON(obj, userId) {
+export async function encryptJSON(obj, userId) {
     const jsonString = JSON.stringify(obj);
-    return encrypt(jsonString, userId);
+    return await encrypt(jsonString, userId);
 }
 
 /**
  * Desencripta un JSON encriptado
  * @param {string} encryptedJSON - JSON encriptado
  * @param {string} userId - ID del usuario
- * @returns {object} - Objeto desencriptado
+ * @returns {Promise<object>} - Objeto desencriptado
  */
-export function decryptJSON(encryptedJSON, userId) {
-    const jsonString = decrypt(encryptedJSON, userId);
+export async function decryptJSON(encryptedJSON, userId) {
+    const jsonString = await decrypt(encryptedJSON, userId);
     return jsonString ? JSON.parse(jsonString) : null;
 }

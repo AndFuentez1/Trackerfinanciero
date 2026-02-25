@@ -18,25 +18,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const DEFAULT_BASE_COLOR = '#64748b';
-
-const bootstrapTheme = () => {
-  if (typeof window === 'undefined') { return; }
-  try {
-    const stored = localStorage.getItem('theme-base-color');
-    const baseColor = stored || DEFAULT_BASE_COLOR;
-    const theme = calculateProportionalTheme(baseColor);
-    const root = document.documentElement;
-    for (const [key, value] of Object.entries(theme)) {
-      root.style.setProperty(key, value);
-    }
-  } catch (error) {
-    console.warn('[theme] bootstrap failed', error);
-  }
-};
-
-bootstrapTheme();
-
 const rootElement = document.getElementById("root");
 if (rootElement) {
   try {

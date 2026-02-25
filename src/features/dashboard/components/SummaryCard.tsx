@@ -57,7 +57,7 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
             currencyCode={currency}
             className={cn(
               'font-bold tracking-tight leading-none',
-              "text-3xl", // Keep number size relative but ensure it fits larger card
+              "text-2xl sm:text-3xl", // Responsive font size to prevent overflow on mobile
               getTextColor()
             )}
           />

@@ -221,7 +221,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
 
                                 <TabsContent value={alphabetTab} className="mt-4">
                                     <div className="flex-1 -mx-2 px-2">
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
                                             {filteredCategories.map(renderCategoryCard)}
                                             {filteredCategories.length === 0 && (
                                                 <div className="col-span-3 text-center py-8 text-muted-foreground">
@@ -235,7 +235,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                         ) : (
                             /* Show all categories directly when less than 20 */
                             <div className="flex-1 -mx-2 px-2">
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pr-4 pb-2">
                                     {typeFilteredCategories.map(renderCategoryCard)}
                                     {typeFilteredCategories.length === 0 && (
                                         <div className="col-span-3 text-center py-8 text-muted-foreground">

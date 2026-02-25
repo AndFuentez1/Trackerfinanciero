@@ -114,13 +114,13 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
 
     // Fondos y superficies NEUTROS (constantes)
     themeVars['--background'] = '0 0% 100%'; // blanco
-    themeVars['--foreground'] = '220 15% 15%';
-    themeVars['--container'] = '220 15% 97%';
+    themeVars['--foreground'] = '215 13% 15%';
+    themeVars['--container'] = '215 13% 97%';
     themeVars['--card'] = '0 0% 100%';
-    themeVars['--card-foreground'] = '220 15% 15%';
-    themeVars['--border'] = '220 13% 90%';
-    themeVars['--muted'] = '220 15% 96%';
-    themeVars['--muted-foreground'] = '220 10% 40%'; // Improved contrast (was 45%)
+    themeVars['--card-foreground'] = '215 13% 15%';
+    themeVars['--border'] = '215 13% 90%';
+    themeVars['--muted'] = '215 13% 96%';
+    themeVars['--muted-foreground'] = '215 12% 40%'; // Improved contrast (was 45%)
     themeVars['--input'] = '0 0% 100%';
 
     // Accent tokens premium
@@ -132,7 +132,7 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
 
     // Dynamic Primary Foreground based on L (Level AA safety)
     // If lightness is high (> 65%), use dark text
-    themeVars['--primary-foreground'] = accentPrimaryL > 65 ? '220 15% 15%' : '0 0% 100%';
+    themeVars['--primary-foreground'] = accentPrimaryL > 65 ? '215 13% 15%' : '0 0% 100%';
 
     // Accent soft: para hover, focus, iconos activos, tabs activos
     const accentSoftS = Math.round(accentPrimaryS * 0.4);
@@ -156,16 +156,16 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
 
     // Accent general para compatibilidad
     themeVars['--accent'] = themeVars['--accent-soft'];
-    themeVars['--accent-foreground'] = '220 15% 15%';
+    themeVars['--accent-foreground'] = '215 13% 15%';
     themeVars['--ring'] = themeVars['--accent-primary'];
 
     // Secondary, Destructive, Popover
-    themeVars['--secondary'] = '220 15% 96%';
-    themeVars['--secondary-foreground'] = '220 15% 15%';
+    themeVars['--secondary'] = '215 13% 96%';
+    themeVars['--secondary-foreground'] = '215 13% 15%';
     themeVars['--destructive'] = '0 84% 60%';
     themeVars['--destructive-foreground'] = '0 0% 100%';
     themeVars['--popover'] = '0 0% 100%';
-    themeVars['--popover-foreground'] = '220 15% 15%';
+    themeVars['--popover-foreground'] = '215 13% 15%';
 
     // Variables personalizadas del sistema
     themeVars['--bg-app'] = themeVars['--background'];

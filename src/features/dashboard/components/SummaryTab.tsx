@@ -266,7 +266,7 @@ export function SummaryTab({
               className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100 hover:text-orange-800 bg-white/50 backdrop-blur-sm shadow-sm gap-2"
               onClick={() => {
                 hideGlobalAlert();
-                navigate('/historial?reclassify=true');
+                navigate('/history?reclassify=true');
               }}
             >
               Corregir (Historial) <ArrowRight className="w-4 h-4" />
@@ -395,7 +395,7 @@ export function SummaryTab({
         ) : (
           <div className="flex flex-col gap-6">
             {/* ROW 1: 3 Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
               <SummaryCard
                 title="Patrimonio neto"
                 amount={dashboardStats.netWorth}
@@ -417,7 +417,7 @@ export function SummaryTab({
             </div>
 
             {/* ROW 2: 4 Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <SummaryCard
                 title="Ingresos del mes"
                 amount={dashboardStats.monthlyIncome}

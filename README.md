@@ -67,34 +67,18 @@ La aplicación ha pasado por una verificación exhaustiva de UI/UX y lógica fin
 - **Refactor de Transferencias:** Actualización de la firma de `addTransfer` para usar objetos, mejorando la mantenibilidad y resolviendo errores en la página de Ahorros.
 - **Alineación Visual:** Ajustes estructurales en encabezados y tarjetas para garantizar una alineación perfecta sin hacks de CSS.
 
+### ✅ 2026-02-23 — Seguridad & Bug Fixes
+- **Fix: Préstamo duplicado** — `Loans.tsx` ahora usa `isSubmitting` guard que deshabilita el botón "Guardar" durante la operación async, previniendo doble-clic o red lenta que generaba 2 registros.
+- **Fix: TypeScript** — Declarado estado faltante `reviewViewByMessageId` en `AdvancedSettings.tsx` que causaba error de compilación.
+- **Migración DB** (`20260223_loans_unique_and_data_masking.sql`):
+  - `UNIQUE(user_id, name)` en tabla `loans` — rechaza duplicados a nivel de BD como segunda línea de defensa.
+  - Vista `user_configs_masked` — enmascara `gmail_tokens`, `gemini_api_key`, `telegram_bot_token` como `***CONFIGURED***` en consultas SQL directas (los datos ya están cifrados AES-256-CBC por el backend).
+  - Columnas de auditoría `gemini_key_updated_at`, `telegram_token_updated_at`, `gmail_tokens_updated_at` + trigger de rotación automática.
+- **Cifrado de credenciales confirmado** — `encryption.service.js` cifra todos los tokens con AES-256-CBC + IV aleatorio por registro + clave derivada por usuario vía `scrypt`. Los datos en `user_configs` nunca son texto plano.
+
 ## 🚀 Hoja de Ruta (Roadmap) & Próximos Pasos
 
-Se ha diseñado un plan para futuras mejoras críticas que optimizarán la flexibilidad y el alcance de la aplicación:
-
-### 1. Internacionalización (i18n)
-- **Selector de Idioma:** Preparación para soporte multi-idioma (Español/Inglés).
-- **Localización:** Adaptación de formatos de fecha y moneda según la elección del usuario
-
-### 2. Toggles de Funcionalidad (Feature Toggles)
-- **Control de Visibilidad:** Implementación de interruptores en Configuración para mostrar/ocultar módulos específicos:
-    - **Panel de Facturas Pendientes:** Opción para usuarios que prefieren un historial más limpio.
-    - **Zona de Reclasificación:** Toggle para activar/desactivar la asistencia de limpieza de datos.
-- **Persistencia:** Uso de `localStorage` para preferencias inmediatas, escalable a perfil de base de datos.
-
-### 3. Aplicación Móvil y Modo Offline (Próximamente)
-- **Capacitor Wrapper:** Convertir la aplicación en una APK funcional utilizando WebView con Capacitor.
-- **Capacidades Offline:** Permitir el uso de la aplicación y el registro de datos sin conexión a internet.
-- **Sincronización Inteligente:** Actualizar automáticamente los datos con el servidor una vez se recupere la conexión.
-
-### 4. Gestión de Configuración
-- **Portabilidad:** Opción para exportar e importar la configuración personalizada de la aplicación (temas, feature toggles, preferencias) para facilitar la migración entre dispositivos.
-
-### 5. QA & Performance (Pendiente)
-- [x] Ejecutar Lighthouse en entorno productivo y registrar scores (Performance, Accessibility, Best Practices, SEO).
-- [x] Configurar suite de tests (Unit/Integration/E2E) y pipeline de CI.
-- [ ] Revisar CLS/TTI con datasets reales y optimizar carga de módulos pesados (charts/excel).
-- [ ] Auditoría de accesibilidad completa (teclado, aria-labels, contraste).
-- [ ] Backlog de tests guardado en `docs/tests-backlog.md` para reactivar la suite.
+Consulta el documento [FUTURE_IMPROVEMENTS.md](./FUTURE_IMPROVEMENTS.md) para ver el plan detallado de mejoras críticas, incluyendo internacionalización, modo offline, y optimizaciones de seguridad.
 
 ## 🧪 Pruebas y QA
 
@@ -350,6 +334,10 @@ npm run dev
 - All reads/writes filter by `user.id` (e.g., `.eq('user_id', user.id)`)
 - Modifying queries **must preserve RLS filtering**
 - Update types when schema changes (regenerate from Supabase CLI or manually)
+- **RLS** is enabled on all tables with `WITH CHECK (auth.uid() = user_id)` — full CRUD protection
+- **Credential encryption**: `encryption.service.js` uses AES-256-CBC with per-user scrypt-derived key. Never store tokens as plain text.
+- **Data masking view**: `user_configs_masked` — use this for any frontend SQL inspection; base table is for backend (service_role) only.
+- **Unique constraints**: `loans(user_id, name)` prevents duplicate loan creation at DB level.
 
 ### Real-time Updates
 - `useFinanceData` subscribes to `transactions` table

@@ -36,7 +36,7 @@ export async function saveGmailTokens(userId, tokens) {
             }
 
             if (data?.gmail_tokens) {
-                existingTokens = decryptJSON(data.gmail_tokens, userId);
+                existingTokens = await decryptJSON(data.gmail_tokens, userId);
             }
         } catch (loadError) {
             logger.warn('⚠️ No se pudieron cargar tokens previos de Gmail:', loadError);
@@ -56,7 +56,7 @@ export async function saveGmailTokens(userId, tokens) {
             mergedTokens.refresh_token = existingTokens.refresh_token;
         }
 
-        const encrypted = encryptJSON(mergedTokens, userId);
+        const encrypted = await encryptJSON(mergedTokens, userId);
 
         const { error } = await supabase
             .from('user_configs')
@@ -100,7 +100,7 @@ export async function loadGmailTokens(userId) {
             return null;
         }
 
-        const tokens = decryptJSON(data.gmail_tokens, userId);
+        const tokens = await decryptJSON(data.gmail_tokens, userId);
         logger.info(`✅ Tokens de Gmail cargados para usuario ${userId}`);
         return tokens;
     } catch (error) {
@@ -139,7 +139,7 @@ export async function getGmailTokenStatus(userId) {
             expiryDate,
             expiresIn, // seconds until expiration
             isExpired,
-            requiresReauth: !hasRefreshToken || isExpired
+            requiresReauth: !hasRefreshToken // Only require reauth if we can't refresh
         };
     } catch (error) {
         logger.error('❌ Error obteniendo estado de tokens de Gmail:', error);
@@ -159,7 +159,7 @@ export async function getGmailTokenStatus(userId) {
  */
 export async function saveGeminiKey(userId, apiKey, email) {
     try {
-        const encrypted = encrypt(apiKey, userId);
+        const encrypted = await encrypt(apiKey, userId);
 
         const { data: existing, error: existingError } = await supabase
             .from('user_configs')
@@ -225,7 +225,7 @@ export async function loadGeminiKey(userId) {
             return null;
         }
 
-        const apiKey = decrypt(data.gemini_api_key, userId);
+        const apiKey = await decrypt(data.gemini_api_key, userId);
         logger.info(`✅ Gemini API Key cargada para usuario ${userId}`);
         return apiKey;
     } catch (error) {
@@ -264,7 +264,7 @@ export async function saveTelegramConfig(userId, botToken, chatId, notifyRulesEx
         // If botToken is undefined, keep existing.
         let encryptedToken = existing?.telegram_bot_token;
         if (botToken !== undefined) {
-            encryptedToken = botToken ? encrypt(botToken, userId) : null;
+            encryptedToken = botToken ? await encrypt(botToken, userId) : null;
         }
 
         const finalChatId = chatId !== undefined ? chatId : existing?.telegram_chat_id;
@@ -373,7 +373,7 @@ export async function loadTelegramConfig(userId) {
         }
 
         return {
-            botToken: decrypt(data.telegram_bot_token, userId),
+            botToken: await decrypt(data.telegram_bot_token, userId),
             chatId: data.telegram_chat_id,
             notifyRulesExceptions: data.notify_rules_exceptions,
             notifyAiExceptions: data.notify_ai_exceptions
@@ -417,21 +417,7 @@ export async function getUserConfigStatus(userId) {
 
         if (error) {
             if (error.code === 'PGRST116') {
-                let email = null;
-                try {
-                    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-                    if (!userError) {
-                        email = userData?.user?.email ?? null;
-                    }
-                } catch (authError) {
-                    logger.warn('⚠️ No se pudo cargar email desde auth.users', authError);
-                }
-
-                if (email) {
-                    await ensureUserConfig(userId, email);
-                }
-
-                return { ...DEFAULT_CONFIG_STATUS, hasEmail: !!email };
+                return { ...DEFAULT_CONFIG_STATUS };
             }
             if (error.code === '42P01' || error.code === '42703') {
                 logger.warn('⚠️ user_configs schema missing or outdated; returning defaults', error);

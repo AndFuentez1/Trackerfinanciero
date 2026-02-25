@@ -93,7 +93,7 @@ export function WelcomePanel() {
               </>
             )}
           </Button>
-          <Button onClick={() => navigate('/configuracion?highlight=categories')} variant="secondary" className="w-full">
+          <Button onClick={() => navigate('/settings?highlight=categories')} variant="secondary" className="w-full">
             Ir a Configuración
           </Button>
         </div>
@@ -106,7 +106,7 @@ export function WelcomePanel() {
       description: 'Cuentas, tarjetas o efectivo',
       completed: paymentMethods.length > 0,
       action: (
-        <Button onClick={() => navigate('/configuracion?highlight=payment-methods')} className="w-full">
+        <Button onClick={() => navigate('/settings?highlight=payment-methods')} className="w-full">
           Ir a Configuración
         </Button>
       ),

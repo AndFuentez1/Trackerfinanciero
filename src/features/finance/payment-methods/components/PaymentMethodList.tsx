@@ -77,7 +77,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
 
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {paymentMethods.map((pm) => {
         const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
@@ -94,7 +94,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
               <CurrencyDisplay
                 amount={val}
                 currencyCode={ctxCurrency || currency}
-                className="text-3xl"
+                className="text-2xl sm:text-3xl font-bold"
                 hideSymbol={false}
               />
             </div>
@@ -203,7 +203,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
           ]
         )}
       >
-        <Plus className={cn("h-5 w-5", highlighted && "animate-pulse")} />
+        <Plus className={cn("h-5 w-5", highlighted && "")} />
         <span className="hidden sm:inline ml-2">Agregar método</span>
       </Button>
     </div>

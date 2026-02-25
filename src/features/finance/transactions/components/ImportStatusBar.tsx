@@ -28,7 +28,7 @@ export function ImportStatusBar({
         return (
             <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-4 mb-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 bg-blue-600 rounded-full animate-pulse" />
+                    <div className="h-2 w-2 bg-blue-600 rounded-full" />
                     <p className="text-sm font-medium text-blue-900">
                         Aplicando {recordCount} {recordCount === 1 ? 'registro' : 'registros'}...
                     </p>
@@ -47,7 +47,7 @@ export function ImportStatusBar({
                             <FileCheck className="h-5 w-5 text-emerald-600" />
                             <h3 className="font-semibold text-emerald-900">Datos importados desde Excel</h3>
                         </div>
-                        
+
                         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                             <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                             <div>

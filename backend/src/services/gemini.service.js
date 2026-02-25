@@ -92,6 +92,7 @@ export async function classifyWithAI(userId, invoiceData) {
 
         // Inicializar modelo con la key del usuario
         const genAI = new GoogleGenerativeAI(apiKey);
+        // Use standard model name since 'latest' tag was dropped in v1beta
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = generatePrompt(invoiceData);

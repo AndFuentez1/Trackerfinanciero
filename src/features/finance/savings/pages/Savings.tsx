@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useSEO } from '@/shared/hooks/useSEO';
 import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useSavingsData } from '@/features/finance/hooks/useSavingsData';
@@ -12,6 +13,10 @@ import { useState } from 'react';
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function SavingsPage() {
+    useSEO({
+        title: 'Ahorros',
+        description: 'Seguimiento de tus metas y cuentas de ahorro.'
+    });
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
     const {

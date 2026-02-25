@@ -5,13 +5,13 @@ import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { getOnboardingGateState, isOnboardingAllowedRoute } from "@/core/utils";
 
 const items = [
-    { name: "Panel", icon: LayoutDashboard, href: "/" },
-    { name: "Historial", icon: Receipt, href: "/historial" },
-    { name: "Flujo de Caja", icon: Wallet, href: "/flujo-caja" },
-    { name: "Presupuestos", icon: PieChart, href: "/presupuestos" },
-    { name: "Ahorros", icon: PiggyBank, href: "/ahorros" },
-    { name: "Préstamos", icon: HandCoins, href: "/prestamos" },
-    { name: "Configuración", icon: Settings, href: "/configuracion" },
+    { name: "Panel", icon: LayoutDashboard, href: "/dashboard" },
+    { name: "Historial", icon: Receipt, href: "/history" },
+    { name: "Flujo de Caja", icon: Wallet, href: "/cashflow" },
+    { name: "Presupuestos", icon: PieChart, href: "/budgets" },
+    { name: "Ahorros", icon: PiggyBank, href: "/savings" },
+    { name: "Préstamos", icon: HandCoins, href: "/loans" },
+    { name: "Configuración", icon: Settings, href: "/settings" },
 ];
 
 export function MobileNav() {
@@ -23,6 +23,7 @@ export function MobileNav() {
         categories,
         onboardingDecision,
         welcomeCompleted,
+        loading: financeLoading,
     } = useFinanceData();
 
     const { isOnboardingLocked } = getOnboardingGateState({
@@ -31,6 +32,7 @@ export function MobileNav() {
         categories,
         onboardingDecision,
         welcomeCompleted,
+        isLoading: financeLoading,
     });
 
     return (

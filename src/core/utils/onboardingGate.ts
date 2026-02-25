@@ -6,6 +6,7 @@ type OnboardingGateInput = {
   categories?: { length: number };
   onboardingDecision?: OnboardingDecision;
   welcomeCompleted?: boolean;
+  isLoading?: boolean;
 };
 
 export const getOnboardingGateState = ({
@@ -14,7 +15,17 @@ export const getOnboardingGateState = ({
   categories,
   onboardingDecision,
   welcomeCompleted,
+  isLoading = false,
 }: OnboardingGateInput) => {
+  if (isLoading) {
+    return {
+      isEmptyState: false,
+      showWelcomePanel: false,
+      showDecisionPanel: false,
+      isOnboardingLocked: false,
+    };
+  }
+
   const paymentCount = paymentMethods?.length ?? 0;
   const categoryCount = categories?.length ?? 0;
   const isEmptyState = !currency || paymentCount === 0 || categoryCount === 0;
@@ -31,4 +42,4 @@ export const getOnboardingGateState = ({
 };
 
 export const isOnboardingAllowedRoute = (path: string) =>
-  path === "/" || path.startsWith("/configuracion");
+  path === "/dashboard" || path === "/settings" || path.startsWith("/dashboard") || path.startsWith("/settings") || path.startsWith("/history") || path.startsWith("/budgets") || path.startsWith("/cashflow") || path.startsWith("/savings") || path.startsWith("/loans");

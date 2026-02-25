@@ -678,26 +678,53 @@ const OnboardingSkeleton = () => (
 );
 
 // ---------------------------------------------------------------------
-// Auth Skeleton (No Sidebar)
+// Auth Skeleton (High Fidelity Login Structure)
 // ---------------------------------------------------------------------
 const AuthSkeleton = () => (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-        <CardSkeleton height="auto" width="100%" maxWidth="450px" padding="2rem" className="flex flex-col items-center space-y-6">
-            <div className="p-3 rounded-2xl bg-primary/10 mb-2">
-                <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.5rem" />
+    <div className="flex flex-col items-center justify-center min-h-[80vh] w-full px-4 animate-in fade-in duration-500">
+        <div className="w-full max-w-[440px] flex flex-col items-center">
+            {/* Logo placeholder */}
+            <div className="mb-8 flex flex-col items-center gap-3">
+                <PulseBlock height="48px" width="48px" borderRadius="12px" className="bg-primary/10" />
+                <PulseBlock height="24px" width="180px" />
             </div>
-            <PulseBlock height="2rem" width="60%" className="mb-2" />
-            <PulseBlock height="1rem" width="40%" className="mb-8" />
 
-            <div className="w-full space-y-4">
-                <PulseBlock height="3rem" width="100%" borderRadius="0.5rem" />
-                <div className="flex gap-2">
-                    <PulseBlock height="2.5rem" width="50%" borderRadius="0.5rem" />
-                    <PulseBlock height="2.5rem" width="50%" borderRadius="0.5rem" />
+            <CardSkeleton height="auto" width="100%" padding="1.5rem" className="flex flex-col space-y-6">
+                {/* Tabs placeholder */}
+                <div className="flex p-1 bg-muted/50 rounded-lg w-full">
+                    <PulseBlock height="36px" width="50%" borderRadius="6px" className="bg-background shadow-sm" />
+                    <PulseBlock height="36px" width="50%" borderRadius="6px" className="bg-transparent" />
                 </div>
-                <PulseBlock height="10rem" width="100%" borderRadius="0.5rem" />
-            </div>
-        </CardSkeleton>
+
+                {/* Form fields */}
+                <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                        <PulseBlock height="14px" width="80px" />
+                        <PulseBlock height="40px" width="100%" borderRadius="8px" />
+                    </div>
+                    <div className="space-y-2">
+                        <PulseBlock height="14px" width="100px" />
+                        <PulseBlock height="40px" width="100%" borderRadius="8px" />
+                    </div>
+                </div>
+
+                {/* Action button */}
+                <PulseBlock height="44px" width="100%" borderRadius="8px" className="bg-primary/20" />
+
+                {/* Social login separator */}
+                <div className="flex items-center gap-4 py-2">
+                    <div className="h-px bg-border flex-1" />
+                    <PulseBlock height="12px" width="120px" />
+                    <div className="h-px bg-border flex-1" />
+                </div>
+
+                {/* Social buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                    <PulseBlock height="40px" width="100%" borderRadius="8px" />
+                    <PulseBlock height="40px" width="100%" borderRadius="8px" />
+                </div>
+            </CardSkeleton>
+        </div>
     </div>
 );
 

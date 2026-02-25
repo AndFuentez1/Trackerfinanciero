@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSEO } from '@/shared/hooks/useSEO';
 import { useCashFlow } from '@/features/finance/cashflow/hooks/useCashFlow';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { CashFlowFilters } from '@/features/finance/cashflow/components/CashFlowFilters';
@@ -20,6 +21,10 @@ const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
 const BACKEND_URL = getBackendUrl();
 
 export default function CashFlow() {
+  useSEO({
+    title: 'Flujo',
+    description: 'Cash Flow Projection - Visualize your future income and commitments.'
+  });
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

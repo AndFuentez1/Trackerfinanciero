@@ -5,11 +5,11 @@
  * Extracted from useFinanceDataLogic.ts for better separation of concerns.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { calculateProportionalTheme } from '../utils/themeCalculations';
 import { THEME_OPTIONS, MASTER_PALETTE } from '../constants/themeConstants';
 
-const DEFAULT_BASE_COLOR = '#0f172a'; // Deep Navy Slate
+const DEFAULT_BASE_COLOR = '#64748b'; // Slate Gray (System Neutral)
 
 /**
  * Hook to manage application theme
@@ -19,7 +19,13 @@ const DEFAULT_BASE_COLOR = '#0f172a'; // Deep Navy Slate
 export function useTheme(initialColor?: string) {
     const [baseColor, setBaseColor] = useState(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('theme-base-color') || initialColor || DEFAULT_BASE_COLOR;
+            const stored = localStorage.getItem('theme-base-color');
+            const hasSession = Object.keys(localStorage).some(k => k.includes('supabase') || k.startsWith('sb-'));
+
+            // If we have a session and a stored color, use it.
+            // If no session, go to default (Neutral Gray).
+            if (hasSession && stored) return stored;
+            return DEFAULT_BASE_COLOR;
         }
         return initialColor || DEFAULT_BASE_COLOR;
     });
@@ -30,23 +36,16 @@ export function useTheme(initialColor?: string) {
 
     // Sync with initialColor from profile
     useEffect(() => {
-        if (initialColor === null) {
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('theme-base-color');
-            }
-            if (baseColor !== DEFAULT_BASE_COLOR) {
-                setBaseColor(DEFAULT_BASE_COLOR);
-            }
-            return;
-        }
+        if (!initialColor) return;
 
-        if (initialColor && initialColor !== baseColor) {
+        // Only update if the color is actually different
+        if (initialColor !== baseColor) {
             setBaseColor(initialColor);
         }
     }, [initialColor]);
 
     // Calculate and apply theme when baseColor changes
-    useEffect(() => {
+    useLayoutEffect(() => {
         const theme = calculateProportionalTheme(baseColor);
         setThemeVars(theme);
 

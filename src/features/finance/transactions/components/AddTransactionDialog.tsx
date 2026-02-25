@@ -200,7 +200,7 @@ export function AddTransactionDialog({
 
   const handleNavigateToSettings = () => {
     setShowAlert(false);
-    navigate('/configuracion');
+    navigate('/settings');
   };
 
   const onFormSubmit = async (values: TransactionFormValues) => {

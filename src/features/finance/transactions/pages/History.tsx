@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { useFinanceData, CategoryItem } from '../../hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
@@ -28,6 +29,10 @@ import type { Transaction } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
 
 export default function HistoryPage() {
+    useSEO({
+        title: 'Historial',
+        description: 'Transaction History - Detailed log of all your income, expenses, and transfers.'
+    });
     // ============================================================================
     // ALL HOOKS AT TOP - BEFORE ANY CONDITIONALS
     // ============================================================================
@@ -358,7 +363,7 @@ export default function HistoryPage() {
                                     </Button>
                                 </div>
                                 <div className="flex flex-col gap-4">
-                                    {reclassifyTxs.slice(0, 3).map(tx => {
+                                    {reclassifyTxs.slice(0, 5).map((tx, index) => {
                                         const initialDraft = {
                                             description: tx.description || '',
                                             amount: tx.amount ?? '',
@@ -378,7 +383,7 @@ export default function HistoryPage() {
                                         const hasValidAmount = Boolean(tx.amount) && tx.amount !== 0;
 
                                         return (
-                                            <div key={tx.id} className="bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm not-italic">
+                                            <div key={tx.id} className={cn("bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm not-italic", index >= 3 && "hidden sm:flex")}>
                                                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
                                                     {/* Fecha (Date) - 1st */}
                                                     <div className="space-y-1">

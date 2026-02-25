@@ -1,5 +1,6 @@
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMemo } from 'react';
+import { useSEO } from '@/shared/hooks/useSEO';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
@@ -15,6 +16,10 @@ import { LayoutDashboard } from 'lucide-react';
 import { getOnboardingGateState } from '@/core/utils';
 
 export default function Index() {
+  useSEO({
+    title: 'Panel',
+    description: 'Main Dashboard - Overview of your financial status and quick actions.'
+  });
   const { user, loading: authLoading } = useAuth();
   const {
     transactions,
@@ -85,18 +90,13 @@ export default function Index() {
   );
 
   const { showWelcomePanel, showDecisionPanel } = useMemo(() => {
-    // STRICT GATING: Never show onboarding panels while loading
-    // This prevents the "flash" of the Welcome Panel for existing users
-    if (isLoading) {
-      return { showWelcomePanel: false, showDecisionPanel: false };
-    }
-
     return getOnboardingGateState({
       currency,
       paymentMethods,
       categories,
       onboardingDecision,
       welcomeCompleted,
+      isLoading,
     });
   }, [isLoading, currency, paymentMethods, categories, onboardingDecision, welcomeCompleted]);
 

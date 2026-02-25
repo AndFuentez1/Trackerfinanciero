@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSEO } from "@/shared/hooks/useSEO";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { format } from 'date-fns';
@@ -27,6 +28,10 @@ import { FutureExpensesList } from "@/features/finance/budgets/components/Future
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function BudgetsPage() {
+    useSEO({
+        title: 'Presupuestos',
+        description: 'Controla tus gastos y establece límites mensuales.'
+    });
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
     const {
