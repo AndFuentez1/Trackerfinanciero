@@ -38,7 +38,7 @@ export default function HistoryPage() {
     // ============================================================================
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const highlightOrphaned = searchParams.get('reclassify') === 'true';
+    const isPanelVisible = searchParams.get('hide_pending') !== 'true';
     const { user, loading: authLoading } = useAuth();
     const {
         transactions,
@@ -65,6 +65,7 @@ export default function HistoryPage() {
         rangeTransactions,
         allTransactions, // Use full dataset for filter options
         totalTransactionsCount,
+        pendingInvoices,
     } = useFinanceData();
 
     const { currency } = useFinance();
@@ -72,9 +73,6 @@ export default function HistoryPage() {
     // useState hooks - MUST be before any conditionals
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [reclassifyDrafts, setReclassifyDrafts] = useState<Record<string, Record<string, string | number>>>({});
-    const [savingId, setSavingId] = useState<string | null>(null);
-    const [creatingPMFor, setCreatingPMFor] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // Debounced state for filtering
     const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
@@ -167,19 +165,16 @@ export default function HistoryPage() {
         updateFilter('all');
     };
 
-    // Memoized values - transactions needing reclassification
-    // CRITICAL: Exclude savings and investment types (managed in Savings tab only)
     const reclassifyTxs = useMemo(() => {
         const safeTransactions = allTransactions || [];
         return safeTransactions.filter(tx => {
             const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
             if (isTransfer) { return false; }
-
-            return (!tx.category_id || !tx.payment_method_id) &&
-                tx.type !== 'saving' &&
-                tx.type !== 'investment';
+            return (!tx.category_id || !tx.payment_method_id) && tx.type !== 'saving' && tx.type !== 'investment';
         });
     }, [allTransactions]);
+
+    const totalPendingCount = (pendingInvoices?.length || 0) + reclassifyTxs.length;
 
     // Memoized function to get filtered categories by type
     const getFilteredCategories = useMemo(() => {
@@ -210,72 +205,6 @@ export default function HistoryPage() {
         setEditingTransaction(transaction);
         setIsEditDialogOpen(true);
     };
-
-    const handleReclassifyChange = (id: string, field: string, value: string | number) => {
-        setReclassifyDrafts(prev => ({
-            ...prev,
-            [id]: {
-                ...prev[id],
-                [field]: value ?? ''
-            }
-        }));
-    };
-
-    const handleReclassifySave = async (tx: Transaction) => {
-        const draft = reclassifyDrafts[tx.id];
-        if (!draft || !draft.category_name || !draft.type) { return; }
-
-        setSavingId(tx.id);
-
-        try {
-            // Find or create category
-            let categoryId = null;
-            const existingCategory = categories.find(c => c.name === draft.category_name);
-            if (existingCategory) {
-                categoryId = existingCategory.id;
-            } else if (draft.category_name) {
-                // Create category
-                const result = await addCategory({ name: draft.category_name as string, type: draft.type as CategoryItem['type'], color: '#475569' });
-                if ('data' in result && result.data && 'id' in result.data) {
-                    categoryId = result.data.id;
-                }
-            }
-
-            // Find or create payment method
-            let paymentMethodId = null;
-            if (draft.payment_method_name) {
-                const existingPaymentMethod = paymentMethods.find(pm => pm.name === draft.payment_method_name);
-                if (existingPaymentMethod) {
-                    paymentMethodId = existingPaymentMethod.id;
-                } else {
-                    // Instead of creating directly, open dialog
-                    setPendingTx(tx);
-                    setCreatingPMFor(tx.id);
-                    return;
-                }
-            }
-
-            // Update with all necessary fields - setting category_id removes from reclassification zone
-            await updateTransaction(tx.id, {
-                category_id: categoryId,
-                type: draft.type as Transaction['type'],
-                description: draft.description as string,
-                amount: Number(draft.amount),
-                date: draft.date as string,
-                payment_method_id: paymentMethodId,
-            });
-
-            // Remove from local drafts
-            setReclassifyDrafts(prev => {
-                const copy = { ...prev };
-                delete copy[tx.id];
-                return copy;
-            });
-        } finally {
-            setSavingId(null);
-        }
-    };
-
     // ============================================================================
     // CONDITIONAL RETURNS (after all hooks)
     // ============================================================================
@@ -340,182 +269,7 @@ export default function HistoryPage() {
                             }}
                         />
 
-                        {/* Reclassification Zone Card */}
-                        {reclassifyTxs.length > 0 && highlightOrphaned && (
-                            <div className="border-2 border-amber-400 bg-amber-50/40 rounded-xl p-6 mb-2 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-lg font-bold text-amber-800 flex items-center gap-2 not-italic">
-                                        <AlertCircle className="h-5 w-5 text-amber-500" />
-                                        Zona de Reclasificación
-                                    </h2>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-amber-700 hover:bg-amber-100 h-8 w-8 p-0"
-                                        onClick={() => {
-                                            const newParams = new URLSearchParams(searchParams);
-                                            newParams.delete('reclassify');
-                                            setSearchParams(newParams);
-                                        }}
-                                        title="Cerrar zona de reclasificación"
-                                    >
-                                        <Plus className="h-5 w-5 rotate-45" />
-                                    </Button>
-                                </div>
-                                <div className="flex flex-col gap-4">
-                                    {reclassifyTxs.slice(0, 5).map((tx, index) => {
-                                        const initialDraft = {
-                                            description: tx.description || '',
-                                            amount: tx.amount ?? '',
-                                            date: tx.date || '',
-                                            category_name: tx.category || '',
-                                            type: tx.type || 'expense',
-                                            payment_method_name: (tx as Record<string, unknown>).payment_method as string || '',
-                                        };
-                                        const draft = reclassifyDrafts[tx.id] ? { ...initialDraft, ...reclassifyDrafts[tx.id] } : initialDraft;
-
-                                        const isSaving = savingId === tx.id;
-
-                                        // Detectar qué campos ya tienen datos válidos (deben bloquearse)
-                                        const hasValidDate = tx.date && tx.date.trim() !== '';
-                                        const hasValidDescription = tx.description && tx.description.trim() !== '';
-                                        const hasValidType = false; // Permitir editar type siempre
-                                        const hasValidAmount = Boolean(tx.amount) && tx.amount !== 0;
-
-                                        return (
-                                            <div key={tx.id} className={cn("bg-white rounded-lg border border-amber-200 p-4 flex flex-col md:flex-row md:items-end gap-4 shadow-sm not-italic", index >= 3 && "hidden sm:flex")}>
-                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-                                                    {/* Fecha (Date) - 1st */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Fecha</label>
-                                                        <Input
-                                                            type="date"
-                                                            value={draft.date?.slice(0, 10) || ''}
-                                                            onChange={e => handleReclassifyChange(tx.id, 'date', e.target.value)}
-                                                            className="h-9 text-sm"
-                                                            disabled={hasValidDate}
-                                                        />
-                                                    </div>
-
-                                                    {/* Descripción (Description) - 2nd */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Descripción</label>
-                                                        <Input
-                                                            value={draft.description}
-                                                            onChange={e => handleReclassifyChange(tx.id, 'description', e.target.value)}
-                                                            placeholder="Descripción"
-                                                            className="h-9 text-sm"
-                                                            disabled={hasValidDescription}
-                                                        />
-                                                    </div>
-
-                                                    {/* Tipo (Type) - 3rd */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Tipo</label>
-                                                        <Select
-                                                            value={draft.type}
-                                                            onValueChange={(value) => {
-                                                                handleReclassifyChange(tx.id, 'type', value);
-                                                            }}
-                                                            disabled={hasValidType}
-                                                        >
-                                                            <SelectTrigger className="h-9 text-sm" disabled={hasValidType}>
-                                                                <SelectValue placeholder="Tipo..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="expense">Gasto</SelectItem>
-                                                                <SelectItem value="income">Ingreso</SelectItem>
-                                                                <SelectItem value="transfer">Transferencia</SelectItem>
-                                                                <SelectItem value="saving">Ahorro</SelectItem>
-                                                                <SelectItem value="investment">Inversión</SelectItem>
-                                                                <SelectItem value="loan">Préstamo</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    {/* Categoría (Category) - 4th */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Categoría</label>
-                                                        <Input
-                                                            value={draft.category_name}
-                                                            onChange={e => handleReclassifyChange(tx.id, 'category_name', e.target.value)}
-                                                            placeholder="Nombre de la categoría"
-                                                            className="h-9 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* Método de Pago (Payment Method) - 5th */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Método de Pago</label>
-                                                        <Input
-                                                            value={draft.payment_method_name}
-                                                            onChange={e => handleReclassifyChange(tx.id, 'payment_method_name', e.target.value)}
-                                                            placeholder="Nombre del método de pago"
-                                                            className="h-9 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* Monto (Amount) - 6th */}
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs font-medium text-muted-foreground block text-left not-italic">Monto</label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={draft.amount}
-                                                            onChange={e => handleReclassifyChange(tx.id, 'amount', e.target.value)}
-                                                            placeholder="0.00"
-                                                            className="h-9 text-sm"
-                                                            disabled={hasValidAmount}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="font-bold">
-                                                    <CurrencyDisplay
-                                                        amount={tx.amount}
-                                                        currencyCode={currency}
-                                                        className={cn(
-                                                            "text-sm",
-                                                            tx.type === 'expense' ? "text-red-600" :
-                                                                tx.type === 'income' ? "text-emerald-600" :
-                                                                    "text-blue-600"
-                                                        )}
-                                                    />
-                                                </div>
-                                                {/* Action Buttons */}
-                                                <div className="flex gap-2 items-end">
-                                                    <Button
-                                                        variant="default"
-                                                        size="sm"
-                                                        className="bg-amber-400/90 text-amber-900 font-bold hover:bg-amber-500 whitespace-nowrap h-9 border border-primary"
-                                                        onClick={() => handleReclassifySave(tx)}
-                                                        disabled={!draft.category_name || !draft.type || isSaving}
-                                                    >
-                                                        {isSaving ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-3 w-3 border-2 border-amber-900 border-t-transparent animate-spin rounded-full" />
-                                                                Guardando...
-                                                            </div>
-                                                        ) : (
-                                                            'Guardar'
-                                                        )}
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        className="whitespace-nowrap h-9"
-                                                        onClick={() => deleteTransaction(tx.id)}
-                                                        disabled={isSaving}
-                                                    >
-                                                        Descartar
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
+                        {/* Reclassification Zone Card MOVED to PendingInvoicesPanel */}
                         <PendingInvoicesPanel />
 
                         {/* FILTROS UNIFICADOS */}
@@ -578,35 +332,32 @@ export default function HistoryPage() {
                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-between">
                                     {/* Grupo fecha: alerta + Mes + Año + botón limpiar (visible en mobile junto a los selects) */}
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        {reclassifyTxs.length > 0 && (
+                                        {totalPendingCount > 0 && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 className={cn(
                                                     "h-auto min-h-[52px] py-3 px-4 font-semibold transition-all w-full sm:flex-1 justify-center rounded-xl !whitespace-normal gap-2",
-                                                    highlightOrphaned
-                                                        ? "text-amber-800 bg-amber-100 border-amber-300 shadow-sm hover:bg-amber-200"
-                                                        : "text-orange-700 bg-orange-50 border-zinc-300 hover:bg-orange-100 hover:text-orange-800 hover:border-orange-400"
+                                                    isPanelVisible
+                                                        ? "text-slate-700 bg-white border-slate-300 shadow-sm hover:bg-slate-100"
+                                                        : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100"
                                                 )}
                                                 onClick={() => {
                                                     const newParams = new URLSearchParams(searchParams);
-                                                    if (highlightOrphaned) {
-                                                        newParams.delete('reclassify');
+                                                    if (isPanelVisible) {
+                                                        newParams.set('hide_pending', 'true');
                                                     } else {
-                                                        newParams.set('reclassify', 'true');
-                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                        newParams.delete('hide_pending');
                                                     }
                                                     setSearchParams(newParams);
-                                                    if (!highlightOrphaned) clearAllFilters();
                                                 }}
                                             >
                                                 <AlertCircle className="w-5 h-5 shrink-0" />
                                                 <span className="text-sm font-semibold">
-                                                    Faltan {reclassifyTxs.length} revisiones
+                                                    {isPanelVisible ? 'Ocultar Facturas Pendientes' : 'Mostrar Facturas Pendientes'} ({totalPendingCount})
                                                 </span>
                                             </Button>
                                         )}
-
                                         {/* Mes */}
                                         <Select value={monthFilter} onValueChange={(value) => {
                                             setMonthFilter(value);
@@ -750,7 +501,7 @@ export default function HistoryPage() {
                             onUpdateTransaction={async (id, updates) => { await updateTransaction(id, updates); }}
                             onEditTransaction={handleEdit}
                             categories={categories}
-                            highlightOrphaned={highlightOrphaned}
+                            highlightOrphaned={false}
                             searchTerm={debouncedSearchTerm}
                             typeFilter={typeFilter}
                             categoryFilter={categoryFilter}

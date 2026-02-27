@@ -138,6 +138,9 @@ export type Database = {
           source: string | null
           status: string
           user_id: string
+          date: string | null
+          payment_method_id: string | null
+          type: string
         }
         Insert: {
           id?: string
@@ -151,6 +154,9 @@ export type Database = {
           source?: string | null
           status?: string
           user_id: string
+          date?: string | null
+          payment_method_id?: string | null
+          type?: string
         }
         Update: {
           id?: string
@@ -164,6 +170,9 @@ export type Database = {
           source?: string | null
           status?: string
           user_id?: string
+          date?: string | null
+          payment_method_id?: string | null
+          type?: string
         }
         Relationships: []
       }
@@ -235,6 +244,7 @@ export type Database = {
           profile_type: string | null
           decimal_places: number | null
           base_color: string | null
+          keep_session_alive: boolean | null
         }
         Insert: {
           created_at?: string
@@ -252,6 +262,7 @@ export type Database = {
           profile_type?: string | null
           decimal_places?: number | null
           base_color?: string | null
+          keep_session_alive?: boolean | null
         }
         Update: {
           created_at?: string
@@ -269,6 +280,7 @@ export type Database = {
           profile_type?: string | null
           decimal_places?: number | null
           base_color?: string | null
+          keep_session_alive?: boolean | null
         }
         Relationships: []
       }

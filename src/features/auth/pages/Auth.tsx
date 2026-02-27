@@ -257,7 +257,8 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           setError(translateError(authError.message || 'Error'));
         }
       } else if (data?.user) {
-        navigate('/dashboard');
+        // Redirection is handled automatically by PublicRoute reacting to AuthContext changes.
+        // This avoids race conditions between navigating and the context updating.
       }
     } finally {
       setIsSubmitting(false);

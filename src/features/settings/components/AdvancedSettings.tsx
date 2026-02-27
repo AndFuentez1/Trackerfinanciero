@@ -21,11 +21,12 @@ import {
 import { getBackendUrl } from '@/core/api/backend';
 import { queryKeys } from '@/core/api/queryKeys';
 import { useUserConfigStatus } from './hooks/useUserConfigStatus';
+import { History, RefreshCw, Mail, CheckCircle2, ChevronDown, CheckSquare, Search, Sparkles, Inbox, AlertCircle } from 'lucide-react';
 import { useBackendReady, type BackendStatus } from './hooks/useBackendReady';
 import { cn } from '@/core/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
-import { ChevronDown, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 
 // Importing sub-components
@@ -52,6 +53,7 @@ export function AdvancedSettings({
 }: AdvancedSettingsProps = {}) {
     const { toast } = useToast();
     const { user } = useAuth();
+    const { addTransaction } = useFinanceData();
     const queryClient = useQueryClient();
     const { categories, paymentMethods, refreshData } = useFinanceData();
 
@@ -667,7 +669,7 @@ export function AdvancedSettings({
                 return null;
             };
 
-            const pendingInvoices = [];
+            const transactionsToAdd = [];
 
             for (const product of target.products!) {
                 const amount = Number(product.total);
@@ -686,35 +688,38 @@ export function AdvancedSettings({
                 const categoryName = product.category?.trim() || '';
                 const categoryId = product.category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
 
-                pendingInvoices.push({
-                    user_id: user.id,
+                if (!categoryName && !categoryId) {
+                    toast({ title: 'Error', description: 'Selecciona o ingresa una categoría para todos los productos', variant: 'destructive' });
+                    setApprovingMessageId(null);
+                    return;
+                }
+
+                transactionsToAdd.push({
                     amount,
                     description: product.description,
                     category: categoryName || null,
                     category_id: categoryId,
-                    type: 'expense',
+                    type: 'expense' as const,
                     payment_method_id: product.payment_method_id,
-                    arrival_date: target.date || new Date().toISOString(),
-                    status: 'pending',
-                    source: 'gmail',
-                    source_id: messageId
+                    date: target.date || new Date().toISOString()
                 });
             }
 
-            if (pendingInvoices.length === 0) {
+            if (transactionsToAdd.length === 0) {
                 toast({ title: 'Error', description: 'No hay items válidos para importar', variant: 'destructive' });
                 return;
             }
 
-            const { error: insertError } = await supabase
-                .from('pending_invoices')
-                .insert(pendingInvoices);
-
-            if (insertError) { throw insertError; }
+            for (const transactionData of transactionsToAdd) {
+                const result = await addTransaction(transactionData);
+                if (result && result.error) {
+                    throw new Error(typeof result.error === 'string' ? result.error : 'Error al registrar transacción');
+                }
+            }
 
             await archiveMessages([messageId]);
 
-            toast({ title: 'Enviado a Pendientes', description: 'La factura ha sido enviada para revisión final.' });
+            toast({ title: 'Importación Exitosa', description: 'Los gastos han sido registrados en tu balance.' });
             setImportResults(prev => prev.filter(result => result.messageId !== messageId));
 
             refreshData();
@@ -905,6 +910,17 @@ export function AdvancedSettings({
             const limitedResults = getFilteredSearchResults(data.results || [], 3650, false);
             applySearchResults(limitedResults, Number(searchRange || '0'));
             const foundCount = limitedResults.length;
+
+            if (foundCount === 1) {
+                // Auto-import if only 1 result is found
+                toast({
+                    title: 'Búsqueda completada',
+                    description: `Se encontró 1 posible factura. Importando automáticamente...`
+                });
+                await handleImportSelectedClick([limitedResults[0].id]);
+                return;
+            }
+
             toast({
                 title: 'Búsqueda completada',
                 description: `Se encontraron ${data.count || foundCount} posibles facturas.`
@@ -917,14 +933,15 @@ export function AdvancedSettings({
         }
     };
 
-    const handleImportSelectedClick = async () => {
-        const selectedSnapshot = [...selectedMessages];
+    const handleImportSelectedClick = async (overrideIds?: string[]) => {
+        const idsToImport = overrideIds || selectedMessages;
+        const selectedSnapshot = [...idsToImport];
         setImporting(true);
         try {
             const res = await fetch(`${BACKEND_URL}/api/gmail/import-batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user?.id, messageIds: selectedMessages })
+                body: JSON.stringify({ userId: user?.id, messageIds: idsToImport })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -932,13 +949,24 @@ export function AdvancedSettings({
             }
             const results = (data.results || []) as GmailImportResult[];
             const normalizedResults = normalizeImportResults(results, selectedSnapshot);
-            toast({
-                title: 'Importación finalizada',
-                description: `Procesadas: ${data.processed ?? results.length}, Duplicadas: ${data.skipped ?? 0}, Errores: ${data.errors ?? 0}`
-            });
+
+            if (!overrideIds) {
+                toast({
+                    title: 'Importación finalizada',
+                    description: `Procesadas: ${data.processed ?? results.length}, Duplicadas: ${data.skipped ?? 0}, Errores: ${data.errors ?? 0}`
+                });
+            } else {
+                toast({
+                    title: 'Factura lista para revisión',
+                    description: `Procesada 1 factura correctamente.`
+                });
+            }
+
             setImportResults(normalizedResults);
             setImportStep('review');
-            setSelectedMessages([]);
+            if (!overrideIds) {
+                setSelectedMessages([]);
+            }
             updateCacheAndView(prev => prev.map(item => (
                 selectedSnapshot.includes(item.id) ? { ...item, status: 'archived' } : item
             )));
@@ -949,7 +977,9 @@ export function AdvancedSettings({
             if (fallbackResults.length > 0) {
                 setImportResults(fallbackResults);
                 setImportStep('review');
-                setSelectedMessages([]);
+                if (!overrideIds) {
+                    setSelectedMessages([]);
+                }
             }
             toast({ title: 'Error', description: message, variant: 'destructive' });
         } finally {
@@ -1054,6 +1084,7 @@ export function AdvancedSettings({
                 onOpenChange={setShowHistoryDialog}
                 isReviewing={isReviewing}
                 importStep={importStep}
+                setImportStep={setImportStep}
 
                 searchRange={searchRange}
                 setSearchRange={setSearchRange}

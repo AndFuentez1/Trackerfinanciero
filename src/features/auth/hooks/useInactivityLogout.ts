@@ -22,6 +22,13 @@ export function useInactivityLogout(timeoutMinutes: number = 5) {
         const lastActive = storedLastActive ? parseInt(storedLastActive, 10) : Date.now();
         const now = Date.now();
         const timeSinceLastActive = now - lastActive;
+        const keepAlive = localStorage.getItem('keep_alive_enabled') === 'true';
+
+        if (keepAlive) {
+            // Update last active so if keep-alive is turned off, we don't immediately logout
+            localStorage.setItem(INACTIVITY_KEY, Date.now().toString());
+            return;
+        }
 
         if (timeSinceLastActive > timeoutMs) {
             console.warn(`[InactivityLogout] User inactive for ${Math.round(timeSinceLastActive / 60000)} minutes. Logging out.`);

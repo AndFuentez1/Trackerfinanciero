@@ -121,7 +121,12 @@ export function useFinanceDataLogic() {
   // Sync loading states
   useEffect(() => {
     if (user && !pmLoading && !catsLoading) {
-      const t = setTimeout(() => ui.setManualLoading(false), 100);
+      const t = setTimeout(() => {
+        ui.setManualLoading(false);
+        if (!ui.lastUpdated) {
+          ui.setLastUpdated(new Date());
+        }
+      }, 100);
       return () => clearTimeout(t);
     } else if (!user) {
       ui.setManualLoading(false);
@@ -221,6 +226,10 @@ export function useFinanceDataLogic() {
     baseColor: theme.baseColor,
     themeVars: theme.themeVars,
     themeOptions: theme.themeOptions,
+    keepSessionAlive: profileMgmt.profileData?.keep_session_alive ?? false,
+    setKeepSessionAlive: (keepAlive: boolean) => {
+      return profileMgmt.updateProfile({ keep_session_alive: keepAlive });
+    },
     setAppThemePreference: (color: string) => {
       theme.setBaseColor(color);
       return profileMgmt.updateProfile({ base_color: color });
@@ -240,6 +249,8 @@ export function useFinanceDataLogic() {
     pmLoading,
     budgetsLoading,
     profileLoading,
+    pendingInvoicesLoading,
+    pendingInvoices,
     paymentMethods,
     categories,
     ui,

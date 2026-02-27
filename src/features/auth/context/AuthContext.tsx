@@ -49,10 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const { data: { session }, error } = await supabase.auth.getSession();
 
                 if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
-                    console.warn('⚠️ [AuthContext] Invalid refresh token, clearing storage');
-                    const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
-                    supabaseKeys.forEach(key => localStorage.removeItem(key));
-                    await supabase.auth.signOut();
+                    console.warn('⚠️ [AuthContext] Invalid refresh token on initial load');
                 }
 
                 if (!ignore) {
@@ -104,6 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error && error.message.includes('Email not confirmed')) {
             return { error: { ...error, code: 'email_not_confirmed' } };
         }
+
+        if (data?.session) {
+            setSession(data.session);
+            setUser(data.user);
+        }
+
         return { data, error };
     }, []);
 
@@ -112,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('sb_remember_me');
         localStorage.removeItem('lastActiveTime');
         localStorage.removeItem('theme-base-color');
+        localStorage.removeItem('keep_alive_enabled');
         return { error };
     }, []);
 

@@ -23,8 +23,7 @@ const errorInterceptor = (...args: unknown[]) => {
   if (fullErrorStr.includes('Invalid Refresh Token') ||
     fullErrorStr.includes('Refresh Token Not Found') ||
     (fullErrorStr.includes('AuthApiError') && fullErrorStr.includes('refresh'))) {
-    const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
-    supabaseKeys.forEach(key => localStorage.removeItem(key));
+    // Silently ignore to prevent race conditions during fast logins
     return;
   }
   originalConsoleError.apply(console, args);
@@ -71,14 +70,11 @@ try {
     }
   });
 
-  // Handle initialization errors silently - clear invalid tokens on startup
+  // Handle initialization errors silently
   supabaseClient.auth.getSession().then(({ error }) => {
     if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
-      const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.startsWith('sb-'));
-      supabaseKeys.forEach(key => localStorage.removeItem(key));
-      supabaseClient.auth.signOut().catch((err) => {
-        console.warn('[Supabase] Failed to sign out during session cleanup', err);
-      });
+      console.warn('⚠️ [client.ts] Invalid refresh token on startup');
+      // We do not call signOut() here to prevent race conditions with new logins
     }
   }).catch((err) => {
     console.warn('[Supabase] Failed to get session during init', err);

@@ -7,7 +7,7 @@ import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, B
 // Supabase row types
 export type ProfileSelect = Pick<
     Database['public']['Tables']['profiles']['Row'],
-    'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color'
+    'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color' | 'keep_session_alive'
 >;
 
 export interface UseFinanceQueriesReturn {
@@ -100,7 +100,7 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
             if (!userId) { return null; }
             const { data, error } = await supabase
                 .from('profiles')
-                .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
+                .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color, keep_session_alive')
                 .eq('id', userId)
                 .single();
             if (error) {

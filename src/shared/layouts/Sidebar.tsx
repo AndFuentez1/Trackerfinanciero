@@ -29,8 +29,18 @@ export function Sidebar() {
         onboardingDecision,
         welcomeCompleted,
         loading: financeLoading,
+        keepSessionAlive,
+        setKeepSessionAlive
     } = useFinanceData();
     const { lastModification: budgetLastUpdated } = useBudgetsData();
+
+    const toggleKeepAlive = async () => {
+        const newValue = !keepSessionAlive;
+        await setKeepSessionAlive(newValue);
+        if (newValue) {
+            localStorage.setItem('lastActiveTime', Date.now().toString());
+        }
+    };
 
     const lastUpdated = useMemo(() => {
         if (!financeLastUpdated && !budgetLastUpdated) { return null; }
@@ -66,13 +76,26 @@ export function Sidebar() {
             `}} />
 
             {/* Header / Logo */}
-            <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border border-border bg-primary/10">
-                    <Wallet className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex flex-col justify-center">
-                    <h1 className="font-display font-bold text-xl leading-none">FinTrack</h1>
-                    <p className="text-xs text-muted-foreground mt-1">Minimalist Finance</p>
+            <div className="mb-10 px-2 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleKeepAlive}
+                        title={keepSessionAlive ? "Mantener sesión activa (Activado)" : "Mantener sesión activa (Desactivado)"}
+                        className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border transition-colors flex-shrink-0",
+                            keepSessionAlive
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "bg-primary/10 border-border text-primary"
+                        )}
+                    >
+                        <Wallet className="w-6 h-6 current-color" />
+                    </button>
+                    <div className="flex flex-col justify-center h-10 relative">
+                        <h1 className="font-display font-bold text-xl leading-none">FinTrack</h1>
+                        <p className="text-xs text-muted-foreground absolute top-full left-0 whitespace-nowrap mt-1">
+                            Minimalist Finance
+                        </p>
+                    </div>
                 </div>
             </div>
 

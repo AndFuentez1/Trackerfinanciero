@@ -89,12 +89,52 @@ export function useFinanceMutations(userId: string | undefined) {
 
             return data[0];
         },
-        onSuccess: () => {
+        onMutate: async (newTxn) => {
+            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
+            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
+
+            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
+            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
+
+            const optimisticTxn: Transaction = {
+                id: `temp-${Date.now()}`,
+                amount: newTxn.amount,
+                type: newTxn.type,
+                description: newTxn.description,
+                category: newTxn.category,
+                category_id: newTxn.category_id || null,
+                payment_method_id: newTxn.payment_method_id,
+                date: newTxn.date || new Date().toISOString().split('T')[0],
+                created_at: new Date().toISOString(),
+                category_name: 'Guardando...',
+                payment_method_name: 'Procesando...',
+            } as Transaction;
+
+            if (previousTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old => [optimisticTxn, ...(old || [])]);
+            }
+            if (previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old => [optimisticTxn, ...(old || [])]);
+            }
+
+            return { previousTransactions, previousAllTransactions };
+        },
+        onError: (err, newTxn, context) => {
+            if (context?.previousTransactions) {
+                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            }
+            if (context?.previousAllTransactions) {
+                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            }
+            toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+        },
+        onSettled: () => {
             invalidateTransactions();
             invalidatePaymentMethods();
-            toast({ title: 'Éxito', description: 'Transacción añadida.' });
         },
-        onError: (error) => toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
+        onSuccess: () => {
+            toast({ title: 'Éxito', description: 'Transacción añadida.' });
+        }
     });
 
     const updateTransaction = useMutation({
@@ -137,9 +177,43 @@ export function useFinanceMutations(userId: string | undefined) {
                 }
             }
         },
-        onSuccess: () => {
+        onMutate: async ({ id, updates }) => {
+            // Cancel any outgoing refetches so they don't overwrite our optimistic update
+            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
+            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
+
+            // Snapshot the previous value
+            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
+            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
+
+            // Optimistically update to the new value
+            if (previousTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old =>
+                    (old || []).map(tx => tx.id === id ? { ...tx, ...updates, category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name, payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name } : tx)
+                );
+            }
+            if (previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old =>
+                    (old || []).map(tx => tx.id === id ? { ...tx, ...updates, category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name, payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name } : tx)
+                );
+            }
+
+            return { previousTransactions, previousAllTransactions };
+        },
+        onError: (err, newTodo, context) => {
+            if (context?.previousTransactions) {
+                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            }
+            if (context?.previousAllTransactions) {
+                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            }
+            toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+        },
+        onSettled: () => {
             invalidateTransactions();
             invalidatePaymentMethods();
+        },
+        onSuccess: () => {
             toast({ title: 'Éxito', description: 'Transacción actualizada.' });
         }
     });
@@ -175,9 +249,36 @@ export function useFinanceMutations(userId: string | undefined) {
                 }
             }
         },
-        onSuccess: () => {
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
+            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
+
+            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
+            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
+
+            if (previousTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old => (old || []).filter(tx => tx.id !== id));
+            }
+            if (previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old => (old || []).filter(tx => tx.id !== id));
+            }
+
+            return { previousTransactions, previousAllTransactions };
+        },
+        onError: (err, id, context) => {
+            if (context?.previousTransactions) {
+                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            }
+            if (context?.previousAllTransactions) {
+                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            }
+            toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+        },
+        onSettled: () => {
             invalidateTransactions();
             invalidatePaymentMethods();
+        },
+        onSuccess: () => {
             toast({ title: 'Éxito', description: 'Transacción eliminada.' });
         }
     });
@@ -199,7 +300,36 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!data) { throw new Error('No data returned'); }
             return data as CategoryItem;
         },
-        onSuccess: () => invalidateCategories()
+        onMutate: async (newCategory) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.categories(userId!) });
+            const previousCategories = queryClient.getQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!));
+
+            const optimisticCategory: CategoryItem = {
+                id: `temp-${Date.now()}`,
+                name: newCategory.name,
+                type: newCategory.type,
+                color: newCategory.color,
+                is_default: false
+            };
+
+            if (previousCategories) {
+                queryClient.setQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!), old => [...(old || []), optimisticCategory]);
+            }
+
+            return { previousCategories };
+        },
+        onError: (err, newCategory, context) => {
+            if (context?.previousCategories) {
+                queryClient.setQueryData(queryKeys.finance.categories(userId!), context.previousCategories);
+            }
+            toast({ title: 'Error', description: 'No se pudo crear la categoría', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidateCategories();
+        },
+        onSuccess: () => {
+            toast({ title: 'Categoría Creada', description: 'Guardado exitosamente.' });
+        }
     });
 
     const initializeDefaultCategories = useMutation({
@@ -264,7 +394,42 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!data) { throw new Error('No data returned'); }
             return data as PaymentMethod;
         },
-        onSuccess: () => invalidatePaymentMethods()
+        onMutate: async (newPm) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.paymentMethods(userId!) });
+            const previousPaymentMethods = queryClient.getQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!));
+
+            const optimisticPm: PaymentMethod = {
+                id: `temp-${Date.now()}`,
+                name: newPm.name,
+                type: newPm.type,
+                balance: newPm.balance,
+                credit_limit: newPm.credit_limit,
+                is_savings_account: newPm.is_savings_account,
+                savings_goal: newPm.savings_goal,
+                estimated_yield: newPm.estimated_yield,
+                closing_date: newPm.closing_date,
+                payment_day: newPm.payment_day,
+                color: newPm.color
+            };
+
+            if (previousPaymentMethods) {
+                queryClient.setQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!), old => [...(old || []), optimisticPm]);
+            }
+
+            return { previousPaymentMethods };
+        },
+        onError: (err, newPm, context) => {
+            if (context?.previousPaymentMethods) {
+                queryClient.setQueryData(queryKeys.finance.paymentMethods(userId!), context.previousPaymentMethods);
+            }
+            toast({ title: 'Error', description: 'No se pudo crear el método de pago.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidatePaymentMethods();
+        },
+        onSuccess: () => {
+            toast({ title: 'Método de Pago Creado', description: 'Guardado exitosamente.' });
+        }
     });
 
     const updatePaymentMethod = useMutation({
@@ -290,7 +455,27 @@ export function useFinanceMutations(userId: string | undefined) {
                 .eq('id', id);
             if (error) { throw error; }
         },
-        onSuccess: () => invalidatePaymentMethods()
+        onMutate: async ({ id, updates }) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.paymentMethods(userId!) });
+            const previousPaymentMethods = queryClient.getQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!));
+
+            if (previousPaymentMethods) {
+                queryClient.setQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!), old =>
+                    (old || []).map(pm => pm.id === id ? { ...pm, ...updates } : pm)
+                );
+            }
+
+            return { previousPaymentMethods };
+        },
+        onError: (err, variables, context) => {
+            if (context?.previousPaymentMethods) {
+                queryClient.setQueryData(queryKeys.finance.paymentMethods(userId!), context.previousPaymentMethods);
+            }
+            toast({ title: 'Error', description: 'No se pudo actualizar el método de pago.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidatePaymentMethods();
+        }
     });
 
     const deletePaymentMethod = useMutation({
@@ -299,7 +484,28 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('payment_methods').delete().eq('id', id);
             if (error) { throw error; }
         },
-        onSuccess: () => invalidatePaymentMethods()
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.paymentMethods(userId!) });
+            const previousPaymentMethods = queryClient.getQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!));
+
+            if (previousPaymentMethods) {
+                queryClient.setQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!), old =>
+                    (old || []).filter(pm => pm.id !== id)
+                );
+            }
+
+            return { previousPaymentMethods };
+        },
+        onError: (err, id, context) => {
+            if (context?.previousPaymentMethods) {
+                queryClient.setQueryData(queryKeys.finance.paymentMethods(userId!), context.previousPaymentMethods);
+            }
+            toast({ title: 'Error', description: 'No se pudo eliminar el método de pago.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidatePaymentMethods();
+            invalidateTransactions();
+        }
     });
 
     // 4. Budget Mutations
@@ -321,7 +527,36 @@ export function useFinanceMutations(userId: string | undefined) {
             });
             if (error) { throw error; }
         },
-        onSuccess: () => invalidateBudgets()
+        onMutate: async (newBudget) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.budgets(userId!) });
+            const previousBudgets = queryClient.getQueryData<Budget[]>(queryKeys.finance.budgets(userId!));
+
+            const optimisticBudget: Budget = {
+                id: `temp-${Date.now()}`,
+                category: newBudget.category,
+                category_id: newBudget.category_id,
+                amount: newBudget.amount,
+                month: newBudget.month
+            };
+
+            if (previousBudgets) {
+                queryClient.setQueryData<Budget[]>(queryKeys.finance.budgets(userId!), old => [...(old || []), optimisticBudget]);
+            }
+
+            return { previousBudgets };
+        },
+        onError: (err, newBudget, context) => {
+            if (context?.previousBudgets) {
+                queryClient.setQueryData(queryKeys.finance.budgets(userId!), context.previousBudgets);
+            }
+            toast({ title: 'Error', description: 'No se pudo guardar el presupuesto.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidateBudgets();
+        },
+        onSuccess: () => {
+            toast({ title: 'Presupuesto Creado', description: 'Guardado exitosamente.' });
+        }
     });
 
     const deleteBudget = useMutation({
@@ -330,7 +565,27 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('budgets').delete().eq('id', id);
             if (error) { throw error; }
         },
-        onSuccess: () => invalidateBudgets()
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.budgets(userId!) });
+            const previousBudgets = queryClient.getQueryData<Budget[]>(queryKeys.finance.budgets(userId!));
+
+            if (previousBudgets) {
+                queryClient.setQueryData<Budget[]>(queryKeys.finance.budgets(userId!), old =>
+                    (old || []).filter(b => b.id !== id)
+                );
+            }
+
+            return { previousBudgets };
+        },
+        onError: (err, id, context) => {
+            if (context?.previousBudgets) {
+                queryClient.setQueryData(queryKeys.finance.budgets(userId!), context.previousBudgets);
+            }
+            toast({ title: 'Error', description: 'No se pudo eliminar el presupuesto.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidateBudgets();
+        }
     });
 
     // 5. Bulk & Special Actions
@@ -421,7 +676,27 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
             if (error) { throw error; }
         },
-        onSuccess: () => invalidateCategories()
+        onMutate: async ({ id, updates }) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.categories(userId!) });
+            const previousCategories = queryClient.getQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!));
+
+            if (previousCategories) {
+                queryClient.setQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!), old =>
+                    (old || []).map(cat => cat.id === id ? { ...cat, ...updates } : cat)
+                );
+            }
+
+            return { previousCategories };
+        },
+        onError: (err, newCategory, context) => {
+            if (context?.previousCategories) {
+                queryClient.setQueryData(queryKeys.finance.categories(userId!), context.previousCategories);
+            }
+            toast({ title: 'Error', description: 'No se pudo actualizar la categoría', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidateCategories();
+        }
     });
 
     const addTransactionFn = async (txn: Omit<Transaction, 'id' | 'created_at'>) => {
@@ -538,7 +813,27 @@ export function useFinanceMutations(userId: string | undefined) {
             const { error } = await supabase.from('categories').delete().eq('id', id);
             if (error) { throw error; }
         },
-        onSuccess: () => invalidateCategories()
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.finance.categories(userId!) });
+            const previousCategories = queryClient.getQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!));
+
+            if (previousCategories) {
+                queryClient.setQueryData<CategoryItem[]>(queryKeys.finance.categories(userId!), old =>
+                    (old || []).filter(cat => cat.id !== id)
+                );
+            }
+
+            return { previousCategories };
+        },
+        onError: (err, id, context) => {
+            if (context?.previousCategories) {
+                queryClient.setQueryData(queryKeys.finance.categories(userId!), context.previousCategories);
+            }
+            toast({ title: 'Error', description: 'No se pudo eliminar la categoría', variant: 'destructive' });
+        },
+        onSettled: () => {
+            invalidateCategories();
+        }
     });
 
     const deleteCategoryFn = async (id: string) => {

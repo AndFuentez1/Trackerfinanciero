@@ -1,5 +1,6 @@
 import supabase from '../config/supabase.config.js';
 import logger from '../utils/logger.js';
+import { Database } from '../../../src/integrations/supabase/types.js';
 export { supabase };
 
 /**
@@ -118,38 +119,27 @@ export async function getPaymentMethodId(methodName: string, userId: string): Pr
 }
 
 /**
- * Verifica si un messageId ya fue procesado
+ * Verifica si un messageId ya fue procesado (existe en pendientes)
  */
 export async function checkDuplicate(messageId: string, userId: string): Promise<boolean> {
     try {
-        const [{ data: pending, error: pendingError }, { data: statusRows, error: statusError }] = await Promise.all([
-            supabase
-                .from('pending_invoices')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('message_id', messageId)
-                .limit(1),
-            supabase
-                .from('gmail_message_status')
-                .select('status')
-                .eq('user_id', userId)
-                .eq('message_id', messageId)
-                .limit(1)
-        ]);
+        const { data: pending, error: pendingError } = await supabase
+            .from('pending_invoices')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('message_id', messageId)
+            .limit(1);
 
         if (pendingError) throw pendingError;
-        if (statusError) throw statusError;
 
-        const status = statusRows && statusRows[0]?.status;
-        const isArchived = status === 'archived' || status === 'approved' || status === 'deleted';
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const isDuplicate = (pending && (pending as any[]).length > 0) || isArchived;
+        const isDuplicate = (pending && (pending as any[]).length > 0);
 
         if (isDuplicate) {
-            logger.warn(`⚠️  Factura duplicada detectada: ${messageId}`);
+            logger.warn(`⚠️  Factura duplicada detectada (en zona pendiente): ${messageId}`);
         }
 
-        return isDuplicate;
+        return !!isDuplicate;
     } catch (error) {
         logger.error('❌ Error verificando duplicado:', error);
         return false; // En caso de error, permitir procesamiento
@@ -159,8 +149,7 @@ export async function checkDuplicate(messageId: string, userId: string): Promise
 /**
  * Inserta una factura en pending_invoices
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function insertPendingInvoice(invoiceData: any) {
+export async function insertPendingInvoice(invoiceData: Database['public']['Tables']['pending_invoices']['Insert']) {
     try {
         const { data, error } = await supabase
             .from('pending_invoices')

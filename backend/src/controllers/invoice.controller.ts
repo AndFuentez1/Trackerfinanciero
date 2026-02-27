@@ -58,7 +58,7 @@ const isAccessNotConfigured = (error: any) => {
     return reason === 'accessNotConfigured';
 };
 
-type ClassifiedProduct = {
+export type ClassifiedProduct = {
     description: string;
     quantity: number;
     price: number;
@@ -168,13 +168,19 @@ const buildInvoiceGroups = (
     return [];
 };
 
-const overrideProductsCategory = (products: ClassifiedProduct[], category: string, confidence?: number) =>
-    products.map(product => ({
-        ...product,
-        category,
-        confidence: Math.max(confidence || 0, product.confidence || 0),
-        source: 'ai'
-    }));
+export const overrideProductsCategory = (products: ClassifiedProduct[], category: string, confidence?: number) =>
+    products.map(product => {
+        // Preserve granular categorization from rules, only override unknowns or very low confidence
+        if (!product.category || product.category === 'Otros' || (product.confidence || 0) < 50) {
+            return {
+                ...product,
+                category,
+                confidence: Math.max(confidence || 0, product.confidence || 0),
+                source: 'ai'
+            };
+        }
+        return product; // Keep the original rule-based categorization
+    });
 
 const shouldNotifyTelegram = (telegramConfig: any, stepOfFailure: 'rules' | 'ai' | null) => {
     if (!telegramConfig?.botToken || !telegramConfig?.chatId || !stepOfFailure) { return false; }
@@ -233,6 +239,7 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     logger.info(`⏭️  Saltando factura duplicada: ${email.messageId}`);
                     skippedCount++;
                     approvedMessageIds.push(email.messageId);
+                    results.push({ messageId: email.messageId, status: 'duplicate' });
                     continue;
                 }
 
@@ -583,6 +590,7 @@ export async function importGmailBatch(req: Request, res: Response) {
                 if (isDuplicate) {
                     skippedCount++;
                     approvedMessageIds.push(email.messageId);
+                    results.push({ messageId: email.messageId, status: 'duplicate' });
                     continue;
                 }
 
