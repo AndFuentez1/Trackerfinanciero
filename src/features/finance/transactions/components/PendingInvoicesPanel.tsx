@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getBackendUrl } from '@/core/api/backend';
+import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 
 export interface PanelItem {
     id: string;
@@ -40,6 +41,7 @@ export function PendingInvoicesPanel() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { addTransaction, paymentMethods, categories: financeCategories, refreshData, allTransactions, updateTransaction, deleteTransaction } = useFinanceData();
+    const { config, updateConfig } = useUserConfig(user?.id);
     const [searchParams, setSearchParams] = useSearchParams();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -478,7 +480,7 @@ export function PendingInvoicesPanel() {
         );
     };
 
-    const isPanelHidden = searchParams.get('hide_pending') === 'true';
+    const isPanelHidden = config.hide_incomplete_alert;
     if (loading || isPanelHidden || invoices.length + reclassifyTxs.length === 0) {
         return null;
     }
@@ -488,12 +490,14 @@ export function PendingInvoicesPanel() {
             <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col gap-0 mb-4">
                     <div className="flex justify-between items-start gap-4">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-orange-100 rounded-full text-orange-600 shrink-0">
-                                <AlertCircle className="w-5 h-5" />
+                        <div className="flex items-start gap-4">
+                            <div className="flex shrink-0 items-center justify-center p-1">
+                                <AlertCircle className="h-5 w-5 text-orange-600" strokeWidth={2.5} />
                             </div>
-                            <div className="flex flex-col mt-0.5">
-                                <h3 className="font-semibold text-lg text-orange-900 tracking-tight leading-none">Facturas Pendientes ({invoices.length + reclassifyTxs.length})</h3>
+                            <div className="flex flex-col min-w-0">
+                                <p className="text-base sm:text-lg font-bold text-orange-900 tracking-tight leading-none">
+                                    Facturas Pendientes ({invoices.length + reclassifyTxs.length})
+                                </p>
                                 <p className="text-sm text-orange-700 mt-1 font-medium leading-tight">Revisa las transacciones que requieren tu atención.</p>
                             </div>
                         </div>
@@ -502,9 +506,7 @@ export function PendingInvoicesPanel() {
                             size="sm"
                             className="text-orange-700 hover:bg-orange-100 h-8 w-8 p-0 shrink-0"
                             onClick={() => {
-                                const newParams = new URLSearchParams(searchParams);
-                                newParams.set('hide_pending', 'true');
-                                setSearchParams(newParams);
+                                updateConfig({ hide_incomplete_alert: true });
                             }}
                             title="Ocultar notificaciones de facturas"
                         >

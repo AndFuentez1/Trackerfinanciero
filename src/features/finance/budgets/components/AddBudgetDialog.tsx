@@ -24,6 +24,7 @@ import {
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import type { BudgetFormValues } from '@/lib/schemas';
 import { budgetSchema } from '@/lib/schemas';
 import { useQueryClient } from '@tanstack/react-query';
@@ -89,6 +90,8 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
   const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
 
+  const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
+
   // Sync state when editingBudget changes
   useEffect(() => {
     if (editingBudget) {
@@ -97,8 +100,14 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         category: editingBudget.categoryName,
         amount: editingBudget.amount,
       });
+      const cat = categories.find(c => c.id === editingBudget.category_id);
+      if (cat && cat.type === 'income') {
+        setActiveTab('income');
+      } else {
+        setActiveTab('expense');
+      }
     }
-  }, [editingBudget, reset]);
+  }, [editingBudget, reset, categories]);
 
   // Filter categories based on functionality. We allow Expense and Income now for projection purposes.
   // Note: Parent component can control this if needed in future, but currently we enable both.
@@ -108,11 +117,11 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         // If editing, always include the budget's category even if type doesn't match default filter
         if (editingBudget && editingBudget.category_id === c.id) { return true; }
 
-        // Include both expenses and income categories
-        return c.type === 'expense' || c.type === 'income';
+        // Include only the active tab's exact type
+        return c.type === activeTab;
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
-    [categories, editingBudget]);
+    [categories, editingBudget, activeTab]);
 
   const onFormSubmit = async (values: BudgetFormValues) => {
     const now = new Date();
@@ -126,7 +135,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     };
 
     // Strict validation
-    if (!budgetPayload.category_id || !budgetPayload.category_name || budgetPayload.amount <= 0) {
+    if (!budgetPayload.category_id || budgetPayload.amount <= 0) {
       toast({
         title: 'Error de validación',
         description: 'Debes seleccionar una categoría y el monto debe ser mayor a 0.',
@@ -181,9 +190,6 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       <DialogTrigger asChild>
         {children || (
           <Button
-            className="gap-2 shadow-sm border border-input text-[15px] md:text-[16px] py-2 flex items-center justify-center"
-            aria-label="Nuevo Presupuesto"
-            title="Nuevo Presupuesto"
             onClick={(e) => {
               if (loading) {
                 e.preventDefault();
@@ -198,9 +204,13 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                 });
               }
             }}
+            size="sm"
+            className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+            aria-label="Nuevo Presupuesto"
+            title="Nuevo Presupuesto"
           >
             <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">Nuevo Presupuesto</span>
+            <span className="hidden sm:inline">Nuevo presupuesto</span>
           </Button>
         )}
       </DialogTrigger>
@@ -216,6 +226,19 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
 
         <Form {...form}>
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
+            {!editingBudget && (
+              <Tabs value={activeTab} onValueChange={(val) => {
+                setActiveTab(val as 'expense' | 'income');
+                setValue('category_id', '');
+                setValue('category', '');
+              }}>
+                <TabsList className="grid w-full grid-cols-2 mb-2">
+                  <TabsTrigger value="expense">Gastos</TabsTrigger>
+                  <TabsTrigger value="income">Ingresos</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+
             <FormField
               control={control}
               name="category_id"
@@ -253,7 +276,14 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                     {!editingBudget && (
                       <div className="flex-shrink-0">
                         {/* Default to expense, but maybe we should allow income? For now keeping as is to avoid scope creep for "Add Budget" flow which is 99% expense */}
-                        <AddCategoryDialog type="expense" onAdd={addCategory} />
+                        <AddCategoryDialog
+                          type={activeTab}
+                          onAdd={addCategory}
+                          onSuccess={(cat) => {
+                            setValue('category_id', cat.id);
+                            setValue('category', cat.name);
+                          }}
+                        />
                       </div>
                     )}
                   </div>

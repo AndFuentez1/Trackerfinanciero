@@ -79,9 +79,13 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="default" className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center">
-          <span className="hidden sm:flex flex-row items-center gap-2">Nuevo Movimiento <Coins className="h-3 w-3" /></span>
-          <span className="sm:hidden flex flex-row items-center gap-2">Nuevo Movimiento <Coins className="h-3 w-3" /></span>
+        <Button
+          size="sm"
+          className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+        >
+          <Coins className="h-4 w-4" />
+          <span className="hidden sm:inline">Nuevo ahorro</span>
+          <span className="sm:hidden">Nuevo ahorro</span>
         </Button>
       </DialogTrigger>
       <DialogContent

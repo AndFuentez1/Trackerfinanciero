@@ -16,7 +16,7 @@ export const typeStyles = {
     saving: 'text-blue-600 bg-blue-50',
     savings: 'text-blue-600 bg-blue-50',
     investment: 'text-purple-600 bg-purple-50',
-    loan: 'text-amber-600 bg-amber-50',
+    loan: 'text-primary bg-primary/10',
     transfer: 'text-slate-700 bg-slate-100',
     transfer_in: 'text-slate-700 bg-slate-100',
     transfer_out: 'text-slate-700 bg-slate-100',

@@ -133,26 +133,18 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                         <Label htmlFor="cat-type">Tipo</Label>
                         <div className="grid grid-cols-4 gap-2">
                             {typeOptions.map((option) => {
-                                // Locked logic remains
-                                const isLocked = initialType === 'income' && option.value !== 'income';
-
                                 return (
                                     <button
                                         key={option.value}
                                         type="button"
-                                        aria-disabled={isLocked}
-                                        disabled={isLocked}
                                         onClick={() => {
-                                            if (isLocked) { return; }
                                             setType(option.value);
                                         }}
                                         className={cn(
                                             'px-2 py-2 text-xs rounded-lg border transition-all truncate min-h-[44px] md:min-h-[36px] flex items-center justify-center',
-                                            isLocked
-                                                ? 'bg-muted text-muted-foreground opacity-70 cursor-not-allowed border-border'
-                                                : type === option.value
-                                                    ? 'bg-primary text-primary-foreground border-primary'
-                                                    : 'bg-background hover:bg-muted border-border'
+                                            type === option.value
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-background hover:bg-muted border-border'
                                         )}
                                     >
                                         {option.label}

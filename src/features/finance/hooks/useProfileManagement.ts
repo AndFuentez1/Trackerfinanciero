@@ -55,7 +55,6 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
         welcome_completed: boolean | null;
         decimal_places: number | null;
         base_color: string | null;
-        keep_session_alive: boolean | null;
     } | null>(null);
 
     // Sync local profile state with fetched profile
@@ -65,11 +64,6 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
         setCurrency(profile.currency ?? '');
         if (typeof profile.decimal_places === 'number') { setDecimalPlaces(profile.decimal_places); }
         if (profile.decimal_places === null) { setDecimalPlaces(0); }
-
-        // Sync keep_session_alive down to localStorage if set explicitly in DB
-        if (profile.keep_session_alive !== undefined && profile.keep_session_alive !== null) {
-            localStorage.setItem('keep_alive_enabled', profile.keep_session_alive ? 'true' : 'false');
-        }
     }, [profile]);
 
     /**
@@ -82,7 +76,6 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
         onboarding_decision?: string;
         has_pending_import?: boolean;
         welcome_completed?: boolean;
-        keep_session_alive?: boolean;
     }) => {
         if (!user) {
             toast({ title: 'Error', description: 'No autenticado', variant: 'destructive' });
@@ -106,9 +99,6 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             // Update local state
             if (validUpdates.currency !== undefined) { setCurrency(validUpdates.currency); }
             if (validUpdates.decimal_places !== undefined) { setDecimalPlaces(validUpdates.decimal_places); }
-            if (validUpdates.keep_session_alive !== undefined) {
-                localStorage.setItem('keep_alive_enabled', validUpdates.keep_session_alive ? 'true' : 'false');
-            }
             const nextProfile = { ...(profileData || {}), ...validUpdates } as NonNullable<typeof profileData>;
             setProfileData(nextProfile);
 

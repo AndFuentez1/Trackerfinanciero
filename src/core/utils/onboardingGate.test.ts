@@ -42,10 +42,12 @@ describe('onboardingGate', () => {
         expect(state.isOnboardingLocked).toBe(false);
     });
 
-    it('allows only dashboard and settings routes during onboarding', () => {
-        expect(isOnboardingAllowedRoute('/')).toBe(true);
-        expect(isOnboardingAllowedRoute('/configuracion')).toBe(true);
-        expect(isOnboardingAllowedRoute('/presupuestos')).toBe(false);
-        expect(isOnboardingAllowedRoute('/loans')).toBe(false);
+    it('allows allowed routes during onboarding', () => {
+        expect(isOnboardingAllowedRoute('/dashboard')).toBe(true);
+        expect(isOnboardingAllowedRoute('/settings')).toBe(true);
+        expect(isOnboardingAllowedRoute('/budgets')).toBe(true);
+        expect(isOnboardingAllowedRoute('/loans')).toBe(true);
+        expect(isOnboardingAllowedRoute('/')).toBe(false);
+        expect(isOnboardingAllowedRoute('/unknown')).toBe(false);
     });
 });

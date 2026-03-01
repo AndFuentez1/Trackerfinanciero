@@ -277,9 +277,15 @@ export default function HistoryPage() {
                             "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border/50",
                             filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
                         )}>
-                            <div className="flex items-start gap-2 mb-4 px-1">
-                                <BarChart3 className="h-5 w-5 text-primary flex-shrink-0" />
-                                <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">Filtros</h2>
+                            <div className="flex items-start gap-4 mb-4">
+                                <div className="flex shrink-0 items-center justify-center p-1">
+                                    <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                        Filtros
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="flex flex-col gap-3">

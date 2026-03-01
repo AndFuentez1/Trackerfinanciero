@@ -35,7 +35,7 @@ export function SummaryCard({ title, amount, icon: Icon, variant = 'neutral', de
       <div className="space-y-3">
         {/* Header: Icon & Title Area */}
         <div className="flex items-start gap-4">
-          <div className="flex shrink-0 items-center justify-center p-1 rounded-md bg-background/50 ring-1 ring-border/50">
+          <div className="flex shrink-0 items-center justify-center p-1">
             <Icon className={cn("h-5 w-5 transition-colors duration-300", getIconColor())} strokeWidth={2.5} />
           </div>
           <div className="flex flex-col min-w-0">

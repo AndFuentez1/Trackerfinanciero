@@ -4,6 +4,7 @@ import {
     calculateBudgetProgress,
     calculateInsights,
     calculateExpensesByCategory,
+    findOrphanedTransactions
 } from '@/features/finance/utils/financeCalculations';
 import type { Transaction, Budget, PaymentMethod } from '@/features/finance/types/financeTypes';
 
@@ -86,5 +87,44 @@ describe('financeCalculations', () => {
 
         expect(hasSavingsWarning).toBe(true);
         expect(hasCreditWarning).toBe(true);
+    });
+
+    it('findOrphanedTransactions detects transactions missing valid links', () => {
+        const categories = [{ id: 'cat1', name: 'Alimentación' }];
+        const paymentMethods = [{ id: 'pm1', name: 'Cuenta de Ahorros' }] as PaymentMethod[];
+
+        const validTransaction = baseTransaction({ payment_method_id: 'pm1', category_id: 'cat1' });
+        const invalidPMTransaction = baseTransaction({ payment_method_id: 'pm-invalid', category_id: 'cat1' });
+        const invalidCatTransaction = baseTransaction({ payment_method_id: 'pm1', category_id: 'cat-invalid' });
+        const totallyInvalidTransaction = baseTransaction({ payment_method_id: 'pm-invalid', category_id: 'cat-invalid' });
+
+        const orphans = findOrphanedTransactions(
+            [validTransaction, invalidPMTransaction, invalidCatTransaction, totallyInvalidTransaction],
+            paymentMethods,
+            categories
+        );
+
+        expect(orphans).toHaveLength(3);
+        expect(orphans).toContain(invalidPMTransaction);
+        expect(orphans).toContain(invalidCatTransaction);
+    });
+
+    it('calculateSummary ignores undisbursed loans', () => {
+        const transactions: Transaction[] = [
+            baseTransaction({ type: 'income', amount: 1000, category: 'Salario' }),
+            // Este préstamo NO debe sumarse ni restarse ya que no tiene payment_method_id
+            baseTransaction({ type: 'income', amount: 5000, category: 'Préstamos', payment_method_id: null }),
+            // Este préstamo SÍ debe contar porque tiene payment_method_id
+            baseTransaction({ type: 'income', amount: 2000, category: 'Préstamos', payment_method_id: 'pm1' }),
+            baseTransaction({ type: 'saving', amount: 100, category: 'Ahorro' }),
+            baseTransaction({ type: 'investment', amount: 50, category: 'Inversión' }),
+        ];
+
+        const summary = calculateSummary(transactions, 'COP');
+        // Total Income debe ser 1000 + 2000 = 3000
+        expect(summary.totalIncome).toBe(3000);
+        expect(summary.totalSavings).toBe(100);
+        expect(summary.totalInvestments).toBe(50);
+        expect(summary.netWorth).toBe(3000); // 3000 - 0 = 3000
     });
 });

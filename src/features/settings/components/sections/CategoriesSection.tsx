@@ -153,19 +153,29 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
 
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden h-full flex flex-col">
-            <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-                            <Tags className="h-5 w-5 text-primary" />
-                            Categorías ({filteredCategories.length}/{categories.length})
-                        </CardTitle>
-                        <CardDescription className="text-base">Organiza tus transacciones por tipo</CardDescription>
+            <CardHeader className="pb-4 pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-start gap-4">
+                            <div className="flex shrink-0 items-center justify-center p-1">
+                                <Tags className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                    Categorías ({filteredCategories.length}/{categories.length})
+                                </p>
+                                <p className="text-sm text-muted-foreground font-medium mt-1 leading-none">
+                                    Organiza tus transacciones por tipo
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0 md:text-[15px]">
-                        <Plus className="h-4 w-4" />
-                        Nueva<span className="hidden md:inline"> categoría</span>
-                    </Button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end flex-wrap mt-2 sm:mt-0">
+                        <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0 md:text-[15px]">
+                            <Plus className="h-4 w-4" />
+                            Nueva<span className="hidden md:inline"> categoría</span>
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">

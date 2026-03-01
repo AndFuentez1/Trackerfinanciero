@@ -187,7 +187,7 @@ export function ExpenseChart({
   return (
     <Card className="shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm h-full flex flex-col">
       <CardHeader className="pb-2">
-        <div>
+        <div className="text-center">
           <CardTitle className="text-lg font-semibold text-foreground">Distribución</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">Gastos por categoría</CardDescription>
         </div>

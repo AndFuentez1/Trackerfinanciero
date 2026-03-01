@@ -9,7 +9,7 @@ import { AdvancedSettings } from '@/features/settings/components/AdvancedSetting
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
-import { Settings2, Heart, ChevronDown, Shield } from 'lucide-react';
+import { Settings2, Heart, ChevronDown, Shield, Info } from 'lucide-react';
 import { Separator } from '@/shared/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { useState, useEffect, useRef } from 'react';
@@ -151,11 +151,23 @@ export default function ConfiguracionPage() {
 
                     {/* Information Card - Moved to bottom */}
                     <Card className="rounded-2xl border-border/50 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden shadow-sm">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Información</CardTitle>
+                        <CardHeader className="pb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex shrink-0 items-center justify-center p-1">
+                                        <Info className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex flex-col min-w-0 text-left">
+                                        <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                            Información
+                                        </p>
+                                        <p className="text-sm text-muted-foreground mt-1 leading-tight">Privacidad y acerca de la aplicación</p>
+                                    </div>
+                                </div>
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-4 pt-2">
-                            <p className="text-base text-balance leading-relaxed">
+                        <CardContent className="space-y-4 pt-0">
+                            <p className="text-base text-balance leading-relaxed text-muted-foreground">
                                 Todos tus datos se guardan de forma segura en la nube y se sincronizan en tiempo real con todos tus dispositivos.
                             </p>
 
@@ -164,9 +176,15 @@ export default function ConfiguracionPage() {
                             {/* Privacy Policy Section - Collapsible */}
                             <Collapsible className="space-y-2">
                                 <CollapsibleTrigger className="flex items-center justify-between w-full group hover:opacity-80 transition-opacity">
-                                    <div className="flex items-center gap-2">
-                                        <Shield className="h-5 w-5 text-primary" />
-                                        <h4 className="text-lg font-semibold text-foreground">Privacidad de Datos</h4>
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex shrink-0 items-center justify-center p-1">
+                                            <Shield className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col min-w-0 flex-1 text-left">
+                                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none mt-1">
+                                                Privacidad de Datos
+                                            </p>
+                                        </div>
                                     </div>
                                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
                                 </CollapsibleTrigger>

@@ -28,6 +28,8 @@ import { es } from 'date-fns/locale';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 import { Calendar } from '@/shared/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { cn } from '@/core/utils';
@@ -129,28 +131,36 @@ export function SummaryTab({
   const [pmToDelete, setPmToDelete] = useState<PaymentMethod | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-  // Estado compartido entre la gráfica de evolución y el donut
-  const [selectedYears, setSelectedYears] = useState<string[]>(() => availableYears.length ? availableYears : [currentYear.toString()]);
+  const [selectedYears, setSelectedYears] = useState<string[]>(() => availableYears.includes(currentYear.toString()) ? [currentYear.toString()] : [currentYear.toString()]);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
-  // Asegurar que siempre haya al menos un año seleccionado
+  // Asegurar validación solo si el año dejó de existir, permitir array vacío para deseleccionar
   useEffect(() => {
-    if (selectedYears.length === 0 && availableYears.length > 0) {
-      setSelectedYears([availableYears[0]]);
-      return;
-    }
+    if (selectedYears.length === 0) return; // Allow empty
     const filtered = selectedYears.filter(y => availableYears.includes(y));
     if (filtered.length !== selectedYears.length) {
-      setSelectedYears(filtered.length ? filtered : [availableYears[0] || currentYear.toString()]);
+      setSelectedYears(filtered.length ? filtered : []);
     }
   }, [availableYears, selectedYears, currentYear]);
 
+  const handleToggleAllYears = () => {
+    if (selectedYears.length === availableYears.length) {
+      setSelectedYears([]);
+    } else {
+      setSelectedYears(availableYears);
+    }
+  };
+
+  const [sankeyDrillDown, setSankeyDrillDown] = useState<{ type: 'income' | 'expense', page: number } | null>(null);
+
+  const { user } = useAuth();
+  const { config, updateConfig } = useUserConfig(user?.id);
+
   // Estado para ocultar la alerta global de transacciones incompletas
-  const [isAlertHidden, setIsAlertHidden] = useState(() => sessionStorage.getItem('hideIncompleteAlert') === 'true');
+  const isAlertHidden = config.hide_incomplete_alert;
 
   const hideGlobalAlert = () => {
-    sessionStorage.setItem('hideIncompleteAlert', 'true');
-    setIsAlertHidden(true);
+    updateConfig({ hide_incomplete_alert: true });
   };
 
   // Transacciones filtradas según la selección de la gráfica (años/mes)
@@ -170,10 +180,25 @@ export function SummaryTab({
     return noTransfers.filter(t => !(t.type === 'expense' && (t.installments || 1) > 1));
   }, [allTransactions, selectedYears, selectedMonth]);
 
-  const expensesByCategoryFiltered = useMemo(
-    () => calculateExpensesByCategory(filteredChartTransactions),
-    [filteredChartTransactions]
-  );
+  const expensesByCategoryFiltered = useMemo(() => {
+    let baseTxs = filteredChartTransactions;
+    if (sankeyDrillDown && sankeyDrillDown.type === 'expense') {
+      const expenseMap = new Map<string, number>();
+      baseTxs.filter(tx => tx.type === 'expense' || tx.type === 'loan').forEach(tx => {
+        if (!tx.category_id) return;
+        expenseMap.set(tx.category_id, (expenseMap.get(tx.category_id) || 0) + tx.amount);
+      });
+      let items = Array.from(expenseMap.entries());
+      items.sort((a, b) => b[1] - a[1]);
+
+      const startIndex = sankeyDrillDown.page * 9;
+      const slicedItems = items.slice(startIndex, startIndex + 9);
+      const validCategoryIds = new Set(slicedItems.map(i => i[0]));
+
+      baseTxs = baseTxs.filter(tx => (tx.type === 'expense' || tx.type === 'loan') && tx.category_id && validCategoryIds.has(tx.category_id));
+    }
+    return calculateExpensesByCategory(baseTxs);
+  }, [filteredChartTransactions, sankeyDrillDown]);
 
 
 
@@ -250,13 +275,17 @@ export function SummaryTab({
       {/* SECTION 0: Global Alerts */}
       {!isAlertHidden && incompleteTransactions.length > 0 && (
         <div className="bg-orange-50/50 border border-orange-200/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-orange-100 text-orange-600">
-              <AlertCircle className="w-5 h-5" />
+          <div className="flex items-start gap-4">
+            <div className="flex shrink-0 items-center justify-center p-1">
+              <AlertCircle className="w-5 h-5 text-orange-600" strokeWidth={2.5} />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-orange-800 leading-tight">Acción requerida</h4>
-              <p className="text-xs text-orange-700 font-medium">Tienes {incompleteTransactions.length} transacciones sin categoría o método de pago.</p>
+            <div className="flex flex-col min-w-0">
+              <p className="text-base sm:text-lg font-bold text-orange-900 tracking-tight leading-none">
+                Acción requerida
+              </p>
+              <p className="text-sm text-orange-700 mt-1 font-medium leading-tight">
+                Tienes {incompleteTransactions.length} transacciones sin categoría o método de pago.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -269,7 +298,7 @@ export function SummaryTab({
                 navigate('/history?reclassify=true');
               }}
             >
-              Corregir (Historial) <ArrowRight className="w-4 h-4" />
+              Corregir ahora <ArrowRight className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
@@ -304,11 +333,17 @@ export function SummaryTab({
 
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 px-1">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-start gap-2 leading-none tracking-tight">
-            <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
-            <span className="truncate">Mis Cuentas</span>
-          </h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 mb-2">
+          <div className="flex items-start gap-4">
+            <div className="flex shrink-0 items-center justify-center p-1">
+              <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                Mis Cuentas
+              </p>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -378,10 +413,16 @@ export function SummaryTab({
 
       {/* SECTION 2: Resumen General */}
       <div className="flex flex-col gap-4">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-start gap-2 leading-none tracking-tight px-1">
-          <CalendarIcon className="w-5 h-5 text-primary flex-shrink-0" />
-          <span className="truncate">Resumen General</span>
-        </h2>
+        <div className="flex items-start gap-4 mb-2">
+          <div className="flex shrink-0 items-center justify-center p-1">
+            <CalendarIcon className="h-5 w-5 text-primary" strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+              Resumen General
+            </p>
+          </div>
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -450,11 +491,15 @@ export function SummaryTab({
       {/* Herramientas de Análisis y Detalles */}
       <div className="flex flex-col gap-8 sm:gap-10 lg:gap-12">
         <div className="flex flex-col gap-4 sm:gap-6">
-          <div className="flex items-start gap-2 sm:gap-3 px-1">
-            <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
-              Análisis Visual
-            </h2>
+          <div className="flex items-start gap-4 mb-2">
+            <div className="flex shrink-0 items-center justify-center p-1">
+              <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                Análisis Visual
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="lg:col-span-2">
@@ -469,11 +514,14 @@ export function SummaryTab({
               ) : (
                 <EvolutionChart
                   transactions={allTransactions}
+                  categories={categories}
                   selectedYears={selectedYears}
                   onSelectedYearsChange={setSelectedYears}
                   selectedMonth={selectedMonth}
                   onSelectedMonthChange={setSelectedMonth}
-                  onSelectAllYears={() => setSelectedYears(availableYears)}
+                  onSelectAllYears={handleToggleAllYears}
+                  sankeyDrillDown={sankeyDrillDown}
+                  onSankeyDrillDownChange={setSankeyDrillDown}
                 />
               )}
             </div>
@@ -499,7 +547,7 @@ export function SummaryTab({
                   selectedYears={selectedYears}
                   onSelectedYearsChange={setSelectedYears}
                   availableYears={availableYears}
-                  onSelectAllYears={() => setSelectedYears(availableYears)}
+                  onSelectAllYears={handleToggleAllYears}
                 />
               )}
             </div>

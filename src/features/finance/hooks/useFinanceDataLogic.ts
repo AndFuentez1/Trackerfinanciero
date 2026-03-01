@@ -11,6 +11,7 @@ import { useProfileManagement } from './useProfileManagement';
 import { useTheme } from './useTheme';
 import { useTransactionData } from './useTransactionData';
 import { useFinanceMutations } from './useFinanceMutations';
+import { useUserConfig } from './useUserConfig';
 
 // Constants
 import { DEFAULT_CATEGORIES } from '../constants/categoryConstants';
@@ -43,6 +44,7 @@ export function useFinanceDataLogic() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { config, updateConfig } = useUserConfig(user?.id);
 
   // 1. Data Layer
   const {
@@ -226,9 +228,9 @@ export function useFinanceDataLogic() {
     baseColor: theme.baseColor,
     themeVars: theme.themeVars,
     themeOptions: theme.themeOptions,
-    keepSessionAlive: profileMgmt.profileData?.keep_session_alive ?? false,
+    keepSessionAlive: config.keep_session_alive,
     setKeepSessionAlive: (keepAlive: boolean) => {
-      return profileMgmt.updateProfile({ keep_session_alive: keepAlive });
+      return updateConfig({ keep_session_alive: keepAlive });
     },
     setAppThemePreference: (color: string) => {
       theme.setBaseColor(color);
@@ -257,6 +259,8 @@ export function useFinanceDataLogic() {
     profileMgmt,
     theme,
     mut,
+    config,
+    updateConfig,
     refreshData,
     confirmPendingImport,
     resetOperationalData,

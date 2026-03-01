@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { Button } from '@/shared/ui/button';
-import { Check } from 'lucide-react';
+import { Check, BarChart3 } from 'lucide-react';
 import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
@@ -139,43 +138,64 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     <Card className="mb-6 shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm">
       <CardHeader className="pb-2">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg font-semibold text-foreground">Proyección de Flujo</CardTitle>
-            <CardDescription>Estimación futura basada en presupuestos y obligaciones</CardDescription>
+          <div className="flex items-start gap-4">
+            <div className="flex shrink-0 items-center justify-center p-1">
+              <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                Proyección de Flujo
+              </p>
+              <p className="text-sm text-muted-foreground mt-1 leading-tight">Estimación futura basada en presupuestos y obligaciones</p>
+            </div>
           </div>
 
-          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 w-full md:w-auto flex-wrap sm:flex-nowrap gap-1">
-            <Button
-              variant={showIncome ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowIncome(!showIncome)}
-              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showIncome && "bg-emerald-100/50 text-emerald-700 hover:bg-emerald-200/50 border border-emerald-200")}
-            >
-              <span className="truncate">Ingresos</span>
-            </Button>
-            <Button
-              variant={showExpense ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowExpense(!showExpense)}
-              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showExpense && "bg-rose-100/50 text-rose-700 hover:bg-rose-200/50 border border-rose-200")}
-            >
-              <span className="truncate">Egresos</span>
-            </Button>
-            <Button
-              variant={showBalance ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowBalance(!showBalance)}
-              className={cn("h-7 text-[10.5px] sm:text-xs gap-1 sm:gap-1.5 transition-all hover:text-current flex-1 px-1 sm:px-3 sm:w-auto justify-center shrink-0", showBalance && "bg-sky-100/70 text-sky-700 hover:bg-sky-200/50 border border-sky-200")}
-            >
-              <span className="truncate">Balance</span>
-            </Button>
+          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap justify-end">
+            <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50">
+              <button
+                type="button"
+                onClick={() => setShowIncome(!showIncome)}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showIncome
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
+              >
+                Ingresos
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowExpense(!showExpense)}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showExpense
+                    ? "bg-rose-100 text-rose-800 border border-rose-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
+              >
+                Gastos
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBalance(!showBalance)}
+                className={cn(
+                  "h-7 text-[10px] md:text-xs min-w-[68px] px-2 rounded-lg shrink-0 font-medium transition-colors",
+                  showBalance
+                    ? "bg-slate-200 text-slate-700 border border-slate-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
+              >
+                Balance
+              </button>
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
               <defs>
                 <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.2} />
@@ -185,11 +205,22 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                 </linearGradient>
-
+                <linearGradient id="balanceRealGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.0} />
+                </linearGradient>
+                <linearGradient id="balanceProyectadoGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.0} />
+                </linearGradient>
+                <linearGradient id="balanceWarningGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.0} />
+                </linearGradient>
               </defs>
-              {/* Líneas horizontales: una por tick visible del eje Y */}
+              {/* Líneas horizontales: extremadamente sutiles (estilo Sure) */}
               {yTicks.map(tick => (
-                <ReferenceLine key={tick} y={tick} stroke="hsl(var(--border))" strokeOpacity={0.35} strokeWidth={1} />
+                <ReferenceLine key={tick} y={tick} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.1} strokeWidth={1} />
               ))}
               <XAxis
                 dataKey="name"
@@ -220,64 +251,66 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                width={60}
+                width={85}
                 ticks={yTicks}
               />
               <Tooltip
-                cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
+                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                 content={<FinanceChartTooltip />}
               />
-              <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} strokeDasharray="3 3" />
 
               {/* Bars & Lines controlled by Toggles */}
 
-              {showIncome && (
-                <Bar
-                  dataKey="ingresos"
-                  name="Ingresos Totales"
-                  fill="hsl(var(--success))"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                  fillOpacity={0.7}
-                  isAnimationActive={false}
-                />
-              )}
+              {/* Fixed barSize + fillOpacity so bars keep position and width always */}
+              <Bar
+                dataKey="ingresos"
+                name="Ingresos Totales"
+                fill="hsl(var(--success))"
+                radius={[4, 4, 0, 0]}
+                barSize={14}
+                fillOpacity={showIncome ? 0.7 : 0}
+                isAnimationActive={false}
+                legendType={showIncome ? 'circle' : 'none'}
+              />
 
-              {showExpense && (
-                <Bar
-                  dataKey="negativeEgresos"
-                  name="Egresos Totales"
-                  fill="hsl(var(--destructive))"
-                  radius={[0, 0, 4, 4]}
-                  maxBarSize={40}
-                  fillOpacity={0.7}
-                  isAnimationActive={false}
-                />
-              )}
+              <Bar
+                dataKey="negativeEgresos"
+                name="Egresos Totales"
+                fill="hsl(var(--destructive))"
+                radius={[0, 0, 4, 4]}
+                barSize={14}
+                fillOpacity={showExpense ? 0.7 : 0}
+                isAnimationActive={false}
+                legendType={showExpense ? 'circle' : 'none'}
+              />
 
               {showBalance && (
                 <>
                   {/* Balance Real (Histórico Descriptivo) */}
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="balanceReal"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2.5}
-                    isAnimationActive={false}
+                    stroke="hsl(var(--muted-foreground))"
+                    fill="url(#balanceRealGradient)"
+                    strokeWidth={3}
+                    isAnimationActive={true}
+                    animationDuration={1000}
+                    animationEasing="ease-in-out"
                     dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
                       const { cx, cy, payload } = props;
                       if (payload.balanceReal == null) return <g key={`dot-br-${payload.name}`} />;
                       return (
                         <circle
                           key={`dot-br-${payload.name}`}
-                          cx={cx} cy={cy} r={3}
-                          fill="hsl(var(--primary))"
-                          stroke="hsl(var(--background))"
-                          strokeWidth={1.5}
+                          cx={cx} cy={cy} r={4}
+                          fill="hsl(var(--background))"
+                          stroke="hsl(var(--muted-foreground))"
+                          strokeWidth={2}
                         />
                       );
                     }}
-                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))", fill: "hsl(var(--muted-foreground))" }}
                     connectNulls={false}
                     name="Balance Histórico"
                   />
@@ -301,29 +334,32 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     return null;
                   })()}
                   {/* Balance Proyectado */}
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="balanceProyectado"
-                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
+                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))"}
+                    fill={isWarning ? "url(#balanceWarningGradient)" : "url(#balanceProyectadoGradient)"}
                     strokeWidth={2}
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationDuration={1000}
+                    animationEasing="ease-in-out"
                     dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
                       const { cx, cy, payload } = props;
                       if (payload.balanceProyectado == null) return <g key={`dot-bp-${payload.name}`} />;
-                      const color = isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))";
+                      const color = isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))";
                       return (
                         <circle
                           key={`dot-bp-${payload.name}`}
-                          cx={cx} cy={cy} r={3}
-                          fill={color}
-                          stroke="hsl(var(--background))"
-                          strokeWidth={1.5}
+                          cx={cx} cy={cy} r={4}
+                          fill="hsl(var(--background))"
+                          stroke={color}
+                          strokeWidth={2}
                         />
                       );
                     }}
                     strokeDasharray="5 5"
                     name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
-                    activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))", fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))" }}
                     className={isWarning ? "opacity-90" : ""}
                   />
                   {/* Ajuste de Balance Inicial */}

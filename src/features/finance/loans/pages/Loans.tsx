@@ -39,6 +39,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { LoansSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 import { getTodayLocalDate } from '@/core/utils';
 import { Badge } from '@/shared/ui/badge';
+import { LoansSummary } from '../components/LoansSummary';
+import { LoanCard } from '../components/LoanCard';
 
 export default function LoansPage() {
     useSEO({
@@ -157,6 +159,21 @@ export default function LoansPage() {
     const handleOpenEdit = (loan: Loan) => {
         setEditDialog({ open: true, loan });
         setEditData({ methodId: '' });
+    };
+
+    const handleEditFormOpen = (loan: Loan) => {
+        setFormData({
+            name: loan.name,
+            total_amount: loan.total_amount.toString(),
+            paid_amount: loan.paid_amount.toString(),
+            interest_rate: loan.interest_rate.toString(),
+            type: loan.type,
+            due_date: loan.due_date ? loan.due_date.split('T')[0] : '',
+            payment_method_id: loan.payment_method_id || '',
+            is_disbursed: !!loan.payment_method_id
+        });
+        setEditingId(loan.id);
+        setIsDialogOpen(true);
     };
 
 
@@ -304,11 +321,12 @@ export default function LoansPage() {
                                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button
-                                                className="gap-2 border border-primary min-w-[44px] sm:min-w-[140px] text-[15px] md:text-[16px] py-2 flex items-center justify-center p-2 sm:px-4" // Better touch target
+                                                size="sm"
+                                                className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
                                                 aria-label="Nuevo préstamo"
                                                 title="Nuevo préstamo"
                                             >
-                                                <CheckCircle2 className="h-5 w-5 sm:h-4 sm:w-4" />
+                                                <CheckCircle2 className="h-4 w-4" />
                                                 <span className="hidden sm:inline">Nuevo préstamo</span>
                                             </Button>
                                         </DialogTrigger>
@@ -521,7 +539,7 @@ export default function LoansPage() {
                                     <DialogDescription className="sr-only">Confirma el desembolso del préstamo.</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
-                                    <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
+                                    <div className="p-3 bg-blue-50 text-blue-800 dark:text-blue-300 rounded-lg text-sm border border-blue-100">
                                         Confirmar el desembolso de <strong>{formatCurrency(disbursementDialog.loan?.total_amount || 0)}</strong>.
                                     </div>
                                     <div className="space-y-2">
@@ -596,53 +614,11 @@ export default function LoansPage() {
                             </Alert>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 hover:shadow-md transition-shadow">
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
-                                            <ArrowDownCircle className="h-4 w-4 text-destructive" strokeWidth={2.5} />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground leading-none tracking-tight">
-                                                Mis Deudas Pendientes
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="pl-[2.125rem] space-y-1">
-                                        <div className="text-2xl font-bold text-foreground leading-none">
-                                            <CurrencyDisplay amount={totalRemainingDebt} currencyCode={ctxCurrency} />
-                                        </div>
-                                        <p className="text-[11px] text-muted-foreground font-normal leading-tight">
-                                            (Solo préstamos desembolsados)
-                                        </p>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 hover:shadow-md transition-shadow">
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
-                                            <ArrowUpCircle className="h-4 w-4 text-emerald-600" strokeWidth={2.5} />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground leading-none tracking-tight">
-                                                Por Cobrar (Prestado)
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="pl-[2.125rem] space-y-1">
-                                        <div className="text-2xl font-bold text-foreground leading-none">
-                                            <CurrencyDisplay amount={totalRemainingReceivable} currencyCode={ctxCurrency} />
-                                        </div>
-                                        <p className="text-[11px] text-muted-foreground font-normal leading-tight">
-                                            (Solo préstamos desembolsados)
-                                        </p>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
+                        <LoansSummary
+                            totalRemainingDebt={totalRemainingDebt}
+                            totalRemainingReceivable={totalRemainingReceivable}
+                            ctxCurrency={ctxCurrency}
+                        />
 
                         <div className="flex flex-col gap-6">
                             <h2 className="text-lg sm:text-xl md:text-2xl font-bold px-1 tracking-tight leading-none">Controla tus pagos y saldos pendientes</h2>
@@ -653,176 +629,21 @@ export default function LoansPage() {
                                         No tienes préstamos registrados.
                                     </div>
                                 ) : (
-                                    loans.map(loan => {
-                                        const percentage = loan.total_amount > 0 ? (loan.paid_amount / loan.total_amount) * 100 : 0;
-                                        const isDebt = loan.type === 'borrowed';
-                                        const overdue = isOverdue(loan);
-                                        const isPendingDisbursement = !loan.is_disbursed && !loan.payment_method_id;
-                                        const isOrphaned = loan.is_disbursed && !loan.payment_method_id;
-                                        const isFullyPaid = loan.paid_amount >= loan.total_amount;
-
-                                        return (
-                                            <Card key={loan.id} className={cn(
-                                                "overflow-hidden border-l-4 transition-all hover:shadow-md border-border bg-gray-50/50 dark:bg-muted/20", // Added border-border
-                                                isPendingDisbursement ? "border-l-slate-300 opacity-90" :
-                                                    isOrphaned ? "border-l-red-400 opacity-90" :
-                                                        isDebt ? "border-l-destructive/60" : "border-l-emerald-500/60", // Reduced opacity
-                                                overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-50/30 border-l-orange-400"
-                                            )}>
-                                                <CardContent className="p-6">
-                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <h3 className="font-semibold text-lg">{loan.name}</h3>
-                                                                <span className={cn(
-                                                                    "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                                                                    isPendingDisbursement ? "bg-slate-100 text-slate-600" :
-                                                                        isOrphaned ? "bg-red-100 text-red-600" :
-                                                                            isDebt ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-600"
-                                                                )}>
-                                                                    {isPendingDisbursement ? 'Pendiente Desembolso' :
-                                                                        isOrphaned ? 'Reclassify: No Account Linked' :
-                                                                            (isDebt ? 'Deuda' : 'Por Cobrar')}
-                                                                </span>
-                                                                {overdue && !isPendingDisbursement && !isOrphaned && (
-                                                                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-orange-100 text-orange-600">
-                                                                        <AlertCircle className="h-3 w-3" />
-                                                                        Vencido
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-3 text-base text-muted-foreground flex-wrap">
-                                                                <p>{formatCurrencySmall(loan.paid_amount)} de {formatCurrencySmall(loan.total_amount)}</p>
-                                                                {loan.interest_rate > 0 && (
-                                                                    <p className="flex items-center gap-1">
-                                                                        <Percent className="h-3 w-3" />
-                                                                        Int: {loan.interest_rate}%
-                                                                    </p>
-                                                                )}
-                                                                {loan.due_date && (
-                                                                    <p className={cn(
-                                                                        "flex items-center gap-1",
-                                                                        overdue ? "text-orange-600 font-medium" : ""
-                                                                    )}>
-                                                                        <Calendar className="h-3 w-3" />
-                                                                        Vence: {format(parseISO(loan.due_date), "d 'de' MMM, yyyy", { locale: es })}
-                                                                    </p>
-                                                                )}
-                                                                {loan.payment_method_id ? (
-                                                                    <p className="flex items-center gap-1">
-                                                                        <Wallet className="h-3 w-3" />
-                                                                        Cuenta: {paymentMethods.find(pm => pm.id === loan.payment_method_id)?.name || 'Desconocida'}
-                                                                    </p>
-                                                                ) : (
-                                                                    <p className="flex items-center gap-1 text-slate-400 font-medium">
-                                                                        <XCircle className="h-3 w-3" />
-                                                                        Sin desembolso
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2 mt-4 md:mt-0">
-                                                            {isPendingDisbursement ? (
-                                                                <Button
-                                                                    size="sm"
-                                                                    className="gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
-                                                                    onClick={() => handleOpenDisbursement(loan)}
-                                                                >
-                                                                    <CheckCircle2 className="h-4 w-4" />
-                                                                    <span className="hidden sm:inline">{isDebt ? 'Recibir Dinero' : 'Confirmar Desembolso'}</span>
-                                                                </Button>
-                                                            ) : isOrphaned ? (
-                                                                <Button
-                                                                    size="sm"
-                                                                    className="gap-2 shadow-sm bg-red-600 hover:bg-red-700 text-white min-w-[140px] flex items-center justify-center"
-                                                                    onClick={() => handleOpenEdit(loan)}
-                                                                >
-                                                                    Reclasificar <Edit2 className="h-4 w-4" />
-                                                                </Button>
-                                                            ) : isFullyPaid ? (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    className="h-9 w-9 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
-                                                                    onClick={() => handleDelete(loan.id)}
-                                                                    title="Eliminar historial"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            ) : (
-                                                                <>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-9 w-9 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
-                                                                        onClick={() => {
-                                                                            setFormData({
-                                                                                name: loan.name,
-                                                                                total_amount: loan.total_amount.toString(),
-                                                                                paid_amount: loan.paid_amount.toString(),
-                                                                                interest_rate: loan.interest_rate.toString(),
-                                                                                type: loan.type,
-                                                                                due_date: loan.due_date ? loan.due_date.split('T')[0] : '',
-                                                                                payment_method_id: loan.payment_method_id || '',
-                                                                                is_disbursed: !!loan.payment_method_id
-                                                                            });
-                                                                            setEditingId(loan.id);
-                                                                            setIsDialogOpen(true);
-                                                                        }}
-                                                                        title="Editar"
-                                                                    >
-                                                                        <Edit2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-9 w-9 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
-                                                                        onClick={() => handleOpenPayment(loan)}
-                                                                        title="Registrar Abono"
-                                                                    >
-                                                                        <HandCoins className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <p className="text-lg font-semibold leading-none tracking-tight">
-                                                                        <CurrencyDisplay amount={loan.total_amount} currencyCode={ctxCurrency} />
-                                                                    </p>
-                                                                    {loan.interest_rate > 0 && (
-                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 font-normal border-amber-200 bg-amber-50 text-amber-700">
-                                                                            +{loan.interest_rate}%
-                                                                        </Badge>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Progress Bar & Paid Amount */}
-                                                    <div className="space-y-1.5 w-full">
-                                                        <div className="flex justify-between text-xs text-muted-foreground">
-                                                            <span>Pagado: <CurrencyDisplay amount={loan.paid_amount} currencyCode={ctxCurrency} className="font-medium text-foreground" variant="small" /></span>
-                                                            <span>Restante: <CurrencyDisplay amount={loan.total_amount - loan.paid_amount} currencyCode={ctxCurrency} className={cn("font-medium", overdue ? "text-destructive" : "text-foreground")} variant="small" /></span>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-xs font-medium">
-                                                                <span>Progreso de {isDebt ? 'pago' : 'cobro'}</span>
-                                                                <span>{percentage.toFixed(2)}%</span>
-                                                            </div>
-                                                            <Progress
-                                                                value={percentage}
-                                                                className="h-2"
-                                                                indicatorClassName={cn(
-                                                                    isPendingDisbursement ? "bg-slate-400" :
-                                                                        isOrphaned ? "bg-red-500" :
-                                                                            isDebt ? "bg-destructive" : "bg-emerald-500",
-                                                                    overdue && !isPendingDisbursement && !isOrphaned && "bg-orange-500"
-                                                                )}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    })
+                                    loans.map(loan => (
+                                        <LoanCard
+                                            key={loan.id}
+                                            loan={loan}
+                                            ctxCurrency={ctxCurrency}
+                                            paymentMethods={paymentMethods}
+                                            isOverdue={isOverdue}
+                                            formatCurrencySmall={formatCurrencySmall}
+                                            onOpenDisbursement={handleOpenDisbursement}
+                                            onOpenEdit={handleOpenEdit}
+                                            onDelete={handleDelete}
+                                            onEditLoan={handleEditFormOpen}
+                                            onOpenPayment={handleOpenPayment}
+                                        />
+                                    ))
                                 )}
                             </div>
                         </div>

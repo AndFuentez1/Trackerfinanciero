@@ -44,12 +44,16 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden h-full flex flex-col">
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="space-y-1">
-                        <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
-                            <Wallet className="h-5 w-5 text-primary flex-shrink-0" />
-                            Mis Cuentas ({paymentMethods.length})
-                        </CardTitle>
-                        <CardDescription className="text-base text-muted-foreground">Cuentas bancarias, tarjetas y efectivo</CardDescription>
+                    <div className="flex items-start gap-4">
+                        <div className="flex shrink-0 items-center justify-center p-1">
+                            <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                Mis Cuentas ({paymentMethods.length})
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Cuentas bancarias, tarjetas y efectivo</p>
+                        </div>
                     </div>
                 </div>
             </CardHeader>

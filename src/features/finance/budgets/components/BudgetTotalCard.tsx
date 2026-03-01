@@ -65,12 +65,12 @@ export function BudgetTotalCard({ totalBudget }: BudgetTotalCardProps) {
     return (
         <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
             <div className="flex flex-col gap-1 pb-4">
-                <div className="flex items-start gap-3">
-                    <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
-                        <PieChart className="h-4 w-4 text-primary" strokeWidth={2.5} />
+                <div className="flex items-start gap-4">
+                    <div className="flex shrink-0 items-center justify-center p-1">
+                        <PieChart className="h-5 w-5 text-primary" strokeWidth={2.5} />
                     </div>
-                    <div className="flex flex-col">
-                        <p className="text-sm font-medium text-muted-foreground tracking-tight leading-none">
+                    <div className="flex flex-col min-w-0">
+                        <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
                             Presupuesto
                         </p>
                     </div>

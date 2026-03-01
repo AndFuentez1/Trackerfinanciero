@@ -85,11 +85,19 @@ export function CurrencySection() {
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
-                    <Globe className="h-5 w-5 text-primary flex-shrink-0" />
-                    Moneda y Formato
-                </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground">Configura tu moneda principal y la visualización de cifras</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="flex shrink-0 items-center justify-center p-1">
+                            <Globe className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                Moneda y Formato
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Configura tu moneda principal y la visualización de cifras</p>
+                        </div>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent className="space-y-6">
 

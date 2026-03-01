@@ -21,6 +21,7 @@ export interface Loan {
     due_date: string | null;
     payment_method_id: string | null;
     created_at: string;
+    updated_at: string;
     user_id: string;
     type: 'borrowed' | 'lent';
     payments?: LoanPayment[];
@@ -45,6 +46,7 @@ export interface LoanRow {
     due_date?: string | null;
     payment_method_id?: string | null;
     created_at?: string;
+    updated_at?: string;
     user_id: string;
     type?: 'borrowed' | 'lent' | string;
     loan_payments?: LoanPaymentRow[];
@@ -98,6 +100,7 @@ export function useLoansDataLogic() {
                     payments,
                     is_disbursed: l.is_disbursed,
                     installments: l.installments ? Number(l.installments) : undefined,
+                    updated_at: l.updated_at || new Date().toISOString(),
                 };
             }));
         }

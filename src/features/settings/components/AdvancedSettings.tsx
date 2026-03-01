@@ -1037,22 +1037,26 @@ export function AdvancedSettings({
             <Collapsible open={isOpen} onOpenChange={onOpenChange}>
                 <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors pb-4">
-                        <div className="flex items-center justify-between w-full">
-                            <div className="space-y-1 text-left">
-                                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-                                    <Settings2 className="h-5 w-5 text-primary" />
-                                    Configuraciones Avanzadas
-                                </CardTitle>
-                                <CardDescription className="text-base">
-                                    Configura integraciones opcionales para procesamiento automático de facturas
-                                </CardDescription>
-                                {isLoadingConfig && (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-                                        <div className="h-4 w-32 animate-pulse bg-muted rounded"></div>
-                                    </div>
-                                )}
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className="flex shrink-0 items-center justify-center p-1">
+                                    <Settings2 className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                </div>
+                                <div className="flex flex-col min-w-0 text-left">
+                                    <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                        Configuraciones Avanzadas
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mt-1 leading-tight">
+                                        Automatizaciones y vinculación con servicios externos
+                                    </p>
+                                    {isLoadingConfig && (
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                                            <div className="h-4 w-32 animate-pulse bg-muted rounded"></div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+                            <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200 mt-1", isOpen && "rotate-180")} />
                         </div>
                     </CardHeader>
                 </CollapsibleTrigger>

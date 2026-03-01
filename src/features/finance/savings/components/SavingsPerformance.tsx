@@ -293,17 +293,17 @@ export function SavingsPerformance({
       {/* Header with total */}
       <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border border-border/50 shadow-md">
         <div className="flex flex-col gap-1">
-          <div className="flex items-start gap-3">
-            <div className="flex items-center justify-center p-0.5 rounded-md bg-background/50 ring-1 ring-border/50">
-              <PiggyBank className="h-4 w-4 text-primary" strokeWidth={2.5} />
+          <div className="flex items-start gap-4">
+            <div className="flex shrink-0 items-center justify-center p-1">
+              <PiggyBank className="h-5 w-5 text-primary" strokeWidth={2.5} />
             </div>
-            <div className="flex flex-col">
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-muted-foreground tracking-tight leading-none">
+            <div className="flex flex-col min-w-0">
+              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
                 Total en ahorros
               </p>
             </div>
           </div>
-          <div className="pl-[2.125rem] space-y-1">
+          <div className="pl-0 space-y-1">
             <div className="text-2xl font-bold text-foreground leading-none">
               <CurrencyDisplay
                 amount={totalBalance}
@@ -333,13 +333,14 @@ export function SavingsPerformance({
           <Card key={account.id} className="savings-card h-full border-border/50 bg-gray-50/50 dark:bg-muted/20">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-base">{account.name}</CardTitle>
-                  <CurrencyDisplay
-                    amount={account.balance}
-                    currencyCode={currency}
-                    className="text-3xl font-bold"
-                  />
+                <div className="flex flex-col gap-1 pb-2">
+                  <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">{account.name}</p>
+                  <div className="text-2xl font-bold text-foreground leading-none mt-1">
+                    <CurrencyDisplay
+                      amount={account.balance}
+                      currencyCode={currency}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button

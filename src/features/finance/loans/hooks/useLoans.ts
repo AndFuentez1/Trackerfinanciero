@@ -32,6 +32,8 @@ export function useCreateLoan() {
             payment_method_id: loan.is_disbursed === false ? null : (loan.payment_method_id || null),
             user_id: user.id,
             paid_amount: Number(initialPaidAmount || 0),
+            is_disbursed: loan.is_disbursed !== false,
+            installments: loan.installments || null,
         };
 
         const { data: loanData, error: loanError } = await supabase
@@ -163,17 +165,18 @@ export function useUpdateLoan() {
     const { toast } = useToast();
 
     const updateLoan = async (id: string, updates: Partial<Loan>) => {
-        // Remove virtual fields
-        const { paid_amount, payments, ...cleanUpdates } = updates as Partial<Loan>;
+        // Remove virtual/derived fields that are NOT columns in the DB
+        const { paid_amount, payments, ...dbUpdates } = updates as any;
 
         const { data, error } = await supabase
             .from('loans' as any)
-            .update(cleanUpdates)
+            .update(dbUpdates)
             .eq('id', id)
             .select()
             .single();
 
         if (error) {
+            console.error('[useUpdateLoan] Error:', error);
             toast({ title: 'Error', description: 'No se pudo actualizar el préstamo', variant: 'destructive' });
             return { error };
         }

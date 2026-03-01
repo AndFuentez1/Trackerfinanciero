@@ -85,10 +85,10 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         const handleChangeWithDots = (e: React.ChangeEvent<HTMLInputElement>) => {
             const val = e.target.value;
 
-            // Mostrar el aviso si el usuario escribió un punto y tiene decimales habilitados
-            if (val.includes('.') && activeDecimals > 0) {
+            // Mostrar el aviso si el usuario escribió un punto y tiene decimales habilitados al final
+            if (val.endsWith('.') && activeDecimals > 0) {
                 setShowCommaWarning(true);
-            } else {
+            } else if (!val.includes('.')) {
                 setShowCommaWarning(false);
             }
 
@@ -98,40 +98,19 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
             // Handle multiple commas
             if ((val.match(/,/g) || []).length > 1) { return; }
 
-            // Split into integer and decimal parts based on the single comma if exists
-            // Or just clean everything but commas and digits.
-            // Since we warned them about the dot, we still need to process ONLY commas as decimals.
-
-            // Revert strict comma logic
             const parts = val.split(',');
-
-            // Clean integer part (remove dots and non-digits)
             const cleanInteger = parts[0].replace(/\D/g, '');
-
-            // Format integer part with thousands separators (using dot)
             const formattedInteger = cleanInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
             let finalDisplay = formattedInteger;
 
-            // Si hay parte decimal, concatenar con coma
             if (val.includes(',')) {
                 finalDisplay += ',' + (parts[1] || '');
             } else if (val.endsWith('.')) {
-                // Keep the dot in display so they can see their wrong character and the warning
                 finalDisplay += '.';
-            } else if (val.includes('.')) {
-                // Even if it has a dot in the middle, keep it so it doesn't just vanish and they are confused
-                const rawParts = val.split('.');
-                const formattedLeft = rawParts[0].replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                finalDisplay = formattedLeft + '.' + rawParts[1];
             }
 
             setDisplayValue(finalDisplay);
-
-            // Calculate numeric value for parent
-            // If they typed a dot, we should probably evaluate it as dot or just ignore. 
-            // In the strict comma logic, dots are thousands separators.
-            // So pareseCurrencyString handles parsing. Give that to parent.
             onChange(parseCurrencyString(finalDisplay));
         };
 

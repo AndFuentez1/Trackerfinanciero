@@ -383,11 +383,17 @@ export function FutureExpensesList() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                    Gastos Futuros y Suscripciones
-                </h2>
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                    <div className="flex shrink-0 items-center justify-center p-1">
+                        <CalendarIcon className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                            Gastos Futuros y Suscripciones
+                        </p>
+                    </div>
+                </div>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
                         <Button

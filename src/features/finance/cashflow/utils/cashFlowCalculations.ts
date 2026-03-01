@@ -326,15 +326,46 @@ export function calculateMonthlySnapshot(
         });
     }
 
-    // --- Préstamos (Amortización) ---
+    // --- Préstamos (Amortización y Pagos Únicos) ---
     const newLoans: Record<string, { saldo: number, cuotasRestantes: number }> = { ...prevLoans };
     loans.forEach(loan => {
-        const prev = prevLoans[loan.id] ?? { saldo: loan.total_amount - (loan.paid_amount || 0), cuotasRestantes: loan.installments || 12 };
-        if (prev.saldo > 0 && prev.cuotasRestantes > 0) {
-            const tasa = loan.interest_rate;
-            const cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
-            const interes = prev.saldo * tasa / 12;
-            if (!isPastMonth) {
+        const isAmortized = (loan.installments || 0) > 1;
+        const hasDueDate = !!loan.due_date;
+        const dueDate = hasDueDate ? toLocalDate(loan.due_date) : null;
+        const isDueDateMonth = dueDate && isSameMonth(date, dueDate);
+
+        const prev = prevLoans[loan.id] ?? {
+            saldo: loan.total_amount - (loan.paid_amount || 0),
+            cuotasRestantes: isAmortized ? (loan.installments || 12) : (hasDueDate ? 1 : 12)
+        };
+
+        if (prev.saldo > 0) {
+            let cuota = 0;
+            let interes = 0;
+
+            if (isAmortized && prev.cuotasRestantes > 0) {
+                const tasa = loan.interest_rate;
+                cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
+                interes = prev.saldo * tasa / 12;
+                newLoans[loan.id] = { saldo: prev.saldo - (cuota - interes), cuotasRestantes: prev.cuotasRestantes - 1 };
+            } else if (!isAmortized && hasDueDate) {
+                if (isDueDateMonth) {
+                    cuota = prev.saldo;
+                    interes = 0; // Simple bullet loan usually handles interest at disbursement or separately, but here we treat saldo as total to pay
+                    newLoans[loan.id] = { saldo: 0, cuotasRestantes: 0 };
+                } else {
+                    newLoans[loan.id] = prev;
+                }
+            } else if (!isAmortized && !hasDueDate) {
+                // Fallback: if no installments and no due date, default to 12 months for safety/backward compatibility
+                const tasa = loan.interest_rate;
+                const cuotasRestantes = prev.cuotasRestantes || 12;
+                cuota = calcularCuotaFrancesa(prev.saldo, tasa, cuotasRestantes);
+                interes = prev.saldo * tasa / 12;
+                newLoans[loan.id] = { saldo: prev.saldo - (cuota - interes), cuotasRestantes: cuotasRestantes - 1 };
+            }
+
+            if (cuota > 0 && !isPastMonth) {
                 if (loan.type === 'lent') {
                     ingresosPrestamos += cuota;
                 } else {
@@ -343,7 +374,6 @@ export function calculateMonthlySnapshot(
                     egresosPrestamosCapital += cuota - interes;
                 }
             }
-            newLoans[loan.id] = { saldo: prev.saldo - (cuota - interes), cuotasRestantes: prev.cuotasRestantes - 1 };
         } else {
             newLoans[loan.id] = prev;
         }

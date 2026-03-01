@@ -130,11 +130,19 @@ export function DangerZone() {
     return (
         <Card className="rounded-2xl shadow-sm border-destructive/20 bg-destructive/5 overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-destructive">
-                    <AlertCircle className="h-5 w-5" />
-                    Zona de Peligro
-                </CardTitle>
-                <CardDescription className="text-base text-destructive/80 font-medium">Acciones irreversibles sobre tus datos</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="flex shrink-0 items-center justify-center p-1">
+                            <AlertCircle className="h-5 w-5 text-destructive" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0 text-left">
+                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                Zona de Peligro
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Acciones irreversibles sobre tus datos</p>
+                        </div>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent className="space-y-4">
                 {/* Export Data Section */}

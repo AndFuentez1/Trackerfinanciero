@@ -35,11 +35,19 @@ export function SecuritySection() {
     return (
         <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
             <CardHeader className="pb-4">
-                <CardTitle className="flex items-start gap-2 text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
-                    <Shield className="h-5 w-5 text-primary flex-shrink-0" />
-                    Seguridad y cuenta
-                </CardTitle>
-                <CardDescription className="text-base text-muted-foreground">Gestiona el acceso a tu cuenta y tu sesión</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="flex shrink-0 items-center justify-center p-1">
+                            <Shield className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                Seguridad y cuenta
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Gestiona el acceso a tu cuenta y tu sesión</p>
+                        </div>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/30 gap-4">

@@ -14,6 +14,8 @@ export interface ConfigStatus {
     notifyRulesExceptions?: boolean;
     notifyAiExceptions?: boolean;
     cashflowUseRealBalance?: boolean;
+    hideIncompleteAlert?: boolean;
+    keepSessionAlive?: boolean;
     hasEmail?: boolean;
     requiresReauth?: boolean;
 }

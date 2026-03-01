@@ -135,11 +135,15 @@ export default function BudgetsPage() {
 
                 <div>
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-                        <div className="flex items-start gap-2 px-1">
-                            <Wallet className="h-5 w-5 text-primary flex-shrink-0" />
-                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-none tracking-tight">
-                                Presupuestos por Categoría
-                            </h2>
+                        <div className="flex items-start gap-4">
+                            <div className="flex shrink-0 items-center justify-center p-1">
+                                <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                    Presupuestos por Categoría
+                                </p>
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <Select
@@ -209,7 +213,7 @@ export default function BudgetsPage() {
                     <div>
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-warning" />
+                                <AlertCircle className="h-5 w-5 text-muted-foreground" />
                                 Alertas de Presupuesto
                             </h2>
                         </div>

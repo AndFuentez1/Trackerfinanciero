@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { PendingInvoicesPanel } from '@/features/finance/transactions/components/PendingInvoicesPanel';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -90,7 +91,11 @@ describe('PendingInvoicesPanel', () => {
     });
 
     it('renders pending invoices', async () => {
-        render(<PendingInvoicesPanel />);
+        render(
+            <MemoryRouter>
+                <PendingInvoicesPanel />
+            </MemoryRouter>
+        );
 
         // Wait for the loading state to complete and data to appear
         await waitFor(() => {
@@ -103,7 +108,11 @@ describe('PendingInvoicesPanel', () => {
 
     it('approves invoice successfully', async () => {
         mockAddTransaction.mockResolvedValue({ error: null });
-        render(<PendingInvoicesPanel />);
+        render(
+            <MemoryRouter>
+                <PendingInvoicesPanel />
+            </MemoryRouter>
+        );
 
         await waitFor(() => screen.getByText('Test Invoice'));
 
@@ -120,7 +129,11 @@ describe('PendingInvoicesPanel', () => {
 
     it('does NOT delete invoice if transaction fails', async () => {
         mockAddTransaction.mockResolvedValue({ error: 'Balance validation failed' });
-        render(<PendingInvoicesPanel />);
+        render(
+            <MemoryRouter>
+                <PendingInvoicesPanel />
+            </MemoryRouter>
+        );
 
         await waitFor(() => screen.getByText('Test Invoice'));
 
