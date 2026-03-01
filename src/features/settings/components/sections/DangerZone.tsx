@@ -136,7 +136,7 @@ export function DangerZone() {
                             <AlertCircle className="h-5 w-5 text-destructive" strokeWidth={2.5} />
                         </div>
                         <div className="flex flex-col min-w-0 text-left">
-                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                            <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                 Zona de Peligro
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 leading-tight">Acciones irreversibles sobre tus datos</p>

@@ -7,6 +7,7 @@ import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import { Label } from '@/shared/ui/label';
 import {
     Dialog,
@@ -97,17 +98,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
         }
     };
 
-    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (val: number) => void) => {
-        const rawValue = e.target.value;
-        const cleanValue = rawValue.replace(/\./g, '').replace(/,/g, '.');
-        const parsedValue = parseFloat(cleanValue);
-        onChange(isNaN(parsedValue) ? 0 : parsedValue);
-    };
-
-    const formatDisplayedAmount = (value: number) => {
-        if (value === 0) { return ''; }
-        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    };
+    // Removed manual formatting functions
 
     return (
         <Dialog open={open} onOpenChange={setOpen} modal={false}>
@@ -119,8 +110,8 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                     aria-label="Nueva transferencia"
                     title="Nueva transferencia"
                 >
-                    <span className="hidden sm:flex flex-row items-center gap-2">Nueva transferencia <ArrowRightLeft className="h-3 w-3" /></span>
-                    <span className="sm:hidden flex flex-row items-center gap-2">Nueva transferencia <ArrowRightLeft className="h-3 w-3" /></span>
+                    <span className="hidden sm:flex flex-row items-center gap-2"><ArrowRightLeft className="h-3 w-3" /> Nueva transferencia</span>
+                    <span className="sm:hidden flex flex-row items-center gap-2"><ArrowRightLeft className="h-3 w-3" /> Nueva transferencia</span>
                 </Button>
             </DialogTrigger>
             <DialogContent
@@ -196,15 +187,13 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                                 <FormItem className="space-y-2">
                                     <FormLabel>Monto</FormLabel>
                                     <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{currency}</span>
-                                            <Input
-                                                className="pl-16"
-                                                placeholder={getPlaceholderAmount()}
-                                                value={formatDisplayedAmount(field.value)}
-                                                onChange={(e) => handleAmountChange(e, field.onChange)}
-                                            />
-                                        </div>
+                                        <MoneyInput
+                                            id="transfer-amount"
+                                            placeholder={getPlaceholderAmount()}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            className="pl-12"
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

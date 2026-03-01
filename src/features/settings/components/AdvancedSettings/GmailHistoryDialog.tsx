@@ -21,7 +21,11 @@ import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X
 import { cn } from '@/core/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useState } from 'react';
 import { useToast } from '@/shared/hooks/use-toast';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
+import { Plus } from 'lucide-react';
 import type { CategoryItem, PaymentMethod } from '@/features/finance/types/financeTypes';
 
 // Types mapped from AdvancedSettings
@@ -164,6 +168,13 @@ export function GmailHistoryDialog({
     onCancel
 }: GmailHistoryDialogProps) {
     const { toast } = useToast();
+    const { addCategory } = useFinanceData();
+    const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+
+    // Solo categorías de tipo gasto para facturas importadas
+    const expenseCategories = [...categories, ...localCategories]
+        .filter(c => c.type === 'expense')
+        .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -203,13 +214,13 @@ export function GmailHistoryDialog({
                             </div>
                         </div>
 
-                        <ScrollArea className="flex-1 min-h-0 border rounded-md p-4">
+                        <ScrollArea className="flex-1 min-h-0 border rounded-md">
                             {reviewItems.length > 0 ? (
-                                <Accordion type="single" collapsible defaultValue={reviewItems[0]?.messageId} className="space-y-4">
+                                <div className="p-4"><Accordion type="single" collapsible defaultValue={reviewItems[0]?.messageId} className="space-y-4">
                                     {reviewItems.map((item, index) => {
                                         const meta = item.meta as GmailHistoryItem | undefined;
                                         const isTelegram = item.status === 'telegram';
-                                        const isPending = item.status === 'pending' || item.status === 'duplicate';
+                                        const isDuplicate = item.status === 'duplicate';
                                         const hasGroups = Boolean(item.groups && item.groups.length > 0);
                                         const statusLabel = isTelegram
                                             ? 'Enviado a Telegram'
@@ -221,7 +232,7 @@ export function GmailHistoryDialog({
                                                         ? 'Error en procesamiento'
                                                         : 'Listo para revisión';
 
-                                        const isProcessed = isTelegram || isPending;
+                                        const isProcessed = isTelegram || isDuplicate;
                                         const hasError = item.status === 'error';
 
                                         const hasProducts = Boolean(item.products && item.products.length > 0);
@@ -234,7 +245,7 @@ export function GmailHistoryDialog({
                                                 <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 transition-colors">
                                                     <div className="flex items-center justify-between gap-3 w-full pr-4 text-left">
                                                         <div className="flex-1 space-y-1 min-w-0 pr-2">
-                                                            <p className="text-sm font-semibold truncate">
+                                                            <p className="text-sm font-semibold truncate max-w-0 min-w-full">
                                                                 <span className="text-muted-foreground mr-2 font-normal">#{index + 1}</span>
                                                                 {meta?.subject || item.store || 'Factura'}
                                                             </p>
@@ -274,27 +285,37 @@ export function GmailHistoryDialog({
                                                                 </div>
                                                             )}
                                                             {hasProducts ? (
-                                                                <div className="rounded-md border bg-muted/30">
-                                                                    <div className={cn("p-0 overflow-x-auto overflow-y-hidden", isProcessed && "opacity-60 pointer-events-none grayscale")}>
-                                                                        <Table className="min-w-[600px]">
+                                                                <div className="rounded-md border bg-muted/30 overflow-hidden">
+                                                                    <div className={cn("overflow-x-auto", isProcessed && "opacity-60 pointer-events-none grayscale")}>
+                                                                        <Table className="min-w-[520px] w-full">
                                                                             <TableHeader>
                                                                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                                                                    <TableHead className="h-8 text-[10px] font-bold min-w-[150px]">Descripción</TableHead>
+                                                                                    <TableHead className="h-8 text-[10px] font-bold w-[35%]">Descripción</TableHead>
                                                                                     <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Categoría</TableHead>
                                                                                     <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Pago</TableHead>
                                                                                     <TableHead className="h-8 text-[10px] font-bold w-[100px] min-w-[100px] text-right">Total</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                             <TableBody>
-                                                                                {item.products?.map((product, pIndex) => {
-                                                                                    return (
+                                                                                {(() => {
+                                                                                    // Normaliza decimales: usa el mayor nro de decimales entre todos los totales
+                                                                                    const maxDecimals = (item.products ?? []).reduce((max, p) => {
+                                                                                        const raw = String(parseNumberValue(p.total));
+                                                                                        const dec = raw.includes('.') ? raw.split('.')[1].length : 0;
+                                                                                        return Math.max(max, dec);
+                                                                                    }, 0);
+                                                                                    const fmtTotal = (val: number) => val.toLocaleString('es-CO', {
+                                                                                        minimumFractionDigits: maxDecimals,
+                                                                                        maximumFractionDigits: maxDecimals
+                                                                                    });
+                                                                                    return item.products?.map((product, pIndex) => (
                                                                                         <TableRow key={`${item.messageId}-p-${pIndex}`} className="hover:bg-muted/30">
-                                                                                            <TableCell className="text-[10px] py-2 leading-relaxed font-medium">
-                                                                                                {product.description}
+                                                                                            <TableCell className="text-[10px] py-2 leading-snug font-medium max-w-[160px]">
+                                                                                                <span className="line-clamp-2 block">{product.description}</span>
                                                                                             </TableCell>
                                                                                             <TableCell className="py-1">
                                                                                                 <Select
-                                                                                                    value={product.category_id || product.category || ''}
+                                                                                                    value={product.category_id || product.category || ""}
                                                                                                     onValueChange={(val) => {
                                                                                                         const isId = categories.some(c => c.id === val);
                                                                                                         updateImportProduct(item.messageId, pIndex, {
@@ -307,17 +328,35 @@ export function GmailHistoryDialog({
                                                                                                         <SelectValue placeholder="Categoría" />
                                                                                                     </SelectTrigger>
                                                                                                     <SelectContent>
-                                                                                                        {categories.map(cat => (
+                                                                                                        {expenseCategories.map(cat => (
                                                                                                             <SelectItem key={cat.id} value={cat.id}>
                                                                                                                 {cat.name}
                                                                                                             </SelectItem>
                                                                                                         ))}
+                                                                                                        {expenseCategories.length === 0 && (
+                                                                                                            <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                                                                                                                Sin categorías de gasto
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                        <div className="border-t border-border/50 px-1 py-1 mt-1">
+                                                                                                            <AddCategoryDialog
+                                                                                                                type="expense"
+                                                                                                                onAdd={addCategory}
+                                                                                                                onSuccess={(cat) => {
+                                                                                                                    setLocalCategories(prev => [...prev, cat]);
+                                                                                                                    updateImportProduct(item.messageId, pIndex, {
+                                                                                                                        category_id: cat.id,
+                                                                                                                        category: cat.name
+                                                                                                                    });
+                                                                                                                }}
+                                                                                                            />
+                                                                                                        </div>
                                                                                                     </SelectContent>
                                                                                                 </Select>
                                                                                             </TableCell>
                                                                                             <TableCell className="py-1">
                                                                                                 <Select
-                                                                                                    value={product.payment_method_id || ''}
+                                                                                                    value={product.payment_method_id || ""}
                                                                                                     onValueChange={(val) => updateImportProduct(item.messageId, pIndex, { payment_method_id: val })}
                                                                                                 >
                                                                                                     <SelectTrigger className="h-7 text-xs">
@@ -333,11 +372,11 @@ export function GmailHistoryDialog({
                                                                                                 </Select>
                                                                                             </TableCell>
                                                                                             <TableCell className="text-[10px] text-right font-medium py-2">
-                                                                                                ${Number(product.total || 0).toLocaleString('es-CO')}
+                                                                                                ${fmtTotal(parseNumberValue(product.total))}
                                                                                             </TableCell>
                                                                                         </TableRow>
-                                                                                    )
-                                                                                })}
+                                                                                    ));
+                                                                                })()}
                                                                             </TableBody>
                                                                         </Table>
                                                                     </div>
@@ -374,7 +413,7 @@ export function GmailHistoryDialog({
                                             </AccordionItem>
                                         );
                                     })}
-                                </Accordion>
+                                </Accordion></div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-10">
                                     <CheckCircle2 className="h-10 w-10 mb-2 opacity-20" />
@@ -392,8 +431,8 @@ export function GmailHistoryDialog({
                                     // Aprobar todos los ítems actuales que no estén procesados todavía
                                     const pendingToApprove = reviewItems.filter(item => {
                                         const isTelegram = item.status === 'telegram';
-                                        const isPending = item.status === 'pending' || item.status === 'duplicate';
-                                        return !(isTelegram || isPending);
+                                        const isDuplicate = item.status === 'duplicate';
+                                        return !(isTelegram || isDuplicate);
                                     });
 
                                     if (pendingToApprove.length === 0) {
@@ -461,9 +500,9 @@ export function GmailHistoryDialog({
                             </Button>
                         </div>
 
-                        <ScrollArea className="flex-1 min-h-0 border rounded-md p-4">
+                        <ScrollArea className="flex-1 min-h-0 border rounded-md">
                             {visibleResults.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="space-y-3 p-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b gap-2">
                                         <span className="text-sm font-medium whitespace-nowrap">
                                             {selectedMessages.length} de {visibleResults.length} seleccionadas
@@ -513,7 +552,7 @@ export function GmailHistoryDialog({
                                                 />
                                                 <div className="flex-1 space-y-1 min-w-0">
                                                     <div className="flex items-center justify-between">
-                                                        <Label htmlFor={res.id} className="font-semibold text-sm truncate cursor-pointer block">
+                                                        <Label htmlFor={res.id} className="font-semibold text-sm truncate cursor-pointer block max-w-xs">
                                                             {res.subject}
                                                         </Label>
                                                         <div className="flex items-center gap-2">

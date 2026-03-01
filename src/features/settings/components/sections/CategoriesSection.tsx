@@ -161,7 +161,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                                 <Tags className="h-5 w-5 text-primary" strokeWidth={2.5} />
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                     Categorías ({filteredCategories.length}/{categories.length})
                                 </p>
                                 <p className="text-sm text-muted-foreground font-medium mt-1 leading-none">

@@ -12,7 +12,7 @@ import { es } from 'date-fns/locale';
 import { WelcomePanel } from '@/features/auth/components/WelcomePanel';
 import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDecisionPanel';
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/features/finance/utils/financeUtils';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutGrid, Wallet } from 'lucide-react';
 import { getOnboardingGateState } from '@/core/utils';
 
 export default function Index() {
@@ -106,10 +106,9 @@ export default function Index() {
   );
 
   // Loading state (High Fidelity Skeleton Reveal)
-  // Removed global blocking to allow layout to render immediately
-  /* if (isLoading) {
+  if (isLoading) {
     return <SkeletonLoader tab="dashboard" fullPage={false} withLayoutWrapper />;
-  } */
+  }
 
   if (!user) { return null; }
 
@@ -165,17 +164,17 @@ export default function Index() {
 
   return (
     <div className="min-h-screen">
-      <main className="mx-auto max-w-6xl px-4 py-8 flex flex-col gap-6 animate-in fade-in duration-700">
+      <main className="mx-auto max-w-6xl px-4 py-8 flex flex-col gap-8 animate-in fade-in duration-700">
         {/* Header Section */}
-        <header className="border-b border-border pb-6">
+        <header className="border-b border-border pb-8">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div className="flex items-start gap-3">
               <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                <LayoutDashboard className="h-6 w-6" />
+                <LayoutGrid className="h-6 w-6" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Panel Principal</h1>
-                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Resumen general de tu estado financiero</p>
+                <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Resumen general de tu estado financiero</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 md:mt-1">

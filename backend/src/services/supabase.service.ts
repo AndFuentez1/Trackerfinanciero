@@ -119,24 +119,27 @@ export async function getPaymentMethodId(methodName: string, userId: string): Pr
 }
 
 /**
- * Verifica si un messageId ya fue procesado (existe en pendientes)
+ * Verifica si un messageId ya fue APROBADO (no solo guardado como pendiente).
+ * Un registro con status='pending' NO cuenta como duplicado — el usuario puede
+ * re-importar mientras no haya aprobado la factura manualmente.
  */
 export async function checkDuplicate(messageId: string, userId: string): Promise<boolean> {
     try {
-        const { data: pending, error: pendingError } = await supabase
+        const { data: approved, error } = await supabase
             .from('pending_invoices')
-            .select('id')
+            .select('id, status')
             .eq('user_id', userId)
             .eq('message_id', messageId)
+            .neq('status', 'pending')  // Solo registros ya aprobados/archivados son duplicados reales
             .limit(1);
 
-        if (pendingError) throw pendingError;
+        if (error) throw error;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const isDuplicate = (pending && (pending as any[]).length > 0);
+        const isDuplicate = (approved && (approved as any[]).length > 0);
 
         if (isDuplicate) {
-            logger.warn(`⚠️  Factura duplicada detectada (en zona pendiente): ${messageId}`);
+            logger.warn(`⚠️  Factura ya aprobada (duplicado real): ${messageId}`);
         }
 
         return !!isDuplicate;
@@ -145,6 +148,28 @@ export async function checkDuplicate(messageId: string, userId: string): Promise
         return false; // En caso de error, permitir procesamiento
     }
 }
+
+/**
+ * Elimina registros pending (no aprobados) de un messageId para permitir re-import limpio.
+ * Solo elimina registros con status='pending', preservando los ya aprobados/archivados.
+ */
+export async function deletePendingByMessageId(messageId: string, userId: string): Promise<void> {
+    try {
+        const { error } = await supabase
+            .from('pending_invoices')
+            .delete()
+            .eq('user_id', userId)
+            .eq('message_id', messageId)
+            .eq('status', 'pending');
+
+        if (error) throw error;
+        logger.info(`🗑️  Pending anterior eliminado para re-import: ${messageId}`);
+    } catch (error) {
+        logger.warn('⚠️ No se pudo eliminar pending anterior:', error);
+        // No relanzar — es una limpieza opcional, no crítica
+    }
+}
+
 
 /**
  * Inserta una factura en pending_invoices

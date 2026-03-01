@@ -15,7 +15,7 @@ export function ThemeSection() {
                             <Settings className="h-5 w-5 text-primary" strokeWidth={2.5} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                            <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                 Tema de la app
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 leading-tight">Personaliza el color principal de la interfaz y el texto</p>

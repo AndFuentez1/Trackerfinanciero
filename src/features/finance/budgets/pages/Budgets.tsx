@@ -81,144 +81,125 @@ export default function BudgetsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <main className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
                 {isLoading ? (
-                    <StandardHeaderSkeleton />
+                    <SkeletonLoader tab="budgets" withLayoutWrapper={true} fullPage={false} />
                 ) : (
-                    <header className="border-b border-border pb-6">
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                            <div className="flex items-start gap-4">
-                                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                                    <PieChart className="h-6 w-6" />
+                    <>
+                        <header className="border-b border-border pb-8">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                        <PieChart className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Presupuestos</h1>
+                                        <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Controla tus gastos mensuales</p>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col">
-                                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Presupuestos</h1>
-                                    <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Controla tus gastos mensuales</p>
+                                <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
+                                    <AddTransactionDialog
+                                        onAdd={addTransaction}
+                                        categories={categories}
+                                        paymentMethods={paymentMethods}
+                                        onAddTransfer={addTransfer}
+                                    />
+                                    <AddBudgetDialog
+                                        onAdd={saveBudget}
+                                        monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                                    />
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
-                                <AddTransactionDialog
-                                    onAdd={addTransaction}
-                                    categories={categories}
-                                    paymentMethods={paymentMethods}
-                                    onAddTransfer={addTransfer}
-                                />
-                                <AddBudgetDialog
-                                    onAdd={saveBudget}
-                                    monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
-                                />
+                        </header>
+
+                        {/* Top Section: Budget Cards (Side by Side on desktop) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                            <div className="flex h-full flex-col space-y-4">
+                                <BudgetTotalCard totalBudget={totalBudget} />
+                            </div>
+
+                            <div className="flex h-full flex-col space-y-4">
+                                <IncomeCard />
                             </div>
                         </div>
-                    </header>
-                )}
 
-                {/* Top Section: Budget Cards (Side by Side on desktop) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    <div className="flex h-full flex-col space-y-4">
-                        {isLoading ? (
-                            <CardSkeleton height="160px" />
-                        ) : (
-                            <BudgetTotalCard totalBudget={totalBudget} />
-                        )}
-                    </div>
+                        <Separator className="my-6" />
 
-                    <div className="flex h-full flex-col space-y-4">
-                        {isLoading ? (
-                            <CardSkeleton height="160px" />
-                        ) : (
-                            <IncomeCard />
-                        )}
-                    </div>
-                </div>
+                        <div>
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex shrink-0 items-center justify-center p-1">
+                                        <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
+                                            Presupuestos por Categoría
+                                        </h2>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Select
+                                        value={selectedMonth}
+                                        onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
+                                    >
+                                        <SelectTrigger className="w-[140px] h-9">
+                                            <SelectValue placeholder="Mes" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {monthOptions.map((m) => (
+                                                <SelectItem key={m.value} value={m.value}>
+                                                    {m.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
-                <Separator className="my-6" />
-
-                <div>
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className="flex shrink-0 items-center justify-center p-1">
-                                <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                    <Select
+                                        value={selectedYear}
+                                        onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
+                                    >
+                                        <SelectTrigger className="w-[120px] h-9">
+                                            <SelectValue placeholder="Año" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            {availableYears.map((year) => (
+                                                <SelectItem key={year} value={year.toString()}>
+                                                    {year}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div className="flex flex-col min-w-0">
-                                <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
-                                    Presupuestos por Categoría
-                                </p>
-                            </div>
+
+                            <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Select
-                                value={selectedMonth}
-                                onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
-                            >
-                                <SelectTrigger className="w-[140px] h-9">
-                                    <SelectValue placeholder="Mes" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {monthOptions.map((m) => (
-                                        <SelectItem key={m.value} value={m.value}>
-                                            {m.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
 
-                            <Select
-                                value={selectedYear}
-                                onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
-                            >
-                                <SelectTrigger className="w-[120px] h-9">
-                                    <SelectValue placeholder="Año" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    {availableYears.map((year) => (
-                                        <SelectItem key={year} value={year.toString()}>
-                                            {year}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                        <Separator className="my-6" />
 
-                    {isLoading ? (
-                        <CategoriesGridSkeleton count={6} />
-                    ) : (
-                        <CategoryBudgetList budgets={budgets} paymentMethods={paymentMethods} />
-                    )}
-                </div>
-
-                <Separator className="my-6" />
-
-                {/* Future Expenses Section */}
-                <div>
-                    {isLoading ? (
-                        <div className="space-y-4">
-                            <PulseBlock height="1.5rem" width="200px" />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {[...Array(3)].map((_, i) => (
-                                    <CardSkeleton key={i} height="120px" />
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
+                        {/* Future Expenses Section */}
                         <FutureExpensesList />
-                    )}
-                </div>
 
-                <Separator className="my-6" />
+                        <Separator className="my-6" />
 
-                {/* Budget Alerts Section */}
-                {!isLoading && budgetInsights.length > 0 && (
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                                Alertas de Presupuesto
-                            </h2>
-                        </div>
-                        <InsightsPanel insights={budgetInsights} />
-                    </div>
+                        {/* Budget Alerts Section */}
+                        {budgetInsights.length > 0 && (
+                            <div>
+                                <div className="flex items-start gap-4 mb-6">
+                                    <div className="flex shrink-0 items-center justify-center p-1">
+                                        <AlertCircle className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
+                                            Alertas de Presupuesto
+                                        </h2>
+                                    </div>
+                                </div>
+                                <InsightsPanel insights={budgetInsights} />
+                            </div>
+                        )}
+                    </>
                 )}
             </main>
         </div>

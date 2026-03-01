@@ -4,6 +4,15 @@ import logger from '../utils/logger.js';
 const readText = (value) => {
     if (value === null || value === undefined) { return null; }
     if (typeof value === 'string' || typeof value === 'number') { return value.toString(); }
+    // When xml2js parses multiple sibling nodes with the same tag (e.g. multiple <cbc:Description>),
+    // it produces an array. Take the first non-empty element instead of returning null.
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const text = readText(item);
+            if (text !== null && text.trim() !== '') { return text; }
+        }
+        return null;
+    }
     if (typeof value === 'object') {
         if (Object.prototype.hasOwnProperty.call(value, '_')) { return value._.toString(); }
         if (Object.prototype.hasOwnProperty.call(value, '#text')) { return value['#text'].toString(); }

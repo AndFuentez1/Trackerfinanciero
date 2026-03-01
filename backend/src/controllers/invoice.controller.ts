@@ -9,6 +9,7 @@ import { fetchMessageStatuses, markMessagesArchived, markMessagesDeleted, markMe
 import {
     checkDuplicate,
     insertPendingInvoice,
+    deletePendingByMessageId,
     getPendingInvoices,
     getCategoryId,
     getPaymentMethodId
@@ -668,6 +669,9 @@ export async function importGmailBatch(req: Request, res: Response) {
                     });
 
                     if (!shouldNotify) {
+                        // Limpiar pending anterior del mismo mensaje (re-import limpio)
+                        await deletePendingByMessageId(email.messageId, userId);
+
                         const pendingInvoice = {
                             user_id: userId,
                             message_id: email.messageId,

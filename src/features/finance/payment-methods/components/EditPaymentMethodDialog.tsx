@@ -9,6 +9,7 @@ import {
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import { Label } from '@/shared/ui/label';
 import {
   Select,
@@ -57,13 +58,13 @@ export function EditPaymentMethodDialog({
   const [formData, setFormData] = useState({
     name: '',
     type: 'debit' as PaymentMethod['type'],
-    balance: '0',
-    creditLimit: '',
+    balance: 0,
+    creditLimit: 0,
     closingDate: '',
     paymentDay: '',
     color: '#3b82f6',
     isSavingsAccount: false,
-    savingsGoal: '',
+    savingsGoal: 0,
     estimatedYield: '',
   });
 
@@ -73,13 +74,13 @@ export function EditPaymentMethodDialog({
       setFormData({
         name: paymentMethod.name,
         type: paymentMethod.type,
-        balance: paymentMethod.balance.toString(),
-        creditLimit: paymentMethod.credit_limit?.toString() || '',
+        balance: Number(paymentMethod.balance),
+        creditLimit: Number(paymentMethod.credit_limit || 0),
         closingDate: paymentMethod.closing_date?.toString() || '',
         paymentDay: paymentMethod.payment_day?.toString() || '',
         color: paymentMethod.color || '#3b82f6',
         isSavingsAccount: paymentMethod.is_savings_account || false,
-        savingsGoal: paymentMethod.savings_goal?.toString() || '',
+        savingsGoal: Number(paymentMethod.savings_goal || 0),
         estimatedYield: paymentMethod.estimated_yield?.toString() || '',
       });
     }
@@ -113,14 +114,14 @@ export function EditPaymentMethodDialog({
       const updates: Partial<Omit<PaymentMethod, 'id'>> = {
         name: formData.name,
         type: formData.type as PaymentMethod['type'],
-        balance: parseFloat(formData.balance) || 0,
+        balance: Number(formData.balance) || 0,
         color: formData.color,
       };
 
       if (formData.type === 'credit') {
         updates.is_savings_account = false;
         if (formData.creditLimit) {
-          updates.credit_limit = parseFloat(formData.creditLimit);
+          updates.credit_limit = Number(formData.creditLimit);
         }
         if (formData.closingDate) {
           updates.closing_date = parseInt(formData.closingDate);
@@ -131,7 +132,7 @@ export function EditPaymentMethodDialog({
       } else if (formData.type === 'savings') {
         updates.is_savings_account = true;
         if (formData.savingsGoal) {
-          updates.savings_goal = parseFloat(formData.savingsGoal);
+          updates.savings_goal = Number(formData.savingsGoal);
         }
         if (formData.estimatedYield) {
           updates.estimated_yield = parseFloat(formData.estimatedYield);
@@ -206,13 +207,11 @@ export function EditPaymentMethodDialog({
           {/* Balance/Debt */}
           <div className="space-y-2">
             <Label htmlFor="balance">{formData.type === 'credit' ? 'Deuda actual' : 'Saldo'}</Label>
-            <Input
+            <MoneyInput
               id="balance"
-              type="number"
-              step="0.01"
               value={formData.balance}
-              onChange={(e) =>
-                setFormData({ ...formData, balance: e.target.value })
+              onChange={(val) =>
+                setFormData({ ...formData, balance: val })
               }
               placeholder="0.00"
             />
@@ -223,13 +222,11 @@ export function EditPaymentMethodDialog({
             <>
               <div className="space-y-2">
                 <Label htmlFor="creditLimit">Límite de crédito</Label>
-                <Input
+                <MoneyInput
                   id="creditLimit"
-                  type="number"
-                  step="0.01"
                   value={formData.creditLimit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, creditLimit: e.target.value })
+                  onChange={(val) =>
+                    setFormData({ ...formData, creditLimit: val })
                   }
                   placeholder="0.00"
                 />
@@ -274,13 +271,11 @@ export function EditPaymentMethodDialog({
             <>
               <div className="space-y-2">
                 <Label htmlFor="savingsGoal">Meta de ahorro</Label>
-                <Input
+                <MoneyInput
                   id="savingsGoal"
-                  type="number"
-                  step="0.01"
                   value={formData.savingsGoal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, savingsGoal: e.target.value })
+                  onChange={(val) =>
+                    setFormData({ ...formData, savingsGoal: val })
                   }
                   placeholder="0.00"
                 />

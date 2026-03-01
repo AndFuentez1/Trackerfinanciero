@@ -7,7 +7,7 @@ import { useSavingsData } from '@/features/finance/hooks/useSavingsData';
 import { SavingsPerformance } from '@/features/finance/savings/components/SavingsPerformance';
 import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/components/EditPaymentMethodDialog';
 import { SkeletonLoader, StandardHeaderSkeleton, CardSkeleton, PulseBlock, SavingsSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
-import { Wallet, LogOut } from 'lucide-react';
+import { Wallet, LogOut, PiggyBank } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useState } from 'react';
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
@@ -96,29 +96,24 @@ export default function SavingsPage() {
 
     return (
         <div className="min-h-screen bg-background/30">
-            <main className="container max-w-6xl mx-auto px-4 py-8">
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
                 {isLoading ? (
-                    <StandardHeaderSkeleton />
-                ) : (
-                    <header className="border-b border-border pb-6">
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                            <div className="flex items-start gap-4 w-full md:w-auto">
-                                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                                    <Wallet className="h-6 w-6" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Ahorros</h1>
-                                    <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Metas y seguimiento de ahorros</p>
-                                </div>
-                            </div>
-                        </div>
-                    </header>
-                )}
-
-                {isLoading ? (
-                    <SavingsSkeleton />
+                    <SkeletonLoader tab="savings" withLayoutWrapper={true} fullPage={false} />
                 ) : (
                     <>
+                        <header className="border-b border-border pb-8">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-3 w-full md:w-auto">
+                                    <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                        <PiggyBank className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Ahorros</h1>
+                                        <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Metas y seguimiento de ahorros</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
                         <SavingsPerformance
                             accounts={savingsAccounts}
                             accountPerformance={accountPerformance}

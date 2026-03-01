@@ -31,6 +31,7 @@ interface FutureExpense {
     amount: number;
     description: string;
     category_id: string | null;
+    type: 'expense' | 'income' | 'saving';
     status: 'pending' | 'paid';
     is_subscription?: boolean;
     payment_day?: number;
@@ -106,6 +107,7 @@ export function FutureExpensesList() {
         amount: string;
         payment_date: string;
         category_id: string;
+        type: 'expense' | 'income' | 'saving';
         is_subscription: boolean;
         payment_day: string;
         start_date: string;
@@ -116,6 +118,7 @@ export function FutureExpensesList() {
         amount: '',
         payment_date: format(new Date(), 'yyyy-MM-dd'),
         category_id: '',
+        type: 'expense',
         is_subscription: false,
         payment_day: '1',
         start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -184,6 +187,7 @@ export function FutureExpensesList() {
             description: newExpense.description,
             amount: parseFloat(newExpense.amount),
             category_id: newExpense.category_id || null,
+            type: newExpense.type,
             status: 'pending',
             is_subscription: newExpense.is_subscription
         };
@@ -245,7 +249,7 @@ export function FutureExpensesList() {
             console.error(error);
             toast({ title: 'Error', description: 'No se pudo guardar el gasto futuro.', variant: 'destructive' });
         } else {
-            toast({ title: editingId ? 'Actualizado' : 'Creado', description: editingId ? 'Gasto actualizado correctamente.' : (newExpense.is_subscription ? 'Suscripción creada exitosamente.' : 'Gasto futuro programado.') });
+            toast({ title: editingId ? 'Actualizado' : 'Creado', description: editingId ? 'Compromiso actualizado correctamente.' : (newExpense.is_subscription ? (newExpense.type === 'income' ? 'Renta recurrente creada.' : newExpense.type === 'saving' ? 'Ahorro recurrente creado.' : 'Suscripción creada exitosamente.') : (newExpense.type === 'income' ? 'Ingreso futuro programado.' : newExpense.type === 'saving' ? 'Ahorro futuro programado.' : 'Gasto futuro programado.')) });
             setIsAddOpen(false);
             setEditingId(null);
             setNewExpense({
@@ -253,6 +257,7 @@ export function FutureExpensesList() {
                 amount: '',
                 payment_date: format(new Date(), 'yyyy-MM-dd'),
                 category_id: '',
+                type: 'expense',
                 is_subscription: false,
                 payment_day: '1',
                 start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -265,13 +270,12 @@ export function FutureExpensesList() {
     const handleEdit = (expense: FutureExpense) => {
         setEditingId(expense.id);
         const expenseFreq = expense.frequency || 'monthly';
-        // Note: 'frequency' might not exist on type if not added to interface, checking... yes added safely.
-
         setNewExpense({
             description: expense.description,
             amount: expense.amount.toString(),
             payment_date: expense.payment_date,
             category_id: expense.category_id || '',
+            type: expense.type || 'expense',
             is_subscription: expense.is_subscription || false,
             payment_day: expense.payment_day?.toString() || '1',
             start_date: expense.start_date || format(new Date(), 'yyyy-MM-dd'),
@@ -285,16 +289,16 @@ export function FutureExpensesList() {
         if (!selectedExpense || !selectedPaymentMethod || !paymentDate) { return; }
 
         try {
-            // 1. Create Transaction (Deduct balance)
             const expenseCategory = categories.find(c => c.id === selectedExpense.category_id);
+            const transactionType = selectedExpense.type === 'income' ? 'income' : 'expense';
 
             await addTransaction({
-                type: 'expense',
-                category: expenseCategory?.name || 'Otros', // Fallback name if needed
+                type: transactionType,
+                category: expenseCategory?.name || 'Otros',
                 category_id: selectedExpense.category_id,
                 amount: selectedExpense.amount,
                 description: selectedExpense.description,
-                date: paymentDate, // Use selected date
+                date: paymentDate,
                 payment_method_id: selectedPaymentMethod
             });
 
@@ -374,12 +378,13 @@ export function FutureExpensesList() {
         }
     };
 
-    // Filter Expense Categories
-    const expenseCategories = useMemo(() =>
+    // Filter categories based on selected type in form
+    const hasSavingCategories = categories.some(c => c.type === 'saving');
+    const filteredCategories = useMemo(() =>
         categories
-            .filter(c => c.type === 'expense')
+            .filter(c => c.type === newExpense.type)
             .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
-        [categories]);
+        [categories, newExpense.type]);
 
     return (
         <div className="space-y-4">
@@ -389,8 +394,8 @@ export function FutureExpensesList() {
                         <CalendarIcon className="h-5 w-5 text-primary" strokeWidth={2.5} />
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
-                            Gastos Futuros y Suscripciones
+                        <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
+                            Compromisos Futuros y Suscripciones
                         </p>
                     </div>
                 </div>
@@ -407,6 +412,7 @@ export function FutureExpensesList() {
                                     amount: '',
                                     payment_date: format(new Date(), 'yyyy-MM-dd'),
                                     category_id: '',
+                                    type: 'expense',
                                     is_subscription: false,
                                     payment_day: '1',
                                     start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -417,28 +423,71 @@ export function FutureExpensesList() {
                                     e.preventDefault();
                                     return;
                                 }
-                                if (expenseCategories.length === 0) {
-                                    e.preventDefault();
-                                    toast({
-                                        title: "Configuración requerida",
-                                        description: "Primero debes configurar al menos una categoría de gasto.",
-                                        variant: "destructive"
-                                    });
-                                }
                             }}
                         >
                             <Plus className="h-4 w-4 mr-1 sm:hidden" />
-                            <span className="hidden sm:inline">Nuevo gasto / Suscripción</span>
+                            <span className="hidden sm:inline">Nuevo compromiso / Suscripción</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>{editingId ? 'Editar Gasto/Suscripción' : (newExpense.is_subscription ? 'Nueva Suscripción Mensual' : 'Nuevo Gasto Futuro')}</DialogTitle>
+                            <DialogTitle>{
+                                editingId
+                                    ? 'Editar Compromiso'
+                                    : newExpense.is_subscription
+                                        ? (newExpense.type === 'income' ? 'Nueva Renta Recurrente' : newExpense.type === 'saving' ? 'Nuevo Ahorro Recurrente' : 'Nueva Suscripción')
+                                        : newExpense.type === 'income'
+                                            ? 'Nuevo Ingreso Futuro'
+                                            : newExpense.type === 'saving'
+                                                ? 'Nuevo Ahorro Futuro'
+                                                : 'Nuevo Gasto Futuro'
+                            }</DialogTitle>
                             <DialogDescription className="sr-only">
-                                Completa la información para programar un gasto futuro o suscripción.
+                                Completa la información para programar un compromiso futuro o suscripción.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
+                            {/* Tipo: Gasto / Ingreso / Ahorro */}
+                            <div className={`grid gap-2 ${hasSavingCategories ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewExpense(p => ({ ...p, type: 'expense', category_id: '' }))}
+                                    className={cn(
+                                        'px-3 py-2 text-sm rounded-lg border transition-all',
+                                        newExpense.type === 'expense'
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-background hover:bg-muted border-border'
+                                    )}
+                                >
+                                    Gasto
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewExpense(p => ({ ...p, type: 'income', category_id: '' }))}
+                                    className={cn(
+                                        'px-3 py-2 text-sm rounded-lg border transition-all',
+                                        newExpense.type === 'income'
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-background hover:bg-muted border-border'
+                                    )}
+                                >
+                                    Ingreso
+                                </button>
+                                {hasSavingCategories && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewExpense(p => ({ ...p, type: 'saving', category_id: '' }))}
+                                        className={cn(
+                                            'px-3 py-2 text-sm rounded-lg border transition-all',
+                                            newExpense.type === 'saving'
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-background hover:bg-muted border-border'
+                                        )}
+                                    >
+                                        Ahorro
+                                    </button>
+                                )}
+                            </div>
 
 
 
@@ -448,7 +497,9 @@ export function FutureExpensesList() {
                                     <Input
                                         value={newExpense.description}
                                         onChange={e => setNewExpense({ ...newExpense, description: e.target.value })}
-                                        placeholder={newExpense.is_subscription ? "Ej. Netflix" : "Ej. Matrícula U"}
+                                        placeholder={newExpense.is_subscription
+                                            ? (newExpense.type === 'income' ? 'Ej. Arriendo local' : newExpense.type === 'saving' ? 'Ej. Aporte mensual' : 'Ej. Netflix')
+                                            : (newExpense.type === 'income' ? 'Ej. Bono anual' : newExpense.type === 'saving' ? 'Ej. Ahorro vacaciones' : 'Ej. Matrícula U')}
                                     />
                                 </div>
                                 <div className="space-y-2 col-span-2 sm:col-span-1">
@@ -464,14 +515,14 @@ export function FutureExpensesList() {
 
                             {/* Toggle Subscription */}
                             <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-                                <span className="text-sm font-medium">¿Es una suscripción mensual?</span>
+                                <span className="text-sm font-medium">{newExpense.type === 'income' ? '¿Es una renta recurrente?' : newExpense.type === 'saving' ? '¿Es un ahorro recurrente?' : '¿Es una suscripción mensual?'}</span>
                                 <div className="flex items-center gap-2">
-                                    <span className={!newExpense.is_subscription ? "font-bold text-primary text-xs" : "text-muted-foreground text-xs"}>No</span>
+                                    <span className={!newExpense.is_subscription ? "font-bold text-primary text-xs" : "text-muted-foreground text-xs"}>{newExpense.type === 'income' ? 'Único' : newExpense.type === 'saving' ? 'Único' : 'No'}</span>
                                     <Switch
                                         checked={newExpense.is_subscription}
                                         onCheckedChange={(checked) => setNewExpense(p => ({ ...p, is_subscription: checked }))}
                                     />
-                                    <span className={newExpense.is_subscription ? "font-bold text-primary text-xs" : "text-muted-foreground text-xs"}>Sí</span>
+                                    <span className={newExpense.is_subscription ? "font-bold text-primary text-xs" : "text-muted-foreground text-xs"}>{newExpense.type === 'income' ? 'Recurrente' : newExpense.type === 'saving' ? 'Recurrente' : 'Sí'}</span>
                                 </div>
                             </div>
 
@@ -611,30 +662,33 @@ export function FutureExpensesList() {
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría</label>
-                                <div className="flex items-center gap-2">
-                                    <Select value={newExpense.category_id} onValueChange={v => setNewExpense({ ...newExpense, category_id: v })}>
-                                        <SelectTrigger className="flex-1">
-                                            <SelectValue placeholder="Seleccionar..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {expenseCategories.map(c => (
-                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <div className="flex-shrink-0">
-                                        <AddCategoryDialog
-                                            type="expense"
-                                            onAdd={addCategory}
-                                            onSuccess={(cat) => {
-                                                setNewExpense({ ...newExpense, category_id: cat.id });
-                                            }}
-                                        />
-                                    </div>
-                                </div>
+                                <Select value={newExpense.category_id} onValueChange={v => setNewExpense({ ...newExpense, category_id: v })}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Seleccionar..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {filteredCategories.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                        ))}
+                                        {filteredCategories.length === 0 && (
+                                            <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                                                Sin categorías de {newExpense.type === 'income' ? 'ingreso' : 'gasto'}
+                                            </div>
+                                        )}
+                                        <div className="border-t border-border/50 px-1 py-1 mt-1">
+                                            <AddCategoryDialog
+                                                type={newExpense.type}
+                                                onAdd={addCategory}
+                                                onSuccess={(cat) => {
+                                                    setNewExpense(p => ({ ...p, category_id: cat.id }));
+                                                }}
+                                            />
+                                        </div>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <Button className="w-full mt-4" onClick={handleCreate}>
-                                {editingId ? 'Guardar Cambios' : (newExpense.is_subscription ? 'Crear Suscripción' : 'Guardar Compromiso')}
+                                {editingId ? 'Guardar Cambios' : (newExpense.is_subscription ? (newExpense.type === 'income' ? 'Crear Renta' : newExpense.type === 'saving' ? 'Crear Ahorro Recurrente' : 'Crear Suscripción') : 'Guardar Compromiso')}
                             </Button>
                         </div>
                     </DialogContent>
@@ -644,7 +698,7 @@ export function FutureExpensesList() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {expenses.length === 0 && !loading && (
                     <div className="col-span-full text-center py-8 text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
-                        No tienes gastos futuros pendientes.
+                        No tienes compromisos futuros pendientes.
                     </div>
                 )}
                 {expenses.map(expense => {
@@ -709,7 +763,7 @@ export function FutureExpensesList() {
                     onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
-                        <DialogTitle>Eliminar Gasto Futuro</DialogTitle>
+                        <DialogTitle>Eliminar Compromiso Futuro</DialogTitle>
                         <DialogDescription className="sr-only">
                             Confirma si deseas eliminar este gasto futuro. Esta acción no se puede deshacer.
                         </DialogDescription>
@@ -741,8 +795,8 @@ export function FutureExpensesList() {
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <p className="text-base text-muted-foreground">
-                            Estás a punto de pagar <strong>{selectedExpense?.description}</strong> por valor de <strong>{selectedExpense && formatCurrency80(selectedExpense.amount)}</strong>.
-                            Selecciona la cuenta de origen:
+                            Estás a punto de registrar <strong>{selectedExpense?.description}</strong> por valor de <strong>{selectedExpense && formatCurrency80(selectedExpense.amount)}</strong>.
+                            {selectedExpense?.type === 'income' ? ' Se acreditará a la cuenta seleccionada.' : ' Se debitará de la cuenta seleccionada.'}
                         </p>
 
                         <div className="space-y-4">

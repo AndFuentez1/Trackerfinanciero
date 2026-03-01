@@ -80,6 +80,7 @@
   :root {
     --radius: var(--radius-md);
     /* Default radius for Tailwind util */
+    --text-base: 1rem;
   }
 
   html {

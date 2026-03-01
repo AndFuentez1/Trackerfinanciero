@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
-import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X } from 'lucide-react';
+import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
@@ -47,6 +47,7 @@ interface SavingsPerformanceProps {
     description?: string;
     type?: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id?: string;
+    savings_account_id?: string;
   }) => Promise<{ error: unknown }>;
   onAddTransfer: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: unknown }>;
   onDeleteTransaction: (id: string) => Promise<void>;
@@ -230,6 +231,7 @@ export function SavingsPerformance({
       description: draft.description,
       type: draft.type,
       payment_method_id: draft.payment_method_id,
+      savings_account_id: draft.payment_method_id,
     };
     const { error } = await onUpdateTransactionFull(id, updates);
     if (!error) {
@@ -298,7 +300,7 @@ export function SavingsPerformance({
               <PiggyBank className="h-5 w-5 text-primary" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+              <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                 Total en ahorros
               </p>
             </div>

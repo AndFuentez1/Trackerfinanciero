@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import { Label } from '@/shared/ui/label';
 import {
   Dialog,
@@ -41,7 +42,7 @@ export function EditSavingsTransactionDialog({
 }: EditSavingsTransactionDialogProps) {
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState<'deposit' | 'withdrawal' | 'interest'>('deposit');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number>(0);
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +53,7 @@ export function EditSavingsTransactionDialog({
     if (transaction && open) {
       setAccountId(transaction.savings_account_id);
       setType(transaction.type);
-      setAmount(String(transaction.amount));
+      setAmount(Number(transaction.amount));
       setDate(transaction.date);
       setDescription(transaction.description || '');
     }
@@ -60,14 +61,14 @@ export function EditSavingsTransactionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transaction || !accountId) {return;}
+    if (!transaction || !accountId) { return; }
 
     setIsSubmitting(true);
 
     const { error } = await onUpdate(transaction.id, {
       savings_account_id: accountId,
       type,
-      amount: parseFloat(amount),
+      amount: amount,
       date,
       description: description.trim() || undefined,
     });
@@ -80,7 +81,7 @@ export function EditSavingsTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-md max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -118,14 +119,11 @@ export function EditSavingsTransactionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Monto</Label>
-            <Input
+            <MoneyInput
               id="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
               placeholder="0.00"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               required
             />
           </div>

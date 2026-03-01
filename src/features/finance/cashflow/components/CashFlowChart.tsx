@@ -143,7 +143,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+              <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                 Proyección de Flujo
               </p>
               <p className="text-sm text-muted-foreground mt-1 leading-tight">Estimación futura basada en presupuestos y obligaciones</p>
@@ -312,7 +312,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     }}
                     activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))", fill: "hsl(var(--muted-foreground))" }}
                     connectNulls={false}
-                    name="Balance Histórico"
+                    name="Balance"
                   />
                   {/* Vertical Jump Line explicitly drawn between Real and Proyectado on pivot month */}
                   {(() => {
@@ -358,7 +358,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                       );
                     }}
                     strokeDasharray="5 5"
-                    name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
+                    name="Balance"
                     activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))", fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))" }}
                     className={isWarning ? "opacity-90" : ""}
                   />

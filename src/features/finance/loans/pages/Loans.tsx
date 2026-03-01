@@ -6,9 +6,11 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { useFinance } from '@/features/finance/context/FinanceContext';
+import { useToast } from '@/shared/hooks/use-toast';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import {
     Dialog,
@@ -27,7 +29,7 @@ import {
     SelectValue
 } from '@/shared/ui/select';
 import { Progress } from '@/shared/ui/progress';
-import { Wallet, Trash2, Edit2, HandCoins, ArrowDownCircle, ArrowUpCircle, Calendar, AlertCircle, Percent, Save, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Wallet, Trash2, Edit2, HandCoins, ArrowDownCircle, ArrowUpCircle, Calendar, AlertCircle, Percent, Save, CheckCircle2, XCircle, Loader2, Activity } from 'lucide-react';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
@@ -36,7 +38,7 @@ import { cn } from '@/core/utils';
 import { format, isPast, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
-import { LoansSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
+import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { getTodayLocalDate } from '@/core/utils';
 import { Badge } from '@/shared/ui/badge';
 import { LoansSummary } from '../components/LoansSummary';
@@ -53,6 +55,7 @@ export default function LoansPage() {
     const { updateLoan, deleteLoan } = useUpdateLoan();
     const { createPayment } = useCreateLoanPayment();
     const { paymentMethods, updateTransaction, transactions } = useFinanceData();
+    const { toast } = useToast();
     const decimalPlaces = useDecimalPlaces();
     const { formatCurrency, formatCurrencySmall, decimalPlaces: dp } = useFormatCurrency();
     const { currency: ctxCurrency, decimalPlaces: ctxDecimalPlaces } = useFinance();
@@ -80,7 +83,7 @@ export default function LoansPage() {
 
     // Payment Dialog State
     const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
-    const [paymentData, setPaymentData] = useState({ amount: '', date: getTodayLocalDate(), methodId: '' });
+    const [paymentData, setPaymentData] = useState({ amount: 0, date: getTodayLocalDate(), methodId: '' });
 
     // Disbursement Dialog State
     const [disbursementDialog, setDisbursementDialog] = useState<{ open: boolean; loan: Loan | null }>({ open: false, loan: null });
@@ -93,9 +96,9 @@ export default function LoansPage() {
 
     const [formData, setFormData] = useState({
         name: '',
-        total_amount: '',
-        paid_amount: '',
-        interest_rate: '',
+        total_amount: 0,
+        paid_amount: 0,
+        interest_rate: 0,
         type: 'borrowed' as 'borrowed' | 'lent',
         due_date: '',
         payment_method_id: '',
@@ -118,6 +121,7 @@ export default function LoansPage() {
             due_date: formData.due_date || null,
             payment_method_id: formData.payment_method_id || null, // Allow null if not disbursed
             is_disbursed: formData.is_disbursed,
+            updated_at: new Date().toISOString(),
         };
 
         let submitError;
@@ -132,7 +136,7 @@ export default function LoansPage() {
 
         if (!submitError) {
             setIsDialogOpen(false);
-            setFormData({ name: '', total_amount: '', paid_amount: '', interest_rate: '', type: 'borrowed', due_date: '', payment_method_id: '', is_disbursed: true });
+            setFormData({ name: '', total_amount: 0, paid_amount: 0, interest_rate: 0, type: 'borrowed', due_date: '', payment_method_id: '', is_disbursed: true });
             setEditingId(null);
             refetch();
         }
@@ -148,7 +152,7 @@ export default function LoansPage() {
 
     const handleOpenPayment = (loan: Loan) => {
         setPaymentDialog({ open: true, loan });
-        setPaymentData({ amount: '', date: getTodayLocalDate(), methodId: '' });
+        setPaymentData({ amount: 0, date: getTodayLocalDate(), methodId: '' });
     };
 
     const handleOpenDisbursement = (loan: Loan) => {
@@ -164,9 +168,9 @@ export default function LoansPage() {
     const handleEditFormOpen = (loan: Loan) => {
         setFormData({
             name: loan.name,
-            total_amount: loan.total_amount.toString(),
-            paid_amount: loan.paid_amount.toString(),
-            interest_rate: loan.interest_rate.toString(),
+            total_amount: Number(loan.total_amount),
+            paid_amount: Number(loan.paid_amount),
+            interest_rate: Number(loan.interest_rate),
             type: loan.type,
             due_date: loan.due_date ? loan.due_date.split('T')[0] : '',
             payment_method_id: loan.payment_method_id || '',
@@ -182,9 +186,21 @@ export default function LoansPage() {
         e.preventDefault();
         if (!paymentDialog.loan) { return; }
 
+        const amount = Number(paymentData.amount);
+        const remaining = paymentDialog.loan.total_amount - paymentDialog.loan.paid_amount;
+
+        if (amount > remaining) {
+            toast({
+                title: 'Monto excedido',
+                description: `No puedes abonar más del saldo pendiente (${formatCurrency(remaining)})`,
+                variant: 'destructive'
+            });
+            return;
+        }
+
         await createPayment({
             loan_id: paymentDialog.loan.id,
-            amount: Number(paymentData.amount),
+            amount: amount,
             date: paymentData.date,
             type: paymentDialog.loan.type,
             name: paymentDialog.loan.name,
@@ -303,18 +319,18 @@ export default function LoansPage() {
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
                 {isLoading ? (
-                    <LoansSkeleton />
+                    <SkeletonLoader tab="loans" withLayoutWrapper={true} fullPage={false} />
                 ) : (
                     <>
-                        <header className="border-b border-border pb-6">
+                        <header className="border-b border-border pb-8">
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                                <div className="flex items-start gap-4">
+                                <div className="flex items-start gap-3">
                                     <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
                                         <HandCoins className="h-6 w-6" />
                                     </div>
                                     <div className="flex flex-col">
                                         <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Préstamos y Deudas</h1>
-                                        <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Gestiona tus préstamos personales y deudas</p>
+                                        <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona tus préstamos personales y deudas</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end md:mt-1">
@@ -364,30 +380,22 @@ export default function LoansPage() {
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium">Monto Total Original</label>
                                                         <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
-                                                            <Input
+                                                            <MoneyInput
                                                                 required
-                                                                type="number"
                                                                 placeholder={getPlaceholderAmount()}
                                                                 value={formData.total_amount}
-                                                                onChange={e => setFormData({ ...formData, total_amount: e.target.value })}
-                                                                step={getStepValue()}
-                                                                className="pl-16"
+                                                                onChange={val => setFormData({ ...formData, total_amount: val })}
                                                             />
                                                         </div>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium">Monto Ya Pagado</label>
                                                         <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
-                                                            <Input
+                                                            <MoneyInput
                                                                 required
-                                                                type="number"
                                                                 placeholder={getPlaceholderAmount()}
                                                                 value={formData.paid_amount}
-                                                                onChange={e => setFormData({ ...formData, paid_amount: e.target.value })}
-                                                                step={getStepValue()}
-                                                                className="pl-16"
+                                                                onChange={val => setFormData({ ...formData, paid_amount: val })}
                                                             />
                                                         </div>
                                                     </div>
@@ -400,7 +408,7 @@ export default function LoansPage() {
                                                             step={getStepValue()}
                                                             placeholder={getPlaceholderInterest()}
                                                             value={formData.interest_rate}
-                                                            onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
+                                                            onChange={e => setFormData({ ...formData, interest_rate: Number(e.target.value) })}
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -470,8 +478,63 @@ export default function LoansPage() {
                             </div>
                         </header>
 
+                        {pendingDisbursementCount > 0 && (
+                            <Alert variant="destructive" className="bg-destructive/5 border-destructive/10 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
+                                <AlertCircle className="h-5 w-5" />
+                                <AlertTitle className="font-bold">Acción requerida</AlertTitle>
+                                <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+                                    <span>Tienes {pendingDisbursementCount} préstamos pendientes de desembolso.</span>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        <LoansSummary
+                            totalRemainingDebt={totalRemainingDebt}
+                            totalRemainingReceivable={totalRemainingReceivable}
+                            ctxCurrency={ctxCurrency}
+                        />
+
+                        <div className="flex flex-col gap-6">
+                            <div className="flex items-start gap-4 px-1">
+                                <div className="flex shrink-0 items-center justify-center p-1">
+                                    <Activity className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
+                                        Controla tus pagos y saldos pendientes
+                                    </h2>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-4">
+                                {loans.filter(l => l.paid_amount < l.total_amount).length === 0 ? (
+                                    <div className="text-center py-10 text-muted-foreground bg-secondary/10 rounded-xl border border-dashed border-border/50">
+                                        No tienes préstamos activos.
+                                    </div>
+                                ) : (
+                                    loans
+                                        .filter(l => l.paid_amount < l.total_amount)
+                                        .map(loan => (
+                                            <LoanCard
+                                                key={loan.id}
+                                                loan={loan}
+                                                ctxCurrency={ctxCurrency}
+                                                paymentMethods={paymentMethods}
+                                                isOverdue={isOverdue}
+                                                formatCurrencySmall={formatCurrencySmall}
+                                                onOpenDisbursement={handleOpenDisbursement}
+                                                onOpenEdit={handleOpenEdit}
+                                                onDelete={handleDelete}
+                                                onEditLoan={handleEditFormOpen}
+                                                onOpenPayment={handleOpenPayment}
+                                            />
+                                        ))
+                                )}
+                            </div>
+                        </div>
+
                         {/* Additional Dialogs (Payment, Disbursement, Edit) */}
-                        <Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })} modal={false}>
+                        <Dialog open={paymentDialog.open} onOpenChange={(open) => !open && setPaymentDialog({ open: false, loan: null })} modal={true}>
                             <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Registrar Abono - {paymentDialog.loan?.name}</DialogTitle>
@@ -481,15 +544,11 @@ export default function LoansPage() {
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Monto del Abono</label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">{ctxCurrency}</span>
-                                            <Input
+                                            <MoneyInput
                                                 required
-                                                type="number"
                                                 placeholder={getPlaceholderAmount()}
                                                 value={paymentData.amount}
-                                                onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                                step={getStepValue()}
-                                                className="pl-16"
+                                                onChange={val => setPaymentData({ ...paymentData, amount: val })}
                                             />
                                         </div>
                                     </div>
@@ -532,7 +591,7 @@ export default function LoansPage() {
                             </DialogContent>
                         </Dialog>
 
-                        <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={false}>
+                        <Dialog open={disbursementDialog.open} onOpenChange={(open) => !open && setDisbursementDialog({ open: false, loan: null })} modal={true}>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Confirmar Desembolso - {disbursementDialog.loan?.name}</DialogTitle>
@@ -553,6 +612,7 @@ export default function LoansPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Cuenta asociada</label>
+                                        <span className="sr-only">Seleccionar cuenta para el desembolso</span>
                                         <Select
                                             value={disbursementData.methodId}
                                             onValueChange={(val) => setDisbursementData({ ...disbursementData, methodId: val })}
@@ -574,7 +634,7 @@ export default function LoansPage() {
                             </DialogContent>
                         </Dialog>
 
-                        <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={false}>
+                        <Dialog open={editDialog.open} onOpenChange={(open) => !open && setEditDialog({ open: false, loan: null })} modal={true}>
                             <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Reclasificar Préstamo - {editDialog.loan?.name}</DialogTitle>
@@ -585,7 +645,7 @@ export default function LoansPage() {
                                         <label className="text-sm font-medium">Nueva Cuenta Asociada</label>
                                         <Select
                                             value={editData.methodId}
-                                            onValueChange={(val) => setEditData({ methodId: val })}
+                                            onValueChange={(val) => setEditData({ ...editData, methodId: val })}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar cuenta..." />
@@ -603,54 +663,9 @@ export default function LoansPage() {
                                 </div>
                             </DialogContent>
                         </Dialog>
-
-                        {pendingDisbursementCount > 0 && (
-                            <Alert variant="destructive" className="bg-destructive/5 border-destructive/10 text-destructive animate-in fade-in slide-in-from-top-4 duration-500">
-                                <AlertCircle className="h-5 w-5" />
-                                <AlertTitle className="font-bold">Acción requerida</AlertTitle>
-                                <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
-                                    <span>Tienes {pendingDisbursementCount} préstamos pendientes de desembolso.</span>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        <LoansSummary
-                            totalRemainingDebt={totalRemainingDebt}
-                            totalRemainingReceivable={totalRemainingReceivable}
-                            ctxCurrency={ctxCurrency}
-                        />
-
-                        <div className="flex flex-col gap-6">
-                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold px-1 tracking-tight leading-none">Controla tus pagos y saldos pendientes</h2>
-
-                            <div className="flex flex-col gap-4">
-                                {loans.length === 0 ? (
-                                    <div className="text-center py-10 text-muted-foreground bg-secondary/10 rounded-xl border border-dashed border-border/50">
-                                        No tienes préstamos registrados.
-                                    </div>
-                                ) : (
-                                    loans.map(loan => (
-                                        <LoanCard
-                                            key={loan.id}
-                                            loan={loan}
-                                            ctxCurrency={ctxCurrency}
-                                            paymentMethods={paymentMethods}
-                                            isOverdue={isOverdue}
-                                            formatCurrencySmall={formatCurrencySmall}
-                                            onOpenDisbursement={handleOpenDisbursement}
-                                            onOpenEdit={handleOpenEdit}
-                                            onDelete={handleDelete}
-                                            onEditLoan={handleEditFormOpen}
-                                            onOpenPayment={handleOpenPayment}
-                                        />
-                                    ))
-                                )}
-                            </div>
-                        </div>
                     </>
-                )
-                }
-            </main >
-        </div >
+                )}
+            </main>
+        </div>
     );
 }

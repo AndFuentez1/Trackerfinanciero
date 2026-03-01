@@ -7,7 +7,7 @@ import { CashFlowFilters } from '@/features/finance/cashflow/components/CashFlow
 import { CashFlowSummaryCards } from '@/features/finance/cashflow/components/CashFlowSummaryCards';
 import { CashFlowChart } from '@/features/finance/cashflow/components/CashFlowChart';
 import { CashFlowTimeline } from "@/features/finance/cashflow/components/CashFlowTimeline";
-import { Wallet, Link, Unlink } from 'lucide-react';
+import { Wallet, Link, Unlink, ArrowUpRight } from 'lucide-react';
 import { Switch } from '@/shared/ui/switch';
 import { Label } from '@/shared/ui/label';
 import { cn } from '@/core/utils';
@@ -132,28 +132,28 @@ export default function CashFlow() {
     }
   };
 
+
   if (loading) {
-    return <SkeletonLoader tab="cashflow" fullPage={false} withLayoutWrapper />;
+    return <SkeletonLoader tab="cashflow" withLayoutWrapper fullPage={false} />;
   }
 
   return (
     <div className="min-h-screen bg-background/30">
-      <main className="container max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <header className="border-b border-border/40 pb-6">
+      <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+        <header className="border-b border-border pb-8">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3">
               <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                <Wallet className="h-6 w-6" />
+                <ArrowUpRight className="h-6 w-6" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Flujo de Caja</h1>
-                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Proyección de ingresos y egresos</p>
+                <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Visualiza tus ingresos futuros y compromisos</p>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Removed internal heading h2 since we have a header now */}
         <CashFlowFilters
           year={year}
           month={month}
@@ -162,8 +162,11 @@ export default function CashFlow() {
           availableYears={availableYears}
           availableMonths={availableMonths}
           loading={loading}
+          useRealBalance={useRealBalance}
+          onRealBalanceChange={handleRealBalanceChange}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <CashFlowSummaryCards
             loading={loading}
             estimatedIncome={estimatedIncome}
@@ -172,9 +175,8 @@ export default function CashFlow() {
             projectedBalance={projectedBalance}
           />
         </div>
-        <div className="mb-6">
-          <CashFlowChart data={cashFlowSeries} loading={loading} isWarning={isProjectionWarning} />
-        </div>
+
+        <CashFlowChart data={cashFlowSeries} loading={loading} isWarning={isProjectionWarning} />
         {/* Tabla de Desglose Mensual */}
         <div className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
@@ -318,6 +320,3 @@ export default function CashFlow() {
     </div>
   );
 }
-
-
-

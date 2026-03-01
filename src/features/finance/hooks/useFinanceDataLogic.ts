@@ -44,7 +44,7 @@ export function useFinanceDataLogic() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { config, updateConfig } = useUserConfig(user?.id);
+  const { config, updateConfig } = useUserConfig(user?.id, user?.email);
 
   // 1. Data Layer
   const {
@@ -143,17 +143,13 @@ export function useFinanceDataLogic() {
     ui.setWelcomeCompleted(Boolean(profile.welcome_completed));
   }, [profile, ui]);
 
-  // Keep hasMore in sync for legacy consumers
-  useEffect(() => {
-    ui.setHasMore(tx.hasMore);
-  }, [tx.hasMore, ui]);
-
   return useMemo(() => ({
     // --- DATA ---
     transactions: tx.transactions,
     allTransactions: tx.allTransactions,
     rangeTransactions: tx.rangeTransactions,
-    budgets: tx.budgetsWithSpending,
+    budgets: budgets,
+    budgetsWithSpending: tx.budgetsWithSpending,
     paymentMethods,
     categories,
     insights: tx.insights,

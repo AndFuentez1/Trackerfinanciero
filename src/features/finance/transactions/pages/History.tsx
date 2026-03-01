@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 import { useSEO } from '@/shared/hooks/useSEO';
 import { useFinanceData, CategoryItem } from '../../hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
@@ -7,7 +8,7 @@ import { AddTransactionDialog } from '@/features/finance/transactions/components
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
 import { HistoryTab } from '@/features/finance/transactions/components/HistoryTab';
-import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX } from 'lucide-react';
+import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX, Receipt } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { Input } from '@/shared/ui/input';
@@ -37,9 +38,9 @@ export default function HistoryPage() {
     // ALL HOOKS AT TOP - BEFORE ANY CONDITIONALS
     // ============================================================================
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const isPanelVisible = searchParams.get('hide_pending') !== 'true';
     const { user, loading: authLoading } = useAuth();
+    const { config, updateConfig } = useUserConfig(user?.id, user?.email);
+    const isPanelVisible = !config.hide_incomplete_alert;
     const {
         transactions,
         paymentMethods,
@@ -221,18 +222,22 @@ export default function HistoryPage() {
         return list.some(t => !t.payment_method_id && t.type !== 'saving' && t.type !== 'investment');
     }, [allTransactions, transactions]);
 
+    if (isLoading && !transactions.length) {
+        return <SkeletonLoader tab="transactions" withLayoutWrapper fullPage={false} />;
+    }
+
     return (
         <div className="min-h-screen bg-background/30">
-            <main className="container max-w-6xl mx-auto px-4 py-8">
-                <header className="border-b border-border pb-6">
+            <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8 animate-in fade-in duration-700">
+                <header className="border-b border-border pb-8">
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                         <div className="flex items-start gap-3">
                             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                                <Wallet className="h-6 w-6" />
+                                <Receipt className="h-6 w-6" />
                             </div>
                             <div className="flex flex-col">
                                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Historial</h1>
-                                <p className="text-muted-foreground font-medium mt-1 leading-none text-sm">Gestiona y consulta tus transacciones</p>
+                                <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona y consulta tus transacciones</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
@@ -246,10 +251,9 @@ export default function HistoryPage() {
                         </div>
                     </div>
                 </header>
-                {isLoading && !transactions.length ? (
-                    <SkeletonLoader tab="transactions" withLayoutWrapper={false} fullPage={false} />
-                ) : (
-                    <div className="flex flex-col gap-6">
+
+                {transactions.length > 0 ? (
+                    <>
                         {/* Barra de estado: Mostrar siempre que haya datos cargados */}
                         <ImportStatusBar
                             uiState={
@@ -274,15 +278,15 @@ export default function HistoryPage() {
 
                         {/* FILTROS UNIFICADOS */}
                         <div className={cn(
-                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border/50",
+                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border/50 flex flex-col gap-8",
                             filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
                         )}>
-                            <div className="flex items-start gap-4 mb-4">
+                            <div className="flex items-start gap-4">
                                 <div className="flex shrink-0 items-center justify-center p-1">
                                     <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
                                 </div>
                                 <div className="flex flex-col min-w-0">
-                                    <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+                                    <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                         Filtros
                                     </p>
                                 </div>
@@ -349,18 +353,12 @@ export default function HistoryPage() {
                                                         : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100"
                                                 )}
                                                 onClick={() => {
-                                                    const newParams = new URLSearchParams(searchParams);
-                                                    if (isPanelVisible) {
-                                                        newParams.set('hide_pending', 'true');
-                                                    } else {
-                                                        newParams.delete('hide_pending');
-                                                    }
-                                                    setSearchParams(newParams);
+                                                    updateConfig({ hide_incomplete_alert: isPanelVisible });
                                                 }}
                                             >
                                                 <AlertCircle className="w-5 h-5 shrink-0" />
                                                 <span className="text-sm font-semibold">
-                                                    {isPanelVisible ? 'Ocultar Facturas Pendientes' : 'Mostrar Facturas Pendientes'} ({totalPendingCount})
+                                                    {isPanelVisible ? 'Ocultar Acción Requerida' : 'Mostrar Acción Requerida'} ({totalPendingCount})
                                                 </span>
                                             </Button>
                                         )}
@@ -535,9 +533,16 @@ export default function HistoryPage() {
                                 </Button>
                             </div>
                         )}
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
+                        <Receipt className="h-12 w-12 text-muted-foreground opacity-20" />
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-semibold">No hay transacciones</h3>
+                            <p className="text-muted-foreground">No hemos encontrado movimientos para este periodo.</p>
+                        </div>
                     </div>
-                )
-                }
+                )}
             </main >
         </div >
     );

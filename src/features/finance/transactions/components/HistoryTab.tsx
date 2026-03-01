@@ -142,7 +142,7 @@ export function HistoryTab({
   }, [allTransactions, transactions]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {/* Label de registros - Use totalCount for accuracy */}
       <div className="text-sm text-muted-foreground">
         Mostrando {filteredTransactions.length} registros de {totalCount || filteredAllTransactions.length}

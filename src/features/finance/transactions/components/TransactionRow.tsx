@@ -1,7 +1,9 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import type { Transaction, PaymentMethod, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
 import {
     Trash2,
     CreditCard,
@@ -13,6 +15,7 @@ import {
 import { cn, getCurrencySymbol } from '@/core/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import {
     Select,
     SelectContent,
@@ -63,11 +66,13 @@ export const TransactionRow = memo(({
 }: TransactionRowProps) => {
     const decimalPlaces = useDecimalPlaces();
     const { formatCurrencySmall } = useFormatCurrency();
+    const { addCategory } = useFinanceData();
+    const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
 
     // Helper logic moved from TransactionList
     const toInputDate = (iso: string) => {
         const d = new Date(iso);
-        if (isNaN(d.getTime())) {return '';}
+        if (isNaN(d.getTime())) { return ''; }
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -76,7 +81,7 @@ export const TransactionRow = memo(({
 
     const formatDate = (dateString: string) => {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) {return '';}
+        if (isNaN(d.getTime())) { return ''; }
         const day = String(d.getDate()).padStart(2, '0');
         const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         const month = months[d.getMonth()] || '';
@@ -85,16 +90,17 @@ export const TransactionRow = memo(({
     };
 
     const getPaymentMethodName = (pmId: string | null | undefined) => {
-        if (!pmId) {return null;}
+        if (!pmId) { return null; }
         const pm = paymentMethods.find(p => p.id === pmId);
         return pm?.name || null;
     };
 
     const getCategoryOptionsForType = (type: Transaction['type']) => {
+        const allCats = [...categories, ...localCategories];
         if (type === 'transfer_in' || type === 'transfer_out') {
-            return categories.filter(c => (c.type as string) === 'transfer' || c.type === 'transfer_out' || c.type === 'transfer_in');
+            return allCats.filter(c => (c.type as string) === 'transfer' || c.type === 'transfer_out' || c.type === 'transfer_in');
         }
-        return categories.filter(c => c.type === type);
+        return allCats.filter(c => c.type === type);
     };
 
     const getCategoryDisplay = (t: Transaction) => {
@@ -189,6 +195,16 @@ export const TransactionRow = memo(({
                                 {getCategoryOptionsForType(transaction.type).map(c => (
                                     <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                                 ))}
+                                <div className="border-t border-border/50 px-1 py-1 mt-1">
+                                    <AddCategoryDialog
+                                        type={transaction.type as "expense" | "income" | "saving" | "investment"}
+                                        onAdd={addCategory}
+                                        onSuccess={(cat) => {
+                                            setLocalCategories(prev => [...prev, cat]);
+                                            onDraftChange({ category_id: cat.id });
+                                        }}
+                                    />
+                                </div>
                             </SelectContent>
                         </Select>
                     </div>
@@ -211,6 +227,16 @@ export const TransactionRow = memo(({
                                 {getCategoryOptionsForType(transaction.type).map(c => (
                                     <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                                 ))}
+                                <div className="border-t border-border/50 px-1 py-1 mt-1">
+                                    <AddCategoryDialog
+                                        type={transaction.type as "expense" | "income" | "saving" | "investment"}
+                                        onAdd={addCategory}
+                                        onSuccess={(cat) => {
+                                            setLocalCategories(prev => [...prev, cat]);
+                                            onUpdate!(transaction.id, { category_id: cat.id, category: cat.name });
+                                        }}
+                                    />
+                                </div>
                             </SelectContent>
                         </Select>
                     </div>
@@ -294,11 +320,10 @@ export const TransactionRow = memo(({
             {/* Amount */}
             <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                 {isEditing ? (
-                    <Input
-                        type="number"
+                    <MoneyInput
                         className="h-8 text-sm w-[10rem] ml-auto text-right"
                         value={draft?.amount ?? transaction.amount}
-                        onChange={(e) => onDraftChange({ amount: Number(e.target.value) })}
+                        onChange={(val) => onDraftChange({ amount: val })}
                     />
                 ) : (
                     <span className="text-sm font-bold tabular-nums whitespace-nowrap flex items-center justify-center gap-1 text-foreground">
@@ -326,7 +351,7 @@ export const TransactionRow = memo(({
                                 );
                             }
                             const parts = formatted.split(',');
-                            if (parts.length === 1) {return formatted;}
+                            if (parts.length === 1) { return formatted; }
                             const integerPart = parts[0].replace(symbol, '').trim();
                             const decimalPart = parts[1];
                             return (

@@ -75,10 +75,8 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
         const handleBlur = () => {
             const parsed = parseCurrencyString(displayValue);
-            setShowCommaWarning(false); // Hide the warning when they leave
-            // Re-format nicely on blur
-            if (parsed === 0) { setDisplayValue(''); }
-            else { setDisplayValue(formatValue(parsed, true)); }
+            setShowCommaWarning(false);
+            setDisplayValue(formatValue(parsed, true));
         };
 
         // Improved HandleChange for dots:

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
+import { MoneyInput } from '@/shared/components/MoneyInput';
 import {
     Select,
     SelectContent,
@@ -47,7 +48,7 @@ export function PendingInvoicesPanel() {
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<PanelItem | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<{ amount: string, description: string, category: string, type: TransactionType, payment_method_id: string | null }>({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
+    const [editForm, setEditForm] = useState<{ amount: number, description: string, category: string, type: TransactionType, payment_method_id: string | null }>({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
 
     const categories = financeCategories;
     const resolveCategoryName = (invoice: { category_id?: string | null, category?: string | null }) =>
@@ -134,7 +135,7 @@ export function PendingInvoicesPanel() {
         const resolvedCategory = resolveCategoryName(invoice);
         const resolvedType = invoice.type || 'expense';
         setEditForm({
-            amount: invoice.amount.toString(),
+            amount: Number(invoice.amount),
             description: invoice.description,
             category: resolvedCategory,
             type: resolvedType,
@@ -144,14 +145,14 @@ export function PendingInvoicesPanel() {
 
     const handleCancelEdit = () => {
         setEditingId(null);
-        setEditForm({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
+        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
     };
 
     const handleApprove = async (invoice: PanelItem) => {
         // Optimistic UI updates - Apply changes instantly
         const isEditing = editingId === invoice.id;
         const originalCategory = resolveCategoryName(invoice);
-        const finalAmount = isEditing ? parseFloat(editForm.amount) : invoice.amount;
+        const finalAmount = isEditing ? editForm.amount : invoice.amount;
         const finalDescription = isEditing ? editForm.description : invoice.description;
         const finalCategory = (isEditing ? editForm.category : originalCategory).trim();
         const finalType = isEditing ? editForm.type : (invoice.type || 'expense');
@@ -172,7 +173,7 @@ export function PendingInvoicesPanel() {
             setInvoices(prev => prev.filter(item => item.id !== invoice.id));
         }
         setEditingId(null);
-        setEditForm({ amount: '', description: '', category: '', type: 'expense', payment_method_id: null });
+        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
 
         // Soft success toast for perception of speed
         toast({ title: 'Aprobada', description: 'Procesando transacción...', duration: 2000 });
@@ -345,11 +346,11 @@ export function PendingInvoicesPanel() {
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-500">Monto</label>
-                                            <input
-                                                type="number"
-                                                className="w-full mt-1 p-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500"
+                                            <MoneyInput
+                                                id="amount-edit"
+                                                className="w-full mt-1 p-2 h-10 text-sm border rounded-md focus:ring-2 focus:ring-orange-500"
                                                 value={editForm.amount}
-                                                onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
+                                                onChange={val => setEditForm({ ...editForm, amount: val })}
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -486,10 +487,10 @@ export function PendingInvoicesPanel() {
     }
 
     return (
-        <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-6 animate-in slide-in-from-top-2">
+        <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-8 animate-in slide-in-from-top-2">
             <CardContent className="p-4 sm:p-6">
-                <div className="flex flex-col gap-0 mb-4">
-                    <div className="flex justify-between items-start gap-4">
+                <div className="flex flex-col gap-8">
+                    <div className="flex flex-col gap-0">
                         <div className="flex items-start gap-4">
                             <div className="flex shrink-0 items-center justify-center p-1">
                                 <AlertCircle className="h-5 w-5 text-orange-600" strokeWidth={2.5} />
@@ -505,7 +506,9 @@ export function PendingInvoicesPanel() {
                             variant="ghost"
                             size="sm"
                             className="text-orange-700 hover:bg-orange-100 h-8 w-8 p-0 shrink-0"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 updateConfig({ hide_incomplete_alert: true });
                             }}
                             title="Ocultar notificaciones de facturas"
@@ -516,7 +519,7 @@ export function PendingInvoicesPanel() {
                 </div>
 
                 <Tabs defaultValue="missing" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-orange-100/50 text-orange-900 mb-4">
+                    <TabsList className="grid w-full grid-cols-2 bg-orange-100/50 text-orange-900">
                         <TabsTrigger value="missing" className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm">
                             Falta Clasificar
                             {missingDataInvoices.length > 0 && (

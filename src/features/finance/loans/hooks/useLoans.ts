@@ -19,7 +19,7 @@ export function useCreateLoan() {
     const { addTransaction } = useFinanceData();
 
     const createLoan = async (loan: Omit<Loan, 'id' | 'created_at' | 'user_id' | 'paid_amount' | 'payments'> & { is_disbursed?: boolean }, initialPaidAmount: number = 0) => {
-        if (!user) {return { error: 'No autenticado' };}
+        if (!user) { return { error: 'No autenticado' }; }
 
         // 1. Create the loan with exact validated database column names (snake_case)
         // Ensure due_date is a simple string 'YYYY-MM-DD' or null
@@ -71,7 +71,7 @@ export function useCreateLoan() {
 
         // 3. Auto-generate transaction for loan creation (cash-in/out)
         await addTransaction({
-            type: loan.type === 'borrowed' ? 'income' : 'expense',
+            type: loan.type === 'borrowed' ? 'transfer_in' : 'transfer_out',
             category: 'Préstamos',
             amount: loan.total_amount,
             description: `Préstamo: ${loan.name}${loan.is_disbursed === false ? ' (Sin desembolso)' : ''}`,
@@ -82,7 +82,7 @@ export function useCreateLoan() {
         // 4. Record initial payment as transaction
         if (initialPaidAmount > 0) {
             await addTransaction({
-                type: loan.type === 'borrowed' ? 'expense' : 'income',
+                type: loan.type === 'borrowed' ? 'transfer_out' : 'transfer_in',
                 category: 'Préstamos',
                 amount: initialPaidAmount,
                 description: `Abono inicial préstamo: ${loan.name}`,
@@ -146,7 +146,7 @@ export function useCreateLoanPayment() {
         // Note: For 'borrowed' (Deuda), paying it is an EXPENSE (money leaves).
         // For 'lent' (Prestado), receiving payment is INCOME (money enters).
         await addTransaction({
-            type: payment.type === 'borrowed' ? 'expense' : 'income',
+            type: payment.type === 'borrowed' ? 'transfer_out' : 'transfer_in',
             category: 'Préstamos', // Standardized to "Préstamos"
             amount: payment.amount,
             description: `Abono a préstamo: ${payment.name}`,

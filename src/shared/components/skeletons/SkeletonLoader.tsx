@@ -102,10 +102,10 @@ export const SidebarSkeleton = () => (
         }}
     >
         <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
-            <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.75rem" />
-            <div className="flex flex-col gap-2">
-                <PulseBlock height="1.25rem" width="80px" />
-                <PulseBlock height="0.65rem" width="60px" />
+            <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.75rem" className="bg-primary/10" />
+            <div className="flex flex-col gap-1.5">
+                <PulseBlock height="1.25rem" width="100px" />
+                <PulseBlock height="0.65rem" width="80px" />
             </div>
         </div>
 
@@ -138,13 +138,13 @@ export const MobileNavSkeleton = () => (
 );
 
 export const StandardHeaderSkeleton = () => (
-    <div className="space-y-4 border-b border-border/40 pb-6 w-full animate-in fade-in duration-700 mb-8">
+    <div className="border-b border-border pb-8 w-full animate-in fade-in duration-700">
         <div className="flex flex-col md:flex-row items-start justify-between gap-6">
-            <div className="flex items-start gap-3 w-full md:w-auto">
-                <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
-                <div className="flex flex-col gap-2">
-                    <PulseBlock height="2rem" width="200px" className="leading-none" />
-                    <PulseBlock height="1rem" width="300px" />
+            <div className="flex items-start gap-4 w-full md:w-auto">
+                <PulseBlock height="3rem" width="3rem" borderRadius="1rem" className="bg-primary/10" />
+                <div className="flex flex-col gap-1.5">
+                    <PulseBlock height="1.75rem" width="180px" className="leading-none" />
+                    <PulseBlock height="0.85rem" width="260px" />
                 </div>
             </div>
             <div className="flex gap-2 w-full md:w-auto justify-start md:justify-end">
@@ -225,7 +225,7 @@ export const DashboardSkeleton = () => (
 );
 
 export const HistorySkeleton = () => (
-    <div className="space-y-6">
+    <div className="space-y-8">
         <StandardHeaderSkeleton />
         {/* Status Bar */}
         <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-border bg-muted/20">
@@ -408,7 +408,7 @@ export const LoansSkeleton = () => (
 );
 
 export const SavingsSkeleton = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <StandardHeaderSkeleton />
 
         {/* Total Balance Card */}
@@ -455,7 +455,7 @@ export const SavingsSkeleton = () => (
 );
 
 export const ConfigSkeleton = () => (
-    <div className="container max-w-6xl mx-auto px-4 py-10 space-y-12">
+    <div className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
         {/* Header Section */}
         <StandardHeaderSkeleton />
 
@@ -592,62 +592,68 @@ export const AccountsListSkeleton = ({ count = 3 }) => (
 );
 
 export const CashFlowSkeleton = () => (
-    <div className="container max-w-6xl mx-auto py-8 px-4 space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-700">
         <StandardHeaderSkeleton />
 
-        {/* Filters */}
-        <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-            <PulseBlock height="2.5rem" width="140px" />
-            <PulseBlock height="2.5rem" width="140px" />
-            <PulseBlock height="2.5rem" width="180px" />
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <CardSkeleton height="140px" padding="1.5rem">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <PulseBlock height="0.8rem" width="100px" className="mb-2" />
-                        <PulseBlock height="2rem" width="140px" />
-                    </div>
-                    <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
-                </div>
-            </CardSkeleton>
-            <CardSkeleton height="140px" padding="1.5rem">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <PulseBlock height="0.8rem" width="100px" className="mb-2" />
-                        <PulseBlock height="2rem" width="140px" />
-                    </div>
-                    <PulseBlock height="2.5rem" width="2.5rem" borderRadius="9999px" />
-                </div>
-            </CardSkeleton>
-        </div>
-
-        {/* Chart */}
-        <CardSkeleton height="400px" className="mb-6">
-            <div className="flex justify-between items-center mb-6">
-                <PulseBlock height="1.5rem" width="200px" />
-                <PulseBlock height="2rem" width="120px" />
+        {/* Filters Skeleton - Matching CashFlowFilters.tsx */}
+        <CardSkeleton padding="1rem" className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex gap-4 items-center">
+                <PulseBlock height="2.25rem" width="140px" borderRadius="9999px" />
+                <PulseBlock height="2.25rem" width="140px" borderRadius="9999px" />
             </div>
-            <PulseBlock height="280px" width="100%" />
+            <div className="flex gap-4 items-center w-full sm:w-auto justify-end ml-auto">
+                <div className="flex items-center gap-2 mr-2">
+                    <PulseBlock height="0.75rem" width="80px" />
+                    <PulseBlock height="1.5rem" width="2.5rem" borderRadius="9999px" />
+                </div>
+                <PulseBlock height="2.25rem" width="80px" borderRadius="9999px" />
+            </div>
         </CardSkeleton>
 
-        {/* Table */}
-        <div className="rounded-xl border border-input bg-card overflow-hidden">
-            <div className="p-4 border-b border-border">
-                <PulseBlock height="1.25rem" width="180px" />
-            </div>
-            <div className="bg-muted/40 p-3 border-b border-border">
-                <div className="grid grid-cols-6 gap-4">
-                    {[...Array(6)].map((_, i) => <PulseBlock key={i} height="0.75rem" />)}
-                </div>
-            </div>
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="p-4 border-b border-border last:border-0 grid grid-cols-6 gap-4 items-center">
-                    {[...Array(6)].map((_, j) => <PulseBlock key={j} height="1rem" width={j === 0 ? "60%" : "90%"} />)}
-                </div>
+        {/* Summary Cards - Matching CashFlow.tsx grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+                <CardSkeleton key={i} height="100px" padding="1.25rem" className="flex flex-col justify-center bg-slate-50/50">
+                    <PulseBlock height="0.85rem" width="60%" className="mb-3" />
+                    <PulseBlock height="1.75rem" width="80%" />
+                </CardSkeleton>
             ))}
+        </div>
+
+        {/* Chart Skeleton */}
+        <CardSkeleton height="420px" padding="1.5rem">
+            <div className="flex justify-between items-center mb-8">
+                <PulseBlock height="1.5rem" width="220px" />
+                <div className="flex gap-2">
+                    <PulseBlock height="2rem" width="100px" borderRadius="9999px" />
+                </div>
+            </div>
+            <PulseBlock height="300px" width="100%" />
+        </CardSkeleton>
+
+        {/* Monthly Breakdown Table Skeleton */}
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <PulseBlock height="1.5rem" width="180px" />
+                <PulseBlock height="2rem" width="200px" borderRadius="0.5rem" />
+            </div>
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="bg-muted/30 p-4 border-b border-border">
+                    <div className="grid grid-cols-6 gap-4">
+                        {[...Array(6)].map((_, i) => <PulseBlock key={i} height="0.7rem" />)}
+                    </div>
+                </div>
+                {[...Array(6)].map((_, i) => (
+                    <div key={i} className="p-4 border-b border-border last:border-0 grid grid-cols-6 gap-4 items-center">
+                        <PulseBlock height="1rem" width="80%" />
+                        <PulseBlock height="1rem" width="90%" />
+                        <PulseBlock height="1rem" width="90%" />
+                        <PulseBlock height="1rem" width="90%" />
+                        <PulseBlock height="1rem" width="90%" />
+                        <PulseBlock height="1.5rem" width="100%" borderRadius="0.5rem" />
+                    </div>
+                ))}
+            </div>
         </div>
     </div>
 );
@@ -760,7 +766,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     const loadingText = message || "Cargando...";
     const isAuth = tab === 'auth';
     const shouldShowIndicator = showLoadingIndicator && tab !== 'onboarding';
-    const contentPaddingClass = tab === 'dashboard' || tab === 'config' ? "py-10" : "py-8";
+    const contentPaddingClass = "py-8";
     const useSoftBg = withLayoutWrapper && tab !== 'dashboard' && tab !== 'auth';
     const embeddedWrapperClass = cn(
         "w-full h-full",

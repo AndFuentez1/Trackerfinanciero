@@ -90,7 +90,8 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
   const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
 
-  const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
+  const [activeTab, setActiveTab] = useState<'expense' | 'income' | 'saving'>('expense');
+  const hasSavingCategories = categories.some(c => c.type === 'saving');
 
   // Sync state when editingBudget changes
   useEffect(() => {
@@ -101,8 +102,10 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         amount: editingBudget.amount,
       });
       const cat = categories.find(c => c.id === editingBudget.category_id);
-      if (cat && cat.type === 'income') {
+      if (cat?.type === 'income') {
         setActiveTab('income');
+      } else if (cat?.type === 'saving') {
+        setActiveTab('saving');
       } else {
         setActiveTab('expense');
       }
@@ -114,10 +117,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const availableCategories = useMemo(() =>
     categories
       .filter(c => {
-        // If editing, always include the budget's category even if type doesn't match default filter
         if (editingBudget && editingBudget.category_id === c.id) { return true; }
-
-        // Include only the active tab's exact type
         return c.type === activeTab;
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
@@ -228,13 +228,16 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
             {!editingBudget && (
               <Tabs value={activeTab} onValueChange={(val) => {
-                setActiveTab(val as 'expense' | 'income');
+                setActiveTab(val as 'expense' | 'income' | 'saving');
                 setValue('category_id', '');
                 setValue('category', '');
               }}>
-                <TabsList className="grid w-full grid-cols-2 mb-2">
+                <TabsList className={`grid w-full mb-2 ${hasSavingCategories ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="expense">Gastos</TabsTrigger>
                   <TabsTrigger value="income">Ingresos</TabsTrigger>
+                  {hasSavingCategories && (
+                    <TabsTrigger value="saving">Ahorro</TabsTrigger>
+                  )}
                 </TabsList>
               </Tabs>
             )}
@@ -267,25 +270,24 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                         <SelectContent>
                           {availableCategories.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
-                              {c.name} ({c.type === 'income' ? 'Ingreso' : 'Gasto'})
+                              {c.name}
                             </SelectItem>
                           ))}
+                          {!editingBudget && (
+                            <div className="border-t border-border/50 px-1 py-1 mt-1">
+                              <AddCategoryDialog
+                                type={activeTab}
+                                onAdd={addCategory}
+                                onSuccess={(cat) => {
+                                  setValue('category_id', cat.id);
+                                  setValue('category', cat.name);
+                                }}
+                              />
+                            </div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
-                    {!editingBudget && (
-                      <div className="flex-shrink-0">
-                        {/* Default to expense, but maybe we should allow income? For now keeping as is to avoid scope creep for "Add Budget" flow which is 99% expense */}
-                        <AddCategoryDialog
-                          type={activeTab}
-                          onAdd={addCategory}
-                          onSuccess={(cat) => {
-                            setValue('category_id', cat.id);
-                            setValue('category', cat.name);
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
                   <FormMessage />
                 </FormItem>

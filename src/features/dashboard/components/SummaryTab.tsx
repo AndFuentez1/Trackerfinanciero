@@ -154,7 +154,7 @@ export function SummaryTab({
   const [sankeyDrillDown, setSankeyDrillDown] = useState<{ type: 'income' | 'expense', page: number } | null>(null);
 
   const { user } = useAuth();
-  const { config, updateConfig } = useUserConfig(user?.id);
+  const { config, updateConfig } = useUserConfig(user?.id, user?.email);
 
   // Estado para ocultar la alerta global de transacciones incompletas
   const isAlertHidden = config.hide_incomplete_alert;
@@ -271,7 +271,7 @@ export function SummaryTab({
   }, [paymentMethods, loans, transactions, pendingInvoices]);
 
   return (
-    <div className="flex flex-col gap-6 pt-2 pb-6 antialiased">
+    <div className="flex flex-col gap-8 pt-2 pb-6 antialiased">
       {/* SECTION 0: Global Alerts */}
       {!isAlertHidden && incompleteTransactions.length > 0 && (
         <div className="bg-orange-50/50 border border-orange-200/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
@@ -332,14 +332,14 @@ export function SummaryTab({
       )}
 
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 mb-2">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
           <div className="flex items-start gap-4">
             <div className="flex shrink-0 items-center justify-center p-1">
               <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+              <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                 Mis Cuentas
               </p>
             </div>
@@ -412,13 +412,13 @@ export function SummaryTab({
       </div>
 
       {/* SECTION 2: Resumen General */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start gap-4 mb-2">
+      <div className="flex flex-col gap-8">
+        <div className="flex items-start gap-4">
           <div className="flex shrink-0 items-center justify-center p-1">
             <CalendarIcon className="h-5 w-5 text-primary" strokeWidth={2.5} />
           </div>
           <div className="flex flex-col min-w-0">
-            <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+            <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
               Resumen General
             </p>
           </div>
@@ -434,7 +434,7 @@ export function SummaryTab({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8">
             {/* ROW 1: 3 Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
               <SummaryCard
@@ -489,19 +489,19 @@ export function SummaryTab({
       </div>
 
       {/* Herramientas de Análisis y Detalles */}
-      <div className="flex flex-col gap-8 sm:gap-10 lg:gap-12">
-        <div className="flex flex-col gap-4 sm:gap-6">
-          <div className="flex items-start gap-4 mb-2">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8">
+          <div className="flex items-start gap-4">
             <div className="flex shrink-0 items-center justify-center p-1">
               <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-base sm:text-lg font-bold text-muted-foreground tracking-tight leading-none">
+              <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                 Análisis Visual
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               {loading ? (
                 <div className="space-y-6">

@@ -53,12 +53,13 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountId) {return;}
+    if (!accountId) { return; }
 
     setIsSubmitting(true);
 
     const { error } = await onAdd({
       payment_method_id: accountId,
+      savings_account_id: accountId,
       type,
       amount: amount,
       date,

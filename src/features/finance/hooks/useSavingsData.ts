@@ -12,6 +12,7 @@ export interface SavingsAccount {
 export interface SavingsTransaction {
   id: string;
   payment_method_id: string;
+  savings_account_id: string;
   type: 'deposit' | 'withdrawal' | 'interest';
   amount: number;
   date: string;

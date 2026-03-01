@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, Wallet, PieChart } from "lucide-react";
+import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, Wallet, PieChart, Activity, LayoutGrid } from "lucide-react";
 import { cn } from "@/core/utils";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
@@ -92,7 +92,7 @@ export function Sidebar() {
                     </button>
                     <div className="flex flex-col justify-center h-10 relative">
                         <h1 className="font-display font-bold text-xl leading-none">FinTrack</h1>
-                        <p className="text-xs text-muted-foreground absolute top-full left-0 whitespace-nowrap mt-1">
+                        <p className="text-[10px] text-muted-foreground whitespace-nowrap absolute top-[26px] left-0 leading-none">
                             Minimalist Finance
                         </p>
                     </div>

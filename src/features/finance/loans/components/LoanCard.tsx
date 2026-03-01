@@ -136,22 +136,20 @@ export function LoanCard({
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="gap-2 h-8 px-3 border-primary/20 text-primary hover:bg-primary/10 shadow-sm"
+                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 shadow-sm flex items-center justify-center"
                                     onClick={() => onEditLoan(loan)}
                                     title="Editar"
                                 >
                                     <Edit2 className="h-3.5 w-3.5" />
-                                    <span className="text-xs font-semibold hidden sm:inline">Editar</span>
                                 </Button>
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="gap-2 h-8 px-3 border-primary/20 text-primary hover:bg-primary/10 shadow-sm"
+                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 shadow-sm flex items-center justify-center"
                                     onClick={() => onOpenPayment(loan)}
                                     title="Abonar"
                                 >
                                     <HandCoins className="h-3.5 w-3.5" />
-                                    <span className="text-xs font-semibold hidden sm:inline">Abonar</span>
                                 </Button>
                                 <div className="flex flex-col items-end ml-1">
                                     <span className="text-[10px] uppercase font-bold text-muted-foreground/70 flex items-center gap-1 leading-none mb-1">

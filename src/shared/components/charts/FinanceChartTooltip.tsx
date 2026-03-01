@@ -25,7 +25,21 @@ export function FinanceChartTooltip({
       <div className="mb-1 text-[11px] font-semibold text-foreground">{title}</div>
       <div className="space-y-1">
         {payload
-          .filter(item => typeof item.value === 'number' && !Number.isNaN(item.value))
+          .filter((item, index, self) => {
+            // Deduplicate Balance if values are the same
+            if (item.name === 'Balance') {
+              const firstBalanceIndex = self.findIndex(i => i.name === 'Balance');
+              if (index !== firstBalanceIndex) {
+                const firstBalanceValue = self[firstBalanceIndex].value;
+                if (item.value === firstBalanceValue) return false;
+              }
+            }
+
+            if (item.dataKey === 'balanceAjuste' && typeof item.payload?.balanceAjusteDelta === 'number' && item.payload.balanceAjusteDelta !== 0) {
+              return true;
+            }
+            return typeof item.value === 'number' && !Number.isNaN(item.value);
+          })
           .map((item) => {
             const dataKey = typeof item.dataKey === 'string' ? item.dataKey : String(item.dataKey);
             const adjustment =
@@ -34,7 +48,10 @@ export function FinanceChartTooltip({
                 ? item.payload.balanceAjusteDelta
                 : null;
             const value = adjustment ?? Number(item.value);
-            const color = item.color || item.payload?.fill || item.payload?.stroke;
+            let color = item.color || item.payload?.fill || item.payload?.stroke;
+            if (dataKey === 'balanceAjuste') {
+              color = 'hsl(var(--primary))';
+            }
 
             return (
               <div key={dataKey} className="flex items-center justify-between gap-3">
