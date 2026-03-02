@@ -150,9 +150,9 @@ export default function LoansPage() {
         }
     };
 
-    const handleOpenPayment = (loan: Loan) => {
+    const handleOpenPayment = (loan: Loan, amount?: number) => {
         setPaymentDialog({ open: true, loan });
-        setPaymentData({ amount: 0, date: getTodayLocalDate(), methodId: '' });
+        setPaymentData({ amount: amount ?? 0, date: getTodayLocalDate(), methodId: '' });
     };
 
     const handleOpenDisbursement = (loan: Loan) => {
@@ -189,14 +189,15 @@ export default function LoansPage() {
         const amount = Number(paymentData.amount);
         const remaining = paymentDialog.loan.total_amount - paymentDialog.loan.paid_amount;
 
-        if (amount > remaining) {
-            toast({
-                title: 'Monto excedido',
-                description: `No puedes abonar más del saldo pendiente (${formatCurrency(remaining)})`,
-                variant: 'destructive'
-            });
-            return;
-        }
+        // Support overpayments - surplus handling is now in useCreateLoanPayment hook
+        // if (amount > remaining) {
+        //     toast({
+        //         title: 'Monto excedido',
+        //         description: `No puedes abonar más del saldo pendiente (${formatCurrency(remaining)})`,
+        //         variant: 'destructive'
+        //     });
+        //     return;
+        // }
 
         await createPayment({
             loan_id: paymentDialog.loan.id,
@@ -279,8 +280,8 @@ export default function LoansPage() {
         return isPast(parseISO(loan.due_date));
     };
 
-    const myDebts = loans.filter(l => l.type === 'borrowed');
-    const myReceivables = loans.filter(l => l.type === 'lent');
+    const myDebts = loans.filter(l => l.type === 'borrowed' && Number(l.paid_amount) < Number(l.total_amount));
+    const myReceivables = loans.filter(l => l.type === 'lent' && Number(l.paid_amount) < Number(l.total_amount));
 
     // Only count debts that are disbursed (have payment method)
     const totalRemainingDebt = myDebts
@@ -333,7 +334,7 @@ export default function LoansPage() {
                                         <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona tus préstamos personales y deudas</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-start md:justify-end md:mt-1">
+                                <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-center md:justify-end md:mt-1">
                                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button

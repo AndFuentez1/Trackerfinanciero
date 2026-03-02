@@ -8,7 +8,22 @@ vi.mock('@/features/auth/context/AuthContext', () => ({
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() }))
+  useQueryClient: vi.fn(() => ({
+    invalidateQueries: vi.fn(),
+    getQueryData: vi.fn(),
+    setQueryData: vi.fn(),
+    cancelQueries: vi.fn()
+  })),
+  useQuery: vi.fn(() => ({ data: null, isLoading: false })),
+  useMutation: vi.fn(() => ({ mutate: vi.fn(), mutateAsync: vi.fn() }))
+}));
+
+vi.mock('../useUserConfig', () => ({
+  useUserConfig: vi.fn(() => ({
+    config: { hide_incomplete_alert: false, keep_session_alive: true },
+    updateConfig: vi.fn(),
+    loaded: true
+  }))
 }));
 
 vi.mock('@/shared/hooks/use-toast', () => ({
@@ -78,21 +93,21 @@ vi.mock('../useFinanceMutations', () => ({
 }));
 
 describe('useFinanceDataLogic', () => {
-    it('aggregates data correctly from all injected sub-hooks', () => {
-        const { result } = renderHook(() => useFinanceDataLogic());
-        
-        // Assertions verifying it successfully pulled from mocks
-        expect(result.current.transactions).toHaveLength(1);
-        expect(result.current.transactions[0].id).toBe('t1');
-        
-        expect(result.current.paymentMethods).toHaveLength(1);
-        expect(result.current.currency).toBe('COP');
+  it('aggregates data correctly from all injected sub-hooks', () => {
+    const { result } = renderHook(() => useFinanceDataLogic());
 
-        // Validating calculated values logic
-        expect(result.current.totalBudget).toBe(500);
-        expect(result.current.totalSpentCurrentMonth).toBe(100);
+    // Assertions verifying it successfully pulled from mocks
+    expect(result.current.transactions).toHaveLength(1);
+    expect(result.current.transactions[0].id).toBe('t1');
 
-        // Validating action references
-        expect(typeof result.current.addTransaction).toBe('function');
-    });
+    expect(result.current.paymentMethods).toHaveLength(1);
+    expect(result.current.currency).toBe('COP');
+
+    // Validating calculated values logic
+    expect(result.current.totalBudget).toBe(500);
+    expect(result.current.totalSpentCurrentMonth).toBe(100);
+
+    // Validating action references
+    expect(typeof result.current.addTransaction).toBe('function');
+  });
 });

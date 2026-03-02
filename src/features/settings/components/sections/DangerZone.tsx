@@ -383,7 +383,7 @@ export function DangerZone() {
                             <Button
                                 variant="destructive"
                                 size="sm"
-                                className="w-full sm:w-[220px] font-medium"
+                                className="w-full sm:w-[220px] font-medium hover:bg-destructive/70 hover:text-white"
                             >
                                 Resetear perfil
                             </Button>

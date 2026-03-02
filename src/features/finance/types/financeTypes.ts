@@ -62,3 +62,18 @@ export interface Insight {
     title: string;
     description: string;
 }
+
+export interface FutureExpense {
+    id: string;
+    payment_date: string;
+    amount: number;
+    description: string;
+    category_id: string | null;
+    type: 'expense' | 'income' | 'saving';
+    status: 'pending' | 'paid';
+    is_subscription?: boolean;
+    payment_day?: number;
+    start_date?: string;
+    end_date?: string;
+    frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
+}

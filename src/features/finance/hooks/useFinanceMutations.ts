@@ -10,6 +10,7 @@
  * - Profile/Currency (convert)
  */
 
+import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -27,30 +28,30 @@ export function useFinanceMutations(userId: string | undefined) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    const invalidateFinance = () => {
+    const invalidateFinance = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
-    };
+    }, [queryClient]);
 
-    const invalidateTransactions = () => {
+    const invalidateTransactions = useCallback(() => {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.transactions(userId) });
         queryClient.invalidateQueries({ queryKey: ['finance', 'allTransactions', userId] });
-    };
+    }, [queryClient, userId]);
 
-    const invalidateCategories = () => {
+    const invalidateCategories = useCallback(() => {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.categories(userId) });
-    };
+    }, [queryClient, userId]);
 
-    const invalidatePaymentMethods = () => {
+    const invalidatePaymentMethods = useCallback(() => {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(userId) });
-    };
+    }, [queryClient, userId]);
 
-    const invalidateBudgets = () => {
+    const invalidateBudgets = useCallback(() => {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.budgets(userId) });
-    };
+    }, [queryClient, userId]);
 
     // 1. Transaction Mutations
     const addTransaction = useMutation({
@@ -58,7 +59,7 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             // Remove frontend-only fields like 'installments' if they don't exist in DB
-            const { installments, ...dbData } = txn as Record<string, unknown>;
+            const { installments, ...dbData } = txn as Record<string, unknown> & { installments?: unknown };
 
             const { data, error } = await supabase.from('transactions')
                 .insert([{ ...dbData, user_id: userId }])
@@ -77,8 +78,8 @@ export function useFinanceMutations(userId: string | undefined) {
 
                 if (pm) {
                     const amount = Number(dbData.amount);
-                    const isIncome = dbData.type === 'income';
-                    const newBalance = isIncome ? pm.balance + amount : pm.balance - amount;
+                    const isPositive = ['income', 'transfer_in'].includes(dbData.type as string);
+                    const newBalance = isPositive ? pm.balance + amount : pm.balance - amount;
 
                     await supabase
                         .from('payment_methods')
@@ -160,7 +161,8 @@ export function useFinanceMutations(userId: string | undefined) {
             if (oldTxn && oldTxn.payment_method_id) {
                 const { data: oldPm } = await supabase.from('payment_methods').select('balance').eq('id', oldTxn.payment_method_id).single();
                 if (oldPm) {
-                    const reverseAmount = oldTxn.type === 'income' ? -oldTxn.amount : oldTxn.amount;
+                    const isPositive = ['income', 'transfer_in'].includes(oldTxn.type);
+                    const reverseAmount = isPositive ? -oldTxn.amount : oldTxn.amount;
                     await supabase.from('payment_methods').update({ balance: oldPm.balance + reverseAmount }).eq('id', oldTxn.payment_method_id);
                 }
             }
@@ -172,7 +174,8 @@ export function useFinanceMutations(userId: string | undefined) {
             if (newPmId) {
                 const { data: newPm } = await supabase.from('payment_methods').select('balance').eq('id', newPmId).single();
                 if (newPm) {
-                    const applyAmount = newType === 'income' ? newAmount : -newAmount;
+                    const isPositive = ['income', 'transfer_in'].includes(newType);
+                    const applyAmount = isPositive ? newAmount : -newAmount;
                     await supabase.from('payment_methods').update({ balance: newPm.balance + applyAmount }).eq('id', newPmId);
                 }
             }
@@ -241,7 +244,8 @@ export function useFinanceMutations(userId: string | undefined) {
                     .single();
 
                 if (pm) {
-                    const reverseAmount = txn.type === 'income' ? -txn.amount : txn.amount;
+                    const isPositive = ['income', 'transfer_in'].includes(txn.type);
+                    const reverseAmount = isPositive ? -txn.amount : txn.amount;
                     await supabase
                         .from('payment_methods')
                         .update({ balance: pm.balance + reverseAmount })

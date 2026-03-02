@@ -7,6 +7,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Mocks
 vi.mock('@/features/auth/hooks/useAuth');
+vi.mock('@/features/finance/hooks/useUserConfig', () => ({
+    useUserConfig: vi.fn(() => ({
+        config: { hide_incomplete_alert: false, keep_session_alive: true },
+        updateConfig: vi.fn(),
+        loaded: true
+    }))
+}));
 vi.mock('@/features/finance/hooks/useFinanceData');
 
 // Mock child components
@@ -76,11 +83,8 @@ describe('SettingsPage', () => {
         // We'd expect scrollIntoView to be called.
 
         await waitFor(() => {
-            // Check if the container has the highlight class "scale-105"
-            // The container for categories has id="categories"
-            // eslint-disable-next-line testing-library/no-node-access
-            const container = screen.getByTestId('categories-section').parentElement;
-            // The parent of the section component is the div with id="categories" and classes
+            // Use the component test-id to find the container if it has the id or just check children
+            const container = screen.getByTestId('categories-section').closest('div[id="categories"]');
             expect(container).toHaveClass('scale-105');
         });
     });

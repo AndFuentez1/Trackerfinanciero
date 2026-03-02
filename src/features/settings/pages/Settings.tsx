@@ -176,10 +176,11 @@ export default function ConfiguracionPage() {
                                                 <div className="flex shrink-0 items-center justify-center p-1">
                                                     <Shield className="h-5 w-5 text-primary" strokeWidth={2.5} />
                                                 </div>
-                                                <div className="flex flex-col min-w-0 flex-1 text-left">
+                                                <div className="flex flex-col min-w-0 text-left">
                                                     <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
                                                         Privacidad de Datos
                                                     </p>
+                                                    <p className="text-sm text-muted-foreground mt-1 leading-tight">Uso y protección de tus datos financieros</p>
                                                 </div>
                                             </div>
                                             <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />

@@ -112,9 +112,15 @@ export function useExcelImport({
         const lastCommaIdx = val.lastIndexOf(',');
         const lastPeriodIdx = val.lastIndexOf('.');
 
-        if (lastCommaIdx === -1 && lastPeriodIdx === -1) return val;
-        if (lastCommaIdx > lastPeriodIdx) return val.replace(/\./g, '').replace(/,/, '.');
-        if (lastPeriodIdx > lastCommaIdx) return val.replace(/,/g, '');
+        if (lastCommaIdx === -1 && lastPeriodIdx === -1) {
+          return val;
+        }
+        if (lastCommaIdx > lastPeriodIdx) {
+          return val.replace(/\./g, '').replace(/,/, '.');
+        }
+        if (lastPeriodIdx > lastCommaIdx) {
+          return val.replace(/,/g, '');
+        }
 
         if (lastCommaIdx !== -1) {
           const beforeComma = val.substring(0, lastCommaIdx).replace(/\./g, '');
@@ -136,9 +142,15 @@ export function useExcelImport({
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (!date) errors.push('Fecha inválida');
-      if (!description) errors.push('Sin descripción');
-      if (isNaN(amount) || amount === 0) errors.push('Monto inválido');
+      if (!date) {
+        errors.push('Fecha inválida');
+      }
+      if (!description) {
+        errors.push('Sin descripción');
+      }
+      if (isNaN(amount) || amount === 0) {
+        errors.push('Monto inválido');
+      }
 
       if (absAmount > MAX_AMOUNT) {
         warnings.push(`Monto excesivo (${absAmount.toLocaleString()}) - Se truncará a ${MAX_AMOUNT.toLocaleString()} para revisión`);

@@ -32,29 +32,29 @@ const AUTH_REASONS = new Set([
     'accessNotConfigured',
 ]);
 
-const extractGmailError = (error: any) => {
-    const status = error?.code || error?.response?.status;
-    const reason = error?.response?.data?.error?.errors?.[0]?.reason;
-    const message = error?.response?.data?.error?.message || error?.message;
-    const retryAfter = error?.response?.headers?.['retry-after'];
+const extractGmailError = (error: unknown) => {
+    const status = (error as any)?.code || (error as any)?.response?.status;
+    const reason = (error as any)?.response?.data?.error?.errors?.[0]?.reason;
+    const message = (error as Record<string, any>)?.response?.data?.error?.message || (error as Record<string, any>)?.message;
+    const retryAfter = (error as any)?.response?.headers?.['retry-after'];
 
     // Auth token errors (like 'invalid_grant') come as string in data.error instead of an array of errors
-    const oauthError = typeof error?.response?.data?.error === 'string' ? error.response.data.error : null;
+    const oauthError = typeof (error as Record<string, any>)?.response?.data?.error === 'string' ? (error as Record<string, any>).response.data.error : null;
 
-    return { status, reason: reason || oauthError, message, retryAfter };
+    return { status, reason: (reason || oauthError) as string, message: message as string, retryAfter: retryAfter as string };
 };
 
-const isQuotaError = (error: any) => {
+const isQuotaError = (error: unknown) => {
     const { status, reason } = extractGmailError(error);
     return status === 429 || (reason && QUOTA_REASONS.has(reason));
 };
 
-const isAuthError = (error: any) => {
+const isAuthError = (error: unknown) => {
     const { status, reason } = extractGmailError(error);
     return status === 401 || (reason && AUTH_REASONS.has(reason));
 };
 
-const isAccessNotConfigured = (error: any) => {
+const isAccessNotConfigured = (error: unknown) => {
     const { reason } = extractGmailError(error);
     return reason === 'accessNotConfigured';
 };
@@ -78,7 +78,9 @@ const formatStoreLabel = (store: string) => {
 };
 
 const formatCategoryLabel = (category: string) => {
-    if (!category) { return 'Otros'; }
+    if (!category) {
+        return 'Otros';
+    }
     return category.toString().trim();
 };
 
@@ -128,7 +130,7 @@ const buildInvoiceGroups = (
     const targetTotal = Number(invoiceTotal || 0);
 
     // 1. Agrupar por categoría
-    let groups = groupProductsByCategory(store, products)
+    const groups = groupProductsByCategory(store, products)
         .filter(group => Number(group.amount) > 0);
 
     const totalFromGroups = groups.reduce((sum, g) => sum + g.amount, 0);
@@ -138,7 +140,7 @@ const buildInvoiceGroups = (
         const diff = targetTotal - totalFromGroups;
 
         // Intentar agregar la diferencia al grupo "Otros"
-        let otrosGroup = groups.find(g => g.category === 'Otros');
+        const otrosGroup = groups.find(g => g.category === 'Otros');
         if (otrosGroup) {
             otrosGroup.amount = Number((otrosGroup.amount + diff).toFixed(2));
         } else {
@@ -151,7 +153,9 @@ const buildInvoiceGroups = (
         }
     }
 
-    if (groups.length > 0) { return groups; }
+    if (groups.length > 0) {
+        return groups;
+    }
 
     // 3. Fallback si no hay productos clasificados
     const productsTotal = products.reduce((sum, product) => sum + Number(product.total || 0), 0);
@@ -183,10 +187,17 @@ export const overrideProductsCategory = (products: ClassifiedProduct[], category
         return product; // Keep the original rule-based categorization
     });
 
-const shouldNotifyTelegram = (telegramConfig: any, stepOfFailure: 'rules' | 'ai' | null) => {
-    if (!telegramConfig?.botToken || !telegramConfig?.chatId || !stepOfFailure) { return false; }
-    if (stepOfFailure === 'rules') { return Boolean(telegramConfig.notifyRulesExceptions); }
-    if (stepOfFailure === 'ai') { return Boolean(telegramConfig.notifyAiExceptions); }
+const shouldNotifyTelegram = (telegramConfig: unknown, stepOfFailure: 'rules' | 'ai' | null) => {
+    const config = telegramConfig as Record<string, unknown>;
+    if (!config?.botToken || !config?.chatId || !stepOfFailure) {
+        return false;
+    }
+    if (stepOfFailure === 'rules') {
+        return Boolean(config.notifyRulesExceptions);
+    }
+    if (stepOfFailure === 'ai') {
+        return Boolean(config.notifyAiExceptions);
+    }
     return false;
 };
 
@@ -225,14 +236,14 @@ export async function processGmailInvoices(req: Request, res: Response) {
             });
         }
 
-        const results: any[] = [];
+        const results: unknown[] = [];
         const approvedMessageIds: string[] = [];
         let processedCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
 
         // 2. Procesar cada factura
-        for (const email of emails) {
+        for (const email of emails as { messageId: string, xmlContent: string }[]) {
             try {
                 // Verificar duplicados
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
@@ -275,8 +286,9 @@ export async function processGmailInvoices(req: Request, res: Response) {
                         if (finalClassification.categoria === 'Otros') {
                             stepOfFailure = 'ai';
                         }
-                    } catch (err: any) {
-                        logger.warn(`⚠️ Falla en IA (continuando con clasificación manual): ${err.message}`);
+                    } catch (err: unknown) {
+                        const errMsg = err instanceof Error ? err.message : String(err);
+                        logger.warn(`⚠️ Falla en IA (continuando con clasificación manual): ${errMsg}`);
                         // Falló IA, nos quedamos con "Otros" de local
                         stepOfFailure = 'ai';
                     }
@@ -310,17 +322,19 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     } else if (stepOfFailure === 'ai') {
                         msg = `🤖 *Revisión Manual (IA)*\n\nAgente AI no pudo clasificar o falló:\n🛒 ${invoiceData.tienda}\n💰 $${invoiceData.total.toLocaleString()}\n\n_Requiere aprobación manual._`;
                     }
-                    if (msg) { await sendTelegramMessage(userId, msg); }
+                    if (msg) {
+                        await sendTelegramMessage(userId, msg);
+                    }
                 }
 
-                const pendingRows: any[] = [];
+                const pendingRows: unknown[] = [];
                 if (!shouldNotify) {
                     const source = 'ai';
                     for (const group of groups) {
                         // 7. Resolver category_id (Match entre texto de categoría y ID de DB)
                         const categoryId = await getCategoryId(group.category, userId);
 
-                        // Si no hay categoría (ni siquiera el fallback), advertir pero usar null 
+                        // Si no hay categoría (ni siquiera el fallback), advertir pero usar null
                         // (o dejar que la DB falle si es NOT NULL, siguiendo el plan de asegurar el match primero)
                         if (!categoryId) {
                             logger.warn(`⚠️  No se pudo resolver category_id para: ${group.category}`);
@@ -361,10 +375,10 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     products: resolvedProducts
                 });
 
-            } catch (innerError: any) {
+            } catch (innerError: unknown) {
                 logger.error(`❌ Error procesando email ${email.messageId}:`, innerError);
                 errorCount++;
-                const errorMessage = innerError?.message || 'Error procesando factura';
+                const errorMessage = innerError instanceof Error ? innerError.message : 'Error procesando factura';
                 results.push({
                     messageId: email.messageId,
                     status: 'error',
@@ -384,11 +398,12 @@ export async function processGmailInvoices(req: Request, res: Response) {
             errors: errorCount,
             results,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('❌ Error en procesamiento:', error);
+        const errMessage = error instanceof Error ? error.message : 'Error desconocido';
         res.status(500).json({
             error: 'Error procesando facturas',
-            details: error.message,
+            details: errMessage,
         });
     }
 }
@@ -412,7 +427,7 @@ export async function handleGmailWebhook(req: Request, res: Response) {
         // TODO: Implementar procesamiento automático
         // Por ahora, solo confirmar recepción
         res.status(200).json({ message: 'Webhook recibido' });
-    } catch (error) {
+    } catch (error: unknown) {
         logger.error('❌ Error en webhook:', error);
         res.status(500).json({ error: 'Error procesando webhook' });
     }
@@ -434,7 +449,7 @@ export async function listPendingInvoices(req: Request, res: Response) {
             count: invoices.length,
             invoices,
         });
-    } catch (error) {
+    } catch (error: unknown) {
         logger.error('❌ Error listando facturas:', error);
         res.status(500).json({ error: 'Error obteniendo facturas' });
     }
@@ -444,10 +459,10 @@ export async function listPendingInvoices(req: Request, res: Response) {
  * Busca facturas en el historial de Gmail
  */
 export async function searchGmailHistory(req: Request, res: Response) {
-    const { userId } = req.query as any;
+    const { userId } = req.query as { userId: string };
     try {
-        const { markRead } = req.query as any;
-        let { days, maxResults } = req.query as any;
+        const { markRead } = req.query as Record<string, unknown>;
+        const { days, maxResults } = req.query as Record<string, unknown>;
 
         if (!userId) {
             return res.status(400).json({ error: 'userId requerido' });
@@ -481,7 +496,7 @@ export async function searchGmailHistory(req: Request, res: Response) {
         const results = await gmailService.searchHistoricalMessages(validDays, limit);
         const messageIds = results.map(r => r.id);
         const statusMap = await fetchMessageStatuses(userId, messageIds);
-        const registeredSet = await fetchRegisteredMessageIds(userId, messageIds);
+        await fetchRegisteredMessageIds(userId, messageIds);
 
         let enriched = results.map(r => ({
             ...r,
@@ -503,7 +518,7 @@ export async function searchGmailHistory(req: Request, res: Response) {
             count: enriched.length,
             results: enriched
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         const details = extractGmailError(error);
         if (isQuotaError(error)) {
             logger.warn('⚠️ Límite Gmail API alcanzado:', details);
@@ -527,11 +542,11 @@ export async function searchGmailHistory(req: Request, res: Response) {
                 reason: details.reason
             });
         }
-        const errorDetails = translateErrorMessage(details.message || error.message || 'Error desconocido');
+        const errorDetails = translateErrorMessage(details.message || (error instanceof Error ? error.message : 'Error desconocido'));
         logger.error(`❌ Error buscando en historial para user ${userId}:`, {
             message: errorDetails,
-            stack: error.stack,
-            code: error.code
+            stack: error instanceof Error ? error.stack : 'N/A',
+            code: (error as { code?: string })?.code
         });
 
         res.status(500).json({
@@ -579,13 +594,13 @@ export async function importGmailBatch(req: Request, res: Response) {
             return res.json({ message: 'No se encontraron facturas procesables en la selección', processed: 0 });
         }
 
-        const results: any[] = [];
+        const results: unknown[] = [];
         const approvedMessageIds: string[] = [];
         let processedCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
 
-        for (const email of emails) {
+        for (const email of emails as { messageId: string, xmlContent: string }[]) {
             try {
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
                 if (isDuplicate) {
@@ -612,8 +627,10 @@ export async function importGmailBatch(req: Request, res: Response) {
                             productNames: invoiceData.productNames,
                         });
                         finalClassification = { ...localClassification, ...aiClassification };
-                        if (finalClassification.categoria === 'Otros') { stepOfFailure = 'ai'; }
-                    } catch (err) {
+                        if (finalClassification.categoria === 'Otros') {
+                            stepOfFailure = 'ai';
+                        }
+                    } catch (_err: unknown) {
                         stepOfFailure = 'ai';
                     }
                 } else if (finalClassification.categoria === 'Otros') {
@@ -645,11 +662,13 @@ export async function importGmailBatch(req: Request, res: Response) {
                     } else if (stepOfFailure === 'ai') {
                         msg = `🤖 *Revisión Manual (IA - Import)*\n\nFallo en clasificación:\n🛒 ${invoiceData.tienda}\n💰 $${invoiceData.total.toLocaleString()}`;
                     }
-                    if (msg) { await sendTelegramMessage(userId, msg); }
+                    if (msg) {
+                        await sendTelegramMessage(userId, msg);
+                    }
                 }
 
-                const pendingRows: any[] = [];
-                const reviewGroups: any[] = [];
+                const pendingRows: unknown[] = [];
+                const reviewGroups: unknown[] = [];
                 const source = stepOfFailure ? 'ai' : 'gmail';
                 for (const group of groups) {
                     // Resolver category_id (Match entre texto de categoría y ID de DB)
@@ -716,10 +735,16 @@ export async function importGmailBatch(req: Request, res: Response) {
                     groups: responseGroups,
                     products: resolvedProducts
                 });
-            } catch (innerError: any) {
-                logger.error(`❌ Error importando email ${email.messageId}:`, innerError);
+            } catch (innerError: unknown) {
+                try {
+                    const errMsg = innerError instanceof Error ? innerError.message : String(innerError);
+                    console.error(`❌ Error auto-saving refreshed Gmail tokens for user ${userId}:`, errMsg);
+                } catch (err: unknown) {
+                    const errMsg = err instanceof Error ? err.message : String(err);
+                    console.error(`❌ Error auto-saving refreshed Gmail tokens for user ${userId}:`, errMsg);
+                }
                 errorCount++;
-                const errorMessage = innerError?.message || 'Error importando factura';
+                const errorMessage = innerError instanceof Error ? innerError.message : 'Error importando factura';
                 results.push({
                     messageId: email.messageId,
                     status: 'error',
@@ -739,7 +764,7 @@ export async function importGmailBatch(req: Request, res: Response) {
             errors: errorCount,
             results
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         const details = extractGmailError(error);
         if (isQuotaError(error)) {
             logger.warn('⚠️ Límite Gmail API alcanzado (lote):', details);
@@ -764,7 +789,7 @@ export async function importGmailBatch(req: Request, res: Response) {
             });
         }
         logger.error('❌ Error en importación por lote:', error);
-        res.status(500).json({ error: 'Error procesando lote', details: details.message || error.message });
+        res.status(500).json({ error: 'Error procesando lote', details: details.message || (error as Error).message });
     }
 }
 

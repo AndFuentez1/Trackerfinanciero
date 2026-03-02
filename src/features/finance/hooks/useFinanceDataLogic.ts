@@ -2,7 +2,6 @@ import { useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/hooks/use-toast';
-import { queryKeys } from '@/core/api/queryKeys';
 
 // Import specialized hooks
 import { useFinanceQueries } from './useFinanceQueries';
@@ -42,7 +41,7 @@ export type {
 
 export function useFinanceDataLogic() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Removed unused
   const queryClient = useQueryClient();
   const { config, updateConfig } = useUserConfig(user?.id, user?.email);
 
@@ -241,25 +240,61 @@ export function useFinanceDataLogic() {
     totalBudget: tx.budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
     totalSpentCurrentMonth: tx.budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
   }), [
-    tx,
+    tx.transactions,
+    tx.allTransactions,
+    tx.rangeTransactions,
+    tx.budgetsWithSpending,
+    tx.insights,
+    tx.summary,
+    tx.filteredSummary,
+    tx.expensesByCategory,
+    tx.yieldStatistics,
+    tx.orphanedTransactions,
+    tx.totalTransactionsCount,
+    tx.transactionsLoading,
+    tx.hasMore,
+    budgets,
+    paymentMethods,
+    categories,
+    pendingInvoices,
     queriesLoading,
     catsLoading,
     pmLoading,
     budgetsLoading,
     profileLoading,
     pendingInvoicesLoading,
-    pendingInvoices,
-    paymentMethods,
-    categories,
-    ui,
-    profileMgmt,
-    theme,
-    mut,
-    config,
+    ui.loading,
+    ui.manualLoading,
+    ui.actionLoading,
+    ui.dateFilter,
+    ui.sortConfig,
+    ui.page,
+    ui.lastUpdated,
+    ui.onboardingDecision,
+    ui.hasPendingImport,
+    ui.welcomeCompleted,
+    ui.highlightedCard,
+    ui.importProgress,
+    ui.pendingImportData,
+    ui.startImport,
+    ui.cancelImport,
+    ui.setImportProgress,
+    ui.updateFilter,
+    ui.setSortConfig,
+    ui.setPage,
+    ui.setHighlightedCard,
+    ui.setOnboardingDecision,
+    profileMgmt.currency,
+    profileMgmt.decimalPlaces,
+    theme.baseColor,
+    theme.themeVars,
+    theme.themeOptions,
+    theme.setBaseColor,
+    config.keep_session_alive,
     updateConfig,
     refreshData,
     confirmPendingImport,
     resetOperationalData,
-    loadMore
+    loadMore,
   ]);
 }

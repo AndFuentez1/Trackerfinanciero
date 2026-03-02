@@ -1,0 +1,807 @@
+
+> vite_react_shadcn_ts@0.0.0 lint
+> eslint .
+
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\src\controllers\__tests__\invoice.controller.test.ts
+  2:1  warning  Imports "ClassifiedProduct" are only used as type  @typescript-eslint/consistent-type-imports
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\src\controllers\auth.controller.ts
+  114:11  warning  'existingTokens' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\src\controllers\invoice.controller.ts
+   35:35   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   36:45   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   36:85   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   37:45   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   38:46   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   38:112  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   39:49   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   47:30   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   52:29   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   57:39   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  191:53   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  499:15   warning  'registeredSet' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  633:30   warning  'err' is defined but never used                     @typescript-eslint/no-unused-vars
+  767:21   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  808:21   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  826:21   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  843:21   error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\src\services\gmail.service.ts
+  108:35  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  108:41  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  109:22  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  110:29  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  155:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  233:45  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  257:28  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  270:44  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  303:21  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  319:45  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  338:37  warning  'userId' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  442:23  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\src\services\supabase.service.ts
+    3:1  warning  All imports in the declaration are only used as types. Use `import type`                               @typescript-eslint/consistent-type-imports
+  144:9  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\backend\test_gmail.ts
+  21:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  25:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  31:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  35:76  warning  'code' is already declared in the upper scope on line 34 column 19                 @typescript-eslint/no-shadow
+  41:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  43:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  48:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  51:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  53:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  54:32  error    Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  55:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\App.tsx
+   67:79   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:79   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:107  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\api\gmailErrorHandler.ts
+  30:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\api\queryKeys.ts
+  10:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\hooks\useIdleTimer.ts
+   18:7   warning  'DEFAULT_EVENTS' is assigned a value but never used                     @typescript-eslint/no-unused-vars
+  134:23  warning  'elapsed' is already declared in the upper scope on line 115 column 15  @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\utils\analytics.ts
+  2:18  warning  '_args' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\utils\cn.test.ts
+   3:8   warning  'React' is defined but never used         @typescript-eslint/no-unused-vars
+  38:59  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\core\utils\onboardingGate.test.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   9:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\auth\components\SetPasswordDialog.tsx
+  55:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\auth\context\AuthContext.tsx
+   49:33  warning  'session' is already declared in the upper scope on line 25 column 12                                                           @typescript-eslint/no-shadow
+   73:21  warning  'session' is already declared in the upper scope on line 25 column 12                                                           @typescript-eslint/no-shadow
+  138:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  147:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\auth\hooks\useInactivityLogout.ts
+  2:10  warning  'supabase' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\auth\pages\Auth.tsx
+  14:10  warning  'calculateProportionalTheme' is defined but never used  @typescript-eslint/no-unused-vars
+  50:13  error    Empty block statement                                   no-empty
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\dashboard\components\EvolutionChart.tsx
+   22:1   warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+  262:9   error    'total' is never reassigned. Use 'const' instead                          prefer-const
+  451:25  error    'label' is never reassigned. Use 'const' instead                          prefer-const
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\dashboard\components\ExpenseChart.tsx
+    7:10  warning  'Select' is defined but never used                    @typescript-eslint/no-unused-vars
+    7:18  warning  'SelectContent' is defined but never used             @typescript-eslint/no-unused-vars
+    7:33  warning  'SelectItem' is defined but never used                @typescript-eslint/no-unused-vars
+    7:45  warning  'SelectTrigger' is defined but never used             @typescript-eslint/no-unused-vars
+    7:60  warning  'SelectValue' is defined but never used               @typescript-eslint/no-unused-vars
+    8:10  warning  'Button' is defined but never used                    @typescript-eslint/no-unused-vars
+    9:10  warning  'ChevronDown' is defined but never used               @typescript-eslint/no-unused-vars
+   11:3   warning  'DropdownMenu' is defined but never used              @typescript-eslint/no-unused-vars
+   12:3   warning  'DropdownMenuContent' is defined but never used       @typescript-eslint/no-unused-vars
+   13:3   warning  'DropdownMenuCheckboxItem' is defined but never used  @typescript-eslint/no-unused-vars
+   14:3   warning  'DropdownMenuTrigger' is defined but never used       @typescript-eslint/no-unused-vars
+   15:3   warning  'DropdownMenuLabel' is defined but never used         @typescript-eslint/no-unused-vars
+   16:3   warning  'DropdownMenuSeparator' is defined but never used     @typescript-eslint/no-unused-vars
+   34:3   warning  'selectedMonth' is defined but never used             @typescript-eslint/no-unused-vars
+   35:3   warning  'onSelectedMonthChange' is defined but never used     @typescript-eslint/no-unused-vars
+   38:3   warning  'availableYears' is defined but never used            @typescript-eslint/no-unused-vars
+   39:3   warning  'onSelectAllYears' is defined but never used          @typescript-eslint/no-unused-vars
+   44:9   warning  'availableMonths' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   60:9   warning  'toggleYear' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   65:36  error    Expected { after 'if' condition                       curly
+  130:11  warning  'symbol' is assigned a value but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\dashboard\components\SankeyChart.tsx
+    2:13  warning  'd3' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+    3:1   warning  Imports "SankeyNode" are only used as type                                                                  @typescript-eslint/consistent-type-imports
+    3:40  warning  'SankeyGraph' is defined but never used                                                                     @typescript-eslint/no-unused-vars
+    3:65  warning  'SankeyLink' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+    5:1   warning  All imports in the declaration are only used as types. Use `import type`                                    @typescript-eslint/consistent-type-imports
+   90:11  warning  'rawTotalIncome' is already declared in the upper scope on line 54 column 25                                @typescript-eslint/no-shadow
+   91:11  warning  'rawTotalExpense' is already declared in the upper scope on line 54 column 41                               @typescript-eslint/no-shadow
+  101:77  warning  'k' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  102:79  warning  'k' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  366:6   error    React Hook useMemo has a missing dependency: 'drillDown'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\dashboard\components\SummaryTab.tsx
+    6:10   warning  'InsightsPanel' is defined but never used             @typescript-eslint/no-unused-vars
+   13:129  warning  'FilterX' is defined but never used                   @typescript-eslint/no-unused-vars
+   26:10   warning  'format' is defined but never used                    @typescript-eslint/no-unused-vars
+   26:18   warning  'startOfWeek' is defined but never used               @typescript-eslint/no-unused-vars
+   26:31   warning  'endOfWeek' is defined but never used                 @typescript-eslint/no-unused-vars
+   26:42   warning  'startOfMonth' is defined but never used              @typescript-eslint/no-unused-vars
+   26:56   warning  'endOfMonth' is defined but never used                @typescript-eslint/no-unused-vars
+   26:68   warning  'startOfYear' is defined but never used               @typescript-eslint/no-unused-vars
+   26:81   warning  'endOfYear' is defined but never used                 @typescript-eslint/no-unused-vars
+   27:10   warning  'es' is defined but never used                        @typescript-eslint/no-unused-vars
+   30:10   warning  'Popover' is defined but never used                   @typescript-eslint/no-unused-vars
+   30:19   warning  'PopoverContent' is defined but never used            @typescript-eslint/no-unused-vars
+   30:35   warning  'PopoverTrigger' is defined but never used            @typescript-eslint/no-unused-vars
+   33:10   warning  'Calendar' is defined but never used                  @typescript-eslint/no-unused-vars
+   34:10   warning  'Select' is defined but never used                    @typescript-eslint/no-unused-vars
+   34:18   warning  'SelectContent' is defined but never used             @typescript-eslint/no-unused-vars
+   34:33   warning  'SelectItem' is defined but never used                @typescript-eslint/no-unused-vars
+   34:45   warning  'SelectTrigger' is defined but never used             @typescript-eslint/no-unused-vars
+   34:60   warning  'SelectValue' is defined but never used               @typescript-eslint/no-unused-vars
+   35:10   warning  'cn' is defined but never used                        @typescript-eslint/no-unused-vars
+   67:3    warning  'budgets' is defined but never used                   @typescript-eslint/no-unused-vars
+   69:3    warning  'summary' is defined but never used                   @typescript-eslint/no-unused-vars
+   70:3    warning  'expensesByCategory' is defined but never used        @typescript-eslint/no-unused-vars
+   71:3    warning  'insights' is defined but never used                  @typescript-eslint/no-unused-vars
+   72:3    warning  'onDeleteBudget' is defined but never used            @typescript-eslint/no-unused-vars
+   77:3    warning  'updateFilter' is defined but never used              @typescript-eslint/no-unused-vars
+  102:9    warning  'availableMonths' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  139:37   error    Expected { after 'if' condition                       curly
+  188:30   error    Expected { after 'if' condition                       curly
+  191:11   error    'items' is never reassigned. Use 'const' instead      prefer-const
+  209:9    warning  'isDateFiltered' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\dashboard\pages\Dashboard.tsx
+  15:22  warning  'Wallet' is defined but never used                          @typescript-eslint/no-unused-vars
+  25:5   warning  'transactions' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  40:5   warning  'setOnboardingDecision' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  41:5   warning  'startImport' is assigned a value but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\components\AddBudgetDialog.tsx
+   6:10  warning  'Input' is defined but never used                       @typescript-eslint/no-unused-vars
+   8:10  warning  'Label' is defined but never used                       @typescript-eslint/no-unused-vars
+  62:9   warning  'queryClient' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  65:9   warning  'getCurrencySymbol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\components\BudgetTotalCard.tsx
+   1:29  warning  'CardHeader' is defined but never used                    @typescript-eslint/no-unused-vars
+   1:41  warning  'CardTitle' is defined but never used                     @typescript-eslint/no-unused-vars
+   4:10  warning  'cn' is defined but never used                            @typescript-eslint/no-unused-vars
+  16:40  warning  'totalRemaining' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  17:13  warning  'formatCurrencySmall' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\components\CategoryBudgetList.tsx
+    2:15   warning  'Budget' is defined but never used        @typescript-eslint/no-unused-vars
+   94:22   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:38   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:39   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:133  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:39   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\components\FutureExpensesList.tsx
+   18:10  warning  'PaymentMethod' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+   25:1   warning  All imports in the declaration are only used as types. Use `import type`                                          @typescript-eslint/consistent-type-imports
+   78:11  warning  'getStepValue' is assigned a value but never used                                                                 @typescript-eslint/no-unused-vars
+   85:11  warning  'dynamicPadding' is assigned a value but never used                                                               @typescript-eslint/no-unused-vars
+  140:8   error    React Hook useEffect has a missing dependency: 'fetchExpenses'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  350:18  warning  'error' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  370:18  warning  'error' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\components\IncomeCard.tsx
+   1:29  warning  'CardHeader' is defined but never used                    @typescript-eslint/no-unused-vars
+   1:41  warning  'CardTitle' is defined but never used                     @typescript-eslint/no-unused-vars
+   3:10  warning  'Select' is defined but never used                        @typescript-eslint/no-unused-vars
+   3:18  warning  'SelectContent' is defined but never used                 @typescript-eslint/no-unused-vars
+   3:33  warning  'SelectItem' is defined but never used                    @typescript-eslint/no-unused-vars
+   3:45  warning  'SelectTrigger' is defined but never used                 @typescript-eslint/no-unused-vars
+   3:60  warning  'SelectValue' is defined but never used                   @typescript-eslint/no-unused-vars
+   7:10  warning  'cn' is defined but never used                            @typescript-eslint/no-unused-vars
+   9:20  warning  'isWithinInterval' is defined but never used              @typescript-eslint/no-unused-vars
+  16:38  warning  'setBudgetPeriod' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  16:55  warning  'availableYears' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  17:13  warning  'formatCurrencySmall' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  60:11  warning  'selectedMonth' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  61:11  warning  'selectedYear' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  66:11  warning  'monthOptions' is assigned a value but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\budgets\pages\Budgets.tsx
+   6:10  warning  'format' is defined but never used                     @typescript-eslint/no-unused-vars
+   7:10  warning  'es' is defined but never used                         @typescript-eslint/no-unused-vars
+   8:26  warning  'StandardHeaderSkeleton' is defined but never used     @typescript-eslint/no-unused-vars
+   8:50  warning  'CardSkeleton' is defined but never used               @typescript-eslint/no-unused-vars
+   8:64  warning  'CategoriesGridSkeleton' is defined but never used     @typescript-eslint/no-unused-vars
+   8:88  warning  'PulseBlock' is defined but never used                 @typescript-eslint/no-unused-vars
+   9:20  warning  'LogOut' is defined but never used                     @typescript-eslint/no-unused-vars
+  10:10  warning  'Button' is defined but never used                     @typescript-eslint/no-unused-vars
+  35:11  warning  'navigate' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  41:9   warning  'refreshBudgets' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  43:9   warning  'lastModification' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\components\CashFlowFilters.tsx
+  27:3  warning  'loading' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\components\LineChartDemo.tsx
+  76:48  error  Expected '===' and instead saw '=='  eqeqeq
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\hooks\useCashFlow.ts
+  11:1  warning  Imports "FutureExpense" and "MonthlySnapshot" are only used as type  @typescript-eslint/consistent-type-imports
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\pages\CashFlow.tsx
+   9:10  warning  'CashFlowTimeline' is defined but never used   @typescript-eslint/no-unused-vars
+  31:17  warning  'setRange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\utils\cashFlowCalculations.test.ts
+    1:32   warning  'vi' is defined but never used               @typescript-eslint/no-unused-vars
+    2:64   warning  'MonthlySnapshot' is defined but never used  @typescript-eslint/no-unused-vars
+    4:28   warning  'PaymentMethod' is defined but never used    @typescript-eslint/no-unused-vars
+    4:43   warning  'Budget' is defined but never used           @typescript-eslint/no-unused-vars
+    6:15   warning  'SavingsAccount' is defined but never used   @typescript-eslint/no-unused-vars
+   66:126  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+   80:123  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  100:133  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  142:137  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  166:137  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  170:150  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  187:168  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  188:152  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  206:168  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  207:152  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\cashflow\utils\cashFlowCalculations.ts
+  144:67   warning  'budgets' is assigned a value but never used                   @typescript-eslint/no-unused-vars
+  144:104  warning  'incomeMode' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  148:11   warning  'isFutureRelativeToIncome' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\categories\components\AddCategoryDialog.tsx
+  15:21  warning  'Check' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  64:8   error    React Hook useEffect has a missing dependency: 'availablePool'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\constants\categoryConstants.ts
+  7:15  warning  'TransactionType' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\context\FinanceContext.tsx
+  16:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\__tests__\useFinanceMutations.test.tsx
+    1:22  warning  'waitFor' is defined but never used       @typescript-eslint/no-unused-vars
+   37:54  warning  'table' is defined but never used         @typescript-eslint/no-unused-vars
+   43:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   75:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:35  warning  'table' is defined but never used         @typescript-eslint/no-unused-vars
+  141:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\__tests__\useFinanceQueries.test.tsx
+  49:32  warning  'field' is defined but never used         @typescript-eslint/no-unused-vars
+  49:39  warning  'val' is defined but never used           @typescript-eslint/no-unused-vars
+  59:58  error    Expected { after 'if' condition           curly
+  60:53  error    Expected { after 'if' condition           curly
+  61:50  error    Expected { after 'if' condition           curly
+  65:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useBudgetsData.ts
+  1:40  warning  'useCallback' is defined but never used      @typescript-eslint/no-unused-vars
+  5:10  warning  'useQuery' is defined but never used         @typescript-eslint/no-unused-vars
+  5:20  warning  'useMutation' is defined but never used      @typescript-eslint/no-unused-vars
+  5:33  warning  'useQueryClient' is defined but never used   @typescript-eslint/no-unused-vars
+  6:10  warning  'queryKeys' is defined but never used        @typescript-eslint/no-unused-vars
+  7:15  warning  'Database' is defined but never used         @typescript-eslint/no-unused-vars
+  9:26  warning  'TransactionType' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useFinanceDataLogic.ts
+    4:10  warning  'useToast' is defined but never used                                                                                                @typescript-eslint/no-unused-vars
+  242:7   error    React Hook useMemo has missing dependencies: 'mut', 'profileMgmt', and 'theme'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useFinanceMutations.ts
+   21:5   warning  'PaymentMethodType' is defined but never used           @typescript-eslint/no-unused-vars
+   31:11  warning  'invalidateFinance' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   62:21  warning  'installments' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  145:21  warning  'installments' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  601:25  warning  'installments' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  601:39  warning  'created_at' is assigned a value but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useLoansLogic.ts
+  4:10  warning  'useFinanceData' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useSavingsLogic.ts
+    4:10  warning  'useFinanceData' is defined but never used                            @typescript-eslint/no-unused-vars
+   24:9   warning  'calculatePreviousSavingsBalance' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  129:19  warning  'error' is already declared in the upper scope on line 21 column 10   @typescript-eslint/no-shadow
+  166:13  warning  'error' is already declared in the upper scope on line 21 column 10   @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useTheme.ts
+  27:39  error  Expected { after 'if' condition                                                                               curly
+  39:28  error  Expected { after 'if' condition                                                                               curly
+  45:8   error  React Hook useEffect has a missing dependency: 'baseColor'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useTransactionData.ts
+   17:5   warning  'TransactionType' is defined but never used                                                                                                                                                        @typescript-eslint/no-unused-vars
+   21:5   warning  'Insight' is defined but never used                                                                                                                                                                @typescript-eslint/no-unused-vars
+   42:11  warning  'queryClient' is assigned a value but never used                                                                                                                                                   @typescript-eslint/no-unused-vars
+  159:11  error    The 'transactions' conditional could make the dependencies of useMemo Hook (at line 163) change on every render. To fix this, wrap the initialization of 'transactions' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\hooks\useUserConfig.ts
+  35:18  error  Expected { after 'if' condition  curly
+  70:18  error  Expected { after 'if' condition  curly
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\loans\context\LoansContext.tsx
+  16:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\loans\hooks\useLoans.ts
+   42:30  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+   57:42  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  117:20  error    Expected { after 'if' condition                   curly
+  121:30  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  141:38  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  158:30  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  166:34  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  221:17  warning  'paid_amount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  221:30  warning  'payments' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  221:68  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  224:30  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  242:30  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\loans\pages\Loans.tsx
+   10:10  warning  'CURRENCIES' is defined but never used          @typescript-eslint/no-unused-vars
+   14:10  warning  'Card' is defined but never used                @typescript-eslint/no-unused-vars
+   14:16  warning  'CardContent' is defined but never used         @typescript-eslint/no-unused-vars
+   14:29  warning  'CardHeader' is defined but never used          @typescript-eslint/no-unused-vars
+   14:41  warning  'CardTitle' is defined but never used           @typescript-eslint/no-unused-vars
+   22:5   warning  'DialogFooter' is defined but never used        @typescript-eslint/no-unused-vars
+   31:10  warning  'Progress' is defined but never used            @typescript-eslint/no-unused-vars
+   32:10  warning  'Wallet' is defined but never used              @typescript-eslint/no-unused-vars
+   32:18  warning  'Trash2' is defined but never used              @typescript-eslint/no-unused-vars
+   32:26  warning  'Edit2' is defined but never used               @typescript-eslint/no-unused-vars
+   32:44  warning  'ArrowDownCircle' is defined but never used     @typescript-eslint/no-unused-vars
+   32:61  warning  'ArrowUpCircle' is defined but never used       @typescript-eslint/no-unused-vars
+   32:76  warning  'Calendar' is defined but never used            @typescript-eslint/no-unused-vars
+   32:99  warning  'Percent' is defined but never used             @typescript-eslint/no-unused-vars
+   35:10  warning  'CurrencyDisplay' is defined but never used     @typescript-eslint/no-unused-vars
+   38:10  warning  'format' is defined but never used              @typescript-eslint/no-unused-vars
+   39:10  warning  'es' is defined but never used                  @typescript-eslint/no-unused-vars
+   43:10  warning  'Badge' is defined but never used               @typescript-eslint/no-unused-vars
+   58:13  warning  'toast' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   60:65  warning  'dp' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  190:15  warning  'remaining' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\payment-methods\components\AddPaymentMethodDialog.tsx
+  16:10  warning  'Check' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\payment-methods\components\PayCreditCardDialog.tsx
+   6:1   warning  Imports "PaymentMethod" are only used as type  @typescript-eslint/consistent-type-imports
+   8:10  warning  'CURRENCIES' is defined but never used         @typescript-eslint/no-unused-vars
+  36:10  warning  'CreditCard' is defined but never used         @typescript-eslint/no-unused-vars
+  36:40  warning  'ArrowRight' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\payment-methods\components\PaymentMethodList.tsx
+  10:10  warning  'CURRENCIES' is defined but never used                    @typescript-eslint/no-unused-vars
+  57:9   warning  'decimalPlaces' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  58:11  warning  'formatCurrencySmall' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\components\AddSavingsAccountDialog.tsx
+  14:10  warning  'Plus' is defined but never used                        @typescript-eslint/no-unused-vars
+  33:9   warning  'getCurrencySymbol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\components\AddSavingsTransactionDialog.tsx
+  29:76  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  42:9   warning  'getCurrencySymbol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\components\EditSavingsTransactionDialog.tsx
+  49:11  warning  'toast' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\components\SavingsGoalsSection.tsx
+   3:10  warning  'cn' is defined but never used            @typescript-eslint/no-unused-vars
+  11:57  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\components\SavingsPerformance.tsx
+   1:41   warning  'CardTitle' is defined but never used                      @typescript-eslint/no-unused-vars
+   3:55   warning  'ArrowUpRight' is defined but never used                   @typescript-eslint/no-unused-vars
+   3:69   warning  'ArrowDownRight' is defined but never used                 @typescript-eslint/no-unused-vars
+   3:103  warning  'Wallet' is defined but never used                         @typescript-eslint/no-unused-vars
+  76:3    warning  'onUpdateTransactionAmount' is defined but never used      @typescript-eslint/no-unused-vars
+  82:32   warning  'formatCurrency' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  85:9    warning  'formatCurrencyCard70' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\context\SavingsContext.tsx
+  16:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\savings\pages\Savings.tsx
+   9:26  warning  'StandardHeaderSkeleton' is defined but never used  @typescript-eslint/no-unused-vars
+   9:50  warning  'CardSkeleton' is defined but never used            @typescript-eslint/no-unused-vars
+   9:64  warning  'PulseBlock' is defined but never used              @typescript-eslint/no-unused-vars
+   9:76  warning  'SavingsSkeleton' is defined but never used         @typescript-eslint/no-unused-vars
+  10:18  warning  'LogOut' is defined but never used                  @typescript-eslint/no-unused-vars
+  20:11  warning  'navigate' is assigned a value but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\AddTransactionDialog.tsx
+   97:9  warning  'getCurrencySymbol' is assigned a value but never used                                                   @typescript-eslint/no-unused-vars
+  188:6  error    React Hook useEffect has a missing dependency: 'form'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\AddTransferDialog.tsx
+   5:10  warning  'PaymentMethod' is defined but never used               @typescript-eslint/no-unused-vars
+  11:10  warning  'Label' is defined but never used                       @typescript-eslint/no-unused-vars
+  37:10  warning  'es' is defined but never used                          @typescript-eslint/no-unused-vars
+  61:11  warning  'getCurrencySymbol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\HistoryTab.tsx
+    4:10  warning  'Input' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+    6:3   warning  'Select' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+    7:3   warning  'SelectContent' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+    8:3   warning  'SelectItem' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+    9:3   warning  'SelectTrigger' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+   10:3   warning  'SelectValue' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   12:10  warning  'Search' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   12:18  warning  'Filter' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   12:26  warning  'Calendar' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+   12:36  warning  'X' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   12:39  warning  'Tag' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+   12:44  warning  'Plus' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   12:50  warning  'AlertCircle' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   13:10  warning  'Button' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   14:10  warning  'cn' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   69:9   warning  'handleClearAll' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+  136:72  error    React Hook useMemo has a missing dependency: 'applyFilters'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  137:96  error    React Hook useMemo has a missing dependency: 'applyFilters'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\ImportExcelDialog.tsx
+  120:27  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\PendingInvoicesPanel.test.tsx
+  30:33  warning  'mockEq' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\PendingInvoicesPanel.tsx
+   21:10  warning  'AddTransactionDialog' is defined but never used                                                          @typescript-eslint/no-unused-vars
+   22:10  warning  'Dialog' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   22:18  warning  'DialogContent' is defined but never used                                                                 @typescript-eslint/no-unused-vars
+   22:33  warning  'DialogHeader' is defined but never used                                                                  @typescript-eslint/no-unused-vars
+   22:47  warning  'DialogTitle' is defined but never used                                                                   @typescript-eslint/no-unused-vars
+   38:19  error    Unexpected any. Specify a different type                                                                  @typescript-eslint/no-explicit-any
+   46:12  warning  'searchParams' is assigned a value but never used                                                         @typescript-eslint/no-unused-vars
+   46:26  warning  'setSearchParams' is assigned a value but never used                                                      @typescript-eslint/no-unused-vars
+   47:46  error    Unexpected any. Specify a different type                                                                  @typescript-eslint/no-explicit-any
+   49:12  warning  'selectedInvoice' is assigned a value but never used                                                      @typescript-eslint/no-unused-vars
+   49:29  warning  'setSelectedInvoice' is assigned a value but never used                                                   @typescript-eslint/no-unused-vars
+  130:8   error    React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  196:39  error    Expected { after 'if' condition                                                                           curly
+  208:49  error    Expected { after 'if' condition                                                                           curly
+  211:49  error    Expected { after 'if' condition                                                                           curly
+  214:38  error    Expected { after 'if' condition                                                                           curly
+  223:30  warning  'e' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  228:29  error    Unexpected any. Specify a different type                                                                  @typescript-eslint/no-explicit-any
+  256:32  error    Expected { after 'if' condition                                                                           curly
+  258:29  error    Unexpected any. Specify a different type                                                                  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\TransactionList.tsx
+   49:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   49:22  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   69:9   warning  'decimalPlaces' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+   70:11  warning  'formatCurrencySmall' is assigned a value but never used                                                                        @typescript-eslint/no-unused-vars
+  201:6   error    React Hook useMemo has a missing dependency: 'paymentMethods'. Either include it or remove the dependency array                 react-hooks/exhaustive-deps
+  225:41  warning  '_' is already declared in the upper scope on line 223 column 37                                                                @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\components\TransactionRow.tsx
+  68:13  warning  'formatCurrencySmall' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\hooks\useExcelImport.ts
+   12:1   warning  Imports "ParsedRow", "ColumnMapping" and "ColumnPreview" are only used as type  @typescript-eslint/consistent-type-imports
+  115:58  error    Expected { after 'if' condition                                                 curly
+  116:43  error    Expected { after 'if' condition                                                 curly
+  117:43  error    Expected { after 'if' condition                                                 curly
+  139:18  error    Expected { after 'if' condition                                                 curly
+  140:25  error    Expected { after 'if' condition                                                 curly
+  141:42  error    Expected { after 'if' condition                                                 curly
+  164:16  error    Expected { after 'if' condition                                                 curly
+  203:42  error    Expected { after 'if' condition                                                 curly
+  220:11  warning  'key' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  261:33  error    Expected { after 'if' condition                                                 curly
+  472:63  error    Expected { after 'if' condition                                                 curly
+  473:59  error    Expected { after 'if' condition                                                 curly
+  474:58  error    Expected { after 'if' condition                                                 curly
+  475:27  error    Expected { after 'if' condition                                                 curly
+  521:46  warning  '_originalIndex' is defined but never used                                      @typescript-eslint/no-unused-vars
+  526:44  error    Expected { after 'if' condition                                                 curly
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\pages\History.tsx
+    1:23  warning  'useSearchParams' is defined but never used                  @typescript-eslint/no-unused-vars
+    5:26  warning  'CategoryItem' is defined but never used                     @typescript-eslint/no-unused-vars
+    8:10  warning  'AddPaymentMethodDialog' is defined but never used           @typescript-eslint/no-unused-vars
+   11:10  warning  'Wallet' is defined but never used                           @typescript-eslint/no-unused-vars
+   11:18  warning  'LogOut' is defined but never used                           @typescript-eslint/no-unused-vars
+   11:63  warning  'Plus' is defined but never used                             @typescript-eslint/no-unused-vars
+   13:10  warning  'CurrencyDisplay' is defined but never used                  @typescript-eslint/no-unused-vars
+   21:5   warning  'SelectGroup' is defined but never used                      @typescript-eslint/no-unused-vars
+   22:5   warning  'SelectLabel' is defined but never used                      @typescript-eslint/no-unused-vars
+   23:5   warning  'SelectSeparator' is defined but never used                  @typescript-eslint/no-unused-vars
+   40:11  warning  'navigate' is assigned a value but never used                @typescript-eslint/no-unused-vars
+   58:9   warning  'hasPendingImport' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   59:9   warning  'startImport' is assigned a value but never used             @typescript-eslint/no-unused-vars
+   63:9   warning  'addCategory' is assigned a value but never used             @typescript-eslint/no-unused-vars
+   64:9   warning  'addPaymentMethod' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   72:13  warning  'currency' is assigned a value but never used                @typescript-eslint/no-unused-vars
+   75:12  warning  'editingTransaction' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   76:12  warning  'isEditDialogOpen' is assigned a value but never used        @typescript-eslint/no-unused-vars
+   85:12  warning  'pendingTx' is assigned a value but never used               @typescript-eslint/no-unused-vars
+   85:23  warning  'setPendingTx' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  181:11  warning  'getFilteredCategories' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  218:11  warning  'hasEmptyPaymentMethods' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\transactions\utils\excelImportUtils.ts
+    3:1   warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+  118:14  warning  'e' is defined but never used                                             @typescript-eslint/no-unused-vars
+  189:32  error    Expected { after 'if' condition                                           curly
+  194:16  error    Expected { after 'if' condition                                           curly
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\utils\financeUtils.ts
+  2:10  warning  'CategoryItem' is defined but never used     @typescript-eslint/no-unused-vars
+  2:24  warning  'TransactionType' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\utils\themeCalculations.ts
+  101:10  warning  'clamp' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\finance\utils\transactionMappers.test.ts
+  17:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\AdvancedSettings.tsx
+    2:29   warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+    2:58   warning  'CardTitle' is defined but never used        @typescript-eslint/no-unused-vars
+    3:10   warning  'Button' is defined but never used           @typescript-eslint/no-unused-vars
+    6:10   warning  'Loader2' is defined but never used          @typescript-eslint/no-unused-vars
+   24:10   warning  'History' is defined but never used          @typescript-eslint/no-unused-vars
+   24:19   warning  'RefreshCw' is defined but never used        @typescript-eslint/no-unused-vars
+   24:30   warning  'Mail' is defined but never used             @typescript-eslint/no-unused-vars
+   24:36   warning  'CheckCircle2' is defined but never used     @typescript-eslint/no-unused-vars
+   24:63   warning  'CheckSquare' is defined but never used      @typescript-eslint/no-unused-vars
+   24:76   warning  'Search' is defined but never used           @typescript-eslint/no-unused-vars
+   24:84   warning  'Sparkles' is defined but never used         @typescript-eslint/no-unused-vars
+   24:94   warning  'Inbox' is defined but never used            @typescript-eslint/no-unused-vars
+   24:101  warning  'AlertCircle' is defined but never used      @typescript-eslint/no-unused-vars
+   25:32   warning  'BackendStatus' is defined but never used    @typescript-eslint/no-unused-vars
+  474:25   error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  726:25   error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  928:23   error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  974:25   error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\AdvancedSettings\GmailHistoryDialog.test.tsx
+    4:1   warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+    8:28  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+    9:35  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   10:34  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   11:33  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   12:39  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   16:33  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   17:40  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   18:39  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   19:38  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   20:44  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   21:39  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   22:39  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   26:37  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   30:32  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   38:27  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   42:27  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   43:33  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   44:31  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   45:30  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   46:31  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   47:31  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   51:26  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   52:33  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   53:30  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   54:33  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   58:31  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   59:35  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   60:38  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   61:38  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+   73:11  warning  'mockUser' is assigned a value but never used                             @typescript-eslint/no-unused-vars
+   85:29  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+  109:44  error    Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\AdvancedSettings\GmailHistoryDialog.tsx
+   20:83  warning  'ChevronRight' is defined but never used          @typescript-eslint/no-unused-vars
+   28:10  warning  'Plus' is defined but never used                  @typescript-eslint/no-unused-vars
+  165:5   warning  'safeFormatDate' is defined but never used        @typescript-eslint/no-unused-vars
+  167:5   warning  'resolveCategoryLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\dialogs\CategoryDialog.tsx
+  10:10  warning  'Check' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\CategoriesSection.tsx
+   2:29  warning  'CardDescription' is defined but never used       @typescript-eslint/no-unused-vars
+   2:58  warning  'CardTitle' is defined but never used             @typescript-eslint/no-unused-vars
+   9:10  warning  'Badge' is defined but never used                 @typescript-eslint/no-unused-vars
+  36:37  warning  'highlighted' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  85:11  warning  'typeLabels' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\CurrencySection.tsx
+   2:29  warning  'CardDescription' is defined but never used            @typescript-eslint/no-unused-vars
+   2:58  warning  'CardTitle' is defined but never used                  @typescript-eslint/no-unused-vars
+  78:11  warning  'formattedPreview' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\DangerZone.tsx
+  3:29  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+  3:58  warning  'CardTitle' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\PaymentMethodsSection.tsx
+   2:29  warning  'CardDescription' is defined but never used          @typescript-eslint/no-unused-vars
+   2:58  warning  'CardTitle' is defined but never used                @typescript-eslint/no-unused-vars
+   3:18  warning  'Plus' is defined but never used                     @typescript-eslint/no-unused-vars
+   4:10  warning  'Button' is defined but never used                   @typescript-eslint/no-unused-vars
+  30:41  warning  'highlighted' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  32:13  warning  'formatCurrency' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\SecuritySection.tsx
+   2:29  warning  'CardDescription' is defined but never used              @typescript-eslint/no-unused-vars
+   2:58  warning  'CardTitle' is defined but never used                    @typescript-eslint/no-unused-vars
+   3:10  warning  'Lock' is defined but never used                         @typescript-eslint/no-unused-vars
+   3:37  warning  'Mail' is defined but never used                         @typescript-eslint/no-unused-vars
+  12:21  warning  'gmailStatus' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  12:43  warning  'gmailLoading' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  14:11  warning  'formatExpiryTime' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  15:43  error    Expected { after 'if' condition                          curly
+  30:11  warning  'handleGmailConnect' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  31:40  error    Expected { after 'if' condition                          curly
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\components\sections\ThemeSection.tsx
+  1:29  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+  1:58  warning  'CardTitle' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\features\settings\pages\Settings.tsx
+  10:41  warning  'CardTitle' is defined but never used  @typescript-eslint/no-unused-vars
+  12:49  warning  'Info' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\lib\analytics.ts
+   2:20  warning  'Query' is defined but never used         @typescript-eslint/no-unused-vars
+  41:20  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\main.tsx
+  3:10  warning  'calculateProportionalTheme' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\pages\Placeholder.tsx
+  5:11  warning  'pageName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\components\ErrorBoundary.tsx
+   91:24  warning  'event' is defined but never used             @typescript-eslint/no-unused-vars
+   95:31  warning  'event' is defined but never used             @typescript-eslint/no-unused-vars
+  145:10  warning  'showRuntimeError' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\components\MoneyInput.tsx
+   1:50  warning  'useRef' is defined but never used                  @typescript-eslint/no-unused-vars
+  55:15  warning  'handleChange' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  66:17  error    'cleaned' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\components\charts\FinanceChartTooltip.tsx
+  15:11  warning  'formatCurrency' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\components\skeletons\AdaptiveSkeleton.tsx
+  2:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\hooks\use-toast.ts
+   16:7   warning  'actionTypes' is assigned a value but only used as a type             @typescript-eslint/no-unused-vars
+   94:31  warning  'toast' is already declared in the upper scope on line 138 column 10  @typescript-eslint/no-shadow
+  141:19  warning  'props' is already declared in the upper scope on line 138 column 21  @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\hooks\useDebugInfo.ts
+   6:13  warning  'user' is assigned a value but never used                                                       @typescript-eslint/no-unused-vars
+  16:13  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  20:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  21:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  23:17  warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  25:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\badge-2.tsx
+  230:40  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\button-1.tsx
+  413:31  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\button.tsx
+  58:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\calendar.tsx
+  45:25  warning  '_props' is defined but never used  @typescript-eslint/no-unused-vars
+  46:26  warning  '_props' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\carousel.tsx
+  53:41  warning  'api' is already declared in the upper scope on line 43 column 25  @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\chart.tsx
+  62:55  warning  '_' is defined but never used                                         @typescript-eslint/no-unused-vars
+  62:58  warning  'config' is already declared in the upper scope on line 61 column 27  @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\form.tsx
+  130:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\line-charts-1.tsx
+  65:59  warning  'config' is already declared in the upper scope on line 64 column 27  @typescript-eslint/no-shadow
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\sidebar.tsx
+   51:109  warning  'ref' is defined but never used                                                                                                 @typescript-eslint/no-unused-vars
+   76:38   warning  'open' is already declared in the upper scope on line 58 column 9                                                               @typescript-eslint/no-shadow
+   76:65   warning  'open' is already declared in the upper scope on line 58 column 9                                                               @typescript-eslint/no-shadow
+  678:3    warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\shared\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\BudgetsPage.test.tsx
+  2:37  warning  'waitFor' is defined but never used        @typescript-eslint/no-unused-vars
+  7:10  warning  'useUserConfig' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\Dashboard.test.tsx
+    7:10  warning  'useUserConfig' is defined but never used  @typescript-eslint/no-unused-vars
+   60:82  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   73:14  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   77:14  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+   81:77  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  108:14  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\History.test.tsx
+   6:10  warning  'useUserConfig' is defined but never used  @typescript-eslint/no-unused-vars
+  10:37  warning  'props' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\Loans.test.tsx
+   1:1   warning  Imports "Mock" are only used as type        @typescript-eslint/consistent-type-imports
+  10:10  warning  'useUserConfig' is defined but never used   @typescript-eslint/no-unused-vars
+  40:59  warning  'importOriginal' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\SavingsPage.test.tsx
+  7:10  warning  'useUserConfig' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\src\test\integration\Settings.test.tsx
+   1:1   warning  Imports "Mock" are only used as type                                @typescript-eslint/consistent-type-imports
+   6:10  warning  'useUserConfig' is defined but never used                           @typescript-eslint/no-unused-vars
+  89:13  error    Definition for rule 'testing-library/no-node-access' was not found  testing-library/no-node-access
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\tailwind.config.ts
+  2:8  warning  'plugin' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\vitest.config.ts
+  6:37  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+Ô£û 569 problems (172 errors, 397 warnings)
+  38 errors and 15 warnings potentially fixable with the `--fix` option.
+

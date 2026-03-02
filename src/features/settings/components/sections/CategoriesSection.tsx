@@ -171,7 +171,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                         </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end flex-wrap mt-2 sm:mt-0">
-                        <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0 md:text-[15px]">
+                        <Button onClick={handleAdd} disabled={!canCreateCategory} className="gap-2 h-10 px-4 rounded-xl shrink-0 md:text-[15px] hover:bg-primary/70 hover:text-white">
                             <Plus className="h-4 w-4" />
                             Nueva<span className="hidden md:inline"> categoría</span>
                         </Button>

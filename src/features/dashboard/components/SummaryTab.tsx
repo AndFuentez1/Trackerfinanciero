@@ -136,12 +136,12 @@ export function SummaryTab({
 
   // Asegurar validación solo si el año dejó de existir, permitir array vacío para deseleccionar
   useEffect(() => {
-    if (selectedYears.length === 0) return; // Allow empty
+    if (selectedYears.length === 0) { return; } // Allow empty
     const filtered = selectedYears.filter(y => availableYears.includes(y));
     if (filtered.length !== selectedYears.length) {
-      setSelectedYears(filtered.length ? filtered : []);
+      setSelectedYears(filtered.length > 0 ? filtered : []);
     }
-  }, [availableYears, selectedYears, currentYear]);
+  }, [availableYears, selectedYears]);
 
   const handleToggleAllYears = () => {
     if (selectedYears.length === availableYears.length) {
@@ -185,7 +185,9 @@ export function SummaryTab({
     if (sankeyDrillDown && sankeyDrillDown.type === 'expense') {
       const expenseMap = new Map<string, number>();
       baseTxs.filter(tx => tx.type === 'expense' || tx.type === 'loan').forEach(tx => {
-        if (!tx.category_id) return;
+        if (!tx.category_id) {
+          return;
+        }
         expenseMap.set(tx.category_id, (expenseMap.get(tx.category_id) || 0) + tx.amount);
       });
       let items = Array.from(expenseMap.entries());
@@ -255,7 +257,7 @@ export function SummaryTab({
     const monthlyPendingExpenses = pendingInvoices.filter((inv) => {
       const d = new Date(inv.arrival_date);
       return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
-    }).reduce((sum: number, inv) => sum + inv.amount, 0);
+    }).reduce((sum: number, inv) => sum + Number(inv.amount || 0), 0);
 
     const monthlyBalance = monthlyIncome - (monthlyPaidExpenses + monthlyPendingExpenses);
 

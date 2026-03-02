@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from '@/features/dashboard/pages/Dashboard';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -7,7 +7,16 @@ import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
 import { MemoryRouter } from 'react-router-dom';
 
 // Mocks
-vi.mock('@/features/auth/hooks/useAuth');
+vi.mock('@/features/auth/hooks/useAuth', () => ({
+    useAuth: vi.fn()
+}));
+vi.mock('@/features/finance/hooks/useUserConfig', () => ({
+    useUserConfig: vi.fn(() => ({
+        config: { hide_incomplete_alert: false, keep_session_alive: true },
+        updateConfig: vi.fn(),
+        loaded: true
+    }))
+}));
 vi.mock('@/features/finance/hooks/useFinanceData');
 vi.mock('@/features/finance/hooks/useBudgetsData');
 
@@ -47,31 +56,36 @@ describe('Dashboard (Index)', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (useAuth as Mock).mockReturnValue({ user: mockUser, loading: false });
-        (useFinanceData as Mock).mockReturnValue({
+        vi.mocked(useAuth).mockReturnValue({ user: mockUser, loading: false } as unknown as ReturnType<typeof useAuth>);
+        vi.mocked(useFinanceData).mockReturnValue({
+            summary: { totalBalance: 1000, monthlyIncome: 500, monthlyExpense: 300 },
+            loading: false,
+            paymentMethods: [],
+            categories: [],
             transactions: [],
             allTransactions: [],
             budgets: [],
-            paymentMethods: [],
-            categories: [],
-            loading: false,
             welcomeCompleted: true,
-            onboardingDecision: 'from_scratch', // Default to unlocked
+            onboardingDecision: 'from_scratch',
             currency: 'COP',
             pendingImportData: [],
-            importProgress: { status: 'idle' }
-        });
-        (useBudgetsData as Mock).mockReturnValue({
+            importProgress: { status: 'idle' },
+            hasPendingImport: false
+        } as unknown as ReturnType<typeof useFinanceData>);
+        vi.mocked(useBudgetsData).mockReturnValue({
+            budgets: [],
             loading: false,
+            totalBudgeted: 200,
+            totalSpent: 100,
             lastModification: null
-        });
+        } as unknown as ReturnType<typeof useBudgetsData>);
     });
 
     it('renders loading state when auth is loading', () => {
-        (useAuth as Mock).mockReturnValue({ user: null, loading: true });
-        // The component returns null if !user (after hooks), but triggers isLoading check.
-        const { container } = render(<Dashboard />, { wrapper: MemoryRouter });
-        expect(container).toBeEmptyDOMElement();
+        vi.mocked(useAuth).mockReturnValue({ user: null, loading: true } as unknown as ReturnType<typeof useAuth>);
+        // The component returns loading state
+        render(<Dashboard />, { wrapper: MemoryRouter });
+        expect(screen.getByText(/Cargando/i)).toBeInTheDocument();
     });
 
     it('renders SummaryTab when onboarding is complete', async () => {
@@ -83,7 +97,7 @@ describe('Dashboard (Index)', () => {
     });
 
     it('renders WelcomePanel when onboarding NOT complete', async () => {
-        (useFinanceData as Mock).mockReturnValue({
+        vi.mocked(useFinanceData).mockReturnValue({
             loading: false,
             transactions: [],
             allTransactions: [],
@@ -95,7 +109,7 @@ describe('Dashboard (Index)', () => {
             currency: 'COP',
             pendingImportData: [],
             importProgress: { status: 'idle' }
-        });
+        } as any);
 
         render(<Dashboard />, { wrapper: MemoryRouter });
         await waitFor(() => {

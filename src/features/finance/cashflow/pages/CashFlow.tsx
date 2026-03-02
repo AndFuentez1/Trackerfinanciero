@@ -7,18 +7,14 @@ import { CashFlowFilters } from '@/features/finance/cashflow/components/CashFlow
 import { CashFlowSummaryCards } from '@/features/finance/cashflow/components/CashFlowSummaryCards';
 import { CashFlowChart } from '@/features/finance/cashflow/components/CashFlowChart';
 import { CashFlowTimeline } from "@/features/finance/cashflow/components/CashFlowTimeline";
-import { Wallet, Link, Unlink, ArrowUpRight } from 'lucide-react';
-import { Switch } from '@/shared/ui/switch';
-import { Label } from '@/shared/ui/label';
-import { cn } from '@/core/utils';
-import { useToast } from '@/shared/hooks/use-toast';
-import { getBackendUrl } from '@/core/api/backend';
+import { ArrowUpRight } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import { useUserConfigStatus } from '@/features/settings/components/hooks/useUserConfigStatus';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/core/utils';
 
 const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
-const BACKEND_URL = getBackendUrl();
 
 export default function CashFlow() {
   useSEO({
@@ -26,7 +22,6 @@ export default function CashFlow() {
     description: 'Cash Flow Projection - Visualize your future income and commitments.'
   });
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: configStatus } = useUserConfigStatus(user?.id);
 
@@ -92,6 +87,7 @@ export default function CashFlow() {
   }, [configStatus?.cashflowUseRealBalance, isRealBalanceHydrated]);
 
   const handleRealBalanceChange = async (value: boolean) => {
+    // 1. Update local state immediately — UI responds instantly
     setUseRealBalance(value);
     setIsRealBalanceHydrated(true);
     if (typeof window !== 'undefined') {
@@ -101,34 +97,26 @@ export default function CashFlow() {
     if (!user?.id) { return; }
 
     try {
-      const body: { userId: string; cashflowUseRealBalance: boolean; email?: string } = {
-        userId: user.id,
-        cashflowUseRealBalance: value
-      };
-      if (!configStatus?.hasEmail && user.email) {
-        body.email = user.email;
-      }
+      // 2. Persist directly to Supabase (user_config table)
+      const { error } = await supabase
+        .from('user_config')
+        .update({ cashflow_use_real_balance: value })
+        .eq('user_id', user.id);
 
-      const response = await fetch(`${BACKEND_URL}/api/user/config/cashflow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+      if (error) { throw error; }
 
-      if (!response.ok) { throw new Error('Failed to save cashflow preference'); }
-
-      queryClient.setQueryData(queryKeys.user.config(user.id), // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // 3. Keep query cache in sync
+      queryClient.setQueryData(
+        queryKeys.user.config(user.id),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (old: Record<string, any> | undefined) => {
           if (!old) { return old; }
           return { ...old, cashflowUseRealBalance: value };
-        });
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar la preferencia de flujo de caja',
-        variant: 'destructive'
-      });
+        }
+      );
+    } catch (err) {
+      // Preference already saved to localStorage — silent console warning is enough
+      console.warn('[CashFlow] Could not persist cashflowUseRealBalance to Supabase:', err);
     }
   };
 

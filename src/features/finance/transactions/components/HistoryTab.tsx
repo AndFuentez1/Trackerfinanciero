@@ -89,7 +89,7 @@ export function HistoryTab({
       // 1. Type Filter
       if (finalTypeFilter !== undefined) {
         if (finalTypeFilter === 'transfer') {
-          if (t.category !== 'Transferencia') { return false; }
+          if (t.type !== 'transfer_in' && t.type !== 'transfer_out' && (t.type as string) !== 'other') { return false; }
         } else if (finalTypeFilter === 'savings_investment') {
           if (!['savings', 'investment'].includes(t.type)) { return false; }
         } else if (t.type !== finalTypeFilter) {

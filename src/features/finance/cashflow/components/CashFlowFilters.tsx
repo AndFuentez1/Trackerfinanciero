@@ -56,8 +56,8 @@ export const CashFlowFilters: React.FC<CashFlowFiltersProps> = ({
       </div>
       <div className="flex gap-4 items-center w-full sm:w-auto justify-end ml-auto">
         <div className="flex items-center gap-2 mr-2">
-          <Label htmlFor="real-balance-filter" className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-            Saldos Reales
+          <Label htmlFor="real-balance-filter" className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+            Saldos reales
           </Label>
           <Switch
             id="real-balance-filter"

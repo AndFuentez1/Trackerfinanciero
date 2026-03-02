@@ -23,11 +23,15 @@ export const useSEO = ({ title, description }: SEOProps) => {
         metaDescription.setAttribute('content', description);
 
         // Optional: OGP tags for better social sharing
-        let ogTitle = document.querySelector('meta[property="og:title"]');
-        if (ogTitle) ogTitle.setAttribute('content', fullTitle);
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) {
+            ogTitle.setAttribute('content', fullTitle);
+        }
 
-        let ogDescription = document.querySelector('meta[property="og:description"]');
-        if (ogDescription) ogDescription.setAttribute('content', description);
+        const ogDescription = document.querySelector('meta[property="og:description"]');
+        if (ogDescription) {
+            ogDescription.setAttribute('content', description);
+        }
 
     }, [title, description]);
 };

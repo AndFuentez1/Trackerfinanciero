@@ -5,7 +5,7 @@ import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { StandardHeaderSkeleton, CardSkeleton, CategoriesGridSkeleton, PulseBlock } from "@/shared/components/skeletons/SkeletonLoader";
+import { SkeletonLoader, StandardHeaderSkeleton, CardSkeleton, CategoriesGridSkeleton, PulseBlock } from "@/shared/components/skeletons/SkeletonLoader";
 import { PieChart, LogOut, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
@@ -97,7 +97,7 @@ export default function BudgetsPage() {
                                         <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Controla tus gastos mensuales</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
+                                <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap md:mt-1">
                                     <AddTransactionDialog
                                         onAdd={addTransaction}
                                         categories={categories}

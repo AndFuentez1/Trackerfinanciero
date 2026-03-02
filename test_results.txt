@@ -1,0 +1,520 @@
+
+> vite_react_shadcn_ts@0.0.0 test:run
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero[39m
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/test/integration/History.test.tsx > HistoryPage > renders header and controls
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:41:37)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/test/integration/History.test.tsx > HistoryPage > updates search term and passes it to HistoryTab
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:41:37)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/test/integration/History.test.tsx > HistoryPage > updates type filter and passes it to HistoryTab
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:41:37)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/test/integration/History.test.tsx > HistoryPage > shows Load More button when hasMore is true
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:41:37)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:42:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/test/integration/History.test.tsx > HistoryPage > calls loadMore when button clicked
+The above error occurred in the <HistoryPage> component:
+
+    at HistoryPage (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/pages/History.tsx:41:37)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [31mÔØ»[39m src/test/integration/History.test.tsx [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 173[2mms[22m[39m
+[31m     [31m├ù[31m renders header and controls[39m[32m 119[2mms[22m[39m
+[31m     [31m├ù[31m updates search term and passes it to HistoryTab[39m[32m 12[2mms[22m[39m
+[31m     [31m├ù[31m updates type filter and passes it to HistoryTab[39m[32m 14[2mms[22m[39m
+[31m     [31m├ù[31m shows Load More button when hasMore is true[39m[32m 11[2mms[22m[39m
+[31m     [31m├ù[31m calls loadMore when button clicked[39m[32m 11[2mms[22m[39m
+stderr | src/test/integration/Settings.test.tsx > SettingsPage > renders all settings sections
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/test/integration/Settings.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1106[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders all settings sections [33m 928[2mms[22m[39m
+stderr | src/test/integration/BudgetsPage.test.tsx > BudgetsPage > renders main specific components
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > renders pending invoices
+The above error occurred in the <PendingInvoicesPanel> component:
+
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:42:78)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > approves invoice successfully
+The above error occurred in the <PendingInvoicesPanel> component:
+
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:42:78)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:20:23)
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > does NOT delete invoice if transaction fails
+The above error occurred in the <PendingInvoicesPanel> component:
+
+    at PendingInvoicesPanel (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:42:78)
+    at Router (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [31mÔØ»[39m src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx [2m([22m[2m3 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 189[2mms[22m[39m
+[31m     [31m├ù[31m renders pending invoices[39m[32m 146[2mms[22m[39m
+[31m     [31m├ù[31m approves invoice successfully[39m[32m 21[2mms[22m[39m
+[31m     [31m├ù[31m does NOT delete invoice if transaction fails[39m[32m 16[2mms[22m[39m
+stderr | src/test/integration/Dashboard.test.tsx > Dashboard (Index) > renders loading state when auth is loading
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [31mÔØ»[39m src/test/integration/Dashboard.test.tsx [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 718[2mms[22m[39m
+[31m     [31m├ù[31m renders loading state when auth is loading[39m[33m 486[2mms[22m[39m
+     [32mÔ£ô[39m renders SummaryTab when onboarding is complete[32m 78[2mms[22m[39m
+     [32mÔ£ô[39m renders WelcomePanel when onboarding NOT complete[32m 63[2mms[22m[39m
+     [32mÔ£ô[39m renders DecisionPanel when decision is pending[32m 84[2mms[22m[39m
+ [32mÔ£ô[39m src/test/integration/BudgetsPage.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 2073[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders main specific components [33m 594[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m calls setBudgetPeriod when year changes [33m 1032[2mms[22m[39m
+Error: useFinance must be used within a FinanceProvider
+    at useFinanceData (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at GmailHistoryDialog (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/settings/components/AdvancedSettings/GmailHistoryDialog.tsx:171:29)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useFinance must be used within a FinanceProvider
+    at useFinanceData (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/context/FinanceContext.tsx:19:15)
+    at GmailHistoryDialog (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/settings/components/AdvancedSettings/GmailHistoryDialog.tsx:171:29)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+stderr | src/features/settings/components/AdvancedSettings/GmailHistoryDialog.test.tsx > GmailHistoryDialog > renders duplicate message when import result status is duplicate
+The above error occurred in the <GmailHistoryDialog> component:
+
+    at GmailHistoryDialog (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/settings/components/AdvancedSettings/GmailHistoryDialog.tsx:42:31)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [31mÔØ»[39m src/features/settings/components/AdvancedSettings/GmailHistoryDialog.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 116[2mms[22m[39m
+[31m     [31m├ù[31m renders duplicate message when import result status is duplicate[39m[32m 110[2mms[22m[39m
+stderr | src/test/integration/Loans.test.tsx > LoansPage Integration > renders loan list
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/test/integration/Loans.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1740[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders loan list [33m 477[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m opens create dialog [33m 1235[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useFinanceQueries.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 468[2mms[22m[39m
+stderr | src/test/integration/SavingsPage.test.tsx > SavingsPage > renders savings performance component
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/test/integration/SavingsPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 298[2mms[22m[39m
+ [32mÔ£ô[39m src/core/utils/cn.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+stderr | src/features/auth/hooks/__tests__/useInactivityLogout.test.ts > useInactivityLogout > should logout if inactive for more than timeout
+[InactivityLogout] User inactive for 6 minutes. Logging out.
+
+stderr | src/features/auth/hooks/__tests__/useInactivityLogout.test.ts > useInactivityLogout > should logout immediately on mount if lastActiveTime is old
+[InactivityLogout] User inactive for 10 minutes. Logging out.
+
+ [32mÔ£ô[39m src/features/auth/hooks/__tests__/useInactivityLogout.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 134[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useFinanceMutations.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+Error: [vitest] No "useQuery" export is defined on the "@tanstack/react-query" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/vitest/dist/chunks/startModuleRunner.DEj0jb3e.js:311:17)
+    at Object.useQuery [as get] (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/vitest/dist/chunks/startModuleRunner.DEj0jb3e.js:384:16)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:23:108)
+    at Module.useFinanceDataLogic (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useFinanceDataLogic.ts:47:36)
+    at C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx:82:45
+    at TestComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\@testing-library\react\dist\pure.js:330:27)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+Error: [vitest] No "useQuery" export is defined on the "@tanstack/react-query" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/vitest/dist/chunks/startModuleRunner.DEj0jb3e.js:311:17)
+    at Object.useQuery [as get] (file:///C:/Users/joan.fuentes/OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/vitest/dist/chunks/startModuleRunner.DEj0jb3e.js:384:16)
+    at useUserConfig (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useUserConfig.ts:23:108)
+    at Module.useFinanceDataLogic (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/useFinanceDataLogic.ts:47:36)
+    at C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Personales/Trackerfinanciero/src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx:82:45
+    at TestComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\@testing-library\react\dist\pure.js:330:27)
+    at renderWithHooks (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+stderr | src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx > useFinanceDataLogic > aggregates data correctly from all injected sub-hooks
+The above error occurred in the <TestComponent> component:
+
+    at TestComponent (C:\Users\joan.fuentes\OneDrive - Universidad EIA\Escritorio\Personales\Trackerfinanciero\node_modules\@testing-library\react\dist\pure.js:328:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [31mÔØ»[39m src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 102[2mms[22m[39m
+[31m     [31m├ù[31m aggregates data correctly from all injected sub-hooks[39m[32m 96[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/utils/financeCalculations.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32mÔ£ô[39m src/core/utils/onboardingGate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/utils/transactionMappers.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/cashflow/utils/cashFlowCalculations.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 11 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/test/integration/Dashboard.test.tsx > Dashboard (Index) > renders loading state when auth is loading
+Error: expect(element).toBeEmptyDOMElement()
+
+Received:
+  "<div class="w-full h-full min-h-screen"><style>
+                    @keyframes skeleton-pulse {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                        100% { opacity: 1; }
+                    }
+                    .skeleton-pulse {
+                        animation: skeleton-pulse 1.8s ease-in-out infinite;
+                    }
+                    </style><div class="fixed top-[140px] left-1/2 -translate-x-1/2 z-[100] pointer-events-none fade-in duration-500"><div class="bg-card/90 backdrop-blur-md px-6 py-3 rounded-full border border-border/50 shadow-xl flex items-center gap-3 skeleton-pulse"><div class="h-2.5 w-2.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0s;"></div><div class="h-2.5 w-2.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 0.15s;"></div><div class="h-2.5 w-2.5 bg-primary/30 rounded-full animate-bounce" style="animation-delay: 0.3s;"></div><span class="text-sm font-semibold tracking-wide ml-1 text-foreground whitespace-nowrap">Cargando...</span></div></div><div class="w-full container max-w-6xl mx-auto px-4 py-8"><div class="space-y-8"><div class="border-b border-border pb-8 w-full animate-in fade-in duration-700"><div class="flex flex-col md:flex-row items-start justify-between gap-6"><div class="flex items-start gap-4 w-full md:w-auto"><div class="skeleton-pulse bg-primary/10" style="width: 3rem; height: 3rem; border-radius: 1rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="flex flex-col gap-1.5"><div class="skeleton-pulse leading-none" style="width: 180px; height: 1.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 260px; height: 0.85rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div><div class="flex gap-2 w-full md:w-auto justify-start md:justify-end"><div class="skeleton-pulse" style="width: 100px; height: 2.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 100px; height: 2.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="space-y-4"><div class="skeleton-pulse" style="width: 150px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div> <div class="space-y-3"><div class="p-4 rounded-xl border border-border/50 bg-muted/5 flex items-center justify-between"><div class="flex items-center gap-4"><div class="skeleton-pulse" style="width: 2.5rem; height: 2.5rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="space-y-2"><div class="skeleton-pulse" style="width: 120px; height: 1rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 80px; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div><div class="skeleton-pulse" style="width: 100px; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div class="p-4 rounded-xl border border-border/50 bg-muted/5 flex items-center justify-between"><div class="flex items-center gap-4"><div class="skeleton-pulse" style="width: 2.5rem; height: 2.5rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="space-y-2"><div class="skeleton-pulse" style="width: 120px; height: 1rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 80px; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div><div class="skeleton-pulse" style="width: 100px; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="space-y-4"><div class="flex justify-between items-center"><div class="skeleton-pulse" style="width: 220px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div></div></div><div class="space-y-4"><div class="flex justify-between items-center"><div class="skeleton-pulse" style="width: 180px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div class="grid grid-cols-1 sm:grid-cols-3 gap-4"><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div><div class="rounded-xl shadow-sm bg-card relative flex flex-col justify-between" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 120px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;"><div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 0%;"><div class="skeleton-pulse" style="width: 40%; height: 0.65rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 70%; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 30%; height: 0.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div style="flex-shrink: 0; margin-left: 1rem;"><div class="skeleton-pulse" style="width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div></div></div><div class="space-y-4"><div class="skeleton-pulse" style="width: 200px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2"><div class="rounded-xl shadow-sm bg-card" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 400px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div class="flex justify-between items-center mb-6"><div class="skeleton-pulse" style="width: 120px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="flex gap-2"><div class="skeleton-pulse" style="width: 80px; height: 2rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 80px; height: 2rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div><div class="skeleton-pulse" style="width: 100%; height: 280px; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div><div class="rounded-xl shadow-sm bg-card" style="border: 1px solid hsl(var(--border, 214 32% 91%)); height: 400px; padding: 1.5rem; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;"><div class="skeleton-pulse mb-8" style="width: 150px; height: 1.5rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="flex flex-col items-center justify-center h-full gap-6"><div class="skeleton-pulse" style="width: 180px; height: 180px; border-radius: 9999px; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="w-full space-y-3"><div class="flex justify-between"><div class="skeleton-pulse" style="width: 40%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 20%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div class="flex justify-between"><div class="skeleton-pulse" style="width: 40%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 20%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div><div class="flex justify-between"><div class="skeleton-pulse" style="width: 40%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div><div class="skeleton-pulse" style="width: 20%; height: 0.75rem; border-radius: 0.5rem; background-color: rgba(100, 116, 139, 0.15); border: 1px solid hsl(var(--border, 214 32% 91%)); transition: background-color 0.3s ease, border-color 0.3s ease;"></div></div></div></div></div></div></div></div></div></div>"
+ ÔØ» src/test/integration/Dashboard.test.tsx:74:27
+     72|         // The component returns null if !user (after hooks), but trigÔÇª
+     73|         const { container } = render(<Dashboard />, { wrapper: MemoryRÔÇª
+     74|         expect(container).toBeEmptyDOMElement();
+       |                           ^
+     75|     });
+     76| 
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/11]ÔÄ»
+
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > renders header and controls
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > updates search term and passes it to HistoryTab
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > updates type filter and passes it to HistoryTab
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > shows Load More button when hasMore is true
+ FAIL  src/test/integration/History.test.tsx > HistoryPage > calls loadMore when button clicked
+Error: No QueryClient set, use QueryClientProvider to set one
+ ÔØ» useQueryClient ../../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11
+ ÔØ» useUserConfig src/features/finance/hooks/useUserConfig.ts:20:23
+     18| 
+     19| export function useUserConfig(userId: string | undefined, userEmail?: ÔÇª
+     20|   const queryClient = useQueryClient();
+       |                       ^
+     21|   const queryKey = ['user_config', userId];
+     22| 
+ ÔØ» HistoryPage src/features/finance/transactions/pages/History.tsx:42:38
+ ÔØ» renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ÔØ» mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ÔØ» beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ÔØ» beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ÔØ» performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ÔØ» workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ÔØ» renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/11]ÔÄ»
+
+ FAIL  src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx > useFinanceDataLogic > aggregates data correctly from all injected sub-hooks
+Error: [vitest] No "useQuery" export is defined on the "@tanstack/react-query" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+vi.mock(import("@tanstack/react-query"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // your mocked methods
+  }
+})
+
+ ÔØ» useUserConfig src/features/finance/hooks/useUserConfig.ts:23:108
+     21|   const queryKey = ['user_config', userId];
+     22| 
+     23|   const { data: config = { hide_incomplete_alert: false, keep_session_ÔÇª
+       |                                                                                                            ^
+     24|     queryKey,
+     25|     queryFn: async () => {
+ ÔØ» Module.useFinanceDataLogic src/features/finance/hooks/useFinanceDataLogic.ts:47:36
+ ÔØ» src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx:82:45
+ ÔØ» TestComponent node_modules/@testing-library/react/dist/pure.js:330:27
+ ÔØ» renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ÔØ» mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ÔØ» beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ÔØ» beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/11]ÔÄ»
+
+ FAIL  src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > renders pending invoices
+ FAIL  src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > approves invoice successfully
+ FAIL  src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > does NOT delete invoice if transaction fails
+Error: No QueryClient set, use QueryClientProvider to set one
+ ÔØ» useQueryClient ../../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Personales/Trackerfinanciero/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11
+ ÔØ» useUserConfig src/features/finance/hooks/useUserConfig.ts:20:23
+     18| 
+     19| export function useUserConfig(userId: string | undefined, userEmail?: ÔÇª
+     20|   const queryClient = useQueryClient();
+       |                       ^
+     21|   const queryKey = ['user_config', userId];
+     22| 
+ ÔØ» PendingInvoicesPanel src/features/finance/transactions/components/PendingInvoicesPanel.tsx:45:38
+ ÔØ» renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ÔØ» mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ÔØ» beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ÔØ» beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ÔØ» performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ÔØ» workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ÔØ» renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/11]ÔÄ»
+
+ FAIL  src/features/settings/components/AdvancedSettings/GmailHistoryDialog.test.tsx > GmailHistoryDialog > renders duplicate message when import result status is duplicate
+Error: useFinance must be used within a FinanceProvider
+ ÔØ» useFinanceData src/features/finance/context/FinanceContext.tsx:19:15
+     17|     const context = useContext(FinanceContext);
+     18|     if (context === undefined) {
+     19|         throw new Error('useFinance must be used within a FinanceProviÔÇª
+       |               ^
+     20|     }
+     21|     return context;
+ ÔØ» GmailHistoryDialog src/features/settings/components/AdvancedSettings/GmailHistoryDialog.tsx:171:29
+ ÔØ» renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ÔØ» mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ÔØ» beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ÔØ» beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ÔØ» performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ÔØ» workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ÔØ» renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ÔØ» recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/11]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (17)[39m
+[2m      Tests [22m [1m[31m11 failed[39m[22m[2m | [22m[1m[32m59 passed[39m[22m[90m (70)[39m
+[2m   Start at [22m 22:20:20
+[2m   Duration [22m 57.87s[2m (transform 31.52s, setup 21.04s, import 109.98s, tests 7.53s, environment 180.70s)[22m
+

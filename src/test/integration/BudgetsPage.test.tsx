@@ -8,6 +8,13 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Mocks
 vi.mock('@/features/auth/hooks/useAuth');
+vi.mock('@/features/finance/hooks/useUserConfig', () => ({
+    useUserConfig: vi.fn(() => ({
+        config: { hide_incomplete_alert: false, keep_session_alive: true },
+        updateConfig: vi.fn(),
+        loaded: true
+    }))
+}));
 vi.mock('@/features/finance/hooks/useBudgetsData');
 vi.mock('@/features/finance/hooks/useFinanceData');
 
@@ -40,7 +47,7 @@ describe('BudgetsPage', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(useAuth).mockReturnValue({ user: mockUser, loading: false } as ReturnType<typeof useAuth>);
+        vi.mocked(useAuth).mockReturnValue({ user: mockUser, loading: false } as unknown as ReturnType<typeof useAuth>);
         vi.mocked(useBudgetsData).mockReturnValue({
             totalBudget: 500,
             budgets: [],

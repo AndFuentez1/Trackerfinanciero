@@ -1,6 +1,6 @@
 import { startOfMonth, endOfMonth, isBefore, isAfter, format, addMonths, isSameMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Transaction, Budget, PaymentMethod } from '@/features/finance/types/financeTypes';
+import type { Transaction, Budget, PaymentMethod, FutureExpense } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
 import { isTransferTransaction } from '@/lib/cashflowUtils';
@@ -16,19 +16,7 @@ function calcularCuotaFrancesa(principal: number, tasaAnual: number, nMeses: num
     return principal * (tasaMensual * Math.pow(1 + tasaMensual, nMeses)) / (Math.pow(1 + tasaMensual, nMeses) - 1);
 }
 
-export interface FutureExpense {
-    id: string;
-    payment_date: string;
-    amount: number;
-    description: string;
-    category_id: string | null;
-    status: 'pending' | 'paid';
-    is_subscription?: boolean;
-    payment_day?: number;
-    start_date?: string;
-    end_date?: string;
-    frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
-}
+// FutureExpense is now imported from financeTypes
 
 export interface MonthlySnapshot {
     mes: string;
@@ -213,31 +201,9 @@ export function calculateMonthlySnapshot(
         }
     });
 
-    // --- Presupuesto ---
-    let budgetedSalary = 0;
-    let budgetedOther = 0;
-    budgets.forEach(b => {
-        if (b.month && b.month.substring(0, 7) !== monthKey) { return; }
-        const cat = categories.find(c => c.id === b.category_id);
-        if (cat?.type === 'income') {
-            if (isSalary(b.category_id || null, cat.name, categories)) {
-                budgetedSalary += b.amount;
-            } else {
-                budgetedOther += b.amount;
-            }
-        }
-    });
-
-    // --- Asignación Final de Ingresos (Separando real vs proyección) ---
-    const salaryProjected = isPastMonth
-        ? 0
-        : Math.max(0, budgetedSalary - realSalarySum);
-    const otherProjected = (incomeMode === 'projected' && isFutureRelativeToIncome)
-        ? budgetedOther
-        : 0;
-
-    ingresosSalario = isPastMonth ? realSalarySum : (realSalarySum + salaryProjected);
-    otrosIngresos = isPastMonth ? realIncomeSum : (realIncomeSum + (isCurrentMonth ? Math.max(0, budgetedOther - realIncomeSum) : otherProjected));
+    // --- Iniciar Ingresos con valores reales ---
+    ingresosSalario = realSalarySum;
+    otrosIngresos = realIncomeSum;
 
     // --- Future Expenses (Proyección) ---
     const pastPoolsCache = new Map<string, Map<string, number[]>>();
@@ -279,7 +245,16 @@ export function calculateMonthlySnapshot(
             if (matchesMonth && dueMonthKey) {
                 const key = getProjectionKey(fe.category_id, null, fe.description);
                 if (!tryConsumePayment(dueMonthKey, key, fe.amount)) {
-                    gastosFuturos += fe.amount;
+                    if (fe.type === 'income') {
+                        // Clasificar ingreso por categoría (Salario vs Otros)
+                        if (isSalary(fe.category_id, null, categories)) {
+                            ingresosSalario += fe.amount;
+                        } else {
+                            otrosIngresos += fe.amount;
+                        }
+                    } else {
+                        gastosFuturos += fe.amount;
+                    }
                 }
             }
         });

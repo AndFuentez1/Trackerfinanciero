@@ -5,6 +5,8 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useToast } from '@/shared/hooks/use-toast';
 import { getTodayLocalDate } from '@/core/utils';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/core/api/queryKeys';
 
 export * from '@/features/finance/hooks/useLoansLogic';
 
@@ -100,7 +102,9 @@ export function useCreateLoan() {
 
 export function useCreateLoanPayment() {
     const { toast } = useToast();
+    const { user } = useAuth();
     const { addTransaction } = useFinanceData();
+    const queryClient = useQueryClient();
 
     const createPayment = async (payment: {
         loan_id: string,
@@ -110,52 +114,100 @@ export function useCreateLoanPayment() {
         name: string,
         payment_method_id?: string
     }) => {
-        const { data, error } = await supabase
+        if (!user) return { error: 'No autenticado' };
+
+        // 1. Get current loan data to check remaining balance
+        const { data: loanData, error: fetchError } = await supabase
+            .from('loans' as any)
+            .select('total_amount, paid_amount, type, name')
+            .eq('id', payment.loan_id)
+            .single();
+
+        if (fetchError || !loanData) {
+            toast({ title: 'Error', description: 'No se pudo obtener la información del préstamo', variant: 'destructive' });
+            return { error: fetchError };
+        }
+
+        const total = Number(loanData.total_amount) || 0;
+        const currentPaid = Number(loanData.paid_amount) || 0;
+        const remaining = total - currentPaid;
+        const isOverpayment = payment.amount > remaining;
+
+        const actualLoanPayment = isOverpayment ? remaining : payment.amount;
+        const surplus = isOverpayment ? payment.amount - remaining : 0;
+
+        // 2. Register the payment on the original loan
+        const { data: pData, error: pError } = await supabase
             .from('loan_payments' as any)
             .insert({
                 loan_id: payment.loan_id,
-                amount: payment.amount,
+                amount: actualLoanPayment,
                 date: payment.date,
             })
             .select()
             .single();
 
-        if (error) {
+        if (pError) {
             toast({ title: 'Error', description: 'No se pudo registrar el pago', variant: 'destructive' });
-            return { error };
+            return { error: pError };
         }
 
-        // Also update the paid_amount in the main loans table for consistency
-        const { data: loanData } = await supabase
+        // 3. Update the paid_amount in the main loans table
+        const newPaid = currentPaid + actualLoanPayment;
+        await supabase
             .from('loans' as any)
-            .select('paid_amount')
-            .eq('id', payment.loan_id)
-            .single();
+            .update({ paid_amount: newPaid })
+            .eq('id', payment.loan_id);
 
-        if (loanData) {
-            const existingPaid = (loanData as { paid_amount?: number | string }).paid_amount;
-            const newPaid = (Number(existingPaid) || 0) + payment.amount;
-            await supabase
+        // 4. Handle overpayment (Surplus) -> Create reverse debt
+        if (isOverpayment && surplus > 0) {
+            const reverseType = loanData.type === 'borrowed' ? 'lent' : 'borrowed';
+            const { error: surplusError } = await supabase
                 .from('loans' as any)
-                .update({ paid_amount: newPaid })
-                .eq('id', payment.loan_id);
+                .insert({
+                    name: `${loanData.name} (Excedente)`,
+                    total_amount: surplus,
+                    paid_amount: 0,
+                    type: reverseType,
+                    user_id: user.id,
+                    payment_method_id: payment.payment_method_id || null,
+                    is_disbursed: true,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (surplusError) {
+                console.error('[useCreateLoanPayment] Failed to create surplus debt', surplusError);
+                toast({
+                    title: 'Aviso',
+                    description: 'Se pagó el préstamo, pero no se pudo crear la deuda por el excedente.',
+                    variant: 'default'
+                });
+            } else {
+                toast({
+                    title: 'Pago con excedente',
+                    description: `Se liquidó el préstamo y se generó una nueva cuenta por el excedente de ${surplus}.`
+                });
+            }
         }
 
-
-        // Sync with transactions
-        // Note: For 'borrowed' (Deuda), paying it is an EXPENSE (money leaves).
-        // For 'lent' (Prestado), receiving payment is INCOME (money enters).
+        // 5. Sync with transactions (full amount)
         await addTransaction({
             type: payment.type === 'borrowed' ? 'transfer_out' : 'transfer_in',
-            category: 'Préstamos', // Standardized to "Préstamos"
+            category: 'Préstamos',
             amount: payment.amount,
-            description: `Abono a préstamo: ${payment.name}`,
+            description: `Abono a préstamo: ${payment.name}${isOverpayment ? ' (con excedente)' : ''}`,
             date: payment.date,
-            payment_method_id: payment.payment_method_id || null // Pass the source/dest account
+            payment_method_id: payment.payment_method_id || null
         });
 
-        toast({ title: 'Éxito', description: 'Pago registrado correctamente' });
-        return { data, error: null };
+        if (!isOverpayment) {
+            toast({ title: 'Éxito', description: 'Pago registrado correctamente' });
+        }
+
+        // Invalidate loans to refresh list
+        queryClient.invalidateQueries({ queryKey: queryKeys.loans.all });
+
+        return { data: pData, error: null };
     };
 
     return { createPayment };

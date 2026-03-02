@@ -91,14 +91,29 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             if (error) { throw error; }
 
             // Filter out undefined values to prevent overwriting existing state with undefined when spreading
-            const validUpdates = Object.entries(updates).reduce((acc: any, [key, value]) => {
-                if (value !== undefined) acc[key] = value;
+            type ProfileUpdate = {
+                currency?: string;
+                decimal_places?: number;
+                base_color?: string;
+                onboarding_decision?: string;
+                has_pending_import?: boolean;
+                welcome_completed?: boolean;
+            };
+
+            const validUpdates = Object.entries(updates).reduce((acc: ProfileUpdate, [key, value]) => {
+                if (value !== undefined) {
+                    (acc as Record<string, unknown>)[key] = value;
+                }
                 return acc;
             }, {});
 
             // Update local state
-            if (validUpdates.currency !== undefined) { setCurrency(validUpdates.currency); }
-            if (validUpdates.decimal_places !== undefined) { setDecimalPlaces(validUpdates.decimal_places); }
+            if (validUpdates.currency !== undefined) {
+                setCurrency(validUpdates.currency);
+            }
+            if (validUpdates.decimal_places !== undefined) {
+                setDecimalPlaces(validUpdates.decimal_places);
+            }
             const nextProfile = { ...(profileData || {}), ...validUpdates } as NonNullable<typeof profileData>;
             setProfileData(nextProfile);
 
@@ -106,7 +121,9 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             queryClient.setQueryData(
                 queryKeys.finance.profile(user.id),
                 (prev: ProfileSelect | null) => {
-                    if (!prev) return prev;
+                    if (!prev) {
+                        return prev;
+                    }
                     return {
                         ...prev,
                         ...validUpdates,

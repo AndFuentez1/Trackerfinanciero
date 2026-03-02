@@ -91,8 +91,8 @@ function CategoryBudgetMobileCard({
     paymentMethods
 }: {
     budget: BudgetState,
-    onSave: (budget: any) => Promise<any>,
-    onDelete: (id: string) => Promise<any>,
+    onSave: (budget: { category_id: string; amount: number; month?: string }) => Promise<unknown>,
+    onDelete: (id: string) => Promise<unknown>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[]
 }) {
@@ -247,8 +247,8 @@ function CategoryBudgetRow({
     onExpandChange
 }: {
     budget: BudgetState,
-    onSave: (budget: { category_id: string; category?: string; category_name?: string; amount: number; month?: string }) => Promise<any>,
-    onDelete: (id: string) => Promise<any>,
+    onSave: (budget: { category_id: string; category?: string; category_name?: string; amount: number; month?: string }) => Promise<unknown>,
+    onDelete: (id: string) => Promise<unknown>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[],
     onExpandChange: (expanded: boolean) => void

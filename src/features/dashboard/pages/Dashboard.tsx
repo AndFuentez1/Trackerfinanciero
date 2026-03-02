@@ -177,7 +177,7 @@ export default function Index() {
                 <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Resumen general de tu estado financiero</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:mt-1">
+            <div className="flex flex-wrap items-center gap-2 md:mt-1 justify-center md:justify-end">
               <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
               <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
             </div>

@@ -61,6 +61,12 @@ vi.mock('@/shared/ui/accordion', () => ({
     AccordionContent: ({ children }: any) => <div>{children}</div>,
 }));
 
+vi.mock('@/features/finance/hooks/useFinanceData', () => ({
+    useFinanceData: () => ({
+        addCategory: vi.fn(),
+    })
+}));
+
 describe('GmailHistoryDialog', () => {
     const mockCategories = [{ id: '1', name: 'Alimentación', type: 'expense' as const }];
     const mockPaymentMethods = [{ id: '1', name: 'Tarjeta', type: 'credit' as const, balance: 0 }];

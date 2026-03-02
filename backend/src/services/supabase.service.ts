@@ -12,7 +12,9 @@ export async function getCategoryId(categoryName: string, userId: string): Promi
 
         // Función de normalización consistente
         const normalize = (name: string) => {
-            if (!name) return '';
+            if (!name) {
+                return '';
+            }
             return name
                 .toLowerCase()
                 .normalize('NFD')
@@ -34,7 +36,9 @@ export async function getCategoryId(categoryName: string, userId: string): Promi
         }
 
         const { data: categories, error } = await query;
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
 
         if (!categories || categories.length === 0) {
             logger.warn(`⚠️  Usuario ${userId} no tiene categorías de gastos.`);
@@ -87,8 +91,9 @@ export async function getPaymentMethodId(methodName: string, userId: string): Pr
             .from('payment_methods')
             .select('id, name')
             .eq('user_id', userId);
-
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
 
         // Buscar coincidencia flexible
         const match = methods.find((method: { name: string; id: string }) => {
@@ -132,11 +137,12 @@ export async function checkDuplicate(messageId: string, userId: string): Promise
             .eq('message_id', messageId)
             .neq('status', 'pending')  // Solo registros ya aprobados/archivados son duplicados reales
             .limit(1);
-
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const isDuplicate = (approved && (approved as any[]).length > 0);
+        const isDuplicate = (approved && (approved as unknown[]).length > 0);
 
         if (isDuplicate) {
             logger.warn(`⚠️  Factura ya aprobada (duplicado real): ${messageId}`);
@@ -161,8 +167,9 @@ export async function deletePendingByMessageId(messageId: string, userId: string
             .eq('user_id', userId)
             .eq('message_id', messageId)
             .eq('status', 'pending');
-
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
         logger.info(`🗑️  Pending anterior eliminado para re-import: ${messageId}`);
     } catch (error) {
         logger.warn('⚠️ No se pudo eliminar pending anterior:', error);
@@ -180,9 +187,9 @@ export async function insertPendingInvoice(invoiceData: Database['public']['Tabl
             .from('pending_invoices')
             .insert([invoiceData])
             .select();
-
-        if (error) throw error;
-
+        if (error) {
+            throw error;
+        }
         logger.info(`✅ Factura insertada en Supabase: ${data[0].id}`);
         return data[0];
     } catch (error) {
@@ -201,9 +208,9 @@ export async function getPendingInvoices(userId: string) {
             .select('*')
             .eq('user_id', userId)
             .order('arrival_date', { ascending: false });
-
-        if (error) throw error;
-
+        if (error) {
+            throw error;
+        }
         return data;
     } catch (error) {
         logger.error('❌ Error obteniendo facturas pendientes:', error);

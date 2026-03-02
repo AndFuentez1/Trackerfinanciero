@@ -70,7 +70,9 @@ export function EvolutionChart({
 
   // If a drill-down comes in from outside, switch to flow tab
   useEffect(() => {
-    if (sankeyDrillDown) setActiveTab('flow');
+    if (sankeyDrillDown) {
+      setActiveTab('flow');
+    }
   }, [sankeyDrillDown]);
 
   // --- Chart toggle filters (only relevant for evolution tab) ---
@@ -216,16 +218,26 @@ export function EvolutionChart({
 
   const { yDomain, yTicks } = useMemo(() => {
     const fallback = { yDomain: [-1000000, 1000000] as [number, number], yTicks: [-1000000, -666667, -333333, 0, 333333, 666667, 1000000] };
-    if (!chartData || chartData.length === 0) return fallback;
+    if (!chartData || chartData.length === 0) {
+      return fallback;
+    }
 
     const allValues: number[] = [];
     chartData.forEach(d => {
-      if (d.income != null) allValues.push(d.income);
-      if (d.expense != null) allValues.push(d.expense);
-      if (d.balance != null) allValues.push(d.balance);
+      if (d.income !== null) {
+        allValues.push(d.income);
+      }
+      if (d.expense !== null) {
+        allValues.push(d.expense);
+      }
+      if (d.balance !== null) {
+        allValues.push(d.balance);
+      }
     });
 
-    if (allValues.length === 0) return fallback;
+    if (allValues.length === 0) {
+      return fallback;
+    }
 
     const minVal = Math.min(...allValues, 0);
     const maxVal = Math.max(...allValues, 0);
@@ -235,15 +247,19 @@ export function EvolutionChart({
     const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     const firstDigit = rawStep / magnitude;
     let step = magnitude;
-    if (firstDigit > 5) step = 10 * magnitude;
-    else if (firstDigit > 2) step = 5 * magnitude;
-    else if (firstDigit > 1) step = 2 * magnitude;
+    if (firstDigit > 5) {
+      step = 10 * magnitude;
+    } else if (firstDigit > 2) {
+      step = 5 * magnitude;
+    } else if (firstDigit > 1) {
+      step = 2 * magnitude;
+    }
 
     const stepsBelow = minVal < 0 ? Math.ceil(Math.abs(minVal) / step) : 0;
     const stepsAbove = maxVal > 0 ? Math.ceil(maxVal / step) : 0;
 
     let kBelow = stepsBelow;
-    let total = stepsBelow + stepsAbove;
+    const total = stepsBelow + stepsAbove;
 
     if (total > 6) {
       const ratio = Math.abs(minVal) / (Math.abs(minVal) + maxVal);
@@ -278,9 +294,13 @@ export function EvolutionChart({
     return transactions.filter(t => {
       const d = new Date(t.date);
       const yearStr = d.getFullYear().toString();
-      if (!selectedYears.includes(yearStr)) return false;
+      if (!selectedYears.includes(yearStr)) {
+        return false;
+      }
       if (selectedMonth !== 'all') {
-        if (d.getMonth() + 1 !== Number(selectedMonth)) return false;
+        if (d.getMonth() + 1 !== Number(selectedMonth)) {
+          return false;
+        }
       }
       return true;
     });
@@ -308,8 +328,12 @@ export function EvolutionChart({
             </TabsList>
           </div>
           {/* ROW 2: Controls — right aligned */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-              <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2 order-2 md:order-1 flex-shrink-0">
+          <div className={cn(
+            "flex items-center gap-2 flex-wrap transition-all duration-300 w-full",
+            activeTab === 'flow' ? "justify-center" : "justify-end"
+          )}>
+            {activeTab === 'evolution' && (
+              <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2 order-2 md:order-1 flex-shrink-0 animate-in fade-in zoom-in-95 duration-200">
                 <button
                   type="button"
                   onClick={() => setShowIncome(!showIncome)}
@@ -347,205 +371,210 @@ export function EvolutionChart({
                   Balance
                 </button>
               </div>
+            )}
 
-              <div className="flex items-center gap-2 flex-shrink-0 order-1 md:order-2">
-                <Select value={selectedMonth} onValueChange={setMonth}>
-                  <SelectTrigger className="w-auto min-w-[130px] h-9 bg-background/50 border-input">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMonths.map(m => (
-                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="flex items-center gap-2 flex-shrink-0 order-1 md:order-2">
+              <Select value={selectedMonth} onValueChange={setMonth}>
+                <SelectTrigger className="w-auto min-w-[130px] h-9 bg-background/50 border-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2 whitespace-nowrap">
-                      {selectedYears.length === availableYears.length ? 'Todos los años' : `${selectedYears.length} Años`}
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[150px]">
-                    <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {onSelectAllYears && (
-                      <>
-                        <DropdownMenuCheckboxItem
-                          checked={selectedYears.length === availableYears.length}
-                          onCheckedChange={onSelectAllYears}
-                        >
-                          Todos
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                      </>
-                    )}
-                    {availableYears.map(year => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2 whitespace-nowrap">
+                    {selectedYears.length === availableYears.length ? 'Todos los años' : `${selectedYears.length} Años`}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[150px]">
+                  <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {onSelectAllYears && (
+                    <>
                       <DropdownMenuCheckboxItem
-                        key={year}
-                        checked={selectedYears.includes(year)}
-                        onCheckedChange={() => toggleYear(year)}
+                        checked={selectedYears.length === availableYears.length}
+                        onCheckedChange={onSelectAllYears}
                       >
-                        {year}
+                        Todos
                       </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {availableYears.map(year => (
+                    <DropdownMenuCheckboxItem
+                      key={year}
+                      checked={selectedYears.includes(year)}
+                      onCheckedChange={() => toggleYear(year)}
+                    >
+                      {year}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="flex-1 p-4 pt-2 min-h-[400px]">
-            {/* ── TAB 1: FLUJO (Sankey) ── */}
-            <TabsContent value="flow" className="mt-0 h-full min-h-[420px]">
-              <SankeyChart
-                transactions={filteredSankeyTransactions}
-                categories={categories}
-                drillDown={sankeyDrillDown}
-                onDrillDownChange={onSankeyDrillDownChange}
-              />
-            </TabsContent>
+          {/* ── TAB 1: FLUJO (Sankey) ── */}
+          <TabsContent value="flow" className="mt-0 h-full min-h-[420px]">
+            <SankeyChart
+              transactions={filteredSankeyTransactions}
+              categories={categories}
+              drillDown={sankeyDrillDown}
+              onDrillDownChange={onSankeyDrillDownChange}
+            />
+          </TabsContent>
 
-            {/* ── TAB 2: EVOLUCIÓN ── */}
-            <TabsContent value="evolution" className="mt-0 h-full min-h-[420px]">
-              <ResponsiveContainer width="100%" height="100%" minHeight={420}>
-                <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          {/* ── TAB 2: EVOLUCIÓN ── */}
+          <TabsContent value="evolution" className="mt-0 h-full min-h-[420px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={420}>
+              <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
 
-                  {yTicks.map(tick => (
-                    <ReferenceLine key={tick} y={tick} stroke="hsl(var(--border))" strokeOpacity={0.35} strokeWidth={1} />
-                  ))}
-                  <XAxis
-                    dataKey="displayName"
-                    axisLine={false}
-                    tickLine={false}
-                    padding={{ left: 20, right: 0 }}
-                    tick={(props: AxisTickProps) => {
-                      const { x, y, payload } = props;
-                      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-                      let label = payload.value as string;
-                      let monthStr = label;
-                      let yearStr = '';
+                {yTicks.map(tick => (
+                  <ReferenceLine key={tick} y={tick} stroke="hsl(var(--border))" strokeOpacity={0.35} strokeWidth={1} />
+                ))}
+                <XAxis
+                  dataKey="displayName"
+                  axisLine={false}
+                  tickLine={false}
+                  padding={{ left: 20, right: 0 }}
+                  tick={(props: AxisTickProps) => {
+                    const { x, y, payload } = props;
+                    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                    const label = payload.value as string;
+                    let monthStr = label;
+                    let yearStr = '';
 
+                    const isMultiYear = selectedYears.length > 1;
+
+                    if (isMultiYear && selectedMonth === 'all' && label.includes(" '")) {
+                      const parts = label.split(" '");
+                      monthStr = parts[0];
+                      yearStr = parts[1] ? `'${parts[1]}` : '';
+                    }
+
+                    if (isMultiYear && selectedMonth === 'all') {
+                      const dataPoint = chartData.find(d => d.displayName === label);
+                      if (dataPoint && dataPoint.monthIndex !== 0 && dataPoint.monthIndex !== 6) {
+                        return null;
+                      }
+                    }
+
+                    if (!isMultiYear && selectedMonth === 'all') {
+                      const dataPoint = chartData.find(d => d.displayName === label);
+                      const visibleMonths = [0, 3, 6, 9, 11];
+                      if (dataPoint && !visibleMonths.includes(dataPoint.monthIndex ?? -1)) {
+                        return null;
+                      }
+                    }
+
+                    if (isMobile && selectedMonth === 'all' && !isMultiYear) {
+                      monthStr = monthStr.charAt(0);
+                    }
+
+                    return (
+                      <text x={x} y={y} dy={12} textAnchor="middle" fill="#475569" fontSize={11} fontWeight={500}>
+                        <tspan x={x} dy="0">{monthStr}</tspan>
+                        {yearStr && <tspan x={x} dy="14">{yearStr}</tspan>}
+                      </text>
+                    );
+                  }}
+                  interval={0}
+                />
+                <YAxis
+                  tickFormatter={formatAxisCurrency}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
+                  width={60}
+                  domain={yDomain}
+                  ticks={yTicks}
+                />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
+                  content={<FinanceChartTooltip />}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  formatter={(value) => (
+                    <span className="text-xs font-semibold text-slate-700 ml-1">{value}</span>
+                  )}
+                />
+
+                {/* Fixed barSize + fillOpacity keeps each bar in its own slot always */}
+                <Bar
+                  dataKey="income"
+                  name="Ingresos"
+                  fill="hsl(var(--success))"
+                  radius={[4, 4, 0, 0]}
+                  barSize={14}
+                  fillOpacity={showIncome ? 0.7 : 0}
+                  isAnimationActive={false}
+                  legendType={showIncome ? 'circle' : 'none'}
+                />
+                <Bar
+                  dataKey="expense"
+                  name="Gastos"
+                  fill="hsl(var(--destructive))"
+                  radius={[4, 4, 0, 0]}
+                  barSize={14}
+                  fillOpacity={showExpense ? 0.7 : 0}
+                  isAnimationActive={false}
+                  legendType={showExpense ? 'circle' : 'none'}
+                />
+                <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                {showBalance && (
+                  <Line
+                    type="monotone"
+                    dataKey="balance"
+                    name="Balance"
+                    stroke="#94a3b8"
+                    strokeWidth={2.5}
+                    isAnimationActive={false}
+                    dot={(props: { cx: number; cy: number; payload: EvolutionChartPoint; index: number }) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.balance === null) {
+                        return <g key={`dot-${payload.displayName}`} />;
+                      }
                       const isMultiYear = selectedYears.length > 1;
-
-                      if (isMultiYear && selectedMonth === 'all' && label.includes(" '")) {
-                        const parts = label.split(" '");
-                        monthStr = parts[0];
-                        yearStr = parts[1] ? `'${parts[1]}` : '';
+                      const monthIdx = payload.monthIndex ?? -1;
+                      const isVisible = selectedMonth !== 'all'
+                        ? true
+                        : isMultiYear
+                          ? monthIdx === 0 || monthIdx === 6
+                          : [0, 3, 6, 9, 11].includes(monthIdx);
+                      if (!isVisible) {
+                        return <g key={`dot-${payload.displayName}`} />;
                       }
-
-                      if (isMultiYear && selectedMonth === 'all') {
-                        const dataPoint = chartData.find(d => d.displayName === label);
-                        if (dataPoint && dataPoint.monthIndex !== 0 && dataPoint.monthIndex !== 6) {
-                          return null;
-                        }
-                      }
-
-                      if (!isMultiYear && selectedMonth === 'all') {
-                        const dataPoint = chartData.find(d => d.displayName === label);
-                        const visibleMonths = [0, 3, 6, 9, 11];
-                        if (dataPoint && !visibleMonths.includes(dataPoint.monthIndex ?? -1)) {
-                          return null;
-                        }
-                      }
-
-                      if (isMobile && selectedMonth === 'all' && !isMultiYear) {
-                        monthStr = monthStr.charAt(0);
-                      }
-
                       return (
-                        <text x={x} y={y} dy={12} textAnchor="middle" fill="#475569" fontSize={11} fontWeight={500}>
-                          <tspan x={x} dy="0">{monthStr}</tspan>
-                          {yearStr && <tspan x={x} dy="14">{yearStr}</tspan>}
-                        </text>
+                        <circle
+                          key={`dot-${payload.displayName}`}
+                          cx={cx}
+                          cy={cy}
+                          r={3}
+                          fill="#94a3b8"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={1.5}
+                        />
                       );
                     }}
-                    interval={0}
+                    connectNulls={false}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#94a3b8' }}
                   />
-                  <YAxis
-                    tickFormatter={formatAxisCurrency}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-                    width={60}
-                    domain={yDomain}
-                    ticks={yTicks}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
-                    content={<FinanceChartTooltip />}
-                  />
-                  <Legend
-                    iconType="circle"
-                    wrapperStyle={{ paddingTop: '20px' }}
-                    formatter={(value) => (
-                      <span className="text-xs font-semibold text-slate-700 ml-1">{value}</span>
-                    )}
-                  />
-
-                  {/* Fixed barSize + fillOpacity keeps each bar in its own slot always */}
-                  <Bar
-                    dataKey="income"
-                    name="Ingresos"
-                    fill="hsl(var(--success))"
-                    radius={[4, 4, 0, 0]}
-                    barSize={14}
-                    fillOpacity={showIncome ? 0.7 : 0}
-                    isAnimationActive={false}
-                    legendType={showIncome ? 'circle' : 'none'}
-                  />
-                  <Bar
-                    dataKey="expense"
-                    name="Gastos"
-                    fill="hsl(var(--destructive))"
-                    radius={[4, 4, 0, 0]}
-                    barSize={14}
-                    fillOpacity={showExpense ? 0.7 : 0}
-                    isAnimationActive={false}
-                    legendType={showExpense ? 'circle' : 'none'}
-                  />
-                  <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                  {showBalance && (
-                    <Line
-                      type="monotone"
-                      dataKey="balance"
-                      name="Balance"
-                      stroke="#94a3b8"
-                      strokeWidth={2.5}
-                      isAnimationActive={false}
-                      dot={(props: { cx: number; cy: number; payload: EvolutionChartPoint; index: number }) => {
-                        const { cx, cy, payload } = props;
-                        if (payload.balance == null) return <g key={`dot-${payload.displayName}`} />;
-                        const isMultiYear = selectedYears.length > 1;
-                        const monthIdx = payload.monthIndex ?? -1;
-                        const isVisible = selectedMonth !== 'all'
-                          ? true
-                          : isMultiYear
-                            ? monthIdx === 0 || monthIdx === 6
-                            : [0, 3, 6, 9, 11].includes(monthIdx);
-                        if (!isVisible) return <g key={`dot-${payload.displayName}`} />;
-                        return (
-                          <circle
-                            key={`dot-${payload.displayName}`}
-                            cx={cx}
-                            cy={cy}
-                            r={3}
-                            fill="#94a3b8"
-                            stroke="hsl(var(--background))"
-                            strokeWidth={1.5}
-                          />
-                        );
-                      }}
-                      connectNulls={false}
-                      activeDot={{ r: 6, strokeWidth: 0, fill: '#94a3b8' }}
-                    />
-                  )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </TabsContent>
-          </CardContent>
-        </Card>
-      </Tabs>
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </TabsContent>
+        </CardContent>
+      </Card>
+    </Tabs>
   );
 }

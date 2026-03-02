@@ -25,6 +25,17 @@ export interface InvoiceSearchResult {
     status?: 'unread' | 'read' | 'archived' | 'deleted' | 'approved';
 }
 
+interface GmailPart {
+    filename?: string;
+    mimeType?: string;
+    body?: {
+        attachmentId?: string;
+        size?: number;
+        data?: string;
+    };
+    parts?: GmailPart[];
+}
+
 export class GmailService {
     private oauth2Client: OAuth2Client;
 
@@ -91,8 +102,9 @@ export class GmailService {
             this.oauth2Client.on('tokens', async (newTokens) => {
                 try {
                     await saveGmailTokens(userId, newTokens);
-                } catch (err: any) {
-                    console.error(`❌ Error auto-saving refreshed Gmail tokens for user ${userId}:`, err);
+                } catch (err: unknown) {
+                    const errMsg = err instanceof Error ? err.message : String(err);
+                    console.error(`❌ Error auto-saving refreshed Gmail tokens for user ${userId}:`, errMsg);
                 }
             });
         }
@@ -104,16 +116,18 @@ export class GmailService {
         return Buffer.from(padded, 'base64');
     }
 
-    private collectParts(payload: any): any[] {
-        const parts: any[] = [];
-        const walk = (part: any) => {
-            if (!part) { return; }
+    private collectParts(payload: unknown): GmailPart[] {
+        const parts: GmailPart[] = [];
+        const walk = (part: GmailPart) => {
+            if (!part) {
+                return;
+            }
             parts.push(part);
             if (Array.isArray(part.parts)) {
                 part.parts.forEach(walk);
             }
         };
-        walk(payload);
+        walk(payload as GmailPart);
         return parts;
     }
 
@@ -181,9 +195,10 @@ export class GmailService {
 
                 // Inspect attachments
                 for (const part of parts) {
-                    if (part.filename && part.body?.attachmentId) {
-                        const lowerName = part.filename.toLowerCase();
-                        fileNames.push(part.filename);
+                    const p = part as GmailPart;
+                    if (p.filename && p.body?.attachmentId) {
+                        const lowerName = p.filename.toLowerCase();
+                        fileNames.push(p.filename);
 
                         // Direct PDF is valid
                         if (lowerName.endsWith('.pdf')) {
@@ -194,7 +209,7 @@ export class GmailService {
                         if (lowerName.endsWith('.zip')) {
                             hasZip = true;
                             // Download and inspect zip content
-                            const isZipValid = await this.validateZipContent(gmail, message.id, part.body.attachmentId);
+                            const isZipValid = await this.validateZipContent(gmail, message.id, p.body.attachmentId);
                             if (isZipValid) {
                                 isValidInvoice = true;
                             }
@@ -351,7 +366,7 @@ export class GmailService {
             });
 
             const messages = res.data.messages || [];
-            const invoices: any[] = []; // Using any to match the JS return shape loosely
+            const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined }[] = [];
 
             for (const message of messages) {
                 if (!message.id) { continue; }
@@ -371,22 +386,23 @@ export class GmailService {
                 const allParts = this.collectParts(details.data.payload);
 
                 for (const part of allParts) {
-                    if (part.filename && part.body?.attachmentId) {
-                        const lowerName = part.filename.toLowerCase();
+                    const p = part as GmailPart;
+                    if (p.filename && p.body?.attachmentId) {
+                        const lowerName = p.filename.toLowerCase();
                         let xmlContent: string | null = null;
 
                         if (lowerName.endsWith('.xml')) {
-                            xmlContent = await this.downloadAttachment(gmail, message.id, part.body.attachmentId);
+                            xmlContent = await this.downloadAttachment(gmail, message.id, p.body.attachmentId);
                         } else if (lowerName.endsWith('.zip')) {
-                            xmlContent = await this.extractXmlFromZip(gmail, message.id, part.body.attachmentId);
+                            xmlContent = await this.extractXmlFromZip(gmail, message.id, p.body.attachmentId);
                         } else if (lowerName.endsWith('.rar')) {
-                            console.warn(`   ⚠️ Archivo RAR no soportado: ${part.filename}`);
+                            console.warn(`   ⚠️ Archivo RAR no soportado: ${p.filename}`);
                         }
 
                         if (xmlContent) {
                             invoices.push({
                                 messageId: message.id,
-                                filename: part.filename,
+                                filename: p.filename,
                                 xmlContent,
                                 date: details.data.internalDate
                             });
@@ -473,7 +489,7 @@ export class GmailService {
                 const chunk = messages.slice(i, i + chunkSize);
 
                 const chunkPromises = chunk.map(async (m): Promise<InvoiceSearchResult | null> => {
-                    const messageId = m.id;
+                    const messageId = (m as { id?: string }).id;
                     if (!messageId) { return null; }
 
                     try {
@@ -497,7 +513,7 @@ export class GmailService {
 
                         return {
                             id: messageId,
-                            threadId: details.data.threadId || m.threadId!,
+                            threadId: details.data.threadId || (m as { threadId?: string }).threadId!,
                             snippet: details.data.snippet || '',
                             internalDate: details.data.internalDate!,
                             date: dateHeader || undefined,
@@ -532,7 +548,7 @@ export class GmailService {
      */
     public async fetchSpecificMessages(messageIds: string[]) {
         const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-        const invoices: any[] = [];
+        const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined }[] = [];
 
         for (const messageId of messageIds) {
             try {
@@ -545,22 +561,23 @@ export class GmailService {
                 const allParts = this.collectParts(details.data.payload);
 
                 for (const part of allParts) {
-                    if (part.filename && part.body?.attachmentId) {
-                        const lowerName = part.filename.toLowerCase();
+                    const p = part as GmailPart;
+                    if (p.filename && p.body?.attachmentId) {
+                        const lowerName = p.filename.toLowerCase();
                         let xmlContent: string | null = null;
 
                         if (lowerName.endsWith('.xml')) {
-                            xmlContent = await this.downloadAttachment(gmail, messageId, part.body.attachmentId);
+                            xmlContent = await this.downloadAttachment(gmail, messageId, p.body.attachmentId);
                         } else if (lowerName.endsWith('.zip')) {
-                            xmlContent = await this.extractXmlFromZip(gmail, messageId, part.body.attachmentId);
+                            xmlContent = await this.extractXmlFromZip(gmail, messageId, p.body.attachmentId);
                         } else if (lowerName.endsWith('.rar')) {
-                            console.warn(`   ⚠️ Archivo RAR no soportado: ${part.filename}`);
+                            console.warn(`   ⚠️ Archivo RAR no soportado: ${p.filename}`);
                         }
 
                         if (xmlContent) {
                             invoices.push({
                                 messageId,
-                                filename: part.filename,
+                                filename: p.filename,
                                 xmlContent,
                                 date: details.data.internalDate
                             });

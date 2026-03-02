@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList, ReferenceLine } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
+import { ResponsiveContainer, ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ReferenceLine, LabelList } from 'recharts';
+import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { Check, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
@@ -22,42 +22,45 @@ interface BalanceAdjustmentLabelProps {
 
 export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isWarning }) => {
   const { formatCurrency, currency } = useFormatCurrency();
+
+  // Filter States - Must be before any conditional returns
+  const [showIncome, setShowIncome] = useState(false);
+  const [showExpense, setShowExpense] = useState(false);
+  const [showBalance, setShowBalance] = useState(true);
+
   const axisFormatter = useMemo(() => {
     return (value: number) => formatCurrencyCompact(value, currency || 'COP');
   }, [currency]);
 
-  const renderBalanceAdjustmentLabel = ({ x, y, payload }: BalanceAdjustmentLabelProps) => {
-    if (typeof x !== 'number' || typeof y !== 'number') { return null; }
-    const delta = payload?.balanceAjusteDelta;
-    if (typeof delta !== 'number' || delta === 0) { return null; }
-    return (
-      <text
-        x={x}
-        y={y - 12}
-        textAnchor="middle"
-        fill="hsl(var(--muted-foreground))"
-        fontSize={10}
-      >
-        {`Ajuste de Balance Inicial ${formatCurrency(delta)}`}
-      </text>
-    );
-  };
-
   // Calculate dynamic domain from data ensuring 7 even grid lines
   const { yDomain, yTicks } = React.useMemo(() => {
     const fallback = { yDomain: [-1000000, 1000000] as [number, number], yTicks: [-1000000, -666667, -333333, 0, 333333, 666667, 1000000] };
-    if (!data || data.length === 0) return fallback;
+    if (!data || data.length === 0) {
+      return fallback;
+    }
 
     const allValues: number[] = [];
     data.forEach(d => {
-      if (d.ingresos != null) allValues.push(d.ingresos);
-      if (d.egresos != null) allValues.push(-Math.abs(d.egresos));
-      if (d.balanceReal != null) allValues.push(d.balanceReal);
-      if (d.balanceProyectado != null) allValues.push(d.balanceProyectado);
-      if (d.balanceSimulated != null) allValues.push(d.balanceSimulated);
+      if (d.ingresos !== null) {
+        allValues.push(d.ingresos);
+      }
+      if (d.egresos !== null) {
+        allValues.push(-Math.abs(d.egresos));
+      }
+      if (d.balanceReal !== null) {
+        allValues.push(d.balanceReal);
+      }
+      if (d.balanceProyectado !== null) {
+        allValues.push(d.balanceProyectado);
+      }
+      if (d.balanceSimulated !== null) {
+        allValues.push(d.balanceSimulated);
+      }
     });
 
-    if (allValues.length === 0) return fallback;
+    if (allValues.length === 0) {
+      return fallback;
+    }
 
     const minVal = Math.min(...allValues, 0);
     const maxVal = Math.max(...allValues, 0);
@@ -68,16 +71,20 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     const firstDigit = rawStep / magnitude;
     let step = magnitude;
-    if (firstDigit > 5) step = 10 * magnitude;
-    else if (firstDigit > 2) step = 5 * magnitude;
-    else if (firstDigit > 1) step = 2 * magnitude;
+    if (firstDigit > 5) {
+      step = 10 * magnitude;
+    } else if (firstDigit > 2) {
+      step = 5 * magnitude;
+    } else if (firstDigit > 1) {
+      step = 2 * magnitude;
+    }
 
     // Distribute 6 intervals around zero
     const stepsBelow = minVal < 0 ? Math.ceil(Math.abs(minVal) / step) : 0;
     const stepsAbove = maxVal > 0 ? Math.ceil(maxVal / step) : 0;
 
     let kBelow = stepsBelow;
-    let total = stepsBelow + stepsAbove;
+    const total = stepsBelow + stepsAbove;
 
     if (total > 6) {
       const ratio = Math.abs(minVal) / (Math.abs(minVal) + maxVal);
@@ -107,10 +114,34 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     };
   }, [data]);
 
-  // Filter States
-  const [showIncome, setShowIncome] = useState(false); // Default off to be clean
-  const [showExpense, setShowExpense] = useState(false);
-  const [showBalance, setShowBalance] = useState(true); // Default on
+  // Pre-process data to make expenses negative for downward bars
+  const chartData = useMemo(() => {
+    return data.map(d => ({
+      ...d,
+      negativeEgresos: d.egresos !== null ? -Math.abs(d.egresos) : null
+    }));
+  }, [data]);
+
+  const renderBalanceAdjustmentLabel = ({ x, y, payload }: BalanceAdjustmentLabelProps) => {
+    if (typeof x !== 'number' || typeof y !== 'number') {
+      return null;
+    }
+    const delta = payload?.balanceAjusteDelta;
+    if (typeof delta !== 'number' || delta === 0) {
+      return null;
+    }
+    return (
+      <text
+        x={x}
+        y={y - 12}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        fontSize={10}
+      >
+        {`Ajuste de Balance Inicial ${formatCurrency(delta)}`}
+      </text>
+    );
+  };
 
   if (loading) {
     return (
@@ -123,16 +154,8 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
           <Skeleton className="h-[350px] w-full rounded-xl" />
         </CardContent>
       </Card>
-    )
+    );
   }
-
-  // Pre-process data to make expenses negative for downward bars
-  const chartData = useMemo(() => {
-    return data.map(d => ({
-      ...d,
-      negativeEgresos: d.egresos != null ? -Math.abs(d.egresos) : null
-    }));
-  }, [data]);
 
   return (
     <Card className="mb-6 shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm">
@@ -218,7 +241,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              {/* Líneas horizontales: extremadamente sutiles (estilo Sure) */}
               {yTicks.map(tick => (
                 <ReferenceLine key={tick} y={tick} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.1} strokeWidth={1} />
               ))}
@@ -237,7 +259,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                       dy={10}
                       textAnchor="middle"
                       fill="hsl(var(--muted-foreground))"
-                      fontSize={12}
+                      fontSize={isMobile ? 13 : 11}
                     >
                       {label}
                     </text>
@@ -250,8 +272,8 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                 tickFormatter={axisFormatter}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                width={85}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                width={78}
                 ticks={yTicks}
               />
               <Tooltip
@@ -260,9 +282,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} strokeDasharray="3 3" />
 
-              {/* Bars & Lines controlled by Toggles */}
-
-              {/* Fixed barSize + fillOpacity so bars keep position and width always */}
               <Bar
                 dataKey="ingresos"
                 name="Ingresos Totales"
@@ -287,7 +306,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
               {showBalance && (
                 <>
-                  {/* Balance Real (Histórico Descriptivo) */}
                   <Area
                     type="monotone"
                     dataKey="balanceReal"
@@ -299,7 +317,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     animationEasing="ease-in-out"
                     dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
                       const { cx, cy, payload } = props;
-                      if (payload.balanceReal == null) return <g key={`dot-br-${payload.name}`} />;
+                      if (payload.balanceReal === null || payload.balanceReal === undefined) {
+                        return <g key={`dot-br-${payload.name}`} />;
+                      }
                       return (
                         <circle
                           key={`dot-br-${payload.name}`}
@@ -314,15 +334,14 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     connectNulls={false}
                     name="Balance"
                   />
-                  {/* Vertical Jump Line explicitly drawn between Real and Proyectado on pivot month */}
                   {(() => {
-                    const pivotData = chartData.find(d => d.balanceReal != null && d.balanceProyectado != null);
+                    const pivotData = chartData.find(d => d.balanceReal !== null && d.balanceReal !== undefined && d.balanceProyectado !== null && d.balanceProyectado !== undefined);
                     if (pivotData && pivotData.balanceReal !== pivotData.balanceProyectado) {
                       return (
                         <ReferenceLine
                           segment={[
-                            { x: pivotData.name, y: pivotData.balanceReal },
-                            { x: pivotData.name, y: pivotData.balanceProyectado }
+                            { x: pivotData.name, y: pivotData.balanceReal as number },
+                            { x: pivotData.name, y: pivotData.balanceProyectado as number }
                           ]}
                           stroke="hsl(var(--muted-foreground))"
                           strokeDasharray="4 4"
@@ -333,7 +352,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     }
                     return null;
                   })()}
-                  {/* Balance Proyectado */}
                   <Area
                     type="monotone"
                     dataKey="balanceProyectado"
@@ -345,7 +363,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     animationEasing="ease-in-out"
                     dot={(props: { cx: number; cy: number; payload: CashFlowChartPoint }) => {
                       const { cx, cy, payload } = props;
-                      if (payload.balanceProyectado == null) return <g key={`dot-bp-${payload.name}`} />;
+                      if (payload.balanceProyectado === null || payload.balanceProyectado === undefined) {
+                        return <g key={`dot-bp-${payload.name}`} />;
+                      }
                       const color = isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))";
                       return (
                         <circle
@@ -362,7 +382,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))", fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))" }}
                     className={isWarning ? "opacity-90" : ""}
                   />
-                  {/* Ajuste de Balance Inicial */}
                   <Line
                     type="monotone"
                     dataKey="balanceAjuste"
@@ -375,7 +394,6 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   >
                     <LabelList content={renderBalanceAdjustmentLabel} />
                   </Line>
-                  {/* Balance Simulado (Ideal) */}
                   {isWarning && (
                     <Line
                       type="monotone"
@@ -392,14 +410,10 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                   )}
                 </>
               )}
-
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
-    </Card >
+    </Card>
   );
 };
-
-
-

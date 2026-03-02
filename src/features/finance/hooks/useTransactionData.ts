@@ -27,7 +27,7 @@ import {
     calculateInsights
 } from '../utils/financeCalculations';
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 50;
 
 export function useTransactionData(
     userId: string | undefined,
@@ -66,7 +66,7 @@ export function useTransactionData(
             pageSize: PAGE_SIZE
         }),
         queryFn: async () => {
-            if (!userId) {return { data: [], total: 0 };}
+            if (!userId) { return { data: [], total: 0 }; }
 
             let q = supabase
                 .from('transactions')
@@ -75,15 +75,15 @@ export function useTransactionData(
                 .order(sortConfig.column, { ascending: sortConfig.ascending })
                 .order('id', { ascending: sortConfig.ascending });
 
-            if (dateFilter.from) {q = q.gte('date', dateFilter.from);}
-            if (dateFilter.to) {q = q.lte('date', dateFilter.to);}
+            if (dateFilter.from) { q = q.gte('date', dateFilter.from); }
+            if (dateFilter.to) { q = q.lte('date', dateFilter.to); }
 
             const from = page * PAGE_SIZE;
             const to = from + PAGE_SIZE - 1;
             q = q.range(from, to);
 
             const { data, count, error } = await q;
-            if (error) {throw error;}
+            if (error) { throw error; }
 
             return {
                 data: (data || []).map(mapTransactionRow),
@@ -99,7 +99,7 @@ export function useTransactionData(
     const { data: allTransactions = [] } = useQuery({
         queryKey: ['finance', 'allTransactions', userId],
         queryFn: async () => {
-            if (!userId) {return [];}
+            if (!userId) { return []; }
 
             const allTxnsData = [];
             let hasMorePages = true;
@@ -115,12 +115,12 @@ export function useTransactionData(
                     .order('id', { ascending: false })
                     .range(offset, offset + CHUNK_SIZE - 1);
 
-                if (res.error) {throw res.error;}
+                if (res.error) { throw res.error; }
 
                 if (res.data && res.data.length > 0) {
                     allTxnsData.push(...res.data);
-                    if (res.data.length < CHUNK_SIZE) {hasMorePages = false;}
-                    else {offset += CHUNK_SIZE;}
+                    if (res.data.length < CHUNK_SIZE) { hasMorePages = false; }
+                    else { offset += CHUNK_SIZE; }
                 } else {
                     hasMorePages = false;
                 }
@@ -129,7 +129,7 @@ export function useTransactionData(
             const deduped: Transaction[] = [];
             const seen = new Set<string>();
             mapped.forEach(tx => {
-                if (seen.has(tx.id)) {return;}
+                if (seen.has(tx.id)) { return; }
                 seen.add(tx.id);
                 deduped.push(tx);
             });
@@ -141,16 +141,16 @@ export function useTransactionData(
 
     // 3. Derived Calculations
     useEffect(() => {
-        if (!transactionsData || isPlaceholderData) {return;}
+        if (!transactionsData || isPlaceholderData) { return; }
 
         const incoming = transactionsData.data || [];
         setPagedTransactions(prev => {
             if ((transactionsData.total || 0) === 0) { return []; }
-            if (page === 0) {return incoming;}
+            if (page === 0) { return incoming; }
             const existingIds = new Set(prev.map(t => t.id));
             const merged = [...prev];
             incoming.forEach(t => {
-                if (!existingIds.has(t.id)) {merged.push(t);}
+                if (!existingIds.has(t.id)) { merged.push(t); }
             });
             return merged;
         });
@@ -160,38 +160,40 @@ export function useTransactionData(
     const totalTransactionsCount = transactionsData?.total || 0;
     const hasMore = transactions.length < totalTransactionsCount;
 
+    const transactionsForMemos = useMemo(() => transactions, [transactions]);
+
     const summary = useMemo(() => {
-        const source = allTransactions.length > 0 ? allTransactions : transactions;
+        const source = allTransactions.length > 0 ? allTransactions : transactionsForMemos;
         return calculateSummary(source, currency);
-    }, [allTransactions, transactions, currency]);
+    }, [allTransactions, transactionsForMemos, currency]);
 
     const filteredSummary = useMemo(() =>
-        calculateSummary(transactions, currency),
-        [transactions, currency]
+        calculateSummary(transactionsForMemos, currency),
+        [transactionsForMemos, currency]
     );
 
     const expensesByCategory = useMemo(() =>
-        calculateExpensesByCategory(transactions),
-        [transactions]
+        calculateExpensesByCategory(transactionsForMemos),
+        [transactionsForMemos]
     );
 
     const budgetsWithSpending = useMemo(() =>
-        calculateBudgetProgress(budgets, transactions),
-        [budgets, transactions]
+        calculateBudgetProgress(budgets, transactionsForMemos),
+        [budgets, transactionsForMemos]
     );
 
     const insights = useMemo(() =>
-        calculateInsights(summary, expensesByCategory, paymentMethods, budgets, transactions),
-        [summary, expensesByCategory, paymentMethods, budgets, transactions]
+        calculateInsights(summary, expensesByCategory, paymentMethods, budgets, transactionsForMemos),
+        [summary, expensesByCategory, paymentMethods, budgets, transactionsForMemos]
     );
 
     const orphanedTransactions = useMemo(() => {
-        return transactions.filter(t =>
+        return transactionsForMemos.filter(t =>
             (!t.category_id || !t.payment_method_id) &&
             t.category !== 'Préstamos' &&
             t.category !== 'Loans'
         );
-    }, [transactions]);
+    }, [transactionsForMemos]);
 
     // Yield statistics (Can be extracted further if needed)
     const yieldStatistics = useMemo(() => {

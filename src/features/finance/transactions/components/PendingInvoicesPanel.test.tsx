@@ -16,6 +16,13 @@ vi.mock('@/features/finance/hooks/useFinanceData', () => ({
 vi.mock('@/features/auth/hooks/useAuth', () => ({
     useAuth: vi.fn(() => ({ user: { id: 'user1' }, loading: false }))
 }));
+vi.mock('@/features/finance/hooks/useUserConfig', () => ({
+    useUserConfig: vi.fn(() => ({
+        config: { hide_incomplete_alert: false, keep_session_alive: true },
+        updateConfig: vi.fn(),
+        loaded: true
+    }))
+}));
 vi.mock('@/shared/hooks/use-toast', () => ({
     useToast: () => ({ toast: vi.fn() })
 }));

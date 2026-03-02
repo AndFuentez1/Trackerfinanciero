@@ -215,13 +215,12 @@ export default function HistoryPage() {
         return <SkeletonLoader tab="transactions" fullPage={false} withLayoutWrapper />;
     } */
 
-    if (!user) { return null; }
-
     const hasEmptyPaymentMethods = useMemo(() => {
         const list = allTransactions || transactions;
         return list.some(t => !t.payment_method_id && t.type !== 'saving' && t.type !== 'investment');
     }, [allTransactions, transactions]);
 
+    if (!user) { return null; }
     if (isLoading && !transactions.length) {
         return <SkeletonLoader tab="transactions" withLayoutWrapper fullPage={false} />;
     }
@@ -240,7 +239,7 @@ export default function HistoryPage() {
                                 <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona y consulta tus transacciones</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end flex-wrap md:mt-1">
+                        <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap md:mt-1">
                             <AddTransactionDialog
                                 onAdd={addTransaction}
                                 onAddTransfer={addTransfer}
@@ -349,8 +348,8 @@ export default function HistoryPage() {
                                                 className={cn(
                                                     "h-auto min-h-[52px] py-3 px-4 font-semibold transition-all w-full sm:flex-1 justify-center rounded-xl !whitespace-normal gap-2",
                                                     isPanelVisible
-                                                        ? "text-slate-700 bg-white border-slate-300 shadow-sm hover:bg-slate-100"
-                                                        : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100"
+                                                        ? "text-slate-700 bg-white border-slate-300 shadow-sm hover:bg-slate-100 hover:text-slate-700"
+                                                        : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100 hover:text-orange-700"
                                                 )}
                                                 onClick={() => {
                                                     updateConfig({ hide_incomplete_alert: isPanelVisible });
@@ -451,7 +450,7 @@ export default function HistoryPage() {
                                                 weekStart.setDate(now.getDate() - 7);
                                                 updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
                                             }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
                                         >
                                             Esta semana
                                         </Button>
@@ -462,7 +461,7 @@ export default function HistoryPage() {
                                                 const now = new Date();
                                                 updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
                                             }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
                                         >
                                             Este mes
                                         </Button>
@@ -475,7 +474,7 @@ export default function HistoryPage() {
                                                 const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
                                                 updateFilter('custom', yearStart, today);
                                             }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap"
+                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
                                         >
                                             Este año
                                         </Button>
@@ -522,7 +521,7 @@ export default function HistoryPage() {
                                     variant="outline"
                                     onClick={loadMore}
                                     disabled={dataLoading}
-                                    className="gap-2 px-8 py-6 rounded-xl border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary min-w-[240px]"
+                                    className="gap-2 px-8 py-6 rounded-xl border-2 border-primary hover:bg-primary/5 transition-all text-primary font-semibold min-w-[240px] shadow-sm"
                                 >
                                     {dataLoading ? (
                                         <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />

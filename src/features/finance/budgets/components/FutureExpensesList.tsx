@@ -22,23 +22,11 @@ import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { Switch } from '@/shared/ui/switch';
+import { FutureExpense } from '@/features/finance/types/financeTypes';
 
 import { MoneyInput } from '@/shared/components/MoneyInput';
 
-interface FutureExpense {
-    id: string;
-    payment_date: string;
-    amount: number;
-    description: string;
-    category_id: string | null;
-    type: 'expense' | 'income' | 'saving';
-    status: 'pending' | 'paid';
-    is_subscription?: boolean;
-    payment_day?: number;
-    start_date?: string;
-    end_date?: string;
-    frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
-}
+// FutureExpense is now imported from financeTypes
 
 export function FutureExpensesList() {
     const { user } = useAuth();
@@ -152,14 +140,19 @@ export function FutureExpensesList() {
     }, [user]);
 
     const fetchExpenses = async () => {
+        if (!user) {
+            return;
+        }
         const { data } = await supabase
-            .from('future_expenses' as never)
+            .from('future_expenses')
             .select('*')
-            .eq('user_id', user!.id)
+            .eq('user_id', user.id)
             .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) { setExpenses(data as unknown as FutureExpense[]); }
+        if (data) {
+            setExpenses(data as unknown as FutureExpense[]);
+        }
         setLoading(false);
     };
 
@@ -248,7 +241,8 @@ export function FutureExpensesList() {
         if (error) {
             console.error(error);
             toast({ title: 'Error', description: 'No se pudo guardar el gasto futuro.', variant: 'destructive' });
-        } else {
+        }
+        else {
             toast({ title: editingId ? 'Actualizado' : 'Creado', description: editingId ? 'Compromiso actualizado correctamente.' : (newExpense.is_subscription ? (newExpense.type === 'income' ? 'Renta recurrente creada.' : newExpense.type === 'saving' ? 'Ahorro recurrente creado.' : 'Suscripción creada exitosamente.') : (newExpense.type === 'income' ? 'Ingreso futuro programado.' : newExpense.type === 'saving' ? 'Ahorro futuro programado.' : 'Gasto futuro programado.')) });
             setIsAddOpen(false);
             setEditingId(null);
@@ -404,7 +398,7 @@ export function FutureExpensesList() {
                         <Button
                             size="sm"
                             variant="default"
-                            className="border-dashed min-w-[160px] sm:min-w-[190px]"
+                            className="border-dashed min-w-[160px] sm:min-w-[190px] hover:bg-primary/70 hover:text-white"
                             onClick={(e) => {
                                 setEditingId(null);
                                 setNewExpense({

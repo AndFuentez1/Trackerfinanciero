@@ -21,7 +21,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         const [showCommaWarning, setShowCommaWarning] = useState(false);
 
         // Format a number to "1.000.000,00" or similar
-        const formatValue = (val: number, isBlur = false) => {
+        const formatValue = useCallback((val: number, isBlur = false) => {
             if (val === 0 && !isBlur) { return ''; } // Empty if 0 while typing (optional, maybe keep 0?)
             if (isNaN(val)) { return ''; }
 
@@ -33,7 +33,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
             const decimalPart = parts[1];
             return `${integerPart},${decimalPart}`;
-        };
+        }, [activeDecimals]);
 
         // Initialize/Sync display value when prop value changes externally
         useEffect(() => {
@@ -43,14 +43,14 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
                 if (value === 0 && displayValue === '') { return; } // Keep empty if 0
                 setDisplayValue(formatValue(value, true));
             }
-        }, [value, activeDecimals]);
+        }, [value, activeDecimals, displayValue, formatValue, parseCurrencyString]);
 
-        const parseCurrencyString = (str: string) => {
+        const parseCurrencyString = useCallback((str: string) => {
             // Remove dots, replace comma with dot
             const clean = str.replace(/\./g, '').replace(/,/g, '.');
             const num = parseFloat(clean);
             return isNaN(num) ? 0 : num;
-        };
+        }, []);
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const raw = e.target.value;

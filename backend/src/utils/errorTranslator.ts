@@ -28,8 +28,10 @@ const ERROR_TRANSLATIONS = {
  * @param {string|Error} error - El error original
  * @returns {string} Mensaje traducido
  */
-export function translateErrorMessage(error: any) {
-    if (!error) return 'Error desconocido';
+export function translateErrorMessage(error: unknown) {
+    if (!error) {
+        return 'Error desconocido';
+    }
 
     const message = typeof error === 'string' ? error : (error.message || String(error));
 

@@ -21,7 +21,7 @@ interface LoanCardProps {
     onOpenEdit: (loan: Loan) => void;
     onDelete: (id: string) => void;
     onEditLoan: (loan: Loan) => void;
-    onOpenPayment: (loan: Loan) => void;
+    onOpenPayment: (loan: Loan, amount?: number) => void;
 }
 
 export function LoanCard({
@@ -136,7 +136,7 @@ export function LoanCard({
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 shadow-sm flex items-center justify-center"
+                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm flex items-center justify-center"
                                     onClick={() => onEditLoan(loan)}
                                     title="Editar"
                                 >
@@ -145,7 +145,16 @@ export function LoanCard({
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 shadow-sm flex items-center justify-center"
+                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm flex items-center justify-center"
+                                    onClick={() => onOpenPayment(loan, loan.total_amount - loan.paid_amount)}
+                                    title="Pagar Totalidad"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 w-8 p-0 border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm flex items-center justify-center"
                                     onClick={() => onOpenPayment(loan)}
                                     title="Abonar"
                                 >

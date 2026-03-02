@@ -62,12 +62,12 @@ export function useLoansDataLogic() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
-        if (!user) {return;}
+        if (!user) { return; }
 
         setLoading(true);
         setError(null);
         const { data, error: err } = await supabase
-            .from('loans' as any)
+            .from('loans')
             .select('*, loan_payments(*)')
             .eq('user_id', user.id);
 

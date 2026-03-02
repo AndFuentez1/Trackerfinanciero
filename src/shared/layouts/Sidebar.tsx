@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, Wallet, PieChart, Activity, LayoutGrid } from "lucide-react";
+import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, Wallet, PieChart } from "lucide-react";
 import { cn } from "@/core/utils";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";

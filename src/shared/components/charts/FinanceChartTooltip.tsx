@@ -31,7 +31,9 @@ export function FinanceChartTooltip({
               const firstBalanceIndex = self.findIndex(i => i.name === 'Balance');
               if (index !== firstBalanceIndex) {
                 const firstBalanceValue = self[firstBalanceIndex].value;
-                if (item.value === firstBalanceValue) return false;
+                if (item.value === firstBalanceValue) {
+                  return false;
+                }
               }
             }
 

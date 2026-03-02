@@ -153,7 +153,7 @@ export function useIdleTimer(options: UseIdleTimerOptions = {}) {
                 window.removeEventListener(event, handleActivity);
             });
         };
-    }, [enabled, handleActivity, resetTimer, clearTimers]);
+    }, [enabled, handleActivity, resetTimer, clearTimers, timeout, warningTime, onTimeout, onWarning]);
 
     return {
         /** Remaining time in milliseconds */

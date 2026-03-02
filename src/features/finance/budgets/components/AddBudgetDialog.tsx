@@ -90,7 +90,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
   const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
 
-  const [activeTab, setActiveTab] = useState<'expense' | 'income' | 'saving'>('expense');
+  const [activeTab, setActiveTab] = useState<'expense' | 'saving'>('expense');
   const hasSavingCategories = categories.some(c => c.type === 'saving');
 
   // Sync state when editingBudget changes
@@ -102,9 +102,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         amount: editingBudget.amount,
       });
       const cat = categories.find(c => c.id === editingBudget.category_id);
-      if (cat?.type === 'income') {
-        setActiveTab('income');
-      } else if (cat?.type === 'saving') {
+      if (cat?.type === 'saving') {
         setActiveTab('saving');
       } else {
         setActiveTab('expense');
@@ -228,13 +226,12 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
             {!editingBudget && (
               <Tabs value={activeTab} onValueChange={(val) => {
-                setActiveTab(val as 'expense' | 'income' | 'saving');
+                setActiveTab(val as 'expense' | 'saving');
                 setValue('category_id', '');
                 setValue('category', '');
               }}>
-                <TabsList className={`grid w-full mb-2 ${hasSavingCategories ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <TabsList className={`grid w-full mb-2 ${hasSavingCategories ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <TabsTrigger value="expense">Gastos</TabsTrigger>
-                  <TabsTrigger value="income">Ingresos</TabsTrigger>
                   {hasSavingCategories && (
                     <TabsTrigger value="saving">Ahorro</TabsTrigger>
                   )}

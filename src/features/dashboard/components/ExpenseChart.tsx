@@ -62,7 +62,9 @@ export function ExpenseChart({
       ? selectedYears.filter(y => y !== year)
       : [...selectedYears, year];
 
-    if (newSelection.length === 0) return;
+    if (newSelection.length === 0) {
+      return;
+    }
     onSelectedYearsChange(newSelection);
   };
 
@@ -161,11 +163,11 @@ export function ExpenseChart({
                 <span className="text-xs font-semibold text-slate-700 truncate">{entry.value}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                <span className="text-[10px] font-bold text-slate-700 tabular-nums">
                   <span style={{ fontSize: '0.7em', opacity: 0.8 }}>{symbol}</span> {integerPart}
                   {decimalPart && <span style={{ fontSize: '0.7em', opacity: 0.8 }}>,{decimalPart}</span>}
                 </span>
-                <span className="text-[10px] font-black text-primary/70 bg-primary/5 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black text-slate-700 bg-slate-100/50 px-1.5 py-0.5 rounded">
                   {((entry.payload.value / total) * 100).toFixed(decimalPlaces)}%
                 </span>
               </div>

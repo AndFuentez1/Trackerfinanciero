@@ -112,7 +112,7 @@ export async function initiateOAuth(req: Request, res: Response) {
     }
 
     const existingTokens = await loadGmailTokens(userId);
-    const hasRefreshToken = Boolean(existingTokens?.refresh_token);
+    // const hasRefreshToken = Boolean(existingTokens?.refresh_token);
 
     // Generar URL de autenticación con userId en state (Base64 para mayor seguridad en transporte)
     const stateData = { userId, email };
@@ -126,7 +126,7 @@ export async function initiateOAuth(req: Request, res: Response) {
 
     logger.info(`🔐 Redirigiendo a Google OAuth para usuario ${userId}. URL: ${authUrl}`);
     res.redirect(authUrl);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('❌ Error iniciando OAuth:', error);
     res.status(500).send(renderErrorPage('No se pudo iniciar la conexión con Google. Por favor, intenta de nuevo.'));
   }
@@ -276,9 +276,10 @@ export async function handleOAuthCallback(req: Request, res: Response) {
       </body>
       </html>
     `);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('❌ Error en callback OAuth:', error);
-    res.status(500).send(renderErrorPage(error.message || 'Ocurrió un error inesperado al conectar con Gmail.'));
+    const errMessage = error instanceof Error ? error.message : 'Ocurrió un error inesperado al conectar con Gmail.';
+    res.status(500).send(renderErrorPage(errMessage));
   }
 }
 

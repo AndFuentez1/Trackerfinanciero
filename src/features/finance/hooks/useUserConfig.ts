@@ -13,7 +13,7 @@ export interface UserConfigRow {
   hide_incomplete_alert: boolean;
   keep_session_alive: boolean;
   email?: string;
-  [key: string]: any; // Catch all other columns from DB
+  [key: string]: unknown; // Catch all other columns from DB
 }
 
 export function useUserConfig(userId: string | undefined, userEmail?: string) {
@@ -23,7 +23,9 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
   const { data: config = { hide_incomplete_alert: false, keep_session_alive: true }, isFetched: loaded } = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!userId) return { hide_incomplete_alert: false, keep_session_alive: true };
+      if (!userId) {
+        return { hide_incomplete_alert: false, keep_session_alive: true };
+      }
       const { data, error } = await supabase
         .from('user_configs')
         .select('*')
@@ -41,17 +43,20 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
       return { hide_incomplete_alert: false, keep_session_alive: true };
     },
     enabled: !!userId,
-    staleTime: Infinity, // Configuration is strictly user-driven, rarely changes externally during session
+    staleTime: Infinity,
+    gcTime: Infinity, // Never evict from cache while user is in session
   });
 
   const mutation = useMutation({
     mutationFn: async (updates: Partial<UserConfigRow>) => {
-      if (!userId) throw new Error('No user ID');
+      if (!userId) {
+        throw new Error('No user ID');
+      }
 
       // Get current from cache to ensure full payload
       const current = queryClient.getQueryData<UserConfigRow>(queryKey) || config;
       const nextState = { ...current, ...updates };
-      const payload: any = { id: userId, ...nextState };
+      const payload: Record<string, unknown> = { id: userId, ...nextState };
 
       if (userEmail) {
         payload.email = userEmail;
@@ -88,17 +93,15 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
 
       return { previousConfig };
     },
-    onError: (err, newTodo, context) => {
-      // If the mutation fails, roll back
+    onError: (err, _updates, context) => {
+      // If the mutation fails, roll back the optimistic update
       console.error('Failed to update user config in database', err);
       if (context?.previousConfig) {
         queryClient.setQueryData(queryKey, context.previousConfig);
       }
     },
-    onSettled: () => {
-      // Always refetch after error or success to ensure sync
-      queryClient.invalidateQueries({ queryKey });
-    },
+    // NOTE: No onSettled invalidation — the optimistic update in onMutate is the source
+    // of truth. Invalidating would race with the upsert and could reset state to the old value.
   });
 
   const updateConfig = useCallback(

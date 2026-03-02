@@ -11,6 +11,13 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Mocks
 vi.mock('@/features/auth/hooks/useAuth');
+vi.mock('@/features/finance/hooks/useUserConfig', () => ({
+    useUserConfig: vi.fn(() => ({
+        config: { hide_incomplete_alert: false, keep_session_alive: true },
+        updateConfig: vi.fn(),
+        loaded: true
+    }))
+}));
 vi.mock('@/features/finance/loans/hooks/useLoans');
 vi.mock('@/features/finance/hooks/useFinanceData', () => ({
     useFinanceData: vi.fn()
@@ -60,7 +67,7 @@ describe('LoansPage Integration', () => {
             decimalPlaces: 2
         });
 
-        (useLoans as Mock).mockReturnValue({
+        vi.mocked(useLoans).mockReturnValue({
             loans: [
                 {
                     id: 'l1',
@@ -76,7 +83,6 @@ describe('LoansPage Integration', () => {
             ],
             loading: false,
             error: null,
-            refetch: mockRefetch
         });
     });
 
