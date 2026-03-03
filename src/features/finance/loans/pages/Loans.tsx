@@ -509,7 +509,7 @@ export default function LoansPage() {
 
                             <div className="flex flex-col gap-4">
                                 {loans.filter(l => l.paid_amount < l.total_amount).length === 0 ? (
-                                    <div className="text-center py-10 text-muted-foreground bg-secondary/10 rounded-xl border border-dashed border-border/50">
+                                    <div className="text-center py-10 text-muted-foreground bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border shadow-sm transition-all duration-300">
                                         No tienes préstamos activos.
                                     </div>
                                 ) : (
@@ -599,7 +599,7 @@ export default function LoansPage() {
                                     <DialogDescription className="sr-only">Confirma el desembolso del préstamo.</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
-                                    <div className="p-3 bg-blue-50 text-blue-800 dark:text-blue-300 rounded-lg text-sm border border-blue-100">
+                                    <div className="p-3 bg-blue-50 text-blue-800 dark:text-blue-300 rounded-xl text-sm border border-blue-100">
                                         Confirmar el desembolso de <strong>{formatCurrency(disbursementDialog.loan?.total_amount || 0)}</strong>.
                                     </div>
                                     <div className="space-y-2">

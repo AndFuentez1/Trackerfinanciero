@@ -3,7 +3,7 @@ import { es } from 'date-fns/locale';
 import type { Transaction, Budget, PaymentMethod, FutureExpense } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
-import { isTransferTransaction } from '@/lib/cashflowUtils';
+import { isTransferTransaction } from '@/features/finance/utils/cashflowUtils';
 import { parseLocalDate } from '@/core/utils';
 
 // Helper: Redondeo seguro a 2 decimales

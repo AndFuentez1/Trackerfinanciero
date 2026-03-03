@@ -29,7 +29,7 @@ export const TransactionCard = memo(({
     // Helpers duplicated/shared logic
     const formatDate = (dateString: string) => {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) {return '';}
+        if (isNaN(d.getTime())) { return ''; }
         const day = String(d.getDate()).padStart(2, '0');
         const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         const month = months[d.getMonth()] || '';
@@ -38,7 +38,7 @@ export const TransactionCard = memo(({
     };
 
     const getPaymentMethodName = (pmId: string | null | undefined) => {
-        if (!pmId) {return null;}
+        if (!pmId) { return null; }
         const pm = paymentMethods.find(p => p.id === pmId);
         return pm?.name || null;
     };
@@ -109,7 +109,7 @@ export const TransactionCard = memo(({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0 rounded-sm border-input hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all bg-transparent text-muted-foreground"
+                        className="h-8 w-8 p-0 rounded-xl border-input hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all bg-transparent text-muted-foreground"
                         onClick={() => onStartEdit(transaction)}
                     >
                         <Pencil className="h-4 w-4" />
@@ -117,7 +117,7 @@ export const TransactionCard = memo(({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0 rounded-sm border-input hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all bg-transparent text-muted-foreground"
+                        className="h-8 w-8 p-0 rounded-xl border-input hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all bg-transparent text-muted-foreground"
                         onClick={() => onDelete(transaction.id)}
                     >
                         <Trash2 className="h-4 w-4" />

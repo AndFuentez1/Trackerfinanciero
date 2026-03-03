@@ -69,7 +69,7 @@ describe('Dashboard (Index)', () => {
             onboardingDecision: 'from_scratch',
             currency: 'COP',
             pendingImportData: [],
-            importProgress: { status: 'idle' },
+            importProgress: { status: 'idle', progress: 0, message: '' },
             hasPendingImport: false
         } as unknown as ReturnType<typeof useFinanceData>);
         vi.mocked(useBudgetsData).mockReturnValue({
@@ -108,8 +108,8 @@ describe('Dashboard (Index)', () => {
             onboardingDecision: 'from_scratch',
             currency: 'COP',
             pendingImportData: [],
-            importProgress: { status: 'idle' }
-        } as any);
+            importProgress: { status: 'idle', progress: 0, message: '' }
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         render(<Dashboard />, { wrapper: MemoryRouter });
         await waitFor(() => {
@@ -119,7 +119,7 @@ describe('Dashboard (Index)', () => {
     });
 
     it('renders DecisionPanel when decision is pending', async () => {
-        (useFinanceData as Mock).mockReturnValue({
+        vi.mocked(useFinanceData).mockReturnValue({
             loading: false,
             transactions: [],
             allTransactions: [],
@@ -130,9 +130,9 @@ describe('Dashboard (Index)', () => {
             categories: [{ id: 'c1', name: 'Test Cat', type: 'expense', color: '#000' }],
             currency: 'COP',
             pendingImportData: [],
-            importProgress: { status: 'idle' },
+            importProgress: { status: 'idle', progress: 0, message: '' },
             hasPendingImport: false
-        });
+        } as unknown as ReturnType<typeof useFinanceData>);
 
         render(<Dashboard />, { wrapper: MemoryRouter });
         await waitFor(() => {

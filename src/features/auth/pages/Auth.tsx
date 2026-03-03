@@ -361,7 +361,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
           <div className="space-y-2">
             <h1 className="text-xl sm:text-2xl font-bold">Verifica tu correo</h1>
-            <p className="text-muted-foreground" aria-live="polite">
+            <p className="text-muted-foreground text-[15px]" aria-live="polite">
               Hemos enviado un enlace de confirmación a <span className="font-semibold text-foreground">{email || (user?.email)}</span>.
             </p>
             <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100 flex items-center gap-2" role="alert">
@@ -390,7 +390,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TrackFinance</h1>
-            <p className="text-muted-foreground text-sm mt-1">Tu control financiero, simplificado.</p>
+            <p className="text-muted-foreground text-[15px] mt-1">Tu control financiero, simplificado.</p>
           </div>
         </div>
 
@@ -492,7 +492,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">¡Enlace enviado!</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed" aria-live="polite">
+                  <p className="text-[15px] text-muted-foreground leading-relaxed" aria-live="polite">
                     Hemos enviado un acceso directo a <span className="font-bold">{email}</span>.
                     Revisa tu bandeja de entrada (y spam).
                   </p>
@@ -526,7 +526,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
                     <CheckCircle2 className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">¡Verifica tu correo!</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-[15px] text-muted-foreground leading-relaxed">
                     Hemos enviado un enlace de confirmación a <span className="font-bold">{email}</span>.
                     Abre el enlace para activar tu cuenta.
                   </p>

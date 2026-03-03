@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/shared/ui/select";
-import type { TransactionType } from '@/features/finance/hooks/useFinanceData';
+import type { TransactionType, PendingInvoice } from '@/features/finance/types/financeTypes';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Check, X, Edit2, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -44,14 +44,14 @@ export function PendingInvoicesPanel() {
     const { addTransaction, paymentMethods, categories: financeCategories, refreshData, allTransactions, updateTransaction, deleteTransaction } = useFinanceData();
     const { config, updateConfig } = useUserConfig(user?.id);
     const [searchParams, setSearchParams] = useSearchParams();
-    const [invoices, setInvoices] = useState<unknown[]>([]);
+    const [invoices, setInvoices] = useState<PendingInvoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<PanelItem | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<{ amount: number, description: string, category: string, type: TransactionType, payment_method_id: string | null }>({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
 
     const categories = financeCategories;
-    const resolveCategoryName = (invoice: { category_id?: string | null, category?: string | null }) =>
+    const resolveCategoryName = (invoice: { category_id?: string | null, category?: string | null } | PendingInvoice) =>
         categories.find(cat => cat.id === invoice.category_id)?.name ||
         invoice.category ||
         '';
@@ -66,31 +66,27 @@ export function PendingInvoicesPanel() {
     }, [allTransactions]);
 
     useEffect(() => {
-        if (!user) { return; }
+        if (!user) return;
+
+        let cancelled = false;
 
         const fetchInvoices = async () => {
-            const { data, error } = await (supabase
+            const { data, error } = await supabase
                 .from('pending_invoices')
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
                 .or('source.is.null,source.eq.ai,source.eq.gmail')
-                .order('arrival_date', { ascending: false }));
+                .order('arrival_date', { ascending: false });
 
+            if (cancelled) return;
             if (error) {
-
                 console.error('[PendingInvoicesPanel] Failed to fetch invoices', error);
-
                 toast({
-
                     title: 'Error',
-
                     description: 'No se pudieron cargar las facturas pendientes.',
-
-                    variant: 'destructive'
-
+                    variant: 'destructive',
                 });
-
             } else {
                 setInvoices(data || []);
             }
@@ -99,7 +95,6 @@ export function PendingInvoicesPanel() {
 
         fetchInvoices();
 
-        // Realtime Subscription
         const channel = supabase
             .channel('pending-invoices-changes')
             .on(
@@ -111,20 +106,16 @@ export function PendingInvoicesPanel() {
                     filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-
                     if (payload.errors?.length) {
-
                         console.error('[PendingInvoicesPanel] Realtime error', payload.errors);
-
                     }
-
-                    fetchInvoices(); // Refresh consistent state
-
+                    if (!cancelled) fetchInvoices();
                 }
             )
             .subscribe();
 
         return () => {
+            cancelled = true;
             supabase.removeChannel(channel);
         };
     }, [user]);
@@ -298,7 +289,7 @@ export function PendingInvoicesPanel() {
             category: inv.category,
             category_id: inv.category_id,
             payment_method_id: inv.payment_method_id,
-            type: inv.type,
+            type: inv.type as TransactionType,
             date: inv.arrival_date,
             originalData: inv
         }))
@@ -312,7 +303,7 @@ export function PendingInvoicesPanel() {
         category: inv.category,
         category_id: inv.category_id,
         payment_method_id: inv.payment_method_id,
-        type: inv.type,
+        type: inv.type as TransactionType,
         date: inv.arrival_date,
         originalData: inv
     }));
@@ -320,9 +311,12 @@ export function PendingInvoicesPanel() {
     const renderInvoiceList = (invoiceList: PanelItem[]) => {
         if (invoiceList.length === 0) {
             return (
-                <div className="py-8 text-center bg-white/50 rounded-xl border border-dashed border-orange-200">
-                    <CheckCircle2 className="w-8 h-8 mx-auto text-orange-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-500">No hay facturas en esta sección.</p>
+                <div className="py-12 text-center bg-white/40 rounded-[24px] border-2 border-dashed border-slate-200/60 animate-in fade-in duration-700">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 ring-1 ring-slate-100">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-800 tracking-tight">¡Todo al día!</p>
+                    <p className="text-xs font-medium text-slate-400 mt-1">No hay transacciones pendientes de revisión.</p>
                 </div>
             );
         }
@@ -331,10 +325,10 @@ export function PendingInvoicesPanel() {
         const hasMore = invoiceList.length > 3;
 
         return (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
                 {hasMore && (
                     <div className="flex justify-end">
-                        <span className="text-xs font-medium bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">
+                        <span className="text-[10px] font-black bg-orange-500/10 text-orange-600 px-3 py-1 rounded-full uppercase tracking-widest border border-orange-200/50">
                             Mostrando 3 de {invoiceList.length}
                         </span>
                     </div>
@@ -344,7 +338,7 @@ export function PendingInvoicesPanel() {
                     const categoryLabel = resolveCategoryName(invoice);
 
                     return (
-                        <div key={invoice.id} className="bg-white/80 p-4 rounded-xl border border-orange-200 shadow-sm flex flex-col gap-4">
+                        <div key={invoice.id} className="bg-white p-5 rounded-[24px] border border-slate-200/60 shadow-xl shadow-slate-200/20 flex flex-col gap-5 transition-all hover:shadow-2xl hover:shadow-slate-200/40 hover:border-orange-200/50">
                             {isEditing ? (
                                 <div className="space-y-4 w-full">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -438,50 +432,52 @@ export function PendingInvoicesPanel() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-                                    <div className="min-w-0 flex-1 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-lg text-slate-800 shrink-0">${invoice.amount.toLocaleString('es-CO')}</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+                                    <div className="min-w-0 flex-1 space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-black text-2xl text-slate-900 shrink-0 tracking-tight">${invoice.amount.toLocaleString('es-CO')}</span>
                                             {categoryLabel && (
-                                                <span className="text-xs text-orange-600 font-medium px-2 py-0.5 bg-orange-100 rounded-full truncate max-w-[120px]">
+                                                <span className="text-[10px] text-orange-600 font-black px-3 py-1 bg-orange-50 rounded-full truncate max-w-[140px] uppercase tracking-wider border border-orange-100 shadow-sm">
                                                     {categoryLabel}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-sm font-medium text-slate-700 truncate" title={invoice.description}>{invoice.description}</p>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Clock className="w-3 h-3 shrink-0" />
-                                            Llegó: {format(new Date(invoice.date), "d MMM, h:mm a", { locale: es })}
-                                        </p>
+                                        <p className="text-base font-bold text-slate-800 truncate tracking-tight" title={invoice.description}>{invoice.description}</p>
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                                {format(new Date(invoice.date), "d MMM, h:mm a", { locale: es })}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                    <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
                                         <Button
                                             size="sm"
-                                            className="bg-orange-500 hover:bg-orange-500/60 text-white border-none shadow-orange-200 shadow-md"
+                                            className="h-11 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95"
                                             onClick={() => handleApprove(invoice)}
                                             aria-label="Aprobar"
                                             title="Aprobar"
                                         >
-                                            <Check className="w-4 h-4" />
+                                            <Check className="w-5 h-5" />
                                         </Button>
                                         <Button
                                             size="sm"
-                                            className="text-white bg-slate-600 hover:bg-slate-600/60 shadow-sm border-none"
+                                            className="h-11 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95"
                                             onClick={() => handleStartEdit(invoice)}
                                             aria-label="Editar"
                                             title="Editar"
                                         >
-                                            <Edit2 className="w-4 h-4" />
+                                            <Edit2 className="w-5 h-5" />
                                         </Button>
                                         <Button
                                             size="sm"
-                                            className="text-white bg-red-500 hover:bg-red-500/60 shadow-sm border-none"
+                                            className="h-11 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-lg shadow-red-200 transition-all active:scale-95"
                                             onClick={() => handleReject(invoice)}
                                             aria-label="Eliminar"
                                             title="Eliminar"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-5 h-5" />
                                         </Button>
                                     </div>
                                 </div>
@@ -499,63 +495,69 @@ export function PendingInvoicesPanel() {
     }
 
     return (
-        <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 mb-8 animate-in slide-in-from-top-2">
-            <CardContent className="p-4 sm:p-6">
-                <div className="flex items-start gap-3">
-                    <div className="flex shrink-0 items-center justify-center p-1">
-                        <AlertCircle className="h-5 w-5 text-orange-600" strokeWidth={2.5} />
+        <Card className="border-none bg-white shadow-[0_24px_48px_-12px_rgba(0,0,0,0.1)] rounded-[32px] overflow-hidden mb-8 animate-in slide-in-from-top-4 duration-700">
+            <CardContent className="p-0">
+                <div className="p-6 sm:p-8 bg-gradient-to-br from-orange-50 via-white to-white flex items-start gap-5 border-b border-slate-100">
+                    <div className="flex shrink-0 items-center justify-center w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-600 ring-1 ring-orange-200 shadow-inner">
+                        <Clock className="h-6 w-6" />
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">
-                        <p className="text-base sm:text-lg font-bold text-orange-900 tracking-tight leading-none">
-                            Facturas Pendientes ({invoices.length + reclassifyTxs.length})
-                        </p>
-                        <p className="text-sm text-orange-700 mt-1 font-medium leading-tight">Revisa las transacciones que requieren tu atención.</p>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+                                Revisiones Pendientes
+                            </h2>
+                            <Badge className="bg-orange-500 text-white border-none font-black text-xs px-2.5 h-6">
+                                {invoices.length + reclassifyTxs.length}
+                            </Badge>
+                        </div>
+                        <p className="text-[15px] text-slate-500 mt-2 font-medium leading-tight">Acciones rápidas para mantener tu flujo financiero al día.</p>
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-orange-700 hover:bg-orange-100 h-8 w-8 p-0 shrink-0 ml-auto"
+                        className="text-slate-400 hover:bg-slate-100 h-10 w-10 p-0 rounded-xl shrink-0 ml-auto transition-colors"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             updateConfig({ hide_incomplete_alert: true });
                         }}
-                        title="Ocultar notificaciones de facturas"
                     >
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
 
-                <Tabs defaultValue="missing" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-muted/40 text-foreground h-auto">
-                        <TabsTrigger value="missing" className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm py-2">
-                            <span className="flex flex-col items-center gap-1">
-                                <span className="text-xs font-semibold">Falta Clasificar</span>
-                                {missingDataInvoices.length > 0 && (
-                                    <Badge variant="secondary" className="bg-orange-200 text-orange-700 border-none hover:bg-orange-300 text-xs px-2 py-0">
-                                        {missingDataInvoices.length}
-                                    </Badge>
-                                )}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger value="ready" className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm py-2">
-                            <span className="flex flex-col items-center gap-1">
-                                <span className="text-xs font-semibold">Listas para Aprobar</span>
-                                {readyToApproveInvoices.length > 0 && (
-                                    <Badge variant="secondary" className="bg-orange-500 text-white border-none hover:bg-orange-600 text-xs px-2 py-0">
-                                        {readyToApproveInvoices.length}
-                                    </Badge>
-                                )}
-                            </span>
-                        </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="missing" className="space-y-3 mt-3 min-h-[200px]">
-                        {renderInvoiceList(missingDataInvoices)}
-                    </TabsContent>
-                    <TabsContent value="ready" className="space-y-3 mt-3 min-h-[200px]">
-                        {renderInvoiceList(readyToApproveInvoices)}
-                    </TabsContent>
-                </Tabs>
+                <div className="p-6 sm:p-8">
+                    <Tabs defaultValue="missing" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 h-auto mb-6">
+                            <TabsTrigger value="missing" className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg data-[state=active]:ring-1 data-[state=active]:ring-slate-100 rounded-xl py-2.5 transition-all duration-300">
+                                <span className="flex items-center gap-2">
+                                    <span className="text-[13px] font-black uppercase tracking-wider">Falta Clasificar</span>
+                                    {missingDataInvoices.length > 0 && (
+                                        <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none px-2 py-0 h-5 font-black text-[10px]">
+                                            {missingDataInvoices.length}
+                                        </Badge>
+                                    )}
+                                </span>
+                            </TabsTrigger>
+                            <TabsTrigger value="ready" className="data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-lg data-[state=active]:ring-1 data-[state=active]:ring-slate-100 rounded-xl py-2.5 transition-all duration-300">
+                                <span className="flex items-center gap-2">
+                                    <span className="text-[13px] font-black uppercase tracking-wider">Listas para Aprobar</span>
+                                    {readyToApproveInvoices.length > 0 && (
+                                        <Badge variant="secondary" className="bg-emerald-500 text-white border-none px-2 py-0 h-5 font-black text-[10px]">
+                                            {readyToApproveInvoices.length}
+                                        </Badge>
+                                    )}
+                                </span>
+                            </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="missing" className="space-y-3 mt-3 min-h-[200px]">
+                            {renderInvoiceList(missingDataInvoices)}
+                        </TabsContent>
+                        <TabsContent value="ready" className="space-y-3 mt-3 min-h-[200px]">
+                            {renderInvoiceList(readyToApproveInvoices)}
+                        </TabsContent>
+                    </Tabs>
+                </div>
             </CardContent>
         </Card>
     );

@@ -67,7 +67,7 @@ export function OnboardingDecisionPanel({
     return (
       <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
         <div className="flex min-h-full items-start sm:items-center justify-center p-4">
-          <Card className="w-full max-w-md lg:max-w-xl border-success/20 bg-success/5">
+          <Card className="max-w-md w-full p-8 space-y-8 animate-in fade-in zoom-in duration-500 bg-gray-50/50 dark:bg-muted/20 border border-border">
             <CardContent className="pt-6 text-center space-y-4">
               <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
               <div>
@@ -153,14 +153,17 @@ export function OnboardingDecisionPanel({
     <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
       <div className="flex min-h-full items-start sm:items-center justify-center p-4">
         <div className="w-full max-w-lg lg:max-w-3xl space-y-4 sm:space-y-6 py-4 sm:py-0">
-          <div className="text-center mb-4 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">¿Cómo deseas comenzar?</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Elige entre empezar desde cero o importar tus datos
+          <div className="text-center mb-6 sm:mb-12">
+            <div className="inline-flex items-center justify-center p-2 mb-4 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 animate-pulse">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-black mb-4 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-transparent">¡Bienvenido a tu Libertad Financiera!</h1>
+            <p className="text-lg sm:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed font-medium">
+              Estás a un paso de tomar el control total. <br className="hidden sm:block" /> ¿Cómo prefieres que comencemos esta aventura?
             </p>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto">
             {/* Theme selector - Optional for onboarding */}
             {themeOptions && themeOptions.length > 0 && (
               <Card className="border-dashed">
@@ -198,53 +201,60 @@ export function OnboardingDecisionPanel({
             )}
 
             {/* Start from scratch */}
-            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <Plus className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="flex-1">
-                    <CardTitle className="text-base">Comenzar desde cero</CardTitle>
-                    <CardDescription className="text-xs">
-                      Crea transacciones nuevas desde ahora
-                    </CardDescription>
-                  </div>
+            <Card
+              className="group relative overflow-hidden cursor-pointer border-slate-200/60 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl hover:scale-[1.02] rounded-[32px] p-2"
+              onClick={handleStartFromScratch}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-4 pt-10 text-center relative z-10">
+                <div className="mx-auto w-20 h-20 rounded-[24px] bg-slate-50 shadow-inner flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-500 ring-1 ring-slate-100 group-hover:ring-primary/20">
+                  <Plus className="h-10 w-10 text-slate-400 group-hover:text-primary transition-colors" />
                 </div>
+                <CardTitle className="text-2xl font-black tracking-tight text-slate-800">Comenzar desde cero</CardTitle>
+                <CardDescription className="text-sm px-6 font-medium text-slate-500 leading-relaxed mt-2">
+                  Ideal si prefieres registrar tus movimientos manualmente y construir tu historial paso a paso con total precisión.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-10 pt-4 relative z-10">
                 <Button
-                  onClick={handleStartFromScratch}
                   disabled={isLoading}
-                  className="w-full hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
-                  size="sm"
+                  className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20 group-hover:shadow-primary/40 group-hover:translate-y-[-4px] transition-all duration-300"
                 >
-                  {isLoading ? 'Cargando...' : 'Comenzar'}
+                  {isLoading ? 'Configurando...' : 'Empezar Limpio'}
                 </Button>
               </CardContent>
             </Card>
 
             {/* Import data */}
-            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <Upload className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div className="flex-1">
-                    <CardTitle className="text-base">Importar datos</CardTitle>
-                    <CardDescription className="text-xs">
-                      Sube un archivo Excel o CSV con tus transacciones
-                    </CardDescription>
-                  </div>
+            <Card
+              className="group relative overflow-hidden cursor-pointer border-slate-200/60 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl hover:scale-[1.02] rounded-[32px] p-2"
+              onClick={() => setShowImportDialog(true)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-4 pt-10 text-center relative z-10">
+                <div className="mx-auto w-20 h-20 rounded-[24px] bg-slate-50 shadow-inner flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-500 ring-1 ring-slate-100 group-hover:ring-primary/20">
+                  <Upload className="h-10 w-10 text-slate-400 group-hover:text-primary transition-colors" />
                 </div>
+                <CardTitle className="text-2xl font-black tracking-tight text-slate-800">Importar Historial</CardTitle>
+                <CardDescription className="text-sm px-6 font-medium text-slate-500 leading-relaxed mt-2">
+                  Sube tu archivo Excel o CSV para que procesemos tus datos automáticamente en segundos con IA.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-10 pt-4 relative z-10">
                 <Button
-                  onClick={() => setShowImportDialog(true)}
-                  className="w-full hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
-                  size="sm"
+                  variant="outline"
+                  className="w-full h-14 rounded-2xl font-bold text-base border-2 group-hover:bg-primary/5 group-hover:border-primary/40 group-hover:translate-y-[-4px] transition-all duration-300"
                 >
-                  Importar
+                  Subir Archivo
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Slide progress indicators */}
+          <div className="flex justify-center gap-2 mt-8">
+            <div className="w-2.5 h-2.5 rounded-full bg-primary/20" />
+            <div className="w-8 h-2.5 rounded-full bg-primary shadow-sm" />
           </div>
           <ImportExcelDialog
             paymentMethods={paymentMethods}

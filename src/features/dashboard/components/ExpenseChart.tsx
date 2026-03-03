@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useMemo } from 'react';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFinance } from '@/features/finance/context/FinanceContext';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { CURRENCIES, DEFAULT_CURRENCY_CODE, DEFAULT_LOCALE } from '@/features/finance/constants/currencyConstants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Button } from '@/shared/ui/button';
 import { ChevronDown } from 'lucide-react';
@@ -108,16 +108,17 @@ export function ExpenseChart({
   };
 
   const formatCurrencyForLegend = (value: number): { symbol: string; amount: string } => {
-    const symbol = getCurrencySymbol(currency || 'COP');
-    let formatted = new Intl.NumberFormat('es-CO', {
+    const activeCurrency = currency || DEFAULT_CURRENCY_CODE;
+    const symbol = getCurrencySymbol(activeCurrency);
+    let formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
       style: 'currency',
-      currency: currency || 'COP',
+      currency: activeCurrency,
       currencyDisplay: 'code',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
     }).format(value);
 
-    formatted = formatted.replace(currency || 'COP', symbol);
+    formatted = formatted.replace(activeCurrency, symbol);
 
     // Split symbol and amount
     const symbolMatch = formatted.match(/^[^\d]+/);
@@ -129,10 +130,11 @@ export function ExpenseChart({
 
   // Formatter for axis: must return string only
   const formatCurrencyAxis = (value: number) => {
-    const symbol = getCurrencySymbol(currency || 'COP');
-    const formatted = new Intl.NumberFormat('es-CO', {
+    const activeCurrency = currency || DEFAULT_CURRENCY_CODE;
+    const symbol = getCurrencySymbol(activeCurrency);
+    const formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
       style: 'currency',
-      currency: currency || 'COP',
+      currency: activeCurrency,
       currencyDisplay: 'symbol',
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
@@ -154,20 +156,20 @@ export function ExpenseChart({
           const [integerPart, decimalPart] = amount.split(',');
 
           return (
-            <div key={`item-${index}`} className="flex items-center justify-between py-1.5 border-b border-slate-100/50 last:border-0">
+            <div key={`item-${index}`} className="flex items-center justify-between py-1.5 border-b border-border last:border-0 hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2">
               <div className="flex items-center gap-2 overflow-hidden">
                 <div
                   className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-xs font-semibold text-slate-700 truncate">{entry.value}</span>
+                <span className="text-xs font-semibold text-foreground truncate">{entry.value}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] font-bold text-slate-700 tabular-nums">
+                <span className="text-[10px] font-bold text-foreground tabular-nums">
                   <span style={{ fontSize: '0.7em', opacity: 0.8 }}>{symbol}</span> {integerPart}
                   {decimalPart && <span style={{ fontSize: '0.7em', opacity: 0.8 }}>,{decimalPart}</span>}
                 </span>
-                <span className="text-[10px] font-black text-slate-700 bg-slate-100/50 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-black text-foreground bg-muted/40 px-1.5 py-0.5 rounded-xl">
                   {((entry.payload.value / total) * 100).toFixed(decimalPlaces)}%
                 </span>
               </div>
@@ -180,14 +182,14 @@ export function ExpenseChart({
 
   if (data.length === 0) {
     return (
-      <Card className="shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm h-full flex flex-col items-center justify-center text-muted-foreground p-6 min-h-[400px]">
+      <Card className="shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 backdrop-blur-sm h-full flex flex-col items-center justify-center text-muted-foreground p-6 min-h-[400px] rounded-2xl">
         <p>No hay gastos registrados para este periodo.</p>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-sm border-border/50 bg-slate-50/50 backdrop-blur-sm h-full flex flex-col">
+    <Card className="shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 backdrop-blur-sm h-full flex flex-col rounded-2xl">
       <CardHeader className="pb-2">
         <div className="text-center">
           <CardTitle className="text-lg font-semibold text-foreground">Distribución</CardTitle>

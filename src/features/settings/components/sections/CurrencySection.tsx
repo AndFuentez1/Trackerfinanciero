@@ -83,7 +83,7 @@ export function CurrencySection() {
     }).format(previewValue);
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -94,7 +94,7 @@ export function CurrencySection() {
                             <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                 Moneda y Formato
                             </p>
-                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Configura tu moneda principal y la visualización de cifras</p>
+                            <p className="text-[15px] text-muted-foreground mt-1 leading-tight">Configura tu moneda principal y la visualización de cifras</p>
                         </div>
                     </div>
                 </div>

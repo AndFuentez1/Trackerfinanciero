@@ -45,7 +45,7 @@ export function TelegramConfigSection({
                     <Send className="h-5 w-5 text-muted-foreground" />
                     Telegram (Opcional)
                 </Label>
-                {isSyncing ? (
+                {savingTelegram ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Sincronizando
@@ -67,7 +67,7 @@ export function TelegramConfigSection({
                     </div>
                 )}
             </div>
-            <p className="text-base text-muted-foreground">
+            <p className="text-[15px] text-muted-foreground">
                 Configura para validar manualmente facturas que el sistema no pudo clasificar.
             </p>
 
@@ -163,7 +163,7 @@ export function TelegramConfigSection({
                         (!telegramBotToken.trim() || !telegramChatId.trim())
                     }
                     size="sm"
-                    className="w-40"
+                    className="w-40 text-[15px]"
                 >
                     {savingTelegram ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

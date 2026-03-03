@@ -9,6 +9,7 @@ import { queryKeys } from '@/core/api/queryKeys';
 import { MASTER_PALETTE } from '@/features/finance/hooks/useFinanceDataLogic';
 import type { Transaction, TransactionType, PaymentMethod } from '@/features/finance/types/financeTypes';
 import { parse, isValid, format as formatDateFns } from 'date-fns';
+import { mapTransactionRow } from '@/features/finance/utils/transactionMappers';
 import {
   ParsedRow,
   ColumnMapping,
@@ -507,6 +508,7 @@ export function useExcelImport({
       let successCount = 0;
       let failCount = 0;
       const failedRows: { row: number; error: string }[] = [];
+      const insertedRows: unknown[] = [];
 
       for (let batch = 0; batch < transactionsToImport.length; batch += batchSize) {
         const batchTransactions = transactionsToImport.slice(batch, batch + batchSize).map((t, idx) => {
@@ -543,6 +545,9 @@ export function useExcelImport({
             failCount += batchTransactions.length;
           } else {
             successCount += (data?.length || 0);
+            if (data && data.length > 0) {
+              insertedRows.push(...data);
+            }
           }
         } catch (e) {
           const errorMsg = e instanceof Error ? e.message : 'Error desconocido';
@@ -583,6 +588,24 @@ export function useExcelImport({
         toast({
           title: '✅ Importación exitosa',
           description: `Se importaron ${successCount} transacciones correctamente.`
+        });
+      }
+
+      // Actualización inmediata del Dashboard: cache optimista para allTransactions
+      // (evita esperar al refetch completo, especialmente con staleTime alto).
+      if (user?.id && insertedRows.length > 0) {
+        const mappedInserted = (insertedRows as any[]).map(mapTransactionRow);
+        queryClient.setQueryData(['finance', 'allTransactions', user.id], (prev: any) => {
+          const prevList = Array.isArray(prev) ? prev : [];
+          const merged = [...mappedInserted, ...prevList];
+          const seen = new Set<string>();
+          return merged.filter((t) => {
+            const id = String(t?.id ?? '');
+            if (!id) return false;
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
         });
       }
 

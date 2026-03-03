@@ -119,7 +119,7 @@ export function WelcomePanel() {
     <div className="fixed inset-0 lg:left-64 z-[60] bg-background overflow-y-auto">
       <div className="flex min-h-full items-start sm:items-center justify-center p-4">
         <div className="w-full max-w-xl lg:max-w-3xl space-y-4 sm:space-y-8 py-4 sm:py-0">
-          <div className="text-center space-y-2">
+          <div className="bg-gray-50/50 dark:bg-muted/20 border border-border p-8 rounded-3xl shadow-sm space-y-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Bienvenido</h1>
             <p className="text-muted-foreground">Configura lo básico para empezar</p>
           </div>
@@ -133,28 +133,30 @@ export function WelcomePanel() {
                 <Card
                   key={step.id}
                   className={cn(
-                    "border-border/50 transition-all overflow-hidden",
-                    step.completed ? "bg-muted/30" : "bg-card",
-                    !isPrevCompleted && "opacity-50 grayscale pointer-events-none"
+                    "border-slate-200/60 transition-all duration-500 overflow-hidden rounded-[24px] group",
+                    step.completed ? "bg-slate-50/50 shadow-none grayscale-[0.5]" : "bg-white shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:shadow-slate-200/40 hover:scale-[1.01] hover:border-primary/30",
+                    !isPrevCompleted && "opacity-40 grayscale pointer-events-none"
                   )}
                 >
-                  <CardHeader className="p-4 pb-2">
-                    <div className="flex items-center gap-4">
+                  <CardHeader className="p-6 pb-2">
+                    <div className="flex items-start gap-5">
                       <div className={cn(
-                        "p-2.5 rounded-xl transition-colors",
-                        step.completed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        "p-3.5 rounded-[18px] transition-all duration-500 shadow-sm",
+                        step.completed ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary group-hover:ring-1 group-hover:ring-primary/20"
                       )}>
-                        {step.completed ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                        {step.completed ? <CheckCircle2 className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
                       </div>
-                      <div>
-                        <CardTitle className="text-base font-bold">{step.title}</CardTitle>
-                        <CardDescription className="text-xs">{step.description}</CardDescription>
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-black tracking-tight text-slate-800">{step.title}</CardTitle>
+                        <CardDescription className="text-sm font-medium text-slate-500 mt-1">{step.description}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   {!step.completed && (
-                    <CardContent className="p-4 pt-0">
-                      {step.action}
+                    <CardContent className="p-6 pt-2">
+                      <div className="pl-[76px]">
+                        {step.action}
+                      </div>
                     </CardContent>
                   )}
                 </Card>

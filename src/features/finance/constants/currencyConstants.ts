@@ -6,6 +6,12 @@ export interface CurrencyConfig {
   decimals: number; // Number of decimal places (e.g., 2 for USD, 0 for COP)
 }
 
+/** Locale por defecto para formateo (evita strings mágicos "es-CO" en toda la app) */
+export const DEFAULT_LOCALE = 'es-CO' as const;
+
+/** Código de moneda por defecto cuando el usuario no ha configurado (evita "COP" repetido) */
+export const DEFAULT_CURRENCY_CODE = 'COP' as const;
+
 export const CURRENCIES: CurrencyConfig[] = [
   { code: 'USD', name: 'Dólar estadounidense ($)', symbol: '$', decimals: 2 },
   { code: 'EUR', name: 'Euro (€)', symbol: '€', decimals: 2 },

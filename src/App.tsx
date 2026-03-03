@@ -8,7 +8,7 @@ import { SavingsProvider } from '@/features/finance/savings/context/SavingsConte
 import { Toaster } from '@/shared/ui/toaster';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
-import { getSkeletonTypeFromPath } from '@/lib/skeletonUtils';
+import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonUtils';
 
 // Auth is imported directly (not lazy) because:
 // 1. It's the first page unauthenticated users see — no benefit from lazy loading

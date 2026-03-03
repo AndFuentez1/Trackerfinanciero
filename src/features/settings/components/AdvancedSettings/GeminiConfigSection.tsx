@@ -28,7 +28,7 @@ export function GeminiConfigSection({
                     <Key className="h-5 w-5 text-muted-foreground" />
                     Gemini AI (Opcional)
                 </Label>
-                {isSyncing ? (
+                {savingGemini ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Sincronizando
@@ -45,7 +45,7 @@ export function GeminiConfigSection({
                     </div>
                 )}
             </div>
-            <p className="text-base text-muted-foreground">
+            <p className="text-[15px] text-muted-foreground">
                 Agrega tu API Key de Google Gemini para categorización inteligente.
             </p>
             <div className="space-y-2">
@@ -64,7 +64,7 @@ export function GeminiConfigSection({
                             onClick={onSaveGeminiClick}
                             disabled={savingGemini || !geminiKey.trim() || isSyncing}
                             size="sm"
-                            className="w-40"
+                            className="w-40 text-[15px]"
                         >
                             {savingGemini ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />

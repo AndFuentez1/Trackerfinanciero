@@ -39,16 +39,14 @@ export default function ConfiguracionPage() {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const highlight = params.get('highlight');
-        if (highlight) {
-            setHighlightedSection(highlight);
-            // Scroll to section after a short delay to ensure DOM is ready
-            setTimeout(() => {
-                const element = document.getElementById(highlight);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 300);
-        }
+        if (!highlight) return;
+
+        setHighlightedSection(highlight);
+        const timerId = setTimeout(() => {
+            const element = document.getElementById(highlight);
+            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+        return () => clearTimeout(timerId);
     }, [location.search]);
 
     useEffect(() => {
@@ -88,7 +86,7 @@ export default function ConfiguracionPage() {
                                 </div>
                                 <div className="flex flex-col">
                                     <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Configuración</h1>
-                                    <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona tus preferencias y cuenta de usuario</p>
+                                    <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-[15px]">Gestiona tus preferencias y cuenta de usuario</p>
                                 </div>
                             </div>
                         </header>
@@ -157,13 +155,13 @@ export default function ConfiguracionPage() {
                                                 <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
                                                     Información
                                                 </p>
-                                                <p className="text-sm text-muted-foreground mt-1 leading-tight">Privacidad y acerca de la aplicación</p>
+                                                <p className="text-[15px] text-muted-foreground mt-1 leading-tight">Privacidad y acerca de la aplicación</p>
                                             </div>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4 pt-0">
-                                    <p className="text-base text-balance leading-relaxed text-muted-foreground">
+                                    <p className="text-[15px] text-balance leading-relaxed text-muted-foreground">
                                         Todos tus datos se guardan de forma segura en la nube y se sincronizan en tiempo real con todos tus dispositivos.
                                     </p>
 
@@ -180,12 +178,12 @@ export default function ConfiguracionPage() {
                                                     <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
                                                         Privacidad de Datos
                                                     </p>
-                                                    <p className="text-sm text-muted-foreground mt-1 leading-tight">Uso y protección de tus datos financieros</p>
+                                                    <p className="text-[15px] text-muted-foreground mt-1 leading-tight">Uso y protección de tus datos financieros</p>
                                                 </div>
                                             </div>
                                             <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
                                         </CollapsibleTrigger>
-                                        <CollapsibleContent className="space-y-2 text-base text-muted-foreground leading-relaxed pt-2 pl-6 animate-in slide-in-from-top-2 duration-200">
+                                        <CollapsibleContent className="space-y-2 text-[15px] text-muted-foreground leading-relaxed pt-2 pl-6 animate-in slide-in-from-top-2 duration-200">
                                             <ul className="space-y-4">
                                                 <li>
                                                     <strong className="text-foreground block">Almacenamiento seguro</strong>
@@ -219,7 +217,7 @@ export default function ConfiguracionPage() {
 
                             {/* Footer */}
                             <footer className="text-center py-6">
-                                <p className="text-muted-foreground" style={{ fontSize: '14px' }}>
+                                <p className="text-muted-foreground" style={{ fontSize: '15px' }}>
                                     Hecho con <Heart className="inline h-3 w-3 text-red-500 fill-current" /> por Joan Fuentes
                                 </p>
                             </footer>

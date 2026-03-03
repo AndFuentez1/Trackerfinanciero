@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { Loader2 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConfigStatus } from './hooks/useUserConfigStatus';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -56,6 +56,43 @@ export function AdvancedSettings({
     const { addTransaction } = useFinanceData();
     const queryClient = useQueryClient();
     const { categories, paymentMethods, refreshData } = useFinanceData();
+    const gmailStatsQueryKey = ['gmail', 'processingStats', user?.id] as const;
+
+    const { data: gmailProcessingStats = { manual: 0, automatic: 0, ai: 0 } } = useQuery({
+        queryKey: gmailStatsQueryKey,
+        queryFn: async () => {
+            if (!user?.id) { return { manual: 0, automatic: 0, ai: 0 }; }
+            const [manualRes, automaticRes, aiRes] = await Promise.all([
+                supabase
+                    .from('gmail_message_status')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('status', 'archived'),
+                supabase
+                    .from('pending_invoices')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('status', 'pending')
+                    .eq('source', 'gmail'),
+                supabase
+                    .from('pending_invoices')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('status', 'pending')
+                    .eq('source', 'ai'),
+            ]);
+            if (manualRes.error) { throw manualRes.error; }
+            if (automaticRes.error) { throw automaticRes.error; }
+            if (aiRes.error) { throw aiRes.error; }
+            return {
+                manual: manualRes.count ?? 0,
+                automatic: automaticRes.count ?? 0,
+                ai: aiRes.count ?? 0,
+            };
+        },
+        enabled: !!user?.id,
+        staleTime: 5 * 60 * 1000,
+    });
 
     // Gemini API Key
     const [geminiKey, setGeminiKey] = useState('');
@@ -991,13 +1028,15 @@ export function AdvancedSettings({
         <CardContent className="space-y-8 pt-6">
             <GmailConfigSection
                 configStatus={configStatus}
-                isLoadingConfig={isLoadingConfig}
                 isPerformingSync={isPerformingSync}
                 backendStatus={backendStatus}
                 onConnect={connectGmail}
                 onDisconnect={disconnectGmail}
                 onRetryBackend={retryBackend}
                 onShowHistory={() => setShowHistoryDialog(true)}
+                manualProcessedCount={gmailProcessingStats.manual}
+                automaticProcessedCount={gmailProcessingStats.automatic}
+                aiProcessedCount={gmailProcessingStats.ai}
             />
 
             <div className="border-t" />
@@ -1033,7 +1072,7 @@ export function AdvancedSettings({
     );
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden transition-all duration-300">
+        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden transition-all duration-300">
             <Collapsible open={isOpen} onOpenChange={onOpenChange}>
                 <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors pb-4">
@@ -1046,14 +1085,9 @@ export function AdvancedSettings({
                                     <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                         Preferencias Avanzadas
                                     </p>
-                                    <p className="text-sm text-muted-foreground mt-1 leading-tight">
+                                    <p className="text-[15px] text-muted-foreground mt-1 leading-tight">
                                         Automatizaciones y vinculación con servicios externos
                                     </p>
-                                    {isLoadingConfig && (
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                                            <div className="h-4 w-32 animate-pulse bg-muted rounded"></div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200 mt-1", isOpen && "rotate-180")} />

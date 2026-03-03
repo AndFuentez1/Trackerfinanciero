@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SummaryCard } from './SummaryCard';
 import { EvolutionChart } from './EvolutionChart';
+import { SankeyChart } from './SankeyChart';
 import { ExpenseChart } from './ExpenseChart';
 import { InsightsPanel } from './InsightsPanel';
 import { PaymentMethodList } from '@/features/finance/payment-methods/components/PaymentMethodList';
@@ -9,8 +10,8 @@ import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/comp
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { calculateExpensesByCategory } from '@/features/finance/utils/financeUtils';
-import { excludeTransfers } from '@/lib/cashflowUtils';
-import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX } from 'lucide-react';
+import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
+import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX, ChevronDown } from 'lucide-react';
 import type { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import {
   AlertDialog,
@@ -23,6 +24,14 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
 import { useLoans } from '@/features/finance/loans/hooks/useLoans';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/shared/ui/dropdown-menu";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
@@ -152,6 +161,7 @@ export function SummaryTab({
   };
 
   const [sankeyDrillDown, setSankeyDrillDown] = useState<{ type: 'income' | 'expense', page: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<'evolution' | 'sankey'>('sankey');
 
   const { user } = useAuth();
   const { config, updateConfig } = useUserConfig(user?.id, user?.email);
@@ -514,17 +524,118 @@ export function SummaryTab({
                   <PulseBlock height="300px" width="100%" />
                 </div>
               ) : (
-                <EvolutionChart
-                  transactions={allTransactions}
-                  categories={categories}
-                  selectedYears={selectedYears}
-                  onSelectedYearsChange={setSelectedYears}
-                  selectedMonth={selectedMonth}
-                  onSelectedMonthChange={setSelectedMonth}
-                  onSelectAllYears={handleToggleAllYears}
-                  sankeyDrillDown={sankeyDrillDown}
-                  onSankeyDrillDownChange={setSankeyDrillDown}
-                />
+                <div className="flex flex-col gap-0">
+                  {/* Shared Controls Container */}
+                  <div className="bg-gray-50/50 dark:bg-muted/20 rounded-t-2xl border border-border p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 w-full justify-between">
+                      <div className="inline-flex p-1 bg-white/50 dark:bg-background/20 rounded-full border border-border backdrop-blur-sm">
+                        <Button
+                          variant={activeTab === 'evolution' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className={cn(
+                            "rounded-full px-6 h-8 text-[11px] font-bold uppercase tracking-wider transition-all",
+                            activeTab === 'evolution'
+                              ? "bg-white dark:bg-background text-primary shadow-sm ring-1 ring-border"
+                              : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                          )}
+                          onClick={() => setActiveTab('evolution')}
+                        >
+                          Evolución
+                        </Button>
+                        <Button
+                          variant={activeTab === 'sankey' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className={cn(
+                            "rounded-full px-6 h-8 text-[11px] font-bold uppercase tracking-wider transition-all",
+                            activeTab === 'sankey'
+                              ? "bg-white dark:bg-background text-primary shadow-sm ring-1 ring-border"
+                              : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                          )}
+                          onClick={() => setActiveTab('sankey')}
+                        >
+                          Flujo (Sankey)
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center bg-white dark:bg-background/40 border border-border rounded-full p-0.5 shadow-sm">
+                          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-[110px] h-8 border-none bg-transparent rounded-full text-[11px] font-bold uppercase tracking-tight focus:ring-0 shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border shadow-xl">
+                              {availableMonths.map(m => (
+                                <SelectItem key={m.value} value={m.value} className="text-[11px] font-medium focus:bg-primary/5">{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <div className="w-[1px] h-4 bg-border mx-1" />
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 bg-transparent gap-2 rounded-full text-[11px] font-bold uppercase tracking-tight hover:bg-black/5 dark:hover:bg-white/5">
+                                {selectedYears.length === availableYears.length ? 'Todos los Años' : `${selectedYears.length} Años`}
+                                <ChevronDown className="h-3 w-3 opacity-50" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[180px] rounded-xl border-border shadow-xl">
+                              <DropdownMenuLabel className="text-[11px] font-bold px-3 py-2 uppercase tracking-wider text-muted-foreground">Seleccionar Años</DropdownMenuLabel>
+                              <DropdownMenuSeparator className="bg-border/20" />
+                              <DropdownMenuCheckboxItem
+                                checked={selectedYears.length === availableYears.length}
+                                onCheckedChange={handleToggleAllYears}
+                                className="text-xs rounded-lg mx-1 focus:bg-primary/5"
+                              >
+                                Todos
+                              </DropdownMenuCheckboxItem>
+                              <DropdownMenuSeparator className="bg-border/20" />
+                              {availableYears.map(year => (
+                                <DropdownMenuCheckboxItem
+                                  key={year}
+                                  checked={selectedYears.includes(year)}
+                                  onCheckedChange={() => {
+                                    const newYears = selectedYears.includes(year)
+                                      ? selectedYears.filter(y => y !== year)
+                                      : [...selectedYears, year];
+                                    if (newYears.length > 0) setSelectedYears(newYears);
+                                  }}
+                                  className="text-xs rounded-lg mx-1 focus:bg-primary/5"
+                                >
+                                  {year}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart Area */}
+                  {activeTab === 'evolution' ? (
+                    <div className="bg-gray-50/50 dark:bg-muted/20 rounded-b-2xl border border-border border-t-0 p-6 min-h-[450px] transition-all duration-300">
+                      <EvolutionChart
+                        transactions={allTransactions}
+                        selectedYears={selectedYears}
+                        onSelectedYearsChange={setSelectedYears}
+                        selectedMonth={selectedMonth}
+                        onSelectedMonthChange={setSelectedMonth}
+                        onSelectAllYears={handleToggleAllYears}
+                        showFilters={false}
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50/50 dark:bg-muted/20 rounded-b-2xl border border-border border-t-0 p-6 min-h-[450px] transition-all duration-300">
+                      <SankeyChart
+                        transactions={filteredChartTransactions}
+                        categories={categories}
+                        drillDown={sankeyDrillDown}
+                        onDrillDownChange={setSankeyDrillDown}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className="lg:col-span-1">

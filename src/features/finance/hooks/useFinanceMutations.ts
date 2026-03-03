@@ -351,7 +351,6 @@ export function useFinanceMutations(userId: string | undefined) {
             );
             const categoriesToInsert = defaultCategories
                 .filter(cat => !existingKey.has(`${cat.name}`.toLowerCase() + '|' + `${cat.type}`.toLowerCase()))
-                .slice(0, 10)
                 .map(cat => ({
                     name: cat.name,
                     type: cat.type,
@@ -362,12 +361,15 @@ export function useFinanceMutations(userId: string | undefined) {
             if (categoriesToInsert.length === 0) { return; }
 
             const { error } = await supabase.from('categories')
-                .upsert(categoriesToInsert, { onConflict: 'user_id, name' });
+                .insert(categoriesToInsert);
             if (error) { throw error; }
         },
         onSuccess: () => {
             invalidateCategories();
             toast({ title: 'Éxito', description: 'Categorías iniciales creadas.' });
+        },
+        onError: (err) => {
+            toast({ title: 'Error', description: 'No se pudieron inicializar las categorías: ' + (err as Error).message, variant: 'destructive' });
         }
     });
 

@@ -1,7 +1,7 @@
 import { cn } from '@/core/utils';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFinance } from '@/features/finance/context/FinanceContext';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { CURRENCIES, DEFAULT_CURRENCY_CODE, DEFAULT_LOCALE } from '@/features/finance/constants/currencyConstants';
 
 interface CurrencyDisplayProps {
     amount: number;
@@ -21,8 +21,8 @@ export function CurrencyDisplay({
     const decimalPlaces = useDecimalPlaces();
     const { currency: ctxCurrency } = useFinance();
 
-    // Use provided currency or context currency or default to COP
-    const activeCurrency = currencyCode || ctxCurrency || 'COP';
+    // Use provided currency or context currency or default
+    const activeCurrency = currencyCode || ctxCurrency || DEFAULT_CURRENCY_CODE;
 
     const getCurrencySymbol = (code: string): string => {
         const curr = CURRENCIES.find(c => c.code === code);
@@ -35,7 +35,7 @@ export function CurrencyDisplay({
         const absValue = Math.abs(value);
 
         // Format number to get proper separators
-        const formatted = new Intl.NumberFormat('es-CO', {
+        const formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces,
         }).format(absValue);

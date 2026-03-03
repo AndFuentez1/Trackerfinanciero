@@ -152,7 +152,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
     );
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden h-full flex flex-col">
+        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden h-full flex flex-col">
             <CardHeader className="pb-4 pt-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex flex-col gap-1">
@@ -164,7 +164,7 @@ export function CategoriesSection({ highlighted, onCategoryCreated }: Categories
                                 <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                     Categorías ({filteredCategories.length}/{categories.length})
                                 </p>
-                                <p className="text-sm text-muted-foreground font-medium mt-1 leading-none">
+                                <p className="text-[15px] text-muted-foreground font-medium mt-1 leading-none">
                                     Organiza tus transacciones por tipo
                                 </p>
                             </div>

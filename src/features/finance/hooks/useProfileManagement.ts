@@ -28,14 +28,14 @@ export type ResetProfileOptions = {
 };
 
 const DEFAULT_RESET_PROFILE_OPTIONS: ResetProfileOptions = {
-    transactions: true,
-    budgets: true,
-    savings: true,
-    loans: true,
-    futureExpenses: true,
-    paymentMethods: true,
-    categories: true,
-    profileFlags: true,
+    transactions: false,
+    budgets: false,
+    savings: false,
+    loans: false,
+    futureExpenses: false,
+    paymentMethods: false,
+    categories: false,
+    profileFlags: false,
     gmailPermissions: false,
     telegramConfig: false,
 };
@@ -198,8 +198,9 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
         const enforcedOptions: ResetProfileOptions = {
             ...resolvedOptions,
-            budgets: resolvedOptions.budgets || resolvedOptions.categories,
-            savings: resolvedOptions.savings || resolvedOptions.paymentMethods,
+            // Only enforce coupled deletions if the primary one is explicitly true
+            budgets: resolvedOptions.budgets || (resolvedOptions.categories && options?.budgets !== false),
+            savings: resolvedOptions.savings || (resolvedOptions.paymentMethods && options?.savings !== false),
         };
 
         if (!Object.values(enforcedOptions).some(Boolean)) {

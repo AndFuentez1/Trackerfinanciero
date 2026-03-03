@@ -3,13 +3,14 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 export default defineConfig({
-    plugins: [react() as unknown as import('vite').Plugin],
+    plugins: [react()],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
     },
     test: {
+        pool: 'threads',
         environment: 'jsdom',
         globals: true,
         css: true,

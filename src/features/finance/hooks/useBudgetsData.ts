@@ -202,12 +202,12 @@ export function useBudgetsData() {
         };
     }, [budgetsStats]);
 
-    const saveBudget = async (budgetData: { category_id: string; amount: number; category_name?: string; month?: string }) => {
+    const saveBudget = async (budgetData: { category_id: string; amount: number; category?: string; category_name?: string; month?: string }) => {
         if (!user) { return { error: 'No autenticado' }; }
 
         // BUSCAR EL NOMBRE DE LA CATEGORÍA SI NO VIENE
         const categoryDetails = categories.find(c => c.id === budgetData.category_id);
-        const finalCategoryName = budgetData.category_name || categoryDetails?.name || '';
+        const finalCategoryName = budgetData.category || budgetData.category_name || categoryDetails?.name || '';
 
         // Evitar problemas de zona horaria: budgetData.month ya viene como YYYY-MM-DD
         // Solo extraer YYYY-MM y agregar -01 para primer día del mes

@@ -28,9 +28,16 @@ export const getOnboardingGateState = ({
 
   const paymentCount = paymentMethods?.length ?? 0;
   const categoryCount = categories?.length ?? 0;
+
+  // isEmptyState: truly empty if no currency and no basic setup
   const isEmptyState = !currency || paymentCount === 0 || categoryCount === 0;
-  const showWelcomePanel = !welcomeCompleted && isEmptyState;
-  const showDecisionPanel = !isEmptyState && (!onboardingDecision || onboardingDecision === 'pending');
+
+  // showWelcomePanel: Only if they haven't made any decision AND it's physically empty
+  const showWelcomePanel = !welcomeCompleted && !onboardingDecision && isEmptyState;
+
+  // showDecisionPanel: If they have currency but haven't chosen 'how' to start (scratch vs import)
+  const showDecisionPanel = !showWelcomePanel && isEmptyState && (!onboardingDecision || onboardingDecision === 'pending');
+
   const isOnboardingLocked = showWelcomePanel || showDecisionPanel;
 
   return {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useFinance } from '@/features/finance/context/FinanceContext';
+import { Card } from '@/shared/ui/card';
 import { ArrowUpRight, ArrowDownRight, BadgeDollarSign, TrendingUp } from 'lucide-react';
 
 interface SummaryCardProps {
@@ -22,7 +23,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, loading }) => {
   const { currency } = useFinance();
   const Icon = iconMap[title] || ArrowUpRight;
   return (
-    <div className="flex-1 min-w-[180px] p-0 bg-slate-50/50 backdrop-blur-sm rounded-xl relative px-5 py-4 flex flex-col gap-2">
+    <Card className="flex-1 min-w-[180px] flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border-border shadow-md relative">
       <span className="absolute top-3 right-3 text-muted-foreground/60"><Icon className="w-5 h-5" /></span>
       <span className="text-base text-muted-foreground font-medium mb-1">{title}</span>
       {loading ? (
@@ -36,7 +37,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, loading }) => {
           />
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

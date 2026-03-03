@@ -21,7 +21,7 @@ export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
 
   if (budgets.length === 0) {
     return (
-      <Card className="shadow-sm border-dashed">
+      <Card className="shadow-sm border-border bg-gray-50/50 dark:bg-muted/20">
         <CardContent className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
           <p>No hay presupuestos configurados</p>
         </CardContent>
@@ -61,7 +61,7 @@ export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 opacity-50 group-hover:opacity-100 transition-all rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 opacity-50 group-hover:opacity-100 transition-all rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     onClick={() => onDelete(budget.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

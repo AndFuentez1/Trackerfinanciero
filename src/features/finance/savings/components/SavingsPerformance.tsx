@@ -293,7 +293,7 @@ export function SavingsPerformance({
   return (
     <div className="space-y-6">
       {/* Header with total */}
-      <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border border-border/50 shadow-md">
+      <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border border-border shadow-md">
         <div className="flex flex-col gap-1">
           <div className="flex items-start gap-4">
             <div className="flex shrink-0 items-center justify-center p-1">
@@ -332,7 +332,7 @@ export function SavingsPerformance({
 
       <div className="grid gap-4 md:grid-cols-2 auto-rows-fr">
         {accountPerformance.map(account => (
-          <Card key={account.id} className="savings-card h-full border-border/50 bg-gray-50/50 dark:bg-muted/20">
+          <Card key={account.id} className="savings-card h-full border-border bg-gray-50/50 dark:bg-muted/20">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-1 pb-2">
@@ -348,7 +348,7 @@ export function SavingsPerformance({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm"
+                    className="h-8 w-8 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm rounded-xl"
                     onClick={() => onEdit(account.id)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -356,7 +356,7 @@ export function SavingsPerformance({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                    className="h-8 w-8 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm rounded-xl"
                     onClick={() => onDeleteAccount(account.id)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -375,21 +375,21 @@ export function SavingsPerformance({
               )}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-card border border-border/40 rounded p-2">
+                <div className="bg-card border border-border/40 rounded-xl p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Depósitos</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalDeposits)}</p>
                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
-                <div className="bg-card border border-border/40 rounded p-2">
+                <div className="bg-card border border-border/40 rounded-xl p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Retiros</p>
                   <div className="flex items-center justify-center gap-1">
                     <p className="text-lg font-bold text-foreground tracking-tight">{formatCurrencyAccount80(account.totalWithdrawals)}</p>
                     <TrendingDown className="h-4 w-4 text-red-500" />
                   </div>
                 </div>
-                <div className="bg-card border border-arquitectura-2/20 rounded p-2">
+                <div className="bg-card border border-arquitectura-2/20 rounded-xl p-2">
                   <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wide mb-1">Intereses</p>
                   <p className="text-lg font-bold text-primary tracking-tight">{formatCurrencyAccount80(account.totalInterest)}</p>
                 </div>
@@ -402,7 +402,7 @@ export function SavingsPerformance({
       </div>
 
       {accounts.length === 0 && (
-        <Card className="bg-card border-2 border-dashed border-border/40">
+        <Card className="bg-gray-50/50 dark:bg-muted/20 border border-border shadow-sm transition-all duration-300">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <PiggyBank className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No tienes cuentas de ahorro</p>
@@ -455,7 +455,7 @@ export function SavingsPerformance({
                         {isEditing ? (
                           <input
                             type="date"
-                            className="h-8 px-2 text-sm bg-background/50 border rounded-md"
+                            className="h-8 px-2 text-sm bg-background/50 border rounded-xl"
                             value={toInputDate(draft?.date || tx.date)}
                             onChange={(e) => setDraft(d => d ? { ...d, date: e.target.value ?? '' } : d)}
                           />

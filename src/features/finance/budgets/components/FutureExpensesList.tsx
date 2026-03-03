@@ -122,27 +122,8 @@ export function FutureExpensesList() {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState<FutureExpense | null>(null);
 
-    useEffect(() => {
-        if (!user) { return; }
-        fetchExpenses();
-
-        // Realtime Subscription
-        const channel = supabase
-            .channel('future-expenses-changes')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` },
-                () => fetchExpenses()
-            )
-            .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-    }, [user]);
-
     const fetchExpenses = async () => {
-        if (!user) {
-            return;
-        }
+        if (!user) return;
         const { data } = await supabase
             .from('future_expenses')
             .select('*')
@@ -150,11 +131,43 @@ export function FutureExpensesList() {
             .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) {
-            setExpenses(data as unknown as FutureExpense[]);
-        }
+        if (data) setExpenses(data as unknown as FutureExpense[]);
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (!user) return;
+
+        let cancelled = false;
+        const doFetch = async () => {
+            if (!user) return;
+            const { data } = await supabase
+                .from('future_expenses')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('status', 'pending')
+                .order('payment_date', { ascending: true });
+            if (cancelled) return;
+            if (data) setExpenses(data as unknown as FutureExpense[]);
+            setLoading(false);
+        };
+
+        doFetch();
+
+        const channel = supabase
+            .channel('future-expenses-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` },
+                () => { if (!cancelled) doFetch(); }
+            )
+            .subscribe();
+
+        return () => {
+            cancelled = true;
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
 
     const handleCreate = async () => {
         if (!newExpense.amount || !newExpense.description) {
@@ -713,9 +726,9 @@ export function FutureExpensesList() {
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between mt-4">
-                                    <span className="text-xs px-2 py-1 bg-slate-100 rounded-full text-slate-600 font-medium">
+                                    <div className="text-xs px-2 py-1 bg-gray-50/50 dark:bg-muted/20 rounded-full border border-border shadow-sm text-slate-600 font-medium">
                                         {category?.name || 'Sin categoría'}
-                                    </span>
+                                    </div>
                                     <div className="flex gap-2">
                                         <Button
                                             size="sm"

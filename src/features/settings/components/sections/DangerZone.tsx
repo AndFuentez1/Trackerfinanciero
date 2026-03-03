@@ -43,14 +43,13 @@ export function DangerZone() {
     const [profileResetOptions, setProfileResetOptions] = useState({
         deleteProfile: false, // Default to FALSE to ensure user choice
         transactions: true,
-        bgudgets: true,
         budgets: true,
         savings: true,
         loans: true,
         futureExpenses: true,
         paymentMethods: true,
         categories: true,
-        profileFlags: true,
+        profileFlags: false, // DEFAULT TO FALSE AS REQUESTED
         telegramConfig: false,
         gmailPermissions: false,
     });
@@ -68,10 +67,12 @@ export function DangerZone() {
                 return { ...prev, [key]: checked };
             }
 
+            // If user unchecks deleteProfile, we just uncheck it but keep other selections
             if (!checked) {
                 return { ...prev, deleteProfile: false };
             }
 
+            // If user checks deleteProfile, we check ALL as a convenient shortcut
             return {
                 ...prev,
                 deleteProfile: true,
@@ -88,7 +89,8 @@ export function DangerZone() {
     };
 
     const hasDataSelection = Object.values(dataResetOptions).some(Boolean);
-    const canDeleteProfile = profileResetOptions.deleteProfile;
+    const hasProfileResetSelection = Object.entries(profileResetOptions).some(([key, val]) => key !== 'deleteProfile' && val === true);
+    const canDeleteProfile = profileResetOptions.deleteProfile || hasProfileResetSelection;
 
     const handleResetTotal = async () => {
         setLoading(true);
@@ -139,7 +141,7 @@ export function DangerZone() {
                             <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                 Zona de Peligro
                             </p>
-                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Acciones irreversibles sobre tus datos</p>
+                            <p className="text-[15px] text-muted-foreground mt-1 leading-tight">Acciones irreversibles sobre tus datos</p>
                         </div>
                     </div>
                 </div>
@@ -153,7 +155,7 @@ export function DangerZone() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-base font-semibold leading-none">Exportar datos</p>
-                            <p className="text-base text-muted-foreground leading-snug">Descarga un archivo Excel con tu información financiera seleccionada.</p>
+                            <p className="text-[15px] text-muted-foreground leading-snug">Descarga un archivo Excel con tu información financiera seleccionada.</p>
                         </div>
                     </div>
 
@@ -258,7 +260,7 @@ export function DangerZone() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-base font-semibold leading-none">Borrar datos</p>
-                            <p className="text-base text-muted-foreground leading-snug">Borra tus datos pero mantiene categorías y métodos de pago.</p>
+                            <p className="text-[15px] text-muted-foreground leading-snug">Borra tus datos pero mantiene categorías y métodos de pago.</p>
                         </div>
                     </div>
 
@@ -374,7 +376,7 @@ export function DangerZone() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-base font-semibold leading-none">Resetear perfil</p>
-                            <p className="text-base text-muted-foreground leading-snug">Elimina tus datos y reinicia tu cuenta desde cero.</p>
+                            <p className="text-[15px] text-muted-foreground leading-snug">Elimina tus datos y reinicia tu cuenta desde cero.</p>
                         </div>
                     </div>
 
@@ -566,7 +568,7 @@ export function DangerZone() {
 
                                 {!canDeleteProfile && (
                                     <p className="text-xs text-destructive font-medium">
-                                        Activa “Eliminar perfil completo” para continuar.
+                                        Selecciona al menos una opción para continuar.
                                     </p>
                                 )}
                             </div>

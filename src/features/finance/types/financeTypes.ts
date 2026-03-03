@@ -77,3 +77,5 @@ export interface FutureExpense {
     end_date?: string;
     frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
 }
+
+export type PendingInvoice = Database['public']['Tables']['pending_invoices']['Row'];

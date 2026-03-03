@@ -38,11 +38,6 @@ describe('useInactivityLogout', () => {
 
         localStorage.clear();
         mockSignOut.mockClear();
-        // Mock window.location.reload
-        Object.defineProperty(window, 'location', {
-            configurable: true,
-            value: { reload: vi.fn() },
-        });
     });
 
     afterEach(() => {
@@ -80,11 +75,10 @@ describe('useInactivityLogout', () => {
         await flushPromises();
 
         expect(mockSignOut).toHaveBeenCalled();
-        expect(window.location.reload).toHaveBeenCalled();
         expect(localStorage.getItem('lastActiveTime')).toBeNull();
     });
 
-    it('should logout immediately on mount if lastActiveTime is old', async () => {
+    it('should NOT logout immediately on mount if lastActiveTime is old', async () => {
         // Set last active time to 10 minutes ago
         const now = Date.now();
         const tenMinutesAgo = now - 10 * 60 * 1000;
@@ -92,10 +86,9 @@ describe('useInactivityLogout', () => {
 
         renderHook(() => useInactivityLogout(5));
 
-        // Hook effect runs immediately, calls checkInactivity, which awaits signOut
         await flushPromises();
 
-        expect(mockSignOut).toHaveBeenCalled();
+        expect(mockSignOut).not.toHaveBeenCalled();
     });
 
     it('should update lastActiveTime on activity', async () => {

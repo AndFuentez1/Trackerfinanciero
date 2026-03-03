@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSEO } from '@/shared/hooks/useSEO';
 import { useCashFlow } from '@/features/finance/cashflow/hooks/useCashFlow';
@@ -13,6 +13,7 @@ import { queryKeys } from '@/core/api/queryKeys';
 import { useUserConfigStatus } from '@/features/settings/components/hooks/useUserConfigStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/core/utils';
+import { DEFAULT_LOCALE, DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 
 const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
 
@@ -62,7 +63,7 @@ export default function CashFlow() {
   const formatCOP = (v: number | null | undefined) => {
     if (typeof v !== 'number' || isNaN(v)) { return <span className="text-muted-foreground">$ 0,00</span>; }
 
-    const formatted = v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 });
+    const formatted = v.toLocaleString(DEFAULT_LOCALE, { style: 'currency', currency: DEFAULT_CURRENCY_CODE, minimumFractionDigits: 2 });
     const parts = formatted.split(',');
 
     if (parts.length === 1) { return <span>{formatted}</span>; }
@@ -164,7 +165,11 @@ export default function CashFlow() {
           />
         </div>
 
-        <CashFlowChart data={cashFlowSeries} loading={loading} isWarning={isProjectionWarning} />
+        <CashFlowChart
+          data={useMemo(() => cashFlowSeries.map(s => ({ ...s, egresos: -s.egresos })), [cashFlowSeries])}
+          loading={loading}
+          isWarning={isProjectionWarning}
+        />
         {/* Tabla de Desglose Mensual */}
         <div className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">

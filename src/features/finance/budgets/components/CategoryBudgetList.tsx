@@ -26,12 +26,10 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
     const [expandedCount, setExpandedCount] = useState(0);
 
     if (budgets.length === 0) {
-        return (
-            <div className="text-center py-12 bg-muted/10 rounded-xl border border-dashed border-border">
-                <p className="text-muted-foreground">No hay presupuestos configurados.</p>
-                <p className="text-base text-muted-foreground mt-1">Crea uno en Configuración</p>
-            </div>
-        );
+        <div className="text-center py-12 bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border shadow-sm transition-all duration-300">
+            <p className="text-muted-foreground">No hay presupuestos configurados.</p>
+            <p className="text-base text-muted-foreground mt-1">Crea uno en Configuración</p>
+        </div>
     }
 
     return (
@@ -91,8 +89,8 @@ function CategoryBudgetMobileCard({
     paymentMethods
 }: {
     budget: BudgetState,
-    onSave: (budget: { category_id: string; amount: number; month?: string }) => Promise<unknown>,
-    onDelete: (id: string) => Promise<unknown>,
+    onSave: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>,
+    onDelete: (id: string) => Promise<{ error: any }>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[]
 }) {
@@ -247,8 +245,8 @@ function CategoryBudgetRow({
     onExpandChange
 }: {
     budget: BudgetState,
-    onSave: (budget: { category_id: string; category?: string; category_name?: string; amount: number; month?: string }) => Promise<unknown>,
-    onDelete: (id: string) => Promise<unknown>,
+    onSave: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>,
+    onDelete: (id: string) => Promise<{ error: any }>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[],
     onExpandChange: (expanded: boolean) => void

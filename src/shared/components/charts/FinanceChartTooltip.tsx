@@ -1,6 +1,7 @@
 import type { TooltipProps } from 'recharts';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
+import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 
 interface FinanceChartTooltipProps extends TooltipProps<number, string> {
   labelFormatter?: (label: string | number | undefined) => string;
@@ -12,7 +13,7 @@ export function FinanceChartTooltip({
   label,
   labelFormatter,
 }: FinanceChartTooltipProps) {
-  const { formatCurrency } = useFormatCurrency();
+  const { currency } = useFormatCurrency();
 
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -64,7 +65,7 @@ export function FinanceChartTooltip({
                   />
                   <span className="text-muted-foreground">{item.name ?? dataKey}</span>
                 </div>
-                <CurrencyDisplay amount={value} currencyCode="COP" className="font-semibold text-foreground" />
+                <CurrencyDisplay amount={value} currencyCode={currency || DEFAULT_CURRENCY_CODE} className="font-semibold text-foreground" />
               </div>
             );
           })}

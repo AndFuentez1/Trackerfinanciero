@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
 import { mapTransactionRow } from '../utils/transactionMappers';
+import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 import type {
     Transaction,
     TransactionType,
@@ -37,7 +38,7 @@ export function useTransactionData(
     paymentMethods: PaymentMethod[],
     categories: CategoryItem[],
     budgets: Budget[],
-    currency: string = 'COP'
+    currency: string = DEFAULT_CURRENCY_CODE
 ) {
     const queryClient = useQueryClient();
     const [pagedTransactions, setPagedTransactions] = useState<Transaction[]>([]);

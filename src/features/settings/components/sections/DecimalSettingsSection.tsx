@@ -33,7 +33,7 @@ export function DecimalSettingsSection() {
                     <Banknote className="h-5 w-5 text-primary" />
                     Números decimales
                 </CardTitle>
-                <CardDescription className="text-base">Configura cuántos decimales mostrar en los montos</CardDescription>
+                <CardDescription className="text-[15px]">Configura cuántos decimales mostrar en los montos</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="flex flex-col gap-6">

@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import React from 'react';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
+import { CURRENCIES, DEFAULT_LOCALE, DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,10 +12,10 @@ export const getCurrencySymbol = (currencyCode: string): string => {
   return currency?.symbol || currencyCode;
 };
 
-export const formatCurrency = (value: number, decimals: number = 2, currencyCode: string = 'COP') => {
+export const formatCurrency = (value: number, decimals: number = 2, currencyCode: string = DEFAULT_CURRENCY_CODE) => {
   const symbol = getCurrencySymbol(currencyCode);
-  
-  const formatted = new Intl.NumberFormat('es-CO', {
+
+  const formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
     style: 'currency',
     currency: currencyCode,
     minimumFractionDigits: decimals,
@@ -30,7 +30,7 @@ export const formatCurrency = (value: number, decimals: number = 2, currencyCode
 /**
  * Formatea moneda en versión compacta para ejes (k/M) manteniendo el símbolo.
  */
-export const formatCurrencyCompact = (value: number, currencyCode: string = 'COP') => {
+export const formatCurrencyCompact = (value: number, currencyCode: string = DEFAULT_CURRENCY_CODE) => {
   const symbol = getCurrencySymbol(currencyCode);
   const abs = Math.abs(value);
 
@@ -51,10 +51,10 @@ export const formatCurrencyCompact = (value: number, currencyCode: string = 'COP
 /**
  * Formatea moneda con decimales reducidos a 40% del tamaño (para presupuestos, ahorros, préstamos)
  */
-export const formatCurrencySmall = (value: number, decimals: number = 2, currencyCode: string = 'COP'): React.ReactNode => {
+export const formatCurrencySmall = (value: number, decimals: number = 2, currencyCode: string = DEFAULT_CURRENCY_CODE): React.ReactNode => {
   const symbol = getCurrencySymbol(currencyCode);
-  
-  let formatted = new Intl.NumberFormat('es-CO', {
+
+  let formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
     style: 'currency',
     currency: currencyCode,
     minimumFractionDigits: decimals,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useRef } from 'react';
+import React, { useState, useEffect, forwardRef, useRef, useCallback } from 'react';
 import { Input } from '@/shared/ui/input';
 import { cn } from '@/core/utils';
 import { useFinance } from '@/features/finance/context/FinanceContext';
@@ -35,6 +35,13 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
             return `${integerPart},${decimalPart}`;
         }, [activeDecimals]);
 
+        const parseCurrencyString = useCallback((str: string) => {
+            // Remove dots, replace comma with dot
+            const clean = str.replace(/\./g, '').replace(/,/g, '.');
+            const num = parseFloat(clean);
+            return isNaN(num) ? 0 : num;
+        }, []);
+
         // Initialize/Sync display value when prop value changes externally
         useEffect(() => {
             const internalAsNumber = parseCurrencyString(displayValue);
@@ -44,13 +51,6 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
                 setDisplayValue(formatValue(value, true));
             }
         }, [value, activeDecimals, displayValue, formatValue, parseCurrencyString]);
-
-        const parseCurrencyString = useCallback((str: string) => {
-            // Remove dots, replace comma with dot
-            const clean = str.replace(/\./g, '').replace(/,/g, '.');
-            const num = parseFloat(clean);
-            return isNaN(num) ? 0 : num;
-        }, []);
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const raw = e.target.value;

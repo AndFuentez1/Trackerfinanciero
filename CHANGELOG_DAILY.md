@@ -1,3 +1,14 @@
+# Changelog - 2026-03-02
+
+## Settings & Data Management
+- **Borrar Datos**: Se incluyeron los préstamos en la lógica de borrado operativo y se añadió el toggle correspondiente en la UI.
+- **Resetear Perfil**: Se eliminó la obligatoriedad de marcar "Eliminar perfil completo". El botón de borrado ahora se habilita si hay al menos una opción de datos seleccionada.
+- **Correciones de Estado**: Se corrigió un error de dedo (`bgudgets`) en las opciones de reseteo del perfil.
+
+## UI/UX & Aesthetics
+- **Theme Flash Fix**: Se optimizó la inyección del tema en el `index.html` usando una base neutra (Slate 500) para evitar el destello inicial "teal".
+- **Transiciones Controladas**: Se ajustó `index.css` y `index.html` para aplicar transiciones de color solo después de que el tema inicial se haya inyectado correctamente, eliminando saltos visuales en la carga.
+
 # Changelog - 2026-03-01
 
 ## Traceability

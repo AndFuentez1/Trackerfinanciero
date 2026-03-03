@@ -1,10 +1,12 @@
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import type { SankeyNode } from 'd3-sankey';
 import { Button } from '@/shared/ui/button';
 import { Transaction, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
-import { excludeTransfers } from '@/lib/cashflowUtils';
+import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
+import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 
 interface SankeyChartProps {
   transactions: Transaction[];
@@ -367,13 +369,13 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
 
   if (!graph || nodes.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full w-full bg-slate-50/50 rounded-xl border border-border/50 min-h-[200px]">
+      <div className="flex items-center justify-center h-full w-full bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border min-h-[200px]">
         <p className="text-muted-foreground text-sm">No hay suficientes datos de flujo para este período.</p>
       </div>
     );
   }
 
-  const cur = currency || 'COP';
+  const cur = currency || DEFAULT_CURRENCY_CODE;
 
   return (
     <div ref={containerRef} className="w-full h-full min-h-[400px] relative overflow-hidden">

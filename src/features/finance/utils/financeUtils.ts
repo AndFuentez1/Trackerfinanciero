@@ -153,4 +153,4 @@ export const calculateInsights = (
     return insights;
 };
 
-export { excludeTransfers } from '@/lib/cashflowUtils';
+export { excludeTransfers } from '@/features/finance/utils/cashflowUtils';

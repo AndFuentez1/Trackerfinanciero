@@ -11,7 +11,7 @@ import { Button } from "@/shared/ui/button";
 import { SkeletonLoader } from "@/shared/components/skeletons/SkeletonLoader";
 import { SetPasswordDialog } from "@/features/auth/components/SetPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { getSkeletonTypeFromPath } from "@/lib/skeletonUtils";
+import { getSkeletonTypeFromPath } from "@/shared/components/skeletons/skeletonUtils";
 import { useScrollRestoration } from "@/shared/hooks/useScrollRestoration";
 import { getOnboardingGateState, isOnboardingAllowedRoute } from "@/core/utils";
 import { queryKeys } from "@/core/api/queryKeys";
@@ -77,32 +77,41 @@ export default function MainLayout() {
         return () => subscription.unsubscribe();
     }, [navigate]);
 
-    // Check if user has password set
+    // Check if user has password set (con cleanup para evitar setState tras unmount)
     useEffect(() => {
+        let cancelled = false;
+        let timerId: ReturnType<typeof setTimeout> | null = null;
+
         const checkUserPassword = async () => {
-            if (!user || !user.email_confirmed_at || hasCheckedPassword) { return; }
+            if (!user || !user.email_confirmed_at || hasCheckedPassword) return;
 
             try {
                 const { data: { user: currentUser } } = await supabase.auth.getUser();
+                if (cancelled) return;
 
                 if (currentUser) {
                     const lastSignInMethod = currentUser.app_metadata?.provider;
-
                     if (lastSignInMethod === 'email' && !localStorage.getItem('password_dialog_shown')) {
-                        setTimeout(() => {
-                            setShowPasswordDialog(true);
-                            localStorage.setItem('password_dialog_shown', 'true');
+                        timerId = setTimeout(() => {
+                            if (!cancelled) {
+                                setShowPasswordDialog(true);
+                                localStorage.setItem('password_dialog_shown', 'true');
+                            }
                         }, 2000);
                     }
                 }
-                setHasCheckedPassword(true);
+                if (!cancelled) setHasCheckedPassword(true);
             } catch (error) {
                 console.error('[MainLayout] Failed to check user password', error);
-                setHasCheckedPassword(true);
+                if (!cancelled) setHasCheckedPassword(true);
             }
         };
 
         checkUserPassword();
+        return () => {
+            cancelled = true;
+            if (timerId) clearTimeout(timerId);
+        };
     }, [user, hasCheckedPassword]);
 
     if (loading) {
@@ -148,10 +157,10 @@ export default function MainLayout() {
     return (
         <>
             <div
-                className="flex h-screen w-full overflow-hidden font-sans antialiased"
+                className="flex h-screen max-h-[100dvh] w-full overflow-hidden font-sans antialiased"
             >
                 <Sidebar />
-                <main ref={scrollRef} className="flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative scrollbar-stable">
+                <main ref={scrollRef} className="flex-1 min-h-0 pb-20 lg:pb-0 overflow-y-auto overflow-x-hidden h-screen max-h-[100dvh] relative scrollbar-stable">
                     <Outlet />
                 </main>
                 <MobileNav />

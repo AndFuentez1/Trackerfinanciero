@@ -14,6 +14,7 @@ import { OnboardingDecisionPanel } from '@/features/auth/components/OnboardingDe
 import { calculateSummary, calculateExpensesByCategory, calculateInsights } from '@/features/finance/utils/financeUtils';
 import { LayoutGrid, Wallet } from 'lucide-react';
 import { getOnboardingGateState } from '@/core/utils';
+import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 
 export default function Index() {
   useSEO({
@@ -58,7 +59,7 @@ export default function Index() {
 
   // --- Derived calculations ---
   const statsSummary = useMemo(() => {
-    return calculateSummary(allTransactions, currency ?? 'COP');
+    return calculateSummary(allTransactions, currency ?? DEFAULT_CURRENCY_CODE);
   }, [allTransactions, currency]);
 
   const chartTransactions = allTransactions; // Use all transactions for charts
@@ -69,7 +70,7 @@ export default function Index() {
 
   const chartInsights = useMemo(() => {
     return calculateInsights(
-      calculateSummary(chartTransactions, currency ?? 'COP'),
+      calculateSummary(chartTransactions, currency ?? DEFAULT_CURRENCY_CODE),
       chartExpensesByCategory,
       paymentMethods,
       budgets,

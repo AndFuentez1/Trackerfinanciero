@@ -86,26 +86,31 @@
   html {
     font-family: var(--font-base);
     font-size: 16px;
-    /* Base for rem calculations */
     line-height: var(--leading-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
+    scrollbar-gutter: stable; /* Evita salto al mostrar/ocultar scrollbar */
   }
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-weight: var(--weight-semiregular);
-    /* Increased from 400 to 450 */
     font-size: var(--text-base);
+    /* Gradientes responsivos: tamaños relativos al viewport para evitar cortes */
     background-image:
-      radial-gradient(1200px 600px at 10% -10%, hsl(var(--accent-soft-bg)) 0%, transparent 60%),
-      radial-gradient(900px 500px at 90% 0%, hsl(var(--accent-soft)) 0%, transparent 55%),
-      radial-gradient(600px 400px at 50% 100%, hsl(var(--muted)) 0%, transparent 60%);
+      radial-gradient(min(80vw, 1200px) min(40vw, 600px) at 10% -10%, hsl(var(--accent-soft-bg)) 0%, transparent 60%),
+      radial-gradient(min(60vw, 900px) min(35vw, 500px) at 90% 0%, hsl(var(--accent-soft)) 0%, transparent 55%),
+      radial-gradient(min(50vw, 600px) min(35vw, 400px) at 50% 100%, hsl(var(--muted)) 0%, transparent 60%);
     background-attachment: fixed;
-    /* Smooth transitions for theme changes */
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Smooth transitions for theme changes (applied after load) */
+  body.theme-loaded {
     transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
       color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
       border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -388,4 +393,49 @@ body,
 #root {
   background-color: hsl(var(--background));
   color: hsl(var(--text-primary));
+}
+
+/* Contenedor de página: evita saltos y mantiene altura estable */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Clase utilitaria para contenido principal responsive sin saltos */
+.page-content {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  container-type: inline-size;
+}
+
+/* Premium Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.15);
+  border-radius: 20px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
 }

@@ -24,7 +24,7 @@ export function PageHeader({ title, description, icon, actions, className }: Pag
                     <div className="flex flex-col">
                         <h1 className="text-2xl font-bold tracking-tight text-foreground leading-none">{title}</h1>
                         {description && (
-                            <p className="text-sm text-muted-foreground font-medium mt-1 leading-none">{description}</p>
+                            <p className="text-[15px] text-muted-foreground font-medium mt-1 leading-none">{description}</p>
                         )}
                     </div>
                 </div>

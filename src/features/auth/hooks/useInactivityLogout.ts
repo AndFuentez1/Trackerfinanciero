@@ -10,6 +10,7 @@ export function useInactivityLogout(timeoutMinutes: number = 5) {
     const { user, signOut } = useAuth();
     const lastActivityRef = useRef<number>(Date.now());
     const timeoutMs = timeoutMinutes * 60 * 1000;
+    const hasHydratedRef = useRef(false);
 
     /**
      * Checks if the user has been inactive for too long.
@@ -17,6 +18,16 @@ export function useInactivityLogout(timeoutMinutes: number = 5) {
      */
     const checkInactivity = useCallback(async () => {
         if (!user) { return; }
+
+        // On first load after session restore, we "hydrate" activity to now so the user
+        // is not logged out immediately just because the app was closed for a while.
+        if (!hasHydratedRef.current) {
+            const now = Date.now();
+            hasHydratedRef.current = true;
+            localStorage.setItem(INACTIVITY_KEY, now.toString());
+            lastActivityRef.current = now;
+            return;
+        }
 
         const storedLastActive = localStorage.getItem(INACTIVITY_KEY);
         const lastActive = storedLastActive ? parseInt(storedLastActive, 10) : Date.now();
@@ -37,9 +48,6 @@ export function useInactivityLogout(timeoutMinutes: number = 5) {
 
             // Sign out locally and globally
             await signOut();
-
-            // Force reload to ensure clean state
-            window.location.reload();
         }
     }, [user, timeoutMs, signOut]);
 
@@ -64,15 +72,12 @@ export function useInactivityLogout(timeoutMinutes: number = 5) {
 
     // Initial check on mount (handle "closed tab -> reopen > 5 mins later")
     useEffect(() => {
-        if (user) {
-            // If no existing timestamp, set one now
-            if (!localStorage.getItem(INACTIVITY_KEY)) {
-                localStorage.setItem(INACTIVITY_KEY, Date.now().toString());
-            } else {
-                // Otherwise check immediately
-                checkInactivity();
-            }
-        }
+        if (!user) { return; }
+        // Always initialize activity on session restore to avoid forced logout on entry.
+        const now = Date.now();
+        localStorage.setItem(INACTIVITY_KEY, now.toString());
+        lastActivityRef.current = now;
+        hasHydratedRef.current = true;
     }, [user, checkInactivity]);
 
     // Periodic check

@@ -194,14 +194,13 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
       <Button
         onClick={onAdd}
         className={cn(
-          "h-48 rounded-2xl border-2 border-border/60 bg-background/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none",
+          "h-48 rounded-2xl border border-border bg-gray-50/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none",
           highlighted && [
             "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
             "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
             "bg-white text-primary border-white font-bold z-10"
           ]
         )}
-        style={{ background: 'transparent' }}
       >
         <Plus className={cn("h-5 w-5", highlighted && "")} />
         <span className="hidden sm:inline ml-2">Agregar método</span>

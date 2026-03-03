@@ -789,7 +789,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     // Embedded Mode (Inside MainLayout)
     if (!fullPage) {
         return (
-            <div className={embeddedWrapperClass}>
+            <div className={embeddedWrapperClass} data-testid={`skeleton-${tab}`}>
                 <style>
                     {`
                     @keyframes skeleton-pulse {
@@ -821,11 +821,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         );
     }
 
-    // Full Page Mode (App.tsx / MainLayout fallback)
+    // Full Page Mode (App.tsx / MainLayout fallback) — min-h reserva espacio y evita layout shift
     return (
         <div
             className={cn(
-                "h-screen w-full overflow-hidden font-sans antialiased bg-background flex"
+                "h-screen min-h-screen min-h-[100dvh] w-full overflow-hidden font-sans antialiased bg-background flex"
             )}
         >
             <style>
@@ -859,7 +859,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             {/* Main Content Area */}
             <main
                 className={cn(
-                    "flex-1 pb-20 lg:pb-0 overflow-y-auto h-screen relative scrollbar-stable",
+                    "flex-1 min-h-0 pb-20 lg:pb-0 overflow-y-auto overflow-x-hidden h-screen relative scrollbar-stable",
                     "transition-colors duration-300",
                     isAuth ? "bg-background flex items-center justify-center" : ""
                 )}

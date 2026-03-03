@@ -142,6 +142,10 @@ export function useFinanceDataLogic() {
     ui.setWelcomeCompleted(Boolean(profile.welcome_completed));
   }, [profile, ui]);
 
+  const initializeDefaultCategories = useCallback(() => {
+    return mut.initializeDefaultCategories(DEFAULT_CATEGORIES);
+  }, [mut.initializeDefaultCategories]);
+
   return useMemo(() => ({
     // --- DATA ---
     transactions: tx.transactions,
@@ -205,7 +209,7 @@ export function useFinanceDataLogic() {
     deletePaymentMethod: mut.deletePaymentMethod,
     addBudget: mut.addBudget,
     deleteBudget: mut.deleteBudget,
-    initializeDefaultCategories: () => mut.initializeDefaultCategories(DEFAULT_CATEGORIES),
+    initializeDefaultCategories,
     recalculatePaymentMethodBalances: async () => { await refreshData(); return { success: true }; },
 
     // --- NAVIGATION / UI ACTIONS ---
@@ -296,5 +300,6 @@ export function useFinanceDataLogic() {
     confirmPendingImport,
     resetOperationalData,
     loadMore,
+    initializeDefaultCategories // Use the stable callback
   ]);
 }

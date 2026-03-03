@@ -6,7 +6,7 @@
  */
 
 import type { Transaction, Budget, PaymentMethod, Insight } from '../types/financeTypes';
-import { excludeTransfers } from '@/lib/cashflowUtils';
+import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
 
 /**
  * Calculate financial summary from transactions
@@ -204,4 +204,4 @@ export function findOrphanedTransactions(
     });
 }
 
-export { excludeTransfers } from '@/lib/cashflowUtils';
+export { excludeTransfers } from '@/features/finance/utils/cashflowUtils';

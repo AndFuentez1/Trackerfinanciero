@@ -125,6 +125,39 @@ export type Database = {
         }
         Relationships: []
       }
+      gmail_message_status: {
+        Row: {
+          id: string
+          user_id: string
+          message_id: string
+          status: string
+          read_at: string | null
+          approved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          message_id: string
+          status?: string
+          read_at?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          message_id?: string
+          status?: string
+          read_at?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pending_invoices: {
         Row: {
           id: string

@@ -33,7 +33,7 @@ export function SecuritySection() {
     };
 
     return (
-        <Card className="rounded-2xl shadow-sm border-border/50 bg-card overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -44,7 +44,7 @@ export function SecuritySection() {
                             <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
                                 Seguridad y cuenta
                             </p>
-                            <p className="text-sm text-muted-foreground mt-1 leading-tight">Gestiona el acceso a tu cuenta y tu sesión</p>
+                            <p className="text-[15px] text-muted-foreground mt-1 leading-tight">Gestiona el acceso a tu cuenta y tu sesión</p>
                         </div>
                     </div>
                 </div>
@@ -57,7 +57,7 @@ export function SecuritySection() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-base font-semibold leading-none">Contraseña</p>
-                            <p className="text-base text-muted-foreground leading-snug">Establece una contraseña para entrar más rápido</p>
+                            <p className="text-[15px] text-muted-foreground leading-snug">Establece una contraseña para entrar más rápido</p>
                         </div>
                     </div>
                     <Button
@@ -79,7 +79,7 @@ export function SecuritySection() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-base font-semibold leading-none">Cerrar sesión</p>
-                            <p className="text-base text-muted-foreground leading-snug">Cierra tu sesión en este dispositivo</p>
+                            <p className="text-[15px] text-muted-foreground leading-snug">Cierra tu sesión en este dispositivo</p>
                         </div>
                     </div>
                     <Button

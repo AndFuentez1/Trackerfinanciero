@@ -170,7 +170,8 @@ export function AddTransactionDialog({
     return combinedCategories
       .filter(c => c.type === currentType)
       .map(c => ({ value: c.id, label: c.name }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
+      .slice(0, 10);
   }, [currentType, categories, localCategories]);
 
   // Set first available category when type changes
@@ -452,7 +453,7 @@ export function AddTransactionDialog({
                           type="button"
                           onClick={() => field.onChange(option.value)}
                           className={cn(
-                            'px-2 py-2 text-xs sm:text-sm rounded-lg border transition-all',
+                            'px-2 py-2 text-xs sm:text-sm rounded-xl border transition-all',
                             option.value === 'transfer_in' ? 'col-span-8' : 'col-span-4',
                             field.value === option.value
                               ? 'bg-primary text-primary-foreground border-primary'

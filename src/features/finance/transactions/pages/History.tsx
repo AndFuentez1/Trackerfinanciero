@@ -277,7 +277,7 @@ export default function HistoryPage() {
 
                         {/* FILTROS UNIFICADOS */}
                         <div className={cn(
-                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border/50 flex flex-col gap-8",
+                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border flex flex-col gap-8",
                             filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
                         )}>
                             <div className="flex items-start gap-4">
@@ -534,7 +534,7 @@ export default function HistoryPage() {
                         )}
                     </>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-gray-50/50 dark:bg-muted/20 rounded-2xl border border-border shadow-sm transition-all duration-300">
                         <Receipt className="h-12 w-12 text-muted-foreground opacity-20" />
                         <div className="space-y-1">
                             <h3 className="text-lg font-semibold">No hay transacciones</h3>
