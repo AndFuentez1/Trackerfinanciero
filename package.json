@@ -20,7 +20,7 @@
     "sca:deps": "depcheck",
     "postinstall": "echo postinstall script skipped",
     "predeploy": "npm run build && echo > dist_deploy/.nojekyll && copy dist_deploy\\index.html dist_deploy\\404.html",
-    "deploy": "gh-pages -d dist_deploy --dotfiles",
+    "deploy": "gh-pages -d dist_deploy --dotfiles --add",
     "start": "cd backend && npm install && npm start"
   },
   "engines": {
