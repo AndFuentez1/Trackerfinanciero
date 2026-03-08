@@ -12,6 +12,7 @@ import { calculateMonthlySnapshot, FutureExpense, MonthlySnapshot } from '@/feat
 import { calculateCurrentRealBalance } from '@/features/finance/utils/financeUtils';
 import type { CashFlowChartPoint } from '@/features/finance/cashflow/types/cashflowTypes';
 import { parseLocalDate } from '@/core/utils';
+import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
 
 // Helper: Redondeo seguro a 2 decimales para evitar errores de punto flotante
 const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -25,6 +26,14 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const { loans } = useLoans();
   const { savingsAccounts } = useSavingsData();
   const { budgets: rawBudgets } = useFinanceQueries(user?.id);
+  const futureExpensesCacheKey = useMemo(
+    () => (user?.id ? buildFinanceCacheKey('future-expenses', user.id) : null),
+    [user?.id]
+  );
+  const cachedFutureExpenses = useMemo(
+    () => (futureExpensesCacheKey ? readFinanceCache<FutureExpense[]>(futureExpensesCacheKey, 12 * 60 * 60 * 1000) : undefined),
+    [futureExpensesCacheKey]
+  );
 
   const transactionsSource = useMemo(
     () => (allTransactions && allTransactions.length > 0 ? allTransactions : transactions),
@@ -44,8 +53,15 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       return data as FutureExpense[];
     },
     enabled: !!user,
+    placeholderData: cachedFutureExpenses,
     staleTime: 10 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (futureExpensesCacheKey) {
+      writeFinanceCache(futureExpensesCacheKey, futureExpenses);
+    }
+  }, [futureExpensesCacheKey, futureExpenses]);
 
   useEffect(() => {
     if (!user) { return; }

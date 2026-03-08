@@ -10,6 +10,7 @@ import { SkeletonLoader, StandardHeaderSkeleton, CardSkeleton, PulseBlock, Savin
 import { Wallet, LogOut, PiggyBank } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useState } from 'react';
+import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
 export default function SavingsPage() {
@@ -21,6 +22,7 @@ export default function SavingsPage() {
     const { user, loading: authLoading } = useAuth();
     const {
         loading: dataLoading,
+        bootLoading: dataBootLoading,
         addTransfer,
         paymentMethods,
         updatePaymentMethod,
@@ -29,6 +31,7 @@ export default function SavingsPage() {
         savingsAccounts,
         savingsTransactions,
         loading: savingsLoading,
+        bootLoading: savingsBootLoading,
         error: savingsError,
         addSavingsAccount,
         deleteSavingsAccount,
@@ -69,11 +72,13 @@ export default function SavingsPage() {
         return result;
     };
 
+    const isBootLoading = authLoading || dataBootLoading || savingsBootLoading;
     const isLoading = authLoading || dataLoading || savingsLoading;
+    usePageBootLoading(isBootLoading);
 
-    if (!user && !isLoading) { return null; }
+    if (!user && !isBootLoading) { return null; }
 
-    if (savingsError && savingsAccounts.length === 0 && !isLoading) {
+    if (savingsError && savingsAccounts.length === 0 && !isBootLoading) {
         return (
             <div className="min-h-screen bg-background/30">
                 <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -97,7 +102,7 @@ export default function SavingsPage() {
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
-                {isLoading ? (
+                {isBootLoading ? (
                     <SkeletonLoader tab="savings" withLayoutWrapper={true} fullPage={false} />
                 ) : (
                     <>

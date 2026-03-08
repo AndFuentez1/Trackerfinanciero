@@ -48,14 +48,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
     // Profile state
     const [currency, setCurrency] = useState('COP');
     const [decimalPlaces, setDecimalPlaces] = useState(0);
-    const [profileData, setProfileData] = useState<{
-        currency: string;
-        onboarding_decision: string | null;
-        has_pending_import: boolean | null;
-        welcome_completed: boolean | null;
-        decimal_places: number | null;
-        base_color: string | null;
-    } | null>(null);
+    const [profileData, setProfileData] = useState<ProfileSelect | null>(null);
 
     // Sync local profile state with fetched profile
     useEffect(() => {
@@ -76,21 +69,21 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
         onboarding_decision?: string;
         has_pending_import?: boolean;
         welcome_completed?: boolean;
+        country?: string;
+        data_treatment_accepted?: boolean;
     }) => {
         if (!user) {
             toast({ title: 'Error', description: 'No autenticado', variant: 'destructive' });
             return { error: 'No autenticado' };
         }
 
+        const profileQueryKey = queryKeys.finance.profile(user.id);
+        const previousProfileData = profileData;
+        const previousQueryProfile = queryClient.getQueryData<ProfileSelect | null>(profileQueryKey) ?? null;
+        const previousCurrency = currency;
+        const previousDecimalPlaces = decimalPlaces;
+
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update(updates)
-                .eq('id', user.id);
-
-            if (error) { throw error; }
-
-            // Filter out undefined values to prevent overwriting existing state with undefined when spreading
             type ProfileUpdate = {
                 currency?: string;
                 decimal_places?: number;
@@ -98,6 +91,8 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 onboarding_decision?: string;
                 has_pending_import?: boolean;
                 welcome_completed?: boolean;
+                country?: string;
+                data_treatment_accepted?: boolean;
             };
 
             const validUpdates = Object.entries(updates).reduce((acc: ProfileUpdate, [key, value]) => {
@@ -107,22 +102,29 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 return acc;
             }, {});
 
-            // Update local state
+            const optimisticBaseProfile = previousProfileData ?? previousQueryProfile;
+            const optimisticProfile = optimisticBaseProfile
+                ? { ...optimisticBaseProfile, ...validUpdates }
+                : null;
+
+            // Start cancellation first, but do not delay the optimistic UI update.
+            const cancelQueriesPromise = queryClient.cancelQueries({ queryKey: profileQueryKey });
+
             if (validUpdates.currency !== undefined) {
                 setCurrency(validUpdates.currency);
             }
             if (validUpdates.decimal_places !== undefined) {
                 setDecimalPlaces(validUpdates.decimal_places);
             }
-            const nextProfile = { ...(profileData || {}), ...validUpdates } as NonNullable<typeof profileData>;
-            setProfileData(nextProfile);
+            if (optimisticProfile) {
+                setProfileData(optimisticProfile);
+            }
 
-            // Keep React Query cache in sync
             queryClient.setQueryData(
-                queryKeys.finance.profile(user.id),
+                profileQueryKey,
                 (prev: ProfileSelect | null) => {
                     if (!prev) {
-                        return prev;
+                        return optimisticProfile;
                     }
                     return {
                         ...prev,
@@ -131,15 +133,34 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 }
             );
 
+            // Finish cancellation before the network write so stale in-flight responses do not win.
+            await cancelQueriesPromise;
+
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', user.id);
+
+            if (error) { throw error; }
+
+            // Invalidate to ensure any other listeners eventually get the completely true state
+            queryClient.invalidateQueries({ queryKey: profileQueryKey });
+
             toast({ title: 'Perfil actualizado', description: 'Cambios guardados correctamente' });
             return { success: true };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Error desconocido';
+
+            setCurrency(previousCurrency);
+            setDecimalPlaces(previousDecimalPlaces);
+            setProfileData(previousProfileData);
+            queryClient.setQueryData(profileQueryKey, previousQueryProfile);
+
             console.error('Error updating profile:', error);
             toast({ title: 'Error', description: message, variant: 'destructive' });
             return { error: message };
         }
-    }, [user, toast, profileData, queryClient]);
+    }, [user, toast, profileData, queryClient, currency, decimalPlaces]);
 
     /**
      * Reset operational data (transactions, budgets, etc.) but keep configuration (categories, payment methods)
@@ -211,6 +232,12 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
         const errors: string[] = [];
 
         try {
+            // 0) Limpiar tablas de soporte y reglas (tienen cascade user_id, pero mejor ser explícitos)
+            const supportTables = ['classifier_rules', 'gmail_message_status'];
+            for (const table of supportTables) {
+                await supabase.from(table).delete().eq('user_id', user.id);
+            }
+
             // 1) Finanzas - eliminar datos seleccionados (orden seguro)
             if (enforcedOptions.transactions) {
                 const { error } = await supabase.from('transactions').delete().eq('user_id', user.id);
@@ -220,7 +247,8 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 }
             }
 
-            if (enforcedOptions.transactions || enforcedOptions.categories) {
+            // Borrar facturas pendientes siempre que se resetean transacciones o se limpian categorías/métodos
+            if (enforcedOptions.transactions || enforcedOptions.categories || enforcedOptions.paymentMethods) {
                 const { error: pendingInvoicesDeleteError } = await supabase
                     .from('pending_invoices')
                     .delete()
@@ -240,6 +268,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             }
 
             if (enforcedOptions.savings) {
+                // Primero transacciones de ahorro por la referencia a cuentas/métodos
                 const { error: savingsTxError } = await supabase.from('savings_transactions').delete().eq('user_id', user.id);
                 if (savingsTxError) {
                     console.error('Error deleting savings_transactions:', savingsTxError);
@@ -270,10 +299,17 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             }
 
             if (enforcedOptions.paymentMethods) {
+                // Intentar borrar métodos de pago
                 const { error } = await supabase.from('payment_methods').delete().eq('user_id', user.id);
                 if (error) {
                     console.error('Error deleting payment_methods:', error);
                     errors.push(`payment_methods: ${error.message}`);
+
+                    // Fallback: Si no se pueden borrar, al menos poner saldos a 0
+                    await supabase
+                        .from('payment_methods')
+                        .update({ balance: 0 })
+                        .eq('user_id', user.id);
                 }
             } else if (enforcedOptions.transactions) {
                 // Mantener métodos de pago pero reiniciar saldos si se borran transacciones
@@ -306,6 +342,8 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                         currency: null,
                         decimal_places: null,
                         base_color: null,
+                        country: null,
+                        data_treatment_accepted: null,
                     })
                     .eq('id', user.id);
 
@@ -314,15 +352,28 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 } else {
                     setCurrency('');
                     setDecimalPlaces(0);
-                    setProfileData(prev => prev ? ({
-                        ...prev,
+
+                    const flushState = {
                         onboarding_decision: null,
                         has_pending_import: false,
                         welcome_completed: false,
                         currency: null,
                         decimal_places: null,
                         base_color: null,
-                    }) : prev);
+                        country: null,
+                        data_treatment_accepted: null,
+                    };
+
+                    setProfileData(prev => prev ? ({ ...prev, ...flushState }) : prev);
+
+                    // Keep React Query cache in sync immediately to force UI reactivity (like WelcomePanel)
+                    queryClient.setQueryData(
+                        queryKeys.finance.profile(user.id),
+                        (prev: ProfileSelect | null) => {
+                            if (!prev) return prev;
+                            return { ...prev, ...flushState };
+                        }
+                    );
                 }
             }
 
@@ -356,6 +407,8 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             }
 
             queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.savings.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.loans.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
 
             if (errors.length > 0) {

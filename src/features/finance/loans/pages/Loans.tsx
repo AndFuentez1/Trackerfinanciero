@@ -43,6 +43,7 @@ import { getTodayLocalDate } from '@/core/utils';
 import { Badge } from '@/shared/ui/badge';
 import { LoansSummary } from '../components/LoansSummary';
 import { LoanCard } from '../components/LoanCard';
+import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
 
 export default function LoansPage() {
     useSEO({
@@ -50,11 +51,11 @@ export default function LoansPage() {
         description: 'Loans & Debts - Manage your personal loans and tracked debts.'
     });
     const { user, loading: authLoading } = useAuth();
-    const { loans, loading, error, refetch } = useLoans();
+    const { loans, loading, bootLoading: loansBootLoading, error, refetch } = useLoans();
     const { createLoan } = useCreateLoan();
     const { updateLoan, deleteLoan } = useUpdateLoan();
     const { createPayment } = useCreateLoanPayment();
-    const { paymentMethods, updateTransaction, transactions } = useFinanceData();
+    const { paymentMethods, updateTransaction, transactions, bootLoading: financeBootLoading } = useFinanceData();
     const { toast } = useToast();
     const decimalPlaces = useDecimalPlaces();
     const { formatCurrency, formatCurrencySmall, decimalPlaces: dp } = useFormatCurrency();
@@ -295,11 +296,13 @@ export default function LoansPage() {
     const pendingDisbursementCount = loans.filter(l => !l.is_disbursed && !l.payment_method_id).length;
 
 
+    const isBootLoading = authLoading || financeBootLoading || loansBootLoading;
     const isLoading = loading || authLoading;
+    usePageBootLoading(isBootLoading);
 
-    if (!user && !isLoading) { return null; }
+    if (!user && !isBootLoading) { return null; }
 
-    if (error && loans.length === 0 && !isLoading) {
+    if (error && loans.length === 0 && !isBootLoading) {
         return (
             <div className="min-h-screen bg-background/30">
                 <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -319,7 +322,7 @@ export default function LoansPage() {
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
-                {isLoading ? (
+                {isBootLoading ? (
                     <SkeletonLoader tab="loans" withLayoutWrapper={true} fullPage={false} />
                 ) : (
                     <>

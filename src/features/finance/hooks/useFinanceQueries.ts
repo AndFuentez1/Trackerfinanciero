@@ -1,13 +1,15 @@
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
 import type { Database } from '@/integrations/supabase/types';
 import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, Budget } from '../types/financeTypes';
+import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '../utils/localCache';
 
 // Supabase row types
 export type ProfileSelect = Pick<
     Database['public']['Tables']['profiles']['Row'],
-    'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color'
+    'currency' | 'onboarding_decision' | 'has_pending_import' | 'welcome_completed' | 'decimal_places' | 'base_color' | 'country' | 'data_treatment_accepted'
 >;
 
 export interface UseFinanceQueriesReturn {
@@ -27,9 +29,45 @@ export interface UseFinanceQueriesReturn {
     queriesLoading: boolean;
 }
 
+const FINANCE_BOOT_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
 export function useFinanceQueries(userId: string | undefined): UseFinanceQueriesReturn {
+    const paymentMethodsCacheKey = useMemo(
+        () => (userId ? buildFinanceCacheKey('payment-methods', userId) : null),
+        [userId]
+    );
+    const categoriesCacheKey = useMemo(
+        () => (userId ? buildFinanceCacheKey('categories', userId) : null),
+        [userId]
+    );
+    const budgetsCacheKey = useMemo(
+        () => (userId ? buildFinanceCacheKey('budgets', userId) : null),
+        [userId]
+    );
+    const profileCacheKey = useMemo(
+        () => (userId ? buildFinanceCacheKey('profile', userId) : null),
+        [userId]
+    );
+
+    const cachedPaymentMethods = useMemo(
+        () => (paymentMethodsCacheKey ? readFinanceCache<PaymentMethod[]>(paymentMethodsCacheKey, FINANCE_BOOT_CACHE_MAX_AGE_MS) : undefined),
+        [paymentMethodsCacheKey]
+    );
+    const cachedCategories = useMemo(
+        () => (categoriesCacheKey ? readFinanceCache<CategoryItem[]>(categoriesCacheKey, FINANCE_BOOT_CACHE_MAX_AGE_MS) : undefined),
+        [categoriesCacheKey]
+    );
+    const cachedBudgets = useMemo(
+        () => (budgetsCacheKey ? readFinanceCache<Budget[]>(budgetsCacheKey, FINANCE_BOOT_CACHE_MAX_AGE_MS) : undefined),
+        [budgetsCacheKey]
+    );
+    const cachedProfile = useMemo(
+        () => (profileCacheKey ? readFinanceCache<ProfileSelect | null>(profileCacheKey, FINANCE_BOOT_CACHE_MAX_AGE_MS) : undefined),
+        [profileCacheKey]
+    );
+
     // 1. Payment Methods Query
-    const { data: paymentMethods = [], isLoading: pmLoading } = useQuery({
+    const { data: paymentMethodsData, isLoading: pmLoading, isFetched: paymentMethodsFetched } = useQuery({
         queryKey: queryKeys.finance.paymentMethods(userId ?? ''),
         queryFn: async () => {
             if (!userId) { return []; }
@@ -47,14 +85,17 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
                 closing_date: (pm.closing_date as number) || null,
                 payment_day: (pm.payment_day as number) || null,
                 color: (pm.color as string) || '#475569',
+                initial_date: pm.initial_date as string | null,
             }));
         },
         enabled: !!userId,
+        placeholderData: cachedPaymentMethods,
         staleTime: Infinity,
     });
+    const paymentMethods = paymentMethodsData ?? [];
 
     // 2. Categories Query
-    const { data: categories = [], isLoading: catsLoading } = useQuery({
+    const { data: categoriesData, isLoading: catsLoading, isFetched: categoriesFetched } = useQuery({
         queryKey: queryKeys.finance.categories(userId ?? ''),
         queryFn: async () => {
             if (!userId) { return []; }
@@ -68,11 +109,13 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
             }));
         },
         enabled: !!userId,
+        placeholderData: cachedCategories,
         staleTime: Infinity,
     });
+    const categories = categoriesData ?? [];
 
     // 3. Budgets Query
-    const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
+    const { data: budgetsData, isLoading: budgetsLoading, isFetched: budgetsFetched } = useQuery({
         queryKey: queryKeys.finance.budgets(userId ?? ''),
         queryFn: async () => {
             if (!userId) { return []; }
@@ -90,17 +133,19 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
             }));
         },
         enabled: !!userId,
+        placeholderData: cachedBudgets,
         staleTime: 5 * 60 * 1000,
     });
+    const budgets = budgetsData ?? [];
 
     // 4. Profile Query
-    const { data: profile = null, isLoading: profileLoading } = useQuery({
+    const { data: profileData, isLoading: profileLoading, isFetched: profileFetched } = useQuery({
         queryKey: queryKeys.finance.profile(userId ?? ''),
         queryFn: async () => {
             if (!userId) { return null; }
             const { data, error } = await supabase
                 .from('profiles')
-                .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color')
+                .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color, country, data_treatment_accepted')
                 .eq('id', userId)
                 .single();
             if (error) {
@@ -110,8 +155,10 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
             return data as ProfileSelect;
         },
         enabled: !!userId,
+        placeholderData: cachedProfile,
         staleTime: Infinity,
     });
+    const profile = profileData ?? null;
 
     // 5. Pending Invoices Query
     const { data: pendingInvoices = [], isLoading: pendingInvoicesLoading } = useQuery({
@@ -131,7 +178,31 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
         staleTime: 5 * 60 * 1000,
     });
 
-    const queriesLoading = pmLoading || catsLoading || budgetsLoading || profileLoading || pendingInvoicesLoading;
+    useEffect(() => {
+        if (paymentMethodsCacheKey && paymentMethodsFetched && paymentMethodsData !== undefined) {
+            writeFinanceCache(paymentMethodsCacheKey, paymentMethodsData);
+        }
+    }, [paymentMethodsCacheKey, paymentMethodsFetched, paymentMethodsData]);
+
+    useEffect(() => {
+        if (categoriesCacheKey && categoriesFetched && categoriesData !== undefined) {
+            writeFinanceCache(categoriesCacheKey, categoriesData);
+        }
+    }, [categoriesCacheKey, categoriesFetched, categoriesData]);
+
+    useEffect(() => {
+        if (budgetsCacheKey && budgetsFetched && budgetsData !== undefined) {
+            writeFinanceCache(budgetsCacheKey, budgetsData);
+        }
+    }, [budgetsCacheKey, budgetsFetched, budgetsData]);
+
+    useEffect(() => {
+        if (profileCacheKey && profileFetched && profileData !== undefined) {
+            writeFinanceCache(profileCacheKey, profileData);
+        }
+    }, [profileCacheKey, profileFetched, profileData]);
+
+    const queriesLoading = pmLoading || catsLoading || budgetsLoading || profileLoading;
 
     return {
         paymentMethods,

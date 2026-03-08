@@ -144,8 +144,10 @@ export function HistoryTab({
   return (
     <div className="space-y-8">
       {/* Label de registros - Use totalCount for accuracy */}
-      <div className="text-sm text-muted-foreground">
-        Mostrando {filteredTransactions.length} registros de {totalCount || filteredAllTransactions.length}
+      <div className="flex justify-end">
+        <span className="text-[12px] font-bold bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
+          Mostrando {filteredTransactions.length} registros de {totalCount || filteredAllTransactions.length}
+        </span>
       </div>
 
       <TransactionList

@@ -3,6 +3,7 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 export function useSettingsProfile() {
     const {
         currency,
+        country,
         decimalPlaces,
         baseColor,
         updateProfile,
@@ -15,6 +16,7 @@ export function useSettingsProfile() {
 
     return {
         currency,
+        country,
         decimalPlaces,
         baseColor,
         updateProfile,

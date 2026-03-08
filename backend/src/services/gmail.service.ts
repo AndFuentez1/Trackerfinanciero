@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 import AdmZip from 'adm-zip';
 import { saveGmailTokens } from './userConfig.service.js';
+import { getBankNotificationQuery, parseBankNotification, BankNotification } from './bankNotification.service.js';
 
 export interface GmailTokens {
     access_token?: string | null;
@@ -161,8 +162,9 @@ export class GmailService {
         // Query: invoice-like attachments (XML or ZIP/RAR), keyword search across subject/body
         const attachmentQuery = 'has:attachment (filename:xml OR filename:zip OR filename:rar)';
         const keywordQuery = '(factura OR "factura electronica" OR "factura electrónica" OR "factura de venta" OR invoice OR bill OR recibo)';
-        // Búsqueda amplia: adjuntos OR keywords, dentro del rango de tiempo.
-        const query = `newer_than:${days}d (${attachmentQuery} OR ${keywordQuery})`;
+        const bankQuery = getBankNotificationQuery();
+        // Búsqueda amplia: adjuntos OR keywords, dentro del rango de tiempo, o notificaciones bancarias.
+        const query = `newer_than:${days}d ((${attachmentQuery} OR ${keywordQuery}) OR (${bankQuery}))`;
         console.log(`🔍 Searching Gmail with query: ${query}`);
 
         try {
@@ -192,6 +194,20 @@ export class GmailService {
                 let hasZip = false;
                 let isValidInvoice = false;
                 const fileNames: string[] = [];
+
+                if (from) {
+                    let bodyText = '';
+                    const textPart = parts.find(p => p.mimeType === 'text/plain' || p.mimeType === 'text/html');
+                    if (textPart && textPart.body?.data) {
+                        bodyText = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+                    } else if (payload?.body?.data) {
+                        bodyText = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+                    }
+                    if (bodyText && parseBankNotification(from, subject || '', bodyText)) {
+                        isValidInvoice = true;
+                        fileNames.push('Notificación Bancaria');
+                    }
+                }
 
                 // Inspect attachments
                 for (const part of parts) {
@@ -356,7 +372,8 @@ export class GmailService {
         // Query: check for xml, zip, rar attachments with invoice keywords (subject/body)
         const attachmentQuery = 'has:attachment (filename:xml OR filename:zip OR filename:rar)';
         const keywordQuery = '(factura OR "factura electronica" OR "factura electrónica" OR "factura de venta" OR invoice OR bill OR recibo)';
-        const query = `${attachmentQuery} ${keywordQuery}`;
+        const bankQuery = getBankNotificationQuery();
+        const query = `(${attachmentQuery} ${keywordQuery}) OR (${bankQuery})`;
 
         try {
             const res = await gmail.users.messages.list({
@@ -366,7 +383,7 @@ export class GmailService {
             });
 
             const messages = res.data.messages || [];
-            const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined }[] = [];
+            const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined, isBankNotification?: boolean, bankNotification?: BankNotification }[] = [];
 
             for (const message of messages) {
                 if (!message.id) { continue; }
@@ -384,6 +401,31 @@ export class GmailService {
                 });
 
                 const allParts = this.collectParts(details.data.payload);
+                const payload = details.data.payload;
+                const subject = payload?.headers?.find(h => h.name === 'Subject')?.value || '';
+                const from = payload?.headers?.find(h => h.name === 'From')?.value || '';
+
+                if (from) {
+                    let bodyText = '';
+                    const textPart = allParts.find(p => p.mimeType === 'text/plain' || p.mimeType === 'text/html');
+                    if (textPart && textPart.body?.data) {
+                        bodyText = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+                    } else if (payload?.body?.data) {
+                        bodyText = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+                    }
+                    const parsedNotif = bodyText ? parseBankNotification(from, subject, bodyText) : null;
+                    if (parsedNotif) {
+                        invoices.push({
+                            messageId: message.id,
+                            filename: 'Notificación Bancaria',
+                            xmlContent: '',
+                            date: details.data.internalDate,
+                            isBankNotification: true,
+                            bankNotification: parsedNotif
+                        });
+                        continue; // Skip attachment processing since this is a bank notification
+                    }
+                }
 
                 for (const part of allParts) {
                     const p = part as GmailPart;
@@ -450,7 +492,8 @@ export class GmailService {
         const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
         const attachmentQuery = 'has:attachment (filename:xml OR filename:zip OR filename:rar)';
         const keywordQuery = '(factura OR "factura electronica" OR "factura electrónica" OR "factura de venta" OR invoice OR bill OR recibo)';
-        const baseQuery = `${attachmentQuery} ${keywordQuery}`;
+        const bankQuery = getBankNotificationQuery();
+        const baseQuery = `(${attachmentQuery} ${keywordQuery}) OR (${bankQuery})`;
 
         let messages: any[] = [];
         const effectiveLimit = (!days && !maxLimit) ? 1 : maxLimit;
@@ -548,7 +591,7 @@ export class GmailService {
      */
     public async fetchSpecificMessages(messageIds: string[]) {
         const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-        const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined }[] = [];
+        const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined, isBankNotification?: boolean, bankNotification?: BankNotification }[] = [];
 
         for (const messageId of messageIds) {
             try {
@@ -559,6 +602,31 @@ export class GmailService {
                 });
 
                 const allParts = this.collectParts(details.data.payload);
+                const payload = details.data.payload;
+                const subject = payload?.headers?.find(h => h.name === 'Subject')?.value || '';
+                const from = payload?.headers?.find(h => h.name === 'From')?.value || '';
+
+                if (from) {
+                    let bodyText = '';
+                    const textPart = allParts.find(p => p.mimeType === 'text/plain' || p.mimeType === 'text/html');
+                    if (textPart && textPart.body?.data) {
+                        bodyText = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+                    } else if (payload?.body?.data) {
+                        bodyText = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+                    }
+                    const parsedNotif = bodyText ? parseBankNotification(from, subject, bodyText) : null;
+                    if (parsedNotif) {
+                        invoices.push({
+                            messageId,
+                            filename: 'Notificación Bancaria',
+                            xmlContent: '',
+                            date: details.data.internalDate,
+                            isBankNotification: true,
+                            bankNotification: parsedNotif
+                        });
+                        continue;
+                    }
+                }
 
                 for (const part of allParts) {
                     const p = part as GmailPart;

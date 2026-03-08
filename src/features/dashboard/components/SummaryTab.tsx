@@ -525,10 +525,22 @@ export function SummaryTab({
                 </div>
               ) : (
                 <div className="flex flex-col gap-0">
-                  {/* Shared Controls Container */}
-                  <div className="bg-gray-50/50 dark:bg-muted/20 rounded-t-2xl border border-border p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 w-full justify-between">
-                      <div className="inline-flex p-1 bg-white/50 dark:bg-background/20 rounded-full border border-border backdrop-blur-sm">
+                  <div className="bg-gray-50/50 dark:bg-muted/20 rounded-t-2xl border border-border p-6 pb-4 flex flex-col gap-4 transition-all duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground tracking-tight">
+                          {activeTab === 'evolution' ? 'Evolución Histórica' : 'Flujo de Caja'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground font-medium">
+                          {activeTab === 'evolution'
+                            ? 'Comportamiento de ingresos, gastos y balance neto'
+                            : 'Visualización detallada de entradas y salidas de dinero'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-border/50 pt-4">
+                      <div className="inline-flex p-1 bg-white/50 dark:bg-background/20 rounded-full border border-border backdrop-blur-sm shadow-sm">
                         <Button
                           variant={activeTab === 'evolution' ? 'secondary' : 'ghost'}
                           size="sm"
@@ -613,28 +625,23 @@ export function SummaryTab({
                   </div>
 
                   {/* Chart Area */}
-                  {activeTab === 'evolution' ? (
-                    <div className="bg-gray-50/50 dark:bg-muted/20 rounded-b-2xl border border-border border-t-0 p-6 min-h-[450px] transition-all duration-300">
+                  <div className="bg-gray-50/50 dark:bg-muted/20 rounded-b-2xl border border-border border-t-0 p-6 flex flex-col min-h-[450px] transition-all duration-300">
+                    {activeTab === 'evolution' ? (
                       <EvolutionChart
                         transactions={allTransactions}
                         selectedYears={selectedYears}
                         onSelectedYearsChange={setSelectedYears}
                         selectedMonth={selectedMonth}
-                        onSelectedMonthChange={setSelectedMonth}
-                        onSelectAllYears={handleToggleAllYears}
-                        showFilters={false}
                       />
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50/50 dark:bg-muted/20 rounded-b-2xl border border-border border-t-0 p-6 min-h-[450px] transition-all duration-300">
+                    ) : (
                       <SankeyChart
                         transactions={filteredChartTransactions}
                         categories={categories}
                         drillDown={sankeyDrillDown}
                         onDrillDownChange={setSankeyDrillDown}
                       />
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
             </div>

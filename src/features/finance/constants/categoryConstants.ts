@@ -39,9 +39,6 @@ export const DEFAULT_CATEGORIES = [
     { name: 'Reparaciones', type: 'expense', color: '#7C2D12' },
     { name: 'Préstamos', type: 'expense', color: '#B91C1C' },
     { name: 'Impuestos y multas', type: 'expense', color: '#57534E' },
-    { name: 'Ahorro', type: 'saving', color: '#0D9488' },
-    { name: 'CDT', type: 'saving', color: '#7C3AED' },
-    { name: 'Acciones', type: 'investment', color: '#6366F1' },
-    { name: 'Transferencia', type: 'transfer_out', color: '#6B7280' },
-    { name: 'Otros', type: 'other', color: '#9CA3AF' },
+    { name: 'Fondo de Emergencia', type: 'savings', color: '#0D9488' },
+    { name: 'Ahorro Programado', type: 'savings', color: '#14B8A6' },
 ];

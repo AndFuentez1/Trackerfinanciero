@@ -125,8 +125,8 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
 
     // Accent tokens premium
     // Accent fuerte: para CTA, pill, estado activo
-    const accentPrimaryS = Math.min(s, 45);
-    const accentPrimaryL = Math.max(l, 48);
+    const accentPrimaryS = Math.min(s, 100);
+    const accentPrimaryL = Math.max(l, 40);
     themeVars['--accent-primary'] = `${h} ${accentPrimaryS}% ${accentPrimaryL}%`;
     themeVars['--primary'] = themeVars['--accent-primary'];
 
@@ -135,22 +135,22 @@ export function calculateProportionalTheme(baseColorHex: string): Record<string,
     themeVars['--primary-foreground'] = accentPrimaryL > 65 ? '215 13% 15%' : '0 0% 100%';
 
     // Accent soft: para hover, focus, iconos activos, tabs activos
-    const accentSoftS = Math.round(accentPrimaryS * 0.4);
+    const accentSoftS = Math.round(accentPrimaryS * 0.8);
     const accentSoftL = Math.min(accentPrimaryL + 10, 96);
     themeVars['--accent-soft'] = `${h} ${accentSoftS}% ${accentSoftL}%`;
 
     // Accent soft bg: para fondos sutiles de hover/focus
-    const accentSoftBgS = Math.round(accentPrimaryS * 0.25);
+    const accentSoftBgS = Math.round(accentPrimaryS * 0.5);
     const accentSoftBgL = Math.min(accentPrimaryL + 16, 98);
     themeVars['--accent-soft-bg'] = `${h} ${accentSoftBgS}% ${accentSoftBgL}%`;
 
     // Accent soft border: para bordes activos
-    const accentSoftBorderS = Math.round(accentPrimaryS * 0.35);
+    const accentSoftBorderS = Math.round(accentPrimaryS * 0.6);
     const accentSoftBorderL = Math.min(accentPrimaryL + 4, 92);
     themeVars['--accent-soft-border'] = `${h} ${accentSoftBorderS}% ${accentSoftBorderL}%`;
 
     // Accent disabled: para estados deshabilitados
-    const accentDisabledS = Math.round(accentPrimaryS * 0.18);
+    const accentDisabledS = Math.round(accentPrimaryS * 0.3);
     const accentDisabledL = Math.min(accentPrimaryL + 24, 98);
     themeVars['--accent-disabled'] = `${h} ${accentDisabledS}% ${accentDisabledL}%`;
 

@@ -74,7 +74,7 @@ export function ExpenseChart({
     // Sort by amount descending
     const sortedData = [...data].sort((a, b) => b.amount - a.amount);
 
-    if (sortedData.length <= 5) {
+    if (sortedData.length <= 9) {
       return sortedData.map(item => ({
         name: item.category,
         value: item.amount,
@@ -82,10 +82,10 @@ export function ExpenseChart({
       }));
     }
 
-    const top5 = sortedData.slice(0, 5);
-    const others = sortedData.slice(5).reduce((sum, item) => sum + item.amount, 0);
+    const top9 = sortedData.slice(0, 9);
+    const others = sortedData.slice(9).reduce((sum, item) => sum + item.amount, 0);
 
-    const result = top5.map(item => ({
+    const result = top9.map(item => ({
       name: item.category,
       value: item.amount,
       color: categories.find(c => c.id === item.category_id || c.name === item.category)?.color || '#94a3b8'
@@ -182,8 +182,8 @@ export function ExpenseChart({
 
   if (data.length === 0) {
     return (
-      <Card className="shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 backdrop-blur-sm h-full flex flex-col items-center justify-center text-muted-foreground p-6 min-h-[400px] rounded-2xl">
-        <p>No hay gastos registrados para este periodo.</p>
+      <Card className="shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 backdrop-blur-sm h-full min-h-[400px] flex flex-col items-center justify-center rounded-2xl p-6">
+        <p className="text-sm text-muted-foreground font-medium text-center">No hay gastos registrados para este periodo.</p>
       </Card>
     );
   }

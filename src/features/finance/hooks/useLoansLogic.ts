@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useToast } from '@/shared/hooks/use-toast';
+import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
 
 export interface LoanPayment {
     id: string;
@@ -54,17 +54,40 @@ export interface LoanRow {
     installments?: number | null;
 }
 
+const LOANS_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
 export function useLoansDataLogic() {
     const { user } = useAuth();
     const { toast } = useToast();
     const [loans, setLoans] = useState<Loan[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const loansCacheKey = useMemo(
+        () => (user?.id ? buildFinanceCacheKey('loans', user.id) : null),
+        [user?.id]
+    );
 
-    const fetchData = useCallback(async () => {
+    const hydrateFromCache = useCallback(() => {
+        if (!loansCacheKey) {
+            return false;
+        }
+
+        const cachedLoans = readFinanceCache<Loan[]>(loansCacheKey, LOANS_CACHE_MAX_AGE_MS);
+        if (!cachedLoans) {
+            return false;
+        }
+
+        setLoans(cachedLoans);
+        setLoading(false);
+        return true;
+    }, [loansCacheKey]);
+
+    const fetchData = useCallback(async (options?: { background?: boolean }) => {
         if (!user) { return; }
 
-        setLoading(true);
+        if (!options?.background) {
+            setLoading(true);
+        }
         setError(null);
         const { data, error: err } = await supabase
             .from('loans')
@@ -74,9 +97,11 @@ export function useLoansDataLogic() {
         if (err) {
             setError(err.message ?? 'No se pudieron cargar los préstamos');
             toast({ title: 'Error', description: err.message ?? 'No se pudieron cargar los préstamos. Revisa tu conexión.', variant: 'destructive' });
-            setLoans([]);
+            if (!options?.background) {
+                setLoans([]);
+            }
         } else if (data) {
-            setLoans((data as unknown as LoanRow[]).map((l: LoanRow) => {
+            const mappedLoans = (data as unknown as LoanRow[]).map((l: LoanRow) => {
                 const payments = ((l.loan_payments || []) as LoanPaymentRow[]).map((p) => ({
                     id: p.id,
                     loan_id: p.loan_id,
@@ -102,16 +127,40 @@ export function useLoansDataLogic() {
                     installments: l.installments ? Number(l.installments) : undefined,
                     updated_at: l.updated_at || new Date().toISOString(),
                 };
-            }));
+            });
+            setLoans(mappedLoans);
+            if (loansCacheKey) {
+                writeFinanceCache(loansCacheKey, mappedLoans);
+            }
         }
         setLoading(false);
-    }, [user, toast]);
+    }, [user, toast, loansCacheKey]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (!user) {
+            setLoans([]);
+            setError(null);
+            setLoading(false);
+            return;
+        }
 
-    return { loans, loading, error, refetch: fetchData };
+        const hasCache = hydrateFromCache();
+        fetchData({ background: hasCache });
+    }, [user, hydrateFromCache, fetchData]);
+
+    useEffect(() => {
+        if (loansCacheKey) {
+            writeFinanceCache(loansCacheKey, loans);
+        }
+    }, [loansCacheKey, loans]);
+
+    return {
+        loans,
+        loading,
+        bootLoading: loading && loans.length === 0,
+        error,
+        refetch: () => fetchData(),
+    };
 }
 
 

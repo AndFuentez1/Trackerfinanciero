@@ -4,11 +4,17 @@ import CashFlowPage from '@/features/finance/cashflow/pages/CashFlow';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useCashFlow } from '@/features/finance/cashflow/hooks/useCashFlow';
 import { useUserConfigStatus } from '@/features/settings/components/hooks/useUserConfigStatus';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { useLoans } from '@/features/finance/loans/hooks/useLoans';
+import { useSavingsData } from '@/features/finance/hooks/useSavingsData';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/features/auth/hooks/useAuth');
 vi.mock('@/features/finance/cashflow/hooks/useCashFlow');
 vi.mock('@/features/settings/components/hooks/useUserConfigStatus');
+vi.mock('@/features/finance/hooks/useFinanceData');
+vi.mock('@/features/finance/loans/hooks/useLoans');
+vi.mock('@/features/finance/hooks/useSavingsData');
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
         setQueryData: vi.fn()
@@ -44,6 +50,15 @@ describe('CashFlowPage', () => {
         vi.mocked(useUserConfigStatus).mockReturnValue({
             data: { cashflowUseRealBalance: false }
         } as ReturnType<typeof useUserConfigStatus>);
+        vi.mocked(useFinanceData).mockReturnValue({
+            bootLoading: false
+        } as unknown as ReturnType<typeof useFinanceData>);
+        vi.mocked(useLoans).mockReturnValue({
+            bootLoading: false
+        } as unknown as ReturnType<typeof useLoans>);
+        vi.mocked(useSavingsData).mockReturnValue({
+            bootLoading: false
+        } as unknown as ReturnType<typeof useSavingsData>);
         vi.mocked(useCashFlow).mockReturnValue({
             cashFlowSeries: [{ balanceProyectado: 100 }],
             proyeccion_ingresos: 1000,

@@ -12,10 +12,11 @@ import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { Settings2, Heart, ChevronDown, Shield, Info, Activity } from 'lucide-react';
 import { Separator } from '@/shared/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/core/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
 
 export default function ConfiguracionPage() {
     useSEO({
@@ -23,7 +24,7 @@ export default function ConfiguracionPage() {
         description: 'Application Settings - Manage your preferences, categories, and account security.'
     });
     const { loading: authLoading } = useAuth();
-    const { categories, categoriesLoading, paymentMethodsLoading, profileLoading } = useFinanceData();
+    const { categories } = useFinanceData();
     const navigate = useNavigate();
     const location = useLocation();
     const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
@@ -31,10 +32,8 @@ export default function ConfiguracionPage() {
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
 
-    const settingsBootLoading = authLoading || categoriesLoading || paymentMethodsLoading || profileLoading;
-    const [showBootSkeleton, setShowBootSkeleton] = useState(settingsBootLoading);
-    const bootStartRef = useRef(settingsBootLoading ? Date.now() : 0);
-    const hasBootedRef = useRef(!settingsBootLoading);
+    const settingsBootLoading = authLoading;
+    const showBootSkeleton = settingsBootLoading;
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -54,22 +53,10 @@ export default function ConfiguracionPage() {
         if (categories.length < 3) { return; }
         setPendingCategoryReturn(false);
         setHighlightedSection(null);
-        navigate('/auth');
+        navigate('/dashboard');
     }, [categories.length, highlightedSection, navigate, pendingCategoryReturn]);
 
-    useEffect(() => {
-        if (hasBootedRef.current) { return; }
-        if (!settingsBootLoading) {
-            const elapsed = bootStartRef.current ? Date.now() - bootStartRef.current : 0;
-            const minDelay = 300;
-            const remaining = Math.max(0, minDelay - elapsed);
-            const t = setTimeout(() => {
-                hasBootedRef.current = true;
-                setShowBootSkeleton(false);
-            }, remaining);
-            return () => clearTimeout(t);
-        }
-    }, [settingsBootLoading]);
+    usePageBootLoading(showBootSkeleton);
 
 
     return (
@@ -121,7 +108,7 @@ export default function ConfiguracionPage() {
                                         if (highlightedSection === 'payment-methods') {
                                             setTimeout(() => {
                                                 setHighlightedSection(null);
-                                                navigate('/auth');
+                                                navigate('/dashboard');
                                             }, 500);
                                         }
                                     }}

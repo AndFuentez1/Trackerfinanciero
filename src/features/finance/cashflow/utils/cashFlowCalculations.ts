@@ -173,6 +173,24 @@ export function calculateMonthlySnapshot(
         }
     });
 
+    // --- Base Balance Calculation (Initial Date aware) ---
+    // If this is the starting month of the calculation (prevBalance == 0 usually indicates the first iteration of the loop in useCashFlow)
+    // or we want to be more explicit: if prevBalance is 0, we should maybe sum the balances of payment methods whose initial_date <= current month.
+    // However, the current loop in useCashFlow sends pb (prevBalance) which is cumulative.
+    // We need to handle the very first month's initial sum.
+
+    let initialMonthBalance = 0;
+    if (prevBalance === 0) {
+        paymentMethods.forEach(pm => {
+            const pmInitDate = pm.initial_date ? toLocalDate(pm.initial_date) : null;
+            // If the payment method starts in or before this month
+            if (!pmInitDate || !isAfter(startOfMonth(pmInitDate), startOfMonth(date))) {
+                initialMonthBalance += pm.balance;
+            }
+        });
+    }
+    const currentPrevBalance = prevBalance === 0 ? initialMonthBalance : prevBalance;
+
     const monthKey = getMonthKey(date);
     const monthTransactions = context.transactionsByMonth.get(monthKey) ?? [];
     const realExpensePool = buildRealExpensePool(monthTransactions);
@@ -403,7 +421,7 @@ export function calculateMonthlySnapshot(
     const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos;
     const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales + egresosAhorro;
     const balanceNetoMes = ingresosTotales - egresosTotales;
-    const balanceAcumulado = prevBalance + balanceNetoMes;
+    const balanceAcumulado = currentPrevBalance + balanceNetoMes;
 
     return {
         mes: format(date, 'MMMM yyyy', { locale: es }),

@@ -8,11 +8,12 @@
  */
 
 import { useMemo, useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
 import { mapTransactionRow } from '../utils/transactionMappers';
 import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
+import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '../utils/localCache';
 import type {
     Transaction,
     TransactionType,
@@ -29,6 +30,7 @@ import {
 } from '../utils/financeCalculations';
 
 const PAGE_SIZE = 50;
+const TRANSACTIONS_BOOT_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 export function useTransactionData(
     userId: string | undefined,
@@ -40,7 +42,6 @@ export function useTransactionData(
     budgets: Budget[],
     currency: string = DEFAULT_CURRENCY_CODE
 ) {
-    const queryClient = useQueryClient();
     const [pagedTransactions, setPagedTransactions] = useState<Transaction[]>([]);
 
     const filterKey = useMemo(() => JSON.stringify({
@@ -48,6 +49,30 @@ export function useTransactionData(
         dateFilter,
         sortConfig
     }), [userId, dateFilter, sortConfig]);
+
+    const isDefaultBootQuery = useMemo(
+        () =>
+            page === 0 &&
+            sortConfig.column === 'date' &&
+            sortConfig.ascending === false &&
+            dateFilter.period === 'all' &&
+            !dateFilter.from &&
+            !dateFilter.to,
+        [page, sortConfig, dateFilter]
+    );
+
+    const transactionsCacheKey = useMemo(
+        () => (userId && isDefaultBootQuery ? buildFinanceCacheKey('transactions-boot', userId) : null),
+        [userId, isDefaultBootQuery]
+    );
+
+    const cachedBootTransactions = useMemo(
+        () =>
+            transactionsCacheKey
+                ? readFinanceCache<{ data: Transaction[]; total: number }>(transactionsCacheKey, TRANSACTIONS_BOOT_CACHE_MAX_AGE_MS)
+                : undefined,
+        [transactionsCacheKey]
+    );
 
     useEffect(() => {
         setPagedTransactions([]);
@@ -58,7 +83,8 @@ export function useTransactionData(
         data: transactionsData,
         isLoading: transactionsLoading,
         isPlaceholderData,
-        refetch: refetchTransactions
+        refetch: refetchTransactions,
+        isFetched: transactionsFetched
     } = useQuery({
         queryKey: queryKeys.finance.transactionsFiltered(userId ?? '', {
             ...dateFilter,
@@ -92,12 +118,12 @@ export function useTransactionData(
             };
         },
         enabled: !!userId,
-        placeholderData: (prev) => prev,
+        placeholderData: (prev) => prev ?? cachedBootTransactions,
         staleTime: 5 * 60 * 1000,
     });
 
     // 2. All Transactions Query (Historical)
-    const { data: allTransactions = [] } = useQuery({
+    const { data: allTransactions = [], isLoading: allTransactionsLoading } = useQuery({
         queryKey: ['finance', 'allTransactions', userId],
         queryFn: async () => {
             if (!userId) { return []; }
@@ -139,6 +165,17 @@ export function useTransactionData(
         enabled: !!userId,
         staleTime: 30 * 60 * 1000,
     });
+
+    useEffect(() => {
+        if (
+            transactionsCacheKey &&
+            transactionsFetched &&
+            !isPlaceholderData &&
+            transactionsData
+        ) {
+            writeFinanceCache(transactionsCacheKey, transactionsData);
+        }
+    }, [transactionsCacheKey, transactionsFetched, isPlaceholderData, transactionsData]);
 
     // 3. Derived Calculations
     useEffect(() => {
@@ -215,6 +252,7 @@ export function useTransactionData(
         rangeTransactions: transactions, // Alias for backward compatibility
         totalTransactionsCount,
         transactionsLoading,
+        allTransactionsLoading,
         hasMore,
         summary,
         filteredSummary,

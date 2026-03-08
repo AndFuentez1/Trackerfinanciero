@@ -12,8 +12,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/shared/ui/dialog';
-import { Check } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { cn } from '@/core/utils';
 
 interface AddPaymentMethodDialogProps {
@@ -22,6 +23,7 @@ interface AddPaymentMethodDialogProps {
   onOpenChange?: (open: boolean) => void;
   initialName?: string;
   onSuccess?: (pm: PaymentMethod) => void;
+  trigger?: React.ReactNode;
 }
 
 const typeOptions: { value: PaymentMethodType; label: string }[] = [
@@ -45,7 +47,7 @@ const PRESET_COLORS = [
   { value: '#ec4899', label: 'Rosa' },
 ];
 
-export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess }: AddPaymentMethodDialogProps) {
+export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChange, initialName = '', onSuccess, trigger }: AddPaymentMethodDialogProps) {
   const { currency, decimalPlaces } = useFinance();
 
   const getCurrencySymbol = () => {
@@ -72,6 +74,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const [estimatedYield, setEstimatedYield] = useState('');
   const [closingDate, setClosingDate] = useState('');
   const [color, setColor] = useState('#4f46e5');
+  const [initialDate, setInitialDate] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -80,7 +83,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) {return;}
+    if (!name) { return; }
 
     setIsSubmitting(true);
     const result = await onAdd({
@@ -93,6 +96,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       estimated_yield: type === 'savings' && estimatedYield ? parseFloat(estimatedYield) : null,
       closing_date: type === 'credit' && closingDate ? parseInt(closingDate) : null,
       color,
+      initial_date: `${initialDate}-01`, // Save as first day of month
     });
 
     setIsSubmitting(false);
@@ -108,12 +112,27 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       setEstimatedYield('');
       setClosingDate('');
       setColor('#4f46e5');
+      setInitialDate(new Date().toISOString().substring(0, 7));
     }
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
+      {trigger !== undefined ? (
+        trigger
+      ) : !isControlled ? (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs font-medium border-input bg-background hover:bg-accent hover:text-accent-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo método de pago
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
@@ -244,6 +263,21 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
               />
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="initial-date" className="text-sm">Fecha de inicio del saldo (mes/año)</Label>
+            <Input
+              id="initial-date"
+              type="month"
+              value={initialDate}
+              onChange={(e) => setInitialDate(e.target.value)}
+              required
+              className="h-11 md:h-9 text-sm"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Define desde cuándo este saldo debe considerarse en el flujo histórico.
+            </p>
+          </div>
 
           {type === 'savings' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">

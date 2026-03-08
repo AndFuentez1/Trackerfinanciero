@@ -105,7 +105,7 @@ describe('Dashboard (Index)', () => {
             paymentMethods: [], // Empty for empty state
             categories: [], // Empty for empty state
             welcomeCompleted: false, // Target condition
-            onboardingDecision: 'from_scratch',
+            onboardingDecision: null,
             currency: 'COP',
             pendingImportData: [],
             importProgress: { status: 'idle', progress: 0, message: '' }

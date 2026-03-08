@@ -308,15 +308,15 @@ export function PendingInvoicesPanel() {
         originalData: inv
     }));
 
-    const renderInvoiceList = (invoiceList: PanelItem[]) => {
+    const renderInvoiceList = (invoiceList: PanelItem[], isReadyTab: boolean = false) => {
         if (invoiceList.length === 0) {
             return (
-                <div className="py-12 text-center bg-white/40 rounded-[24px] border-2 border-dashed border-slate-200/60 animate-in fade-in duration-700">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 ring-1 ring-slate-100">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                <div className="py-10 text-center bg-muted/20 rounded-[20px] border-2 border-dashed border-border/60 animate-in fade-in duration-700">
+                    <div className="mx-auto w-14 h-14 rounded-full bg-background flex items-center justify-center mb-4 ring-1 ring-border shadow-sm">
+                        <CheckCircle2 className="w-7 h-7 text-emerald-500" />
                     </div>
-                    <p className="text-sm font-bold text-slate-800 tracking-tight">¡Todo al día!</p>
-                    <p className="text-xs font-medium text-slate-400 mt-1">No hay transacciones pendientes de revisión.</p>
+                    <p className="text-base font-extrabold text-foreground tracking-tight">¡Todo al día!</p>
+                    <p className="text-[15px] font-medium text-muted-foreground mt-1">No hay transacciones pendientes de revisión.</p>
                 </div>
             );
         }
@@ -326,19 +326,12 @@ export function PendingInvoicesPanel() {
 
         return (
             <div className="flex flex-col gap-4">
-                {hasMore && (
-                    <div className="flex justify-end">
-                        <span className="text-[10px] font-black bg-orange-500/10 text-orange-600 px-3 py-1 rounded-full uppercase tracking-widest border border-orange-200/50">
-                            Mostrando 3 de {invoiceList.length}
-                        </span>
-                    </div>
-                )}
                 {displayedInvoices.map(invoice => {
                     const isEditing = editingId === invoice.id;
                     const categoryLabel = resolveCategoryName(invoice);
 
                     return (
-                        <div key={invoice.id} className="bg-white p-5 rounded-[24px] border border-slate-200/60 shadow-xl shadow-slate-200/20 flex flex-col gap-5 transition-all hover:shadow-2xl hover:shadow-slate-200/40 hover:border-orange-200/50">
+                        <div key={invoice.id} className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col gap-5 transition-all duration-300 hover:shadow-md hover:border-primary/30">
                             {isEditing ? (
                                 <div className="space-y-4 w-full">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -413,48 +406,63 @@ export function PendingInvoicesPanel() {
                                             size="sm"
                                             onClick={() => handleApprove(invoice)}
                                             disabled={!editForm.payment_method_id}
-                                            className="bg-primary hover:bg-primary/60 text-primary-foreground shadow-sm"
-                                            aria-label="Guardar y Aprobar"
-                                            title="Guardar y Aprobar"
+                                            className="bg-primary hover:bg-primary/70 text-primary-foreground shadow-sm rounded-xl transition-all"
+                                            aria-label="Guardar y aprobar"
+                                            title="Guardar y aprobar"
                                         >
                                             <Check className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             size="sm"
-                                            variant="outline"
+                                            variant="secondary"
                                             onClick={handleCancelEdit}
-                                            className="hover:bg-primary/60 hover:text-primary-foreground"
+                                            className="bg-muted hover:bg-muted/50 rounded-xl border-none transition-all"
                                             aria-label="Cancelar"
                                             title="Cancelar"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-4 h-4 text-muted-foreground" />
                                         </Button>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
-                                    <div className="min-w-0 flex-1 space-y-2">
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-black text-2xl text-slate-900 shrink-0 tracking-tight">${invoice.amount.toLocaleString('es-CO')}</span>
+                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                        <div className="text-[15px] font-bold text-foreground truncate tracking-tight leading-none" title={invoice.description}>
+                                            {invoice.description}
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
                                             {categoryLabel && (
-                                                <span className="text-[10px] text-orange-600 font-black px-3 py-1 bg-orange-50 rounded-full truncate max-w-[140px] uppercase tracking-wider border border-orange-100 shadow-sm">
-                                                    {categoryLabel}
-                                                </span>
+                                                <>
+                                                    <span className="text-[15px] font-bold text-foreground leading-none">
+                                                        {categoryLabel}
+                                                    </span>
+                                                    <div
+                                                        className="w-2.5 h-2.5 rounded-sm shadow-sm border border-black/5 shrink-0"
+                                                        style={{ backgroundColor: categories.find(c => c.name.toLowerCase() === categoryLabel.toLowerCase())?.color || '#3b82f6' }}
+                                                    />
+                                                </>
                                             )}
                                         </div>
-                                        <p className="text-base font-bold text-slate-800 truncate tracking-tight" title={invoice.description}>{invoice.description}</p>
+
+                                        <div className="flex items-center">
+                                            <span className="font-bold text-[15px] text-foreground shrink-0 tracking-tight leading-none">
+                                                ${invoice.amount.toLocaleString('es-CO')}
+                                            </span>
+                                        </div>
+
                                         <div className="flex items-center gap-3">
-                                            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                            <div className="text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 bg-transparent leading-none">
+                                                <Clock className="w-3 h-3 shrink-0" />
                                                 {format(new Date(invoice.date), "d MMM, h:mm a", { locale: es })}
-                                            </p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                         <Button
                                             size="sm"
-                                            className="h-11 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                            className="h-10 px-4 bg-primary hover:bg-primary/70 text-primary-foreground rounded-xl shadow-md shadow-primary/20 transition-all active:scale-95"
                                             onClick={() => handleApprove(invoice)}
                                             aria-label="Aprobar"
                                             title="Aprobar"
@@ -463,21 +471,23 @@ export function PendingInvoicesPanel() {
                                         </Button>
                                         <Button
                                             size="sm"
-                                            className="h-11 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95"
+                                            variant="secondary"
+                                            className="h-10 px-4 bg-muted hover:bg-muted/50 rounded-xl border-none transition-all active:scale-95"
                                             onClick={() => handleStartEdit(invoice)}
                                             aria-label="Editar"
                                             title="Editar"
                                         >
-                                            <Edit2 className="w-5 h-5" />
+                                            <Edit2 className="w-5 h-5 text-muted-foreground" />
                                         </Button>
                                         <Button
                                             size="sm"
-                                            className="h-11 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-lg shadow-red-200 transition-all active:scale-95"
+                                            variant="secondary"
+                                            className="h-10 px-4 bg-muted hover:bg-destructive/10 rounded-xl border-none transition-all active:scale-95"
                                             onClick={() => handleReject(invoice)}
                                             aria-label="Eliminar"
                                             title="Eliminar"
                                         >
-                                            <X className="w-5 h-5" />
+                                            <X className="w-5 h-5 text-destructive" />
                                         </Button>
                                     </div>
                                 </div>
@@ -485,6 +495,14 @@ export function PendingInvoicesPanel() {
                         </div>
                     );
                 })}
+
+                {(hasMore || (isReadyTab && invoiceList.length > 0)) && (
+                    <div className="flex justify-end mt-2">
+                        <span className="text-sm font-bold bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
+                            Mostrando {Math.min(3, invoiceList.length)} de {invoiceList.length}
+                        </span>
+                    </div>
+                )}
             </div>
         );
     };
@@ -495,67 +513,69 @@ export function PendingInvoicesPanel() {
     }
 
     return (
-        <Card className="border-none bg-white shadow-[0_24px_48px_-12px_rgba(0,0,0,0.1)] rounded-[32px] overflow-hidden mb-8 animate-in slide-in-from-top-4 duration-700">
+        <Card className="border border-border/50 bg-gray-50/50 dark:bg-muted/20 shadow-sm rounded-2xl overflow-hidden mb-6 animate-in slide-in-from-top-4 duration-700">
             <CardContent className="p-0">
-                <div className="p-6 sm:p-8 bg-gradient-to-br from-orange-50 via-white to-white flex items-start gap-5 border-b border-slate-100">
-                    <div className="flex shrink-0 items-center justify-center w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-600 ring-1 ring-orange-200 shadow-inner">
-                        <Clock className="h-6 w-6" />
+                <div className="p-5 sm:p-6 bg-muted/10 flex items-start gap-5 border-b border-border/50">
+                    <div className="flex shrink-0 items-center justify-center w-11 h-11 rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 shadow-inner">
+                        <Clock className="h-5.5 w-5.5" />
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
-                                Revisiones Pendientes
+                        <div className="flex items-center">
+                            <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
+                                Revisiones pendientes ({invoices.length + reclassifyTxs.length})
                             </h2>
-                            <Badge className="bg-orange-500 text-white border-none font-black text-xs px-2.5 h-6">
-                                {invoices.length + reclassifyTxs.length}
-                            </Badge>
                         </div>
-                        <p className="text-[15px] text-slate-500 mt-2 font-medium leading-tight">Acciones rápidas para mantener tu flujo financiero al día.</p>
+                        <p className="text-sm text-muted-foreground mt-1.5 font-medium leading-tight">Acciones rápidas para mantener tu flujo financiero al día.</p>
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-slate-400 hover:bg-slate-100 h-10 w-10 p-0 rounded-xl shrink-0 ml-auto transition-colors"
+                        className="text-muted-foreground hover:bg-muted h-9 w-9 p-0 rounded-lg shrink-0 ml-auto transition-colors"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             updateConfig({ hide_incomplete_alert: true });
                         }}
                     >
-                        <X className="h-5 w-5" />
+                        <X className="h-4 w-4" />
                     </Button>
                 </div>
 
-                <div className="p-6 sm:p-8">
+
+                <div className="p-5 sm:p-6">
                     <Tabs defaultValue="missing" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 h-auto mb-6">
-                            <TabsTrigger value="missing" className="data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg data-[state=active]:ring-1 data-[state=active]:ring-slate-100 rounded-xl py-2.5 transition-all duration-300">
+                        <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border/50 h-auto mb-3">
+                            <TabsTrigger value="missing" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
                                 <span className="flex items-center gap-2">
-                                    <span className="text-[13px] font-black uppercase tracking-wider">Falta Clasificar</span>
+                                    <span className="text-sm font-bold">Falta por clasificar</span>
                                     {missingDataInvoices.length > 0 && (
-                                        <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-none px-2 py-0 h-5 font-black text-[10px]">
+                                        <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
                                             {missingDataInvoices.length}
                                         </Badge>
                                     )}
                                 </span>
                             </TabsTrigger>
-                            <TabsTrigger value="ready" className="data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-lg data-[state=active]:ring-1 data-[state=active]:ring-slate-100 rounded-xl py-2.5 transition-all duration-300">
+                            <TabsTrigger value="ready" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
                                 <span className="flex items-center gap-2">
-                                    <span className="text-[13px] font-black uppercase tracking-wider">Listas para Aprobar</span>
+                                    <span className="text-sm font-bold">Lista por aprobar</span>
                                     {readyToApproveInvoices.length > 0 && (
-                                        <Badge variant="secondary" className="bg-emerald-500 text-white border-none px-2 py-0 h-5 font-black text-[10px]">
+                                        <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
                                             {readyToApproveInvoices.length}
                                         </Badge>
                                     )}
                                 </span>
                             </TabsTrigger>
                         </TabsList>
-                        <TabsContent value="missing" className="space-y-3 mt-3 min-h-[200px]">
+
+
+
+                        <TabsContent value="missing" className="space-y-3 mt-2">
                             {renderInvoiceList(missingDataInvoices)}
                         </TabsContent>
-                        <TabsContent value="ready" className="space-y-3 mt-3 min-h-[200px]">
-                            {renderInvoiceList(readyToApproveInvoices)}
+                        <TabsContent value="ready" className="space-y-3 mt-2">
+                            {renderInvoiceList(readyToApproveInvoices, true)}
                         </TabsContent>
+
                     </Tabs>
                 </div>
             </CardContent>

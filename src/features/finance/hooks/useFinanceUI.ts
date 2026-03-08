@@ -7,8 +7,11 @@
 
 import { useState, useEffect } from 'react';
 import type { Transaction } from '../types/financeTypes';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { clearStoredLastUpdated, readStoredLastUpdated, writeStoredLastUpdated } from '../utils/lastUpdatedStorage';
 
 export function useFinanceUI() {
+    const { user } = useAuth();
     // Pagination state
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -31,35 +34,22 @@ export function useFinanceUI() {
     }>({ column: 'date', ascending: false });
 
     // Onboarding state
-    const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('onboarding_decision');
-            return (stored === 'pending' || stored === 'from_scratch' || stored === 'imported') ? stored : null;
-        }
-        return null;
-    });
+    // NOTE: Always initialize to null/false — Supabase is the source of truth.
+    // useFinanceDataLogic.ts (L176-181) overwrites these from profile in ms.
+    // No need to eagerly read localStorage; this eliminates the race condition
+    // where stale localStorage values beat Supabase on slow connections.
+    const [onboardingDecision, setOnboardingDecision] = useState<'pending' | 'from_scratch' | 'imported' | null>(null);
     const [hasPendingImport, setHasPendingImport] = useState(false);
-
-    const [welcomeCompleted, setWelcomeCompleted] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('welcome_completed') === 'true';
-        }
-        return false;
-    });
+    const [welcomeCompleted, setWelcomeCompleted] = useState(false);
 
     const [highlightedCard, setHighlightedCard] = useState<'categories' | 'payment-methods' | null>(null);
 
-    // Sync state to localStorage
+    // Sync onboarding state to localStorage as write-through cache
+    // (only for same-browser-tab speed, NOT as initial source of truth)
     useEffect(() => {
         if (welcomeCompleted) {
             localStorage.setItem('welcome_completed', 'true');
         } else {
-            // Optional: remove if falsy, but careful with initial load which might be false before profile loads.
-            // Actually, if it starts false, we want it false. If starts true from storage, it stays true.
-            // If profile says true, it stays true.
-            // If profile says false (new user), we might want to clear it?
-            // But usually it goes false -> true.
-            // Let's stick to setting it true.
             localStorage.removeItem('welcome_completed');
         }
     }, [welcomeCompleted]);
@@ -92,7 +82,25 @@ export function useFinanceUI() {
     const [actionLoading, setActionLoading] = useState(false);
 
     // Last updated timestamp
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(() => {
+        return user?.id ? readStoredLastUpdated(user.id) : null;
+    });
+
+    useEffect(() => {
+        const stored = readStoredLastUpdated(user?.id);
+        if (!stored) {
+            if (lastUpdated) {
+                setLastUpdated(null);
+            }
+            return;
+        }
+
+        if (!lastUpdated || stored.getTime() !== lastUpdated.getTime()) {
+            setLastUpdated(stored);
+        }
+    }, [user?.id, lastUpdated]);
+
+
 
     const startImport = () => {
         setImportProgress({

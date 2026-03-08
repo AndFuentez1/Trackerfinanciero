@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import { calculateProportionalTheme } from "./features/finance/utils/themeCalculations";
+import { DEFAULT_BASE_COLOR, applyThemeToDocument } from "./features/finance/utils/themeRuntime";
 import "./core/api/gmailErrorHandler"; // Initialize Gmail token error handler
 import "./index.css";
 
@@ -21,6 +21,7 @@ if (typeof window !== 'undefined') {
 const rootElement = document.getElementById("root");
 if (rootElement) {
   try {
+    applyThemeToDocument(DEFAULT_BASE_COLOR);
     createRoot(rootElement).render(<App />);
   } catch (error) {
     console.error('Fatal error during app mount:', error);

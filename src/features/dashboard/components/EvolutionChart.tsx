@@ -4,17 +4,8 @@ import { cn, formatCurrencyCompact } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
 import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Button } from '@/shared/ui/button';
-import { ChevronDown, Check } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/shared/ui/dropdown-menu";
+import { Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -23,6 +14,7 @@ interface Transaction {
   date: string;
   type: string;
   amount: number;
+  installments?: number;
 }
 
 interface EvolutionChartPoint {
@@ -46,87 +38,38 @@ interface EvolutionChartProps {
   transactions: Transaction[];
   selectedYears: string[];
   onSelectedYearsChange: (years: string[]) => void;
-  selectedMonth?: string;
-  onSelectedMonthChange?: (month: string) => void;
-  onSelectAllYears?: () => void;
+  selectedMonth: string;
 }
 
 export function EvolutionChart({
   transactions,
   selectedYears,
   onSelectedYearsChange,
-  selectedMonth: controlledMonth,
-  onSelectedMonthChange,
-  onSelectAllYears,
+  selectedMonth,
 }: EvolutionChartProps) {
   const { currency } = useFormatCurrency();
-  const currentYear = new Date().getFullYear();
 
-  // --- State for Filters ---
+  // --- State for Toggles ---
   const [showIncome, setShowIncome] = useState(false);
   const [showExpense, setShowExpense] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
 
-  // --- Date Selection Logic ---
-  const availableYears = useMemo(() => {
-    const uniqueYears = new Set(transactions.map(t => new Date(t.date).getFullYear()));
-    uniqueYears.add(currentYear);
-    return Array.from(uniqueYears).sort((a, b) => b - a).map(String);
-  }, [transactions, currentYear]);
-
-  const [internalMonth, setInternalMonth] = useState<string>('all');
-
-  const selectedMonth = controlledMonth ?? internalMonth;
-
-  useEffect(() => { if (controlledMonth) {setInternalMonth(controlledMonth);} }, [controlledMonth]);
-
-  const setMonth = (value: string) => {
-    setInternalMonth(value);
-    onSelectedMonthChange?.(value);
-  };
-
-  const toggleYear = (year: string) => {
-    const newSelection = selectedYears.includes(year)
-      ? selectedYears.filter(y => y !== year)
-      : [...selectedYears, year];
-
-    // Prevent empty selection? 
-    if (newSelection.length === 0) {return;}
-
-    onSelectedYearsChange(newSelection);
-  };
-
-  const availableMonths = useMemo(() => ([
-    { value: 'all', label: 'Todo el año' },
-    { value: '1', label: 'Enero' },
-    { value: '2', label: 'Febrero' },
-    { value: '3', label: 'Marzo' },
-    { value: '4', label: 'Abril' },
-    { value: '5', label: 'Mayo' },
-    { value: '6', label: 'Junio' },
-    { value: '7', label: 'Julio' },
-    { value: '8', label: 'Agosto' },
-    { value: '9', label: 'Septiembre' },
-    { value: '10', label: 'Octubre' },
-    { value: '11', label: 'Noviembre' },
-    { value: '12', label: 'Diciembre' },
-  ]), []);
 
   // --- Data Processing ---
   const chartData = useMemo(() => {
-    if (transactions.length === 0) {return [];}
+    if (transactions.length === 0) { return []; }
 
     const baseTransactions = excludeTransfers(transactions)
       .filter(tx => !(tx.type === 'expense' && (tx.installments || 1) > 1));
 
-    if (baseTransactions.length === 0) {return [];}
+    if (baseTransactions.length === 0) { return []; }
 
     // Process deltas (solo transacciones reales, sin anclaje a saldo real)
     const txsWithDelta = baseTransactions.map(tx => {
       let delta = 0;
       const amt = Number(tx.amount);
-      if (tx.type === 'income' || tx.type === 'transfer_in') {delta = amt;}
-      else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') {delta = -amt;}
+      if (tx.type === 'income' || tx.type === 'transfer_in') { delta = amt; }
+      else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') { delta = -amt; }
       return { ...tx, delta, dateObj: new Date(tx.date) };
     });
 
@@ -153,17 +96,14 @@ export function EvolutionChart({
             name: format(new Date(y, m, 1), 'MMM', { locale: es }),
             monthIndex: m,
             year: y,
-            // Unique key for recharts if needed, but name is usually XAxis
-            // If multiple years have same month name 'Ene', we might want unique XAxis labels like 'Ene 23'
             displayName: sortedSelectedYears.length > 1
               ? `${format(new Date(y, m, 1), 'MMM', { locale: es })} '${y.toString().slice(2)}`
-              : format(new Date(y, m, 1), 'MMM', { locale: es })
+              : format(new Date(y, m, 1), 'MMM', { locale: es }),
+            balance: runningBalance,
+            income: income,
+            expense: expense,
+            fullDate: start
           };
-
-          point.balance = runningBalance;
-          point.income = income;
-          point.expense = expense;
-          point.fullDate = start;
 
           points.push(point);
         }
@@ -184,13 +124,12 @@ export function EvolutionChart({
             year: y,
             displayName: sortedSelectedYears.length > 1
               ? `${d}/${m + 1}/${y.toString().slice(2)}`
-              : `${d}`
+              : `${d}`,
+            balance: runningBalance,
+            income: income,
+            expense: expense,
+            fullDate: start
           };
-
-          point.balance = runningBalance;
-          point.income = income;
-          point.expense = expense;
-          point.fullDate = start;
 
           points.push(point);
         }
@@ -200,7 +139,7 @@ export function EvolutionChart({
     // Post-process: Cut balance line after last record (Strict "no future balance line")
     let lastActiveIndex = -1;
     points.forEach((p, i) => {
-      if (p.income !== 0 || p.expense !== 0) {lastActiveIndex = i;}
+      if (p.income !== 0 || p.expense !== 0) { lastActiveIndex = i; }
     });
 
     if (lastActiveIndex !== -1) {
@@ -212,23 +151,23 @@ export function EvolutionChart({
     }
 
     return points;
-  }, [transactions, selectedYears, selectedMonth, currentYear]);
+  }, [transactions, selectedYears, selectedMonth]);
 
   // --- Helpers ---
   const formatAxisCurrency = (val: number) => formatCurrencyCompact(val, currency || 'COP');
 
   // Calculate dynamic domain from data
   const yDomain = useMemo(() => {
-    if (!chartData || chartData.length === 0) {return [0, 1000000];}
+    if (!chartData || chartData.length === 0) { return [0, 1000000]; }
 
     const allValues: number[] = [];
     chartData.forEach(d => {
-      if (d.income != null) {allValues.push(d.income);}
-      if (d.expense != null) {allValues.push(d.expense);}
-      if (d.balance != null) {allValues.push(d.balance);}
+      if (d.income != null) { allValues.push(d.income); }
+      if (d.expense != null) { allValues.push(d.expense); }
+      if (d.balance != null) { allValues.push(d.balance); }
     });
 
-    if (allValues.length === 0) {return [0, 1000000];}
+    if (allValues.length === 0) { return [0, 1000000]; }
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
@@ -239,15 +178,10 @@ export function EvolutionChart({
 
   return (
     <div className="space-y-4">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Evolución Histórica</h3>
-          <p className="text-sm text-muted-foreground">Comportamiento de ingresos, gastos y balance neto</p>
-        </div>
-
+      {/* Controls Container */}
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50 mr-2">
+          <div className="flex bg-muted/30 p-1 rounded-lg border border-border/50">
             <Button
               variant={showIncome ? 'secondary' : 'ghost'}
               size="sm"
@@ -273,46 +207,6 @@ export function EvolutionChart({
               {showBalance && <Check className="h-3 w-3" />} Balance
             </Button>
           </div>
-
-          <Select value={selectedMonth} onValueChange={setMonth}>
-            <SelectTrigger className="w-[130px] h-9 bg-background/50 border-input"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {availableMonths.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 bg-background/50 border-input gap-2">
-                {selectedYears.length === availableYears.length ? 'Todos' : `${selectedYears.length} Años`}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[150px]">
-              <DropdownMenuLabel>Seleccionar Años</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {onSelectAllYears && (
-                <>
-                  <DropdownMenuCheckboxItem
-                    checked={selectedYears.length === availableYears.length}
-                    onCheckedChange={onSelectAllYears}
-                  >
-                    Todos
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {availableYears.map(year => (
-                <DropdownMenuCheckboxItem
-                  key={year}
-                  checked={selectedYears.includes(year)}
-                  onCheckedChange={() => toggleYear(year)}
-                >
-                  {year}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 

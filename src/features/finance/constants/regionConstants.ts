@@ -1,0 +1,7 @@
+export const REGIONS = [
+    { id: 'Latam', value: 'Latam', label: 'Latam', policy: 'Menor tiempo de acceso a IA, políticas estándar de privacidad.' },
+    { id: 'NA', value: 'NA', label: 'Norteamérica', policy: 'Acceso rápido, políticas de datos aplicables a Norteamérica.' },
+    { id: 'Europa', value: 'Europa', label: 'Europa (GDPR)', policy: 'Estricta protección de datos, algunas funciones IA pueden demorar más.' },
+    { id: 'Asia', value: 'Asia', label: 'Asia', policy: 'Políticas regionales específicas, equilibrio en rendimiento.' },
+    { id: 'Global', value: 'Global', label: 'Global (Otra)', policy: 'Equilibrio entre privacidad y rendimiento global.' }
+];

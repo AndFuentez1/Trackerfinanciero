@@ -6,29 +6,26 @@
  */
 
 import { useState, useEffect, useLayoutEffect } from 'react';
-import { calculateProportionalTheme } from '../utils/themeCalculations';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { THEME_OPTIONS, MASTER_PALETTE } from '../constants/themeConstants';
-
-const DEFAULT_BASE_COLOR = '#64748b'; // Slate Gray (System Neutral)
+import { calculateProportionalTheme } from '../utils/themeCalculations';
+import {
+    DEFAULT_BASE_COLOR,
+    applyThemeToDocument,
+    persistThemeBaseColor,
+} from '../utils/themeRuntime';
 
 /**
  * Hook to manage application theme
  * @param initialColor - Initial base color (from user profile)
  * @returns Theme state and setters
  */
-export function useTheme(initialColor?: string) {
-    const [baseColor, setBaseColor] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('theme-base-color');
-            const hasSession = Object.keys(localStorage).some(k => k.includes('supabase') || k.startsWith('sb-'));
-
-            // If we have a session and a stored color, use it.
-            // If no session, go to default (Neutral Gray).
-            if (hasSession && stored) return stored;
-            return DEFAULT_BASE_COLOR;
-        }
-        return initialColor || DEFAULT_BASE_COLOR;
-    });
+export function useTheme(initialColor?: string | null) {
+    const { user } = useAuth();
+    // NOTE: Always start with DEFAULT_BASE_COLOR — no localStorage read on init.
+    // The useEffect below (Sync with initialColor from profile) overwrites this from
+    // Supabase profile.base_color in ms, eliminating the Flash of Old Theme (FLOT).
+    const [baseColor, setBaseColor] = useState(initialColor ?? DEFAULT_BASE_COLOR);
 
     const [themeVars, setThemeVars] = useState<Record<string, string>>(() =>
         calculateProportionalTheme(baseColor)
@@ -36,30 +33,24 @@ export function useTheme(initialColor?: string) {
 
     // Sync with initialColor from profile
     useEffect(() => {
-        if (!initialColor) return;
+        if (initialColor === undefined) { return; }
+
+        const resolvedColor = initialColor ?? DEFAULT_BASE_COLOR;
 
         // Only update if the color is actually different
-        if (initialColor !== baseColor) {
-            setBaseColor(initialColor);
+        if (resolvedColor !== baseColor) {
+            setBaseColor(resolvedColor);
         }
-    }, [initialColor]);
+    }, [initialColor, baseColor]);
 
     // Calculate and apply theme when baseColor changes
     useLayoutEffect(() => {
-        const theme = calculateProportionalTheme(baseColor);
+        const theme = applyThemeToDocument(baseColor);
         setThemeVars(theme);
 
-        // Inject CSS variables into document root
-        const root = document.documentElement;
-        for (const [key, value] of Object.entries(theme)) {
-            root.style.setProperty(key, value);
-        }
-
         // Persist to localStorage
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('theme-base-color', baseColor);
-        }
-    }, [baseColor]);
+        persistThemeBaseColor(baseColor, user?.id);
+    }, [baseColor, user?.id]);
 
     return {
         baseColor,

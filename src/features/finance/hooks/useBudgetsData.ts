@@ -44,7 +44,15 @@ export interface TotalBudgetState {
 export function useBudgetsData() {
     const { user } = useAuth();
     // Use budgets from finance data instead of local state
-    const { transactions, allTransactions, categories, budgets: financeBudgets, lastUpdated: financeLastUpdated, refreshData, loading: financeLoading } = useFinanceData();
+    const {
+        transactions,
+        allTransactions,
+        categories,
+        budgets: financeBudgets,
+        lastUpdated: financeLastUpdated,
+        refreshData,
+        bootLoading: financeBootLoading
+    } = useFinanceData();
     const [lastModification, setLastModification] = useState<Date | null>(null);
     const [budgetYear, setBudgetYear] = useState<number | 'all'>(new Date().getFullYear());
     const [budgetMonth, setBudgetMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
@@ -58,7 +66,7 @@ export function useBudgetsData() {
     }, [financeLastUpdated]);
 
     const budgets = financeBudgets as Budget[];
-    const loading = financeLoading;
+    const loading = financeBootLoading;
 
     // Years available from budgets (fallback to current year)
     const availableYears = useMemo(() => {

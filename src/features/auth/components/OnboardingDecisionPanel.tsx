@@ -154,24 +154,23 @@ export function OnboardingDecisionPanel({
       <div className="flex min-h-full items-start sm:items-center justify-center p-4">
         <div className="w-full max-w-lg lg:max-w-3xl space-y-4 sm:space-y-6 py-4 sm:py-0">
           <div className="text-center mb-6 sm:mb-12">
-            <div className="inline-flex items-center justify-center p-2 mb-4 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 animate-pulse">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
             <h1 className="text-3xl sm:text-5xl font-black mb-4 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-transparent">¡Bienvenido a tu Libertad Financiera!</h1>
             <p className="text-lg sm:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed font-medium">
               Estás a un paso de tomar el control total. <br className="hidden sm:block" /> ¿Cómo prefieres que comencemos esta aventura?
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto">
+          <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
             {/* Theme selector - Optional for onboarding */}
             {themeOptions && themeOptions.length > 0 && (
-              <Card className="border-dashed">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Elige un tema</CardTitle>
-                  <CardDescription className="text-xs">Personaliza el color base de la app</CardDescription>
+              <Card className="group relative overflow-hidden border-slate-200/60 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl hover:scale-[1.02] rounded-[32px] p-2">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardHeader className="pb-2 pt-6 text-center relative z-10">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary mb-2 block">Paso 1</span>
+                  <CardTitle className="text-2xl font-black tracking-tight text-slate-800">Elige un tema</CardTitle>
+                  <CardDescription className="text-sm font-medium text-slate-500 mt-2">Personaliza el color base de la app</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4 pb-6 relative z-10">
                   <div className="flex flex-row flex-wrap gap-4 justify-center items-end my-2">
                     {themeOptions.map((theme) => (
                       <div key={theme.hex} className="flex flex-col items-center w-24">
@@ -179,7 +178,7 @@ export function OnboardingDecisionPanel({
                           type="button"
                           className={cn(
                             "w-12 h-12 sm:w-16 sm:h-16 rounded-xl border-2 flex items-center justify-center transition-all",
-                            selectedTheme === theme.hex ? "border-primary ring-2 ring-primary" : "border-border/40 hover:border-border"
+                            selectedTheme === theme.hex ? "border-primary ring-2 ring-primary scale-110" : "border-border/40 hover:border-border hover:scale-105"
                           )}
                           style={{ background: theme.hex }}
                           aria-label={theme.label}
@@ -192,7 +191,7 @@ export function OnboardingDecisionPanel({
                             <span className="w-6 h-6 rounded-full border-4 border-white bg-primary block shadow-lg" />
                           )}
                         </button>
-                        <span className="text-xs mt-2 text-center break-words w-full font-medium text-muted-foreground">{theme.label}</span>
+                        <span className="text-xs mt-3 text-center break-words w-full font-medium text-muted-foreground">{theme.label}</span>
                       </div>
                     ))}
                   </div>
@@ -200,53 +199,59 @@ export function OnboardingDecisionPanel({
               </Card>
             )}
 
-            {/* Start from scratch */}
-            <Card
-              className="group relative overflow-hidden cursor-pointer border-slate-200/60 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl hover:scale-[1.02] rounded-[32px] p-2"
-              onClick={handleStartFromScratch}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <CardHeader className="pb-4 pt-10 text-center relative z-10">
-                <div className="mx-auto w-20 h-20 rounded-[24px] bg-slate-50 shadow-inner flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-500 ring-1 ring-slate-100 group-hover:ring-primary/20">
-                  <Plus className="h-10 w-10 text-slate-400 group-hover:text-primary transition-colors" />
-                </div>
-                <CardTitle className="text-2xl font-black tracking-tight text-slate-800">Comenzar desde cero</CardTitle>
-                <CardDescription className="text-sm px-6 font-medium text-slate-500 leading-relaxed mt-2">
-                  Ideal si prefieres registrar tus movimientos manualmente y construir tu historial paso a paso con total precisión.
-                </CardDescription>
+            {/* Decision options combined into a single visual panel */}
+            <Card className="group/main relative overflow-hidden border-slate-200/60 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl rounded-[32px] p-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50" />
+              <CardHeader className="pb-2 pt-6 text-center relative z-10">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary mb-2 block">Paso 2</span>
+                <CardTitle className="text-2xl font-black tracking-tight text-slate-800">¿Cómo prefieres empezar?</CardTitle>
               </CardHeader>
-              <CardContent className="pb-10 pt-4 relative z-10">
-                <Button
-                  disabled={isLoading}
-                  className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20 group-hover:shadow-primary/40 group-hover:translate-y-[-4px] transition-all duration-300"
-                >
-                  {isLoading ? 'Configurando...' : 'Empezar Limpio'}
-                </Button>
-              </CardContent>
-            </Card>
+              <CardContent className="p-4 sm:p-6 relative z-10 flex flex-col gap-4">
 
-            {/* Import data */}
-            <Card
-              className="group relative overflow-hidden cursor-pointer border-slate-200/60 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white/80 backdrop-blur-xl hover:scale-[1.02] rounded-[32px] p-2"
-              onClick={() => setShowImportDialog(true)}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <CardHeader className="pb-4 pt-10 text-center relative z-10">
-                <div className="mx-auto w-20 h-20 rounded-[24px] bg-slate-50 shadow-inner flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-500 ring-1 ring-slate-100 group-hover:ring-primary/20">
-                  <Upload className="h-10 w-10 text-slate-400 group-hover:text-primary transition-colors" />
-                </div>
-                <CardTitle className="text-2xl font-black tracking-tight text-slate-800">Importar Historial</CardTitle>
-                <CardDescription className="text-sm px-6 font-medium text-slate-500 leading-relaxed mt-2">
-                  Sube tu archivo Excel o CSV para que procesemos tus datos automáticamente en segundos con IA.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-10 pt-4 relative z-10">
-                <Button
-                  variant="outline"
-                  className="w-full h-14 rounded-2xl font-bold text-base border-2 group-hover:bg-primary/5 group-hover:border-primary/40 group-hover:translate-y-[-4px] transition-all duration-300"
+                {/* Start from scratch */}
+                <div
+                  className="group relative overflow-hidden cursor-pointer border-2 border-slate-100/60 hover:border-primary/40 transition-all duration-300 bg-white hover:bg-slate-50/80 hover:shadow-lg hover:-translate-y-1 rounded-[24px] p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left"
+                  onClick={handleStartFromScratch}
                 >
-                  Subir Archivo
-                </Button>
+                  <div className="w-16 h-16 shrink-0 rounded-[20px] bg-slate-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 ring-1 ring-slate-100 group-hover:ring-primary/20">
+                    <Plus className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors duration-300" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">Comenzar desde cero</h3>
+                    <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm mx-auto sm:mx-0">
+                      Ideal para registrar manualmente paso a paso.
+                    </p>
+                  </div>
+                  <Button
+                    disabled={isLoading}
+                    className="w-full sm:w-auto mt-2 sm:mt-0 rounded-xl font-bold shadow-sm"
+                  >
+                    {isLoading ? 'Configurando...' : 'Empezar Limpio'}
+                  </Button>
+                </div>
+
+                {/* Import data */}
+                <div
+                  className="group relative overflow-hidden cursor-pointer border-2 border-slate-100/60 hover:border-primary/40 transition-all duration-300 bg-white hover:bg-slate-50/80 hover:shadow-lg hover:-translate-y-1 rounded-[24px] p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left"
+                  onClick={() => setShowImportDialog(true)}
+                >
+                  <div className="w-16 h-16 shrink-0 rounded-[20px] bg-slate-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 ring-1 ring-slate-100 group-hover:ring-primary/20">
+                    <Upload className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors duration-300" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">Importar Historial</h3>
+                    <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm mx-auto sm:mx-0">
+                      Sube tu Excel o CSV para procesar datos con IA.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto mt-2 sm:mt-0 rounded-xl font-bold border-2 group-hover:bg-primary/5 group-hover:border-primary/40 transition-colors duration-300"
+                  >
+                    Subir Archivo
+                  </Button>
+                </div>
+
               </CardContent>
             </Card>
           </div>

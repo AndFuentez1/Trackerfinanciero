@@ -28,9 +28,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
   }, [currency]);
 
   const renderBalanceAdjustmentLabel = ({ x, y, payload }: BalanceAdjustmentLabelProps) => {
-    if (typeof x !== 'number' || typeof y !== 'number') {return null;}
+    if (typeof x !== 'number' || typeof y !== 'number') { return null; }
     const delta = payload?.balanceAjusteDelta;
-    if (typeof delta !== 'number' || delta === 0) {return null;}
+    if (typeof delta !== 'number' || delta === 0) { return null; }
     return (
       <text
         x={x}
@@ -46,18 +46,18 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
   // Calculate dynamic domain from data
   const yDomain = React.useMemo(() => {
-    if (!data || data.length === 0) {return [0, 1000000];} // Fallback when no data
+    if (!data || data.length === 0) { return [0, 1000000]; } // Fallback when no data
 
     const allValues: number[] = [];
     data.forEach(d => {
-      if (d.ingresos != null) {allValues.push(d.ingresos);}
-      if (d.egresos != null) {allValues.push(d.egresos);}
-      if (d.balanceReal != null) {allValues.push(d.balanceReal);}
-      if (d.balanceProyectado != null) {allValues.push(d.balanceProyectado);}
-      if (d.balanceSimulated != null) {allValues.push(d.balanceSimulated);}
+      if (d.ingresos != null) { allValues.push(d.ingresos); }
+      if (d.egresos != null) { allValues.push(d.egresos); }
+      if (d.balanceReal != null) { allValues.push(d.balanceReal); }
+      if (d.balanceProyectado != null) { allValues.push(d.balanceProyectado); }
+      if (d.balanceSimulated != null) { allValues.push(d.balanceSimulated); }
     });
 
-    if (allValues.length === 0) {return [0, 1000000];} // Fallback when no valid values
+    if (allValues.length === 0) { return [0, 1000000]; } // Fallback when no valid values
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
@@ -213,28 +213,27 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               {showBalance && (
                 <>
                   {/* Balance Real (Histórico Descriptivo) */}
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="balanceReal"
                     stroke="hsl(var(--primary))"
-                    strokeWidth={2.5}
-                    fill="url(#balanceHistoryGradient)"
-                    fillOpacity={1}
-                    dot={false}
-                    connectNulls={false}
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
+                    connectNulls={true}
                     name="Balance Histórico"
                   />
                   {/* Balance Proyectado */}
                   <Line
                     type="monotone"
                     dataKey="balanceProyectado"
-                    stroke={isWarning ? "hsl(var(--destructive))" : "url(#balanceProjectionGradient)"}
+                    stroke={isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
                     strokeWidth={2}
-                    dot={false}
+                    dot={{ r: 4, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))", strokeWidth: 1, stroke: "hsl(var(--background))" }}
                     strokeDasharray="5 5"
                     name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
                     activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
-                    className={isWarning ? "opacity-90" : ""}
+                    className={isWarning ? "opacity-90" : "opacity-60"}
                   />
                   {/* Ajuste de Balance Inicial */}
                   <Line
@@ -255,7 +254,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                       dataKey="balanceSimulated"
                       stroke="hsl(var(--muted-foreground))"
                       strokeWidth={2}
-                      dot={false}
+                      dot={{ r: 4, fill: "hsl(var(--muted-foreground))", strokeWidth: 1, stroke: "hsl(var(--background))" }}
                       strokeDasharray="4 4"
                       name="Proyección Ideal (Si se paga hoy)"
                       activeDot={{ r: 4, strokeWidth: 0, fill: "hsl(var(--muted-foreground))" }}

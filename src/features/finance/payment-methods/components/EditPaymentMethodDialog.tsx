@@ -66,6 +66,7 @@ export function EditPaymentMethodDialog({
     isSavingsAccount: false,
     savingsGoal: 0,
     estimatedYield: '',
+    initialDate: '',
   });
 
   // Update form data when paymentMethod changes
@@ -82,6 +83,7 @@ export function EditPaymentMethodDialog({
         isSavingsAccount: paymentMethod.is_savings_account || false,
         savingsGoal: Number(paymentMethod.savings_goal || 0),
         estimatedYield: paymentMethod.estimated_yield?.toString() || '',
+        initialDate: paymentMethod.initial_date?.substring(0, 7) || new Date().toISOString().substring(0, 7),
       });
     }
   }, [paymentMethod]);
@@ -116,6 +118,7 @@ export function EditPaymentMethodDialog({
         type: formData.type as PaymentMethod['type'],
         balance: Number(formData.balance) || 0,
         color: formData.color,
+        initial_date: formData.initialDate ? `${formData.initialDate}-01` : null,
       };
 
       if (formData.type === 'credit') {
@@ -295,6 +298,23 @@ export function EditPaymentMethodDialog({
               </div>
             </>
           )}
+
+          {/* Initial Date */}
+          <div className="space-y-2">
+            <Label htmlFor="initialDate">Fecha de inicio del saldo (mes/año)</Label>
+            <Input
+              id="initialDate"
+              type="month"
+              value={formData.initialDate}
+              onChange={(e) =>
+                setFormData({ ...formData, initialDate: e.target.value })
+              }
+              required
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Define desde cuándo este saldo debe considerarse en el flujo histórico.
+            </p>
+          </div>
 
           {/* Color */}
           <div className="space-y-2">

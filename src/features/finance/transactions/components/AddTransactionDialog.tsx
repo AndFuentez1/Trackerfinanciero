@@ -51,6 +51,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/shared/hooks/use-toast';
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
+import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { getTodayLocalDate } from '@/core/utils';
 
 export interface AddTransactionDialogProps {
@@ -84,6 +85,7 @@ export function AddTransactionDialog({
 }: AddTransactionDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+  const [localPaymentMethods, setLocalPaymentMethods] = useState<PaymentMethod[]>([]);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
@@ -91,7 +93,7 @@ export function AddTransactionDialog({
   const [showAlert, setShowAlert] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { categories: contextCategories, paymentMethods: contextPaymentMethods, addCategory, loading } = useFinanceData();
+  const { categories: contextCategories, paymentMethods: contextPaymentMethods, addCategory, addPaymentMethod, loading } = useFinanceData();
   const { currency, decimalPlaces } = useFinance();
 
   const getCurrencySymbol = () => {
@@ -108,7 +110,19 @@ export function AddTransactionDialog({
 
   // Use props if provided (for edit mode from dashboard), else context
   const categories = propCategories || contextCategories;
-  const paymentMethods = propPaymentMethods || contextPaymentMethods;
+  const basePaymentMethods = propPaymentMethods || contextPaymentMethods;
+
+  const availablePaymentMethods = useMemo(() => {
+    const combined = [...basePaymentMethods];
+    localPaymentMethods.forEach(localPm => {
+      if (!combined.some(p => p.id === localPm.id)) {
+        combined.push(localPm);
+      }
+    });
+    return combined.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }, [basePaymentMethods, localPaymentMethods]);
+
+  const paymentMethods = availablePaymentMethods; // Alias for standard mapping
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(insertTransactionSchema),
@@ -582,6 +596,15 @@ export function AddTransactionDialog({
                               </SelectItem>
                             );
                           })}
+                          <div className="border-t border-border/50 px-2 py-2 mt-1">
+                            <AddPaymentMethodDialog
+                              onAdd={addPaymentMethod}
+                              onSuccess={(pm) => {
+                                setLocalPaymentMethods(prev => [...prev, pm]);
+                                form.setValue('payment_method_id', pm.id);
+                              }}
+                            />
+                          </div>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -657,6 +680,15 @@ export function AddTransactionDialog({
                                 </SelectItem>
                               );
                             })}
+                            <div className="border-t border-border/50 px-2 py-2 mt-1">
+                              <AddPaymentMethodDialog
+                                onAdd={addPaymentMethod}
+                                onSuccess={(pm) => {
+                                  setLocalPaymentMethods(prev => [...prev, pm]);
+                                  form.setValue('to_payment_method_id', pm.id);
+                                }}
+                              />
+                            </div>
                           </SelectContent>
                         </Select>
                         <FormMessage />

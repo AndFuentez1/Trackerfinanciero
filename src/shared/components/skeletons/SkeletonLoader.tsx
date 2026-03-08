@@ -11,6 +11,9 @@ interface SkeletonLoaderProps {
     showLoadingIndicator?: boolean;
 }
 
+const NEUTRAL_SKELETON_FILL = 'rgba(100, 116, 139, 0.12)';
+const NEUTRAL_SKELETON_BORDER = '1px solid rgba(148, 163, 184, 0.24)';
+
 // ---------------------------------------------------------------------
 // Modular Base Skeletons (High Fidelity)
 // ---------------------------------------------------------------------
@@ -20,16 +23,17 @@ export const PulseBlock: React.FC<{
     height?: string | number;
     className?: string;
     borderRadius?: string;
-}> = ({ width = '100%', height = '1rem', className = '', borderRadius = '0.5rem' }) => (
+    isPrimary?: boolean;
+}> = ({ width = '100%', height = '1rem', className = '', borderRadius = '0.5rem', isPrimary = false }) => (
     <div
         className={cn('skeleton-pulse', className)}
         style={{
             width,
             height,
             borderRadius,
-            backgroundColor: 'rgba(100, 116, 139, 0.15)',
-            border: '1px solid hsl(var(--border, 214 32% 91%))',
-            transition: 'background-color 0.3s ease, border-color 0.3s ease',
+            backgroundColor: NEUTRAL_SKELETON_FILL,
+            border: NEUTRAL_SKELETON_BORDER,
+            transition: 'opacity 0.2s ease',
         }}
     />
 );
@@ -102,7 +106,7 @@ export const SidebarSkeleton = () => (
         }}
     >
         <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
-            <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.75rem" className="bg-primary/10" />
+            <PulseBlock height="2.5rem" width="2.5rem" borderRadius="0.75rem" />
             <div className="flex flex-col gap-1.5">
                 <PulseBlock height="1.25rem" width="100px" />
                 <PulseBlock height="0.65rem" width="80px" />
@@ -141,7 +145,7 @@ export const StandardHeaderSkeleton = () => (
     <div className="border-b border-border pb-8 w-full animate-in fade-in duration-700">
         <div className="flex flex-col md:flex-row items-start justify-between gap-6">
             <div className="flex items-start gap-4 w-full md:w-auto">
-                <PulseBlock height="3rem" width="3rem" borderRadius="1rem" className="bg-primary/10" />
+                <PulseBlock height="3rem" width="3rem" borderRadius="1rem" />
                 <div className="flex flex-col gap-1.5">
                     <PulseBlock height="1.75rem" width="180px" className="leading-none" />
                     <PulseBlock height="0.85rem" width="260px" />
@@ -301,12 +305,12 @@ export const BudgetsSkeleton = () => (
 
         {/* Top Cards: Total + Income */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-            <CardSkeleton height="160px">
+            <CardSkeleton height="auto" padding="1.5rem">
                 <PulseBlock height="1rem" width="120px" className="mb-4" />
                 <PulseBlock height="2.5rem" width="60%" className="mb-4" />
                 <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" />
             </CardSkeleton>
-            <CardSkeleton height="160px">
+            <CardSkeleton height="auto" padding="1.5rem">
                 <PulseBlock height="1rem" width="120px" className="mb-4" />
                 <PulseBlock height="2.5rem" width="60%" className="mb-4" />
                 <PulseBlock height="0.5rem" width="100%" borderRadius="9999px" />
@@ -431,7 +435,7 @@ export const SavingsSkeleton = () => (
         {/* Savings Accounts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[...Array(2)].map((_, i) => (
-                <CardSkeleton key={i} height="200px" padding="1.5rem">
+                <CardSkeleton key={i} height="auto" padding="1.5rem">
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <PulseBlock height="1.25rem" width="120px" />
@@ -455,7 +459,7 @@ export const SavingsSkeleton = () => (
 );
 
 export const ConfigSkeleton = () => (
-    <div className="container max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="space-y-8">
         {/* Header Section */}
         <StandardHeaderSkeleton />
 
@@ -691,15 +695,15 @@ const AuthSkeleton = () => (
         <div className="w-full max-w-[440px] flex flex-col items-center">
             {/* Logo placeholder */}
             <div className="mb-8 flex flex-col items-center gap-3">
-                <PulseBlock height="48px" width="48px" borderRadius="12px" className="bg-primary/10" />
+                <PulseBlock height="48px" width="48px" borderRadius="12px" />
                 <PulseBlock height="24px" width="180px" />
             </div>
 
             <CardSkeleton height="auto" width="100%" padding="1.5rem" className="flex flex-col space-y-6">
                 {/* Tabs placeholder */}
                 <div className="flex p-1 bg-muted/50 rounded-lg w-full">
-                    <PulseBlock height="36px" width="50%" borderRadius="6px" className="bg-background shadow-sm" />
-                    <PulseBlock height="36px" width="50%" borderRadius="6px" className="bg-transparent" />
+                    <PulseBlock height="36px" width="50%" borderRadius="6px" />
+                    <PulseBlock height="36px" width="50%" borderRadius="6px" />
                 </div>
 
                 {/* Form fields */}
@@ -715,7 +719,7 @@ const AuthSkeleton = () => (
                 </div>
 
                 {/* Action button */}
-                <PulseBlock height="44px" width="100%" borderRadius="8px" className="bg-primary/20" />
+                <PulseBlock height="44px" width="100%" borderRadius="8px" />
 
                 {/* Social login separator */}
                 <div className="flex items-center gap-4 py-2">
@@ -766,57 +770,84 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     const loadingText = message || "Cargando...";
     const isAuth = tab === 'auth';
     const shouldShowIndicator = showLoadingIndicator && tab !== 'onboarding';
+    const loadingIndicatorPositionClass = "absolute inset-x-0 top-1/3 z-[100] flex justify-center pointer-events-none";
+
     const contentPaddingClass = "py-8";
-    const useSoftBg = withLayoutWrapper && tab !== 'dashboard' && tab !== 'auth';
-    const embeddedWrapperClass = cn(
-        "w-full h-full",
-        withLayoutWrapper ? "min-h-screen" : "",
-        withLayoutWrapper && useSoftBg ? "bg-background/30" : "",
-        withLayoutWrapper && tab === 'config' ? "pb-20" : ""
-    );
-    const embeddedContentClass = cn(
-        "w-full",
-        tab === 'config' ? "" : "container max-w-6xl mx-auto px-4",
-        tab === 'config' ? "" : contentPaddingClass
-    );
     const fullPageContentClass = cn(
-        "w-full mx-auto",
-        tab === 'config' ? "" : "max-w-6xl px-4",
-        tab === 'config' ? "" : contentPaddingClass,
+        "w-full mx-auto max-w-6xl px-4",
+        contentPaddingClass,
         isAuth ? "flex justify-center items-center h-full" : ""
     );
+
 
     // Embedded Mode (Inside MainLayout)
     if (!fullPage) {
         return (
-            <div className={embeddedWrapperClass} data-testid={`skeleton-${tab}`}>
+            <div className="relative w-full" data-testid={`skeleton-${tab}`}>
                 <style>
                     {`
-                    @keyframes skeleton-pulse {
-                        0% { opacity: 1; }
-                        50% { opacity: 0.5; }
-                        100% { opacity: 1; }
+                    @keyframes skeleton-shimmer {
+                        0% { background-color: rgba(148, 163, 184, 0.12); }
+                        50% { background-color: rgba(148, 163, 184, 0.18); }
+                        100% { background-color: rgba(148, 163, 184, 0.12); }
+                    }
+                    @keyframes text-breathe {
+                        0% { color: hsl(var(--foreground)); }
+                        50% { color: hsl(var(--muted-foreground)); }
+                        100% { color: hsl(var(--foreground)); }
+                    }
+                    @keyframes loader-button-tint {
+                        0%, 20% {
+                            background-color: var(--loader-idle-bg);
+                            border-color: var(--loader-idle-border);
+                            box-shadow: none;
+                        }
+                        33%, 53% {
+                            background-color: var(--loader-active-bg);
+                            border-color: var(--loader-active-border);
+                            box-shadow: 0 0 0 1px var(--loader-active-border);
+                        }
+                        66%, 100% {
+                            background-color: var(--loader-idle-bg);
+                            border-color: var(--loader-idle-border);
+                            box-shadow: none;
+                        }
                     }
                     .skeleton-pulse {
-                        animation: skeleton-pulse 1.8s ease-in-out infinite;
+                        animation: skeleton-shimmer 2s ease-in-out infinite;
                     }
+                    .text-breathe {
+                        animation: text-breathe 2s ease-in-out infinite;
+                    }
+                    .animate-loader-button {
+                        animation: loader-button-tint 1.5s ease-in-out infinite;
+                    }
+
                     `}
                 </style>
+
                 {/* Loading Indicator for embedded view */}
                 {shouldShowIndicator && (
-                    <div className="fixed top-[140px] left-1/2 -translate-x-1/2 z-[100] pointer-events-none fade-in duration-500">
-                        <div className="bg-card/90 backdrop-blur-md px-6 py-3 rounded-full border border-border/50 shadow-xl flex items-center gap-3 skeleton-pulse">
-                            <div className="h-2.5 w-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                            <div className="h-2.5 w-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                            <div className="h-2.5 w-2.5 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                            <span className="text-sm font-semibold tracking-wide ml-1 text-foreground whitespace-nowrap">{loadingText}</span>
+                    <div className={loadingIndicatorPositionClass}>
+                        <div className="w-max bg-card/95 backdrop-blur-md px-6 py-2.5 rounded-full border border-border shadow-lg flex items-center gap-3">
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(148, 163, 184, 0.20)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(148, 163, 184, 0.28)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(100, 116, 139, 0.78)', ['--loader-active-border' as '--loader-active-border']: 'rgba(100, 116, 139, 0.84)', animationDelay: '0s' }}
+                            />
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(203, 213, 225, 0.26)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(203, 213, 225, 0.34)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(148, 163, 184, 0.82)', ['--loader-active-border' as '--loader-active-border']: 'rgba(148, 163, 184, 0.88)', animationDelay: '0.4s' }}
+                            />
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(226, 232, 240, 0.34)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(203, 213, 225, 0.42)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(148, 163, 184, 0.72)', ['--loader-active-border' as '--loader-active-border']: 'rgba(148, 163, 184, 0.8)', animationDelay: '0.8s' }}
+                            />
+                            <span className="text-[13px] font-bold tracking-tight ml-1 text-foreground whitespace-nowrap text-breathe">{loadingText}</span>
                         </div>
                     </div>
                 )}
 
-                <div className={embeddedContentClass}>
-                    {renderTabSkeleton()}
-                </div>
+                {renderTabSkeleton()}
             </div>
         );
     }
@@ -830,32 +861,48 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         >
             <style>
                 {`
-                @keyframes skeleton-pulse {
-                    0% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                    100% { opacity: 1; }
+                @keyframes skeleton-shimmer {
+                    0% { background-color: rgba(148, 163, 184, 0.12); }
+                    50% { background-color: rgba(148, 163, 184, 0.18); }
+                    100% { background-color: rgba(148, 163, 184, 0.12); }
+                }
+                @keyframes text-breathe {
+                    0% { color: hsl(var(--foreground)); }
+                    50% { color: hsl(var(--muted-foreground)); }
+                    100% { color: hsl(var(--foreground)); }
+                }
+                @keyframes loader-button-tint {
+                    0%, 20% {
+                        background-color: var(--loader-idle-bg);
+                        border-color: var(--loader-idle-border);
+                        box-shadow: none;
+                    }
+                    33%, 53% {
+                        background-color: var(--loader-active-bg);
+                        border-color: var(--loader-active-border);
+                        box-shadow: 0 0 0 1px var(--loader-active-border);
+                    }
+                    66%, 100% {
+                        background-color: var(--loader-idle-bg);
+                        border-color: var(--loader-idle-border);
+                        box-shadow: none;
+                    }
                 }
                 .skeleton-pulse {
-                    animation: skeleton-pulse 1.8s ease-in-out infinite;
+                    animation: skeleton-shimmer 2s ease-in-out infinite;
                 }
+                .text-breathe {
+                    animation: text-breathe 2s ease-in-out infinite;
+                }
+                .animate-loader-button {
+                    animation: loader-button-tint 1.5s ease-in-out infinite;
+                }
+
                 `}
             </style>
 
-            {/* Loading Indicator */}
-            {shouldShowIndicator && (
-                <div className="fixed top-[140px] left-1/2 -translate-x-1/2 z-[100] pointer-events-none fade-in duration-500">
-                    <div className="bg-card/90 backdrop-blur-md px-6 py-3 rounded-full border border-border/50 shadow-xl flex items-center gap-3 skeleton-pulse">
-                        <div className="h-2.5 w-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                        <div className="h-2.5 w-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                        <div className="h-2.5 w-2.5 bg-primary/30 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                        <span className="text-sm font-semibold tracking-wide ml-1 text-foreground whitespace-nowrap">{loadingText}</span>
-                    </div>
-                </div>
-            )}
-
             {/* Sidebar Skeleton - Only show if NOT auth */}
             {!isAuth && <SidebarSkeleton />}
-
             {/* Main Content Area */}
             <main
                 className={cn(
@@ -864,6 +911,26 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                     isAuth ? "bg-background flex items-center justify-center" : ""
                 )}
             >
+                {shouldShowIndicator && (
+                    <div className={loadingIndicatorPositionClass}>
+                        <div className="w-max bg-card/95 backdrop-blur-md px-6 py-2.5 rounded-full border border-border shadow-lg flex items-center gap-3">
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(148, 163, 184, 0.20)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(148, 163, 184, 0.28)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(100, 116, 139, 0.78)', ['--loader-active-border' as '--loader-active-border']: 'rgba(100, 116, 139, 0.84)', animationDelay: '0s' }}
+                            />
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(203, 213, 225, 0.26)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(203, 213, 225, 0.34)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(148, 163, 184, 0.82)', ['--loader-active-border' as '--loader-active-border']: 'rgba(148, 163, 184, 0.88)', animationDelay: '0.4s' }}
+                            />
+                            <div
+                                className="h-[5px] w-[10px] rounded-full border animate-loader-button"
+                                style={{ ['--loader-idle-bg' as '--loader-idle-bg']: 'rgba(226, 232, 240, 0.34)', ['--loader-idle-border' as '--loader-idle-border']: 'rgba(203, 213, 225, 0.42)', ['--loader-active-bg' as '--loader-active-bg']: 'rgba(148, 163, 184, 0.72)', ['--loader-active-border' as '--loader-active-border']: 'rgba(148, 163, 184, 0.8)', animationDelay: '0.8s' }}
+                            />
+                            <span className="text-[13px] font-bold tracking-tight ml-1 text-foreground whitespace-nowrap text-breathe">{loadingText}</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Content Container */}
                 <div className={fullPageContentClass}>
                     {renderTabSkeleton()}

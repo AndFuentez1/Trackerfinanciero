@@ -2,6 +2,12 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import {
+    DEFAULT_BASE_COLOR,
+    applyThemeToDocument,
+    clearStoredThemeBaseColor,
+} from '@/features/finance/utils/themeRuntime';
+import { writeStoredLastUpdated } from '@/features/finance/utils/lastUpdatedStorage';
 
 type SignInWithOtpResult = Awaited<ReturnType<typeof supabase.auth.signInWithOtp>>;
 type SignInWithPasswordResult = Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
@@ -71,6 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
+                if (event === 'SIGNED_OUT' || !session) {
+                    clearStoredThemeBaseColor();
+                    applyThemeToDocument(DEFAULT_BASE_COLOR);
+                }
+
                 if (!ignore) {
                     setSession(session);
                     setUser(session?.user ?? null);
@@ -111,13 +122,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const signOut = useCallback(async () => {
+        if (user?.id) {
+            writeStoredLastUpdated(new Date(), user.id);
+        }
         const { error } = await supabase.auth.signOut();
         localStorage.removeItem('sb_remember_me');
         localStorage.removeItem('lastActiveTime');
-        localStorage.removeItem('theme-base-color');
         localStorage.removeItem('keep_alive_enabled');
+        clearStoredThemeBaseColor();
+        applyThemeToDocument(DEFAULT_BASE_COLOR);
         return { error };
-    }, []);
+    }, [user?.id]);
 
     const value = useMemo(() => ({
         user,

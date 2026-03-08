@@ -243,7 +243,7 @@ export async function processGmailInvoices(req: Request, res: Response) {
         let errorCount = 0;
 
         // 2. Procesar cada factura
-        for (const email of emails as { messageId: string, xmlContent: string }[]) {
+        for (const email of emails as { messageId: string, xmlContent: string, isBankNotification?: boolean, bankNotification?: any }[]) {
             try {
                 // Verificar duplicados
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
@@ -255,8 +255,26 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     continue;
                 }
 
-                // 3. Parsear XML
-                const invoiceData = await processInvoiceXML(email.xmlContent);
+                // 3. Parsear XML o Procesar Notificación Bancaria
+                let invoiceData;
+
+                if (email.isBankNotification && email.bankNotification) {
+                    invoiceData = {
+                        tienda: email.bankNotification.bank,
+                        fecha: email.bankNotification.date || new Date().toISOString(),
+                        total: email.bankNotification.amount,
+                        productos: [{
+                            description: email.bankNotification.description,
+                            quantity: 1,
+                            price: email.bankNotification.amount,
+                            total: email.bankNotification.amount
+                        }],
+                        productNames: [email.bankNotification.description],
+                        paymentMethod: 'Transferencia'
+                    };
+                } else {
+                    invoiceData = await processInvoiceXML(email.xmlContent);
+                }
 
                 // 4. Clasificar localmente (Paso 1) - AHORA ASYNC por Reglas en DB
                 const localClassification = await classifyInvoice(invoiceData.productos, userId);
@@ -600,7 +618,7 @@ export async function importGmailBatch(req: Request, res: Response) {
         let skippedCount = 0;
         let errorCount = 0;
 
-        for (const email of emails as { messageId: string, xmlContent: string }[]) {
+        for (const email of emails as { messageId: string, xmlContent: string, isBankNotification?: boolean, bankNotification?: any }[]) {
             try {
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
                 if (isDuplicate) {
@@ -610,7 +628,25 @@ export async function importGmailBatch(req: Request, res: Response) {
                     continue;
                 }
 
-                const invoiceData = await processInvoiceXML(email.xmlContent);
+                let invoiceData;
+
+                if (email.isBankNotification && email.bankNotification) {
+                    invoiceData = {
+                        tienda: email.bankNotification.bank,
+                        fecha: email.bankNotification.date || new Date().toISOString(),
+                        total: email.bankNotification.amount,
+                        productos: [{
+                            description: email.bankNotification.description,
+                            quantity: 1,
+                            price: email.bankNotification.amount,
+                            total: email.bankNotification.amount
+                        }],
+                        productNames: [email.bankNotification.description],
+                        paymentMethod: 'Transferencia'
+                    };
+                } else {
+                    invoiceData = await processInvoiceXML(email.xmlContent);
+                }
                 // 4. Clasificar localmente (Paso 1) - AHORA ASYNC
                 const localClassification = await classifyInvoice(invoiceData.productos, userId);
                 let finalClassification = localClassification;

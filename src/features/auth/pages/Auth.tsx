@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useSEO } from '@/shared/hooks/useSEO';
-import { useEffect, useState, forwardRef } from 'react';
+import { useEffect, useLayoutEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { getBackendUrl } from '@/core/api/backend';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
@@ -11,8 +11,8 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { calculateProportionalTheme } from '@/features/finance/utils/themeCalculations';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
+import { DEFAULT_BASE_COLOR, applyThemeToDocument } from '@/features/finance/utils/themeRuntime';
 
 const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   useSEO({
@@ -42,6 +42,10 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [activeTab, setActiveTab] = useState<string>('magic-link');
   const [resendTimer, setResendTimer] = useState(60);
   const [isLoginMode, setIsLoginMode] = useState(true);
+
+  useLayoutEffect(() => {
+    applyThemeToDocument(DEFAULT_BASE_COLOR);
+  }, []);
 
   useEffect(() => {
     // Wake up backend ping

@@ -10,7 +10,7 @@
  * - Profile/Currency (convert)
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -27,16 +27,24 @@ import type {
 export function useFinanceMutations(userId: string | undefined) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const transactionQueriesKey = useMemo(
+        () => (userId ? queryKeys.finance.transactions(userId) : null),
+        [userId]
+    );
+    const allTransactionsKey = useMemo(
+        () => (userId ? ['finance', 'allTransactions', userId] as const : null),
+        [userId]
+    );
 
     const invalidateFinance = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
     }, [queryClient]);
 
     const invalidateTransactions = useCallback(() => {
-        if (!userId) { return; }
-        queryClient.invalidateQueries({ queryKey: queryKeys.finance.transactions(userId) });
-        queryClient.invalidateQueries({ queryKey: ['finance', 'allTransactions', userId] });
-    }, [queryClient, userId]);
+        if (!transactionQueriesKey || !allTransactionsKey) { return; }
+        queryClient.invalidateQueries({ queryKey: transactionQueriesKey });
+        queryClient.invalidateQueries({ queryKey: allTransactionsKey });
+    }, [queryClient, transactionQueriesKey, allTransactionsKey]);
 
     const invalidateCategories = useCallback(() => {
         if (!userId) { return; }
@@ -52,6 +60,42 @@ export function useFinanceMutations(userId: string | undefined) {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.budgets(userId) });
     }, [queryClient, userId]);
+
+    type TransactionListQueryData = {
+        data: Transaction[];
+        total: number;
+    };
+
+    type TransactionListSnapshot = Array<[
+        readonly unknown[],
+        TransactionListQueryData | undefined
+    ]>;
+
+    const captureTransactionListSnapshots = useCallback((): TransactionListSnapshot => {
+        if (!transactionQueriesKey) {
+            return [];
+        }
+        return queryClient.getQueriesData<TransactionListQueryData>({
+            queryKey: transactionQueriesKey,
+        });
+    }, [queryClient, transactionQueriesKey]);
+
+    const restoreTransactionListSnapshots = useCallback((snapshots: TransactionListSnapshot) => {
+        snapshots.forEach(([key, value]) => {
+            queryClient.setQueryData(key, value);
+        });
+    }, [queryClient]);
+
+    const updateTransactionListsOptimistically = useCallback(
+        (updater: (current: TransactionListQueryData) => TransactionListQueryData) => {
+            if (!transactionQueriesKey) { return; }
+            queryClient.setQueriesData<TransactionListQueryData>(
+                { queryKey: transactionQueriesKey },
+                (oldValue) => (oldValue ? updater(oldValue) : oldValue)
+            );
+        },
+        [queryClient, transactionQueriesKey]
+    );
 
     // 1. Transaction Mutations
     const addTransaction = useMutation({
@@ -91,11 +135,17 @@ export function useFinanceMutations(userId: string | undefined) {
             return data[0];
         },
         onMutate: async (newTxn) => {
-            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
-            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
+            if (transactionQueriesKey) {
+                await queryClient.cancelQueries({ queryKey: transactionQueriesKey });
+            }
+            if (allTransactionsKey) {
+                await queryClient.cancelQueries({ queryKey: allTransactionsKey });
+            }
 
-            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
-            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
+            const previousTransactionLists = captureTransactionListSnapshots();
+            const previousAllTransactions = allTransactionsKey
+                ? queryClient.getQueryData<Transaction[]>(allTransactionsKey)
+                : undefined;
 
             const optimisticTxn: Transaction = {
                 id: `temp-${Date.now()}`,
@@ -111,21 +161,27 @@ export function useFinanceMutations(userId: string | undefined) {
                 payment_method_name: 'Procesando...',
             } as Transaction;
 
-            if (previousTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old => [optimisticTxn, ...(old || [])]);
-            }
-            if (previousAllTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old => [optimisticTxn, ...(old || [])]);
+            updateTransactionListsOptimistically((current) => ({
+                ...current,
+                data: [optimisticTxn, ...current.data],
+                total: current.total + 1,
+            }));
+
+            if (allTransactionsKey && previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(
+                    allTransactionsKey,
+                    [optimisticTxn, ...previousAllTransactions]
+                );
             }
 
-            return { previousTransactions, previousAllTransactions };
+            return { previousTransactionLists, previousAllTransactions };
         },
         onError: (err, newTxn, context) => {
-            if (context?.previousTransactions) {
-                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            if (context?.previousTransactionLists) {
+                restoreTransactionListSnapshots(context.previousTransactionLists);
             }
-            if (context?.previousAllTransactions) {
-                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            if (allTransactionsKey && context?.previousAllTransactions) {
+                queryClient.setQueryData(allTransactionsKey, context.previousAllTransactions);
             }
             toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
         },
@@ -182,33 +238,58 @@ export function useFinanceMutations(userId: string | undefined) {
         },
         onMutate: async ({ id, updates }) => {
             // Cancel any outgoing refetches so they don't overwrite our optimistic update
-            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
-            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
+            if (transactionQueriesKey) {
+                await queryClient.cancelQueries({ queryKey: transactionQueriesKey });
+            }
+            if (allTransactionsKey) {
+                await queryClient.cancelQueries({ queryKey: allTransactionsKey });
+            }
 
             // Snapshot the previous value
-            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
-            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
+            const previousTransactionLists = captureTransactionListSnapshots();
+            const previousAllTransactions = allTransactionsKey
+                ? queryClient.getQueryData<Transaction[]>(allTransactionsKey)
+                : undefined;
 
             // Optimistically update to the new value
-            if (previousTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old =>
-                    (old || []).map(tx => tx.id === id ? { ...tx, ...updates, category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name, payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name } : tx)
-                );
-            }
-            if (previousAllTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old =>
-                    (old || []).map(tx => tx.id === id ? { ...tx, ...updates, category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name, payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name } : tx)
+            updateTransactionListsOptimistically((current) => ({
+                ...current,
+                data: current.data.map((tx) =>
+                    tx.id === id
+                        ? {
+                            ...tx,
+                            ...updates,
+                            category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name,
+                            payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name,
+                        }
+                        : tx
+                ),
+            }));
+
+            if (allTransactionsKey && previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(
+                    allTransactionsKey,
+                    previousAllTransactions.map((tx) =>
+                        tx.id === id
+                            ? {
+                                ...tx,
+                                ...updates,
+                                category_name: updates.category_id ? 'Actualizada(Oculta)' : tx.category_name,
+                                payment_method_name: updates.payment_method_id ? 'Actualizada(Oculta)' : tx.payment_method_name,
+                            }
+                            : tx
+                    )
                 );
             }
 
-            return { previousTransactions, previousAllTransactions };
+            return { previousTransactionLists, previousAllTransactions };
         },
         onError: (err, newTodo, context) => {
-            if (context?.previousTransactions) {
-                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            if (context?.previousTransactionLists) {
+                restoreTransactionListSnapshots(context.previousTransactionLists);
             }
-            if (context?.previousAllTransactions) {
-                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            if (allTransactionsKey && context?.previousAllTransactions) {
+                queryClient.setQueryData(allTransactionsKey, context.previousAllTransactions);
             }
             toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
         },
@@ -254,27 +335,42 @@ export function useFinanceMutations(userId: string | undefined) {
             }
         },
         onMutate: async (id) => {
-            await queryClient.cancelQueries({ queryKey: ['finance', 'transactions', userId] });
-            await queryClient.cancelQueries({ queryKey: ['finance', 'allTransactions', userId] });
-
-            const previousTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'transactions', userId]);
-            const previousAllTransactions = queryClient.getQueryData<Transaction[]>(['finance', 'allTransactions', userId]);
-
-            if (previousTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'transactions', userId], old => (old || []).filter(tx => tx.id !== id));
+            if (transactionQueriesKey) {
+                await queryClient.cancelQueries({ queryKey: transactionQueriesKey });
             }
-            if (previousAllTransactions) {
-                queryClient.setQueryData<Transaction[]>(['finance', 'allTransactions', userId], old => (old || []).filter(tx => tx.id !== id));
+            if (allTransactionsKey) {
+                await queryClient.cancelQueries({ queryKey: allTransactionsKey });
             }
 
-            return { previousTransactions, previousAllTransactions };
+            const previousTransactionLists = captureTransactionListSnapshots();
+            const previousAllTransactions = allTransactionsKey
+                ? queryClient.getQueryData<Transaction[]>(allTransactionsKey)
+                : undefined;
+
+            updateTransactionListsOptimistically((current) => {
+                const hadTargetTransaction = current.data.some((tx) => tx.id === id);
+                return {
+                    ...current,
+                    data: current.data.filter((tx) => tx.id !== id),
+                    total: hadTargetTransaction ? Math.max(0, current.total - 1) : current.total,
+                };
+            });
+
+            if (allTransactionsKey && previousAllTransactions) {
+                queryClient.setQueryData<Transaction[]>(
+                    allTransactionsKey,
+                    previousAllTransactions.filter((tx) => tx.id !== id)
+                );
+            }
+
+            return { previousTransactionLists, previousAllTransactions };
         },
         onError: (err, id, context) => {
-            if (context?.previousTransactions) {
-                queryClient.setQueryData(['finance', 'transactions', userId], context.previousTransactions);
+            if (context?.previousTransactionLists) {
+                restoreTransactionListSnapshots(context.previousTransactionLists);
             }
-            if (context?.previousAllTransactions) {
-                queryClient.setQueryData(['finance', 'allTransactions', userId], context.previousAllTransactions);
+            if (allTransactionsKey && context?.previousAllTransactions) {
+                queryClient.setQueryData(allTransactionsKey, context.previousAllTransactions);
             }
             toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
         },
@@ -360,13 +456,17 @@ export function useFinanceMutations(userId: string | undefined) {
 
             if (categoriesToInsert.length === 0) { return; }
 
-            const { error } = await supabase.from('categories')
-                .insert(categoriesToInsert);
+            const { data: insertedData, error } = await supabase.from('categories')
+                .insert(categoriesToInsert)
+                .select();
             if (error) { throw error; }
+
+            return insertedData;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             invalidateCategories();
             toast({ title: 'Éxito', description: 'Categorías iniciales creadas.' });
+            return data;
         },
         onError: (err) => {
             toast({ title: 'Error', description: 'No se pudieron inicializar las categorías: ' + (err as Error).message, variant: 'destructive' });

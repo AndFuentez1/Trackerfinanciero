@@ -278,6 +278,8 @@ export type Database = {
           decimal_places: number | null
           base_color: string | null
           keep_session_alive: boolean | null
+          country: string | null
+          data_treatment_accepted: boolean | null
         }
         Insert: {
           created_at?: string
@@ -296,6 +298,8 @@ export type Database = {
           decimal_places?: number | null
           base_color?: string | null
           keep_session_alive?: boolean | null
+          country?: string | null
+          data_treatment_accepted?: boolean | null
         }
         Update: {
           created_at?: string
@@ -314,6 +318,8 @@ export type Database = {
           decimal_places?: number | null
           base_color?: string | null
           keep_session_alive?: boolean | null
+          country?: string | null
+          data_treatment_accepted?: boolean | null
         }
         Relationships: []
       }

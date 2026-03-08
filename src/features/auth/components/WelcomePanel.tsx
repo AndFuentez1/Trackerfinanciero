@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Wallet, DollarSign, Tag, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -12,24 +12,80 @@ import {
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useNavigate } from 'react-router-dom';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/shared/ui/command';
 import { cn } from '@/core/utils';
+import { Globe, Check, ChevronsUpDown } from 'lucide-react';
+
+import { REGIONS } from '@/features/finance/constants/regionConstants';
 
 export function WelcomePanel() {
   const {
     currency,
+    country,
     updateProfile,
     categories,
     paymentMethods,
-    initializeDefaultCategories, // Need to add this to hook
+    initializeDefaultCategories,
+    currencyUsage,
+    updateConfig,
   } = useFinanceData();
 
   const navigate = useNavigate();
+  const safeCurrencyUsage = useMemo(() => currencyUsage ?? {}, [currencyUsage]);
 
-  const [selectedCurrency, setSelectedCurrency] = useState(currency || 'USD');
+  const [selectedCurrency, setSelectedCurrency] = useState(currency || '');
+  const [selectedRegion, setSelectedRegion] = useState(country || '');
   const [isConfiguringCurrency, setIsConfiguringCurrency] = useState(false);
+  const [isConfiguringRegion, setIsConfiguringRegion] = useState(false);
   const [isInitializingCategories, setIsInitializingCategories] = useState(false);
+  const [categoriesLocallyCompleted, setCategoriesLocallyCompleted] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedCurrency(currency || '');
+  }, [currency]);
+
+  useEffect(() => {
+    setSelectedRegion(country || '');
+  }, [country]);
 
   const steps = [
+    {
+      id: 'region',
+      icon: Globe,
+      title: 'Región y Datos',
+      description: 'Define tu zona para políticas de privacidad',
+      completed: !!country,
+      action: (
+        <div className="flex gap-2">
+          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Selecciona una región" />
+            </SelectTrigger>
+            <SelectContent className="z-[70]">
+              {REGIONS.map(reg => (
+                <SelectItem key={reg.id} value={reg.id}>
+                  {reg.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={async () => {
+              if (!selectedRegion) { return; }
+              setIsConfiguringRegion(true);
+              await updateProfile({ country: selectedRegion, data_treatment_accepted: true });
+              setIsConfiguringRegion(false);
+            }}
+            disabled={isConfiguringRegion || !selectedRegion}
+            aria-label="Confirmar región"
+          >
+            {isConfiguringRegion ? '...' : <CheckCircle2 className="h-4 w-4" />}
+          </Button>
+        </div>
+      ),
+    },
     {
       id: 'currency',
       icon: DollarSign,
@@ -38,20 +94,56 @@ export function WelcomePanel() {
       completed: !!currency,
       action: (
         <div className="flex gap-2">
-          <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Selecciona una moneda" />
-            </SelectTrigger>
-            <SelectContent className="z-[70]">
-              {CURRENCIES.map(curr => (
-                <SelectItem key={curr.code} value={curr.code}>
-                  {curr.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={currencyOpen} onOpenChange={setCurrencyOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={currencyOpen}
+                className="flex-1 justify-between bg-background"
+              >
+                {selectedCurrency
+                  ? CURRENCIES.find((c) => c.code === selectedCurrency)?.name
+                  : "Busca una moneda..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0 z-[75]">
+              <Command>
+                <CommandInput placeholder="Buscar moneda..." />
+                <CommandList>
+                  <CommandEmpty>No se encontraron monedas.</CommandEmpty>
+                  <CommandGroup>
+                    {CURRENCIES.map((curr) => (
+                      <CommandItem
+                        key={curr.code}
+                        value={`${curr.name} ${curr.code}`}
+                        onSelect={() => {
+                          setSelectedCurrency(curr.code);
+                          setCurrencyOpen(false);
+                          // Track selection in Supabase (optimistic)
+                          const newCount = (safeCurrencyUsage[curr.code] ?? 0) + 1;
+                          void updateConfig({ currency_usage: { ...safeCurrencyUsage, [curr.code]: newCount } });
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedCurrency === curr.code ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <span className="font-semibold mr-2">{curr.code}</span>
+                        {curr.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Button
             onClick={async () => {
+              if (!selectedCurrency) { return; }
               setIsConfiguringCurrency(true);
               const currConfig = CURRENCIES.find(c => c.code === selectedCurrency);
               await updateProfile({
@@ -60,7 +152,7 @@ export function WelcomePanel() {
               });
               setIsConfiguringCurrency(false);
             }}
-            disabled={isConfiguringCurrency}
+            disabled={isConfiguringCurrency || !selectedCurrency}
             aria-label="Confirmar moneda"
           >
             {isConfiguringCurrency ? '...' : <CheckCircle2 className="h-4 w-4" />}
@@ -73,7 +165,7 @@ export function WelcomePanel() {
       icon: Tag,
       title: 'Categorías',
       description: 'Organiza tus ingresos y gastos',
-      completed: categories.length >= 3,
+      completed: categoriesLocallyCompleted || categories.length >= 3,
       action: (
         <div className="flex flex-col gap-2">
           <Button
@@ -81,8 +173,12 @@ export function WelcomePanel() {
             className="w-full border-dashed border-border hover:border-primary/50"
             onClick={async () => {
               setIsInitializingCategories(true);
-              await initializeDefaultCategories?.();
-              setIsInitializingCategories(false);
+              try {
+                await initializeDefaultCategories?.();
+                setCategoriesLocallyCompleted(true);
+              } finally {
+                setIsInitializingCategories(false);
+              }
             }}
             disabled={isInitializingCategories}
           >
@@ -94,7 +190,7 @@ export function WelcomePanel() {
             )}
           </Button>
           <Button onClick={() => navigate('/settings?highlight=categories')} variant="secondary" className="w-full">
-            Ir a Configuración
+            Configurar manualmente
           </Button>
         </div>
       ),
@@ -168,7 +264,13 @@ export function WelcomePanel() {
             <div className="pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Button
                 className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-                onClick={() => updateProfile({ welcome_completed: true })}
+                onClick={async () => {
+                  const res = await updateProfile({ welcome_completed: true });
+                  if (res?.success) {
+                    // Force navigation just in case the context update is slow
+                    navigate('/dashboard', { replace: true });
+                  }
+                }}
               >
                 <span className="hidden sm:inline">¡Todo listo! Continuar</span>
                 <span className="sm:hidden">Continuar</span>

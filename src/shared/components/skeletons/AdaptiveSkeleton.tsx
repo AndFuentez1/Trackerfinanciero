@@ -11,35 +11,67 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
             {/* Shared Sidebar Skeleton (Desktop) */}
             <div className="hidden lg:flex flex-col w-64 border-r p-6 gap-8 bg-card/50">
                 <div className="flex items-center gap-3 px-2">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 animate-pulse" />
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 skeleton-pulse" />
                     <div className="space-y-2">
-                        <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                        <div className="h-3 w-16 bg-muted/60 animate-pulse rounded" />
+                        <div className="h-4 w-24 bg-muted skeleton-pulse rounded" />
+                        <div className="h-3 w-16 bg-muted/60 skeleton-pulse rounded" />
                     </div>
                 </div>
                 <div className="flex-1 space-y-3">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="h-12 w-full rounded-xl bg-muted/30 animate-pulse" />
+                        <div key={i} className="h-12 w-full rounded-xl bg-muted/30 skeleton-pulse" />
                     ))}
                 </div>
-                <div className="mt-auto h-8 w-full bg-muted/20 animate-pulse rounded-xl" />
+                <div className="mt-auto h-8 w-full bg-muted/20 skeleton-pulse rounded-xl" />
             </div>
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+                <style>
+                    {`
+                    @keyframes skeleton-shimmer {
+                        0% { background-color: rgba(148, 163, 184, 0.12); }
+                        50% { background-color: rgba(148, 163, 184, 0.18); }
+                        100% { background-color: rgba(148, 163, 184, 0.12); }
+                    }
+                    @keyframes text-breathe {
+                        0% { color: hsl(var(--foreground)); }
+                        50% { color: hsl(var(--muted-foreground)); }
+                        100% { color: hsl(var(--foreground)); }
+                    }
+                    .skeleton-pulse {
+                        animation: skeleton-shimmer 2s ease-in-out infinite;
+                    }
+                    .text-breathe {
+                        animation: text-breathe 2s ease-in-out infinite;
+                    }
+                    .animate-bounce-sync {
+                        animation: bounce-wave 1.5s ease-in-out infinite;
+                    }
+                    @keyframes bounce-wave {
+                        0%   { transform: translateY(0); }
+                        25%  { transform: translateY(-7px); }
+                        50%  { transform: translateY(0); }
+                        75%  { transform: translateY(7px); }
+                        100% { transform: translateY(0); }
+                    }
+                    `}
+                </style>
+
                 {/* Loading Message Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
                     <div className="bg-background/80 backdrop-blur-sm px-6 py-3 rounded-full border border-primary/20 shadow-lg flex items-center gap-3">
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                        <span className="text-sm font-medium text-foreground tracking-tight">Cargando...</span>
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-75" />
+                        <div className="h-2 w-2 rounded-full animate-bounce-sync bg-primary/70 [animation-delay:-0.75s]" />
+                        <div className="h-2 w-2 rounded-full animate-bounce-sync bg-primary/50 [animation-delay:-0.25s]" />
+                        <div className="h-2 w-2 rounded-full animate-bounce-sync bg-primary/80 [animation-delay:-1.25s]" />
+                        <span className="text-sm font-medium text-foreground tracking-tight text-breathe ml-1">Cargando...</span>
                     </div>
                 </div>
 
                 {/* Header Skeleton */}
                 <header className="h-16 border-b flex items-center px-6 justify-between bg-card/20 shrink-0">
-                    <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-                    <div className="h-9 w-9 rounded-full bg-primary/20 animate-pulse" />
+                    <div className="h-6 w-32 bg-muted skeleton-pulse rounded" />
+                    <div className="h-9 w-9 rounded-full bg-primary/20 skeleton-pulse" />
                 </header>
 
                 {/* Dynamic Content based on Type */}
@@ -49,35 +81,35 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
                     {(type === "dashboard" || type === "default") && (
                         <>
                             <div className="space-y-2">
-                                <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-                                <div className="h-4 w-96 bg-muted/60 animate-pulse rounded" />
+                                <div className="h-8 w-48 bg-muted skeleton-pulse rounded" />
+                                <div className="h-4 w-96 bg-muted/60 skeleton-pulse rounded" />
                             </div>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 {[1, 2, 3, 4].map((i) => (
                                     <Card key={i} className="p-6 space-y-4 border-primary/10 shadow-sm bg-card/40">
                                         <div className="flex justify-between items-start">
-                                            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                                            <div className="h-4 w-4 bg-primary/20 animate-pulse rounded" />
+                                            <div className="h-4 w-24 bg-muted skeleton-pulse rounded" />
+                                            <div className="h-4 w-4 bg-primary/20 skeleton-pulse rounded" />
                                         </div>
                                         <div className="space-y-1">
-                                            <div className="h-8 w-32 bg-primary/10 animate-pulse rounded" />
-                                            <div className="h-3 w-20 bg-muted/50 animate-pulse rounded" />
+                                            <div className="h-8 w-32 bg-primary/10 skeleton-pulse rounded" />
+                                            <div className="h-3 w-20 bg-muted/50 skeleton-pulse rounded" />
                                         </div>
                                     </Card>
                                 ))}
                             </div>
                             <div className="grid gap-4 md:grid-cols-7">
                                 <Card className="col-span-4 p-6 border-primary/10 shadow-sm min-h-[300px] bg-card/40">
-                                    <div className="h-[250px] w-full bg-gradient-to-t from-primary/5 to-transparent animate-pulse rounded-lg" />
+                                    <div className="h-[250px] w-full bg-gradient-to-t from-primary/5 to-transparent skeleton-pulse rounded-lg" />
                                 </Card>
                                 <Card className="col-span-3 p-6 border-primary/10 shadow-sm min-h-[300px] bg-card/40">
                                     <div className="space-y-4">
                                         {[1, 2, 3, 4].map((i) => (
                                             <div key={i} className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 animate-pulse" />
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 skeleton-pulse" />
                                                 <div className="flex-1 space-y-2">
-                                                    <div className="h-4 w-full bg-muted/40 animate-pulse rounded" />
-                                                    <div className="h-3 w-2/3 bg-muted/20 animate-pulse rounded" />
+                                                    <div className="h-4 w-full bg-muted/40 skeleton-pulse rounded" />
+                                                    <div className="h-3 w-2/3 bg-muted/20 skeleton-pulse rounded" />
                                                 </div>
                                             </div>
                                         ))}
@@ -91,27 +123,27 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
                     {type === "transactions" && (
                         <>
                             <div className="flex items-center justify-between">
-                                <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+                                <div className="h-8 w-48 bg-muted skeleton-pulse rounded" />
                                 <div className="flex gap-2">
-                                    <div className="h-9 w-24 bg-muted/30 animate-pulse rounded" />
-                                    <div className="h-9 w-24 bg-muted/30 animate-pulse rounded" />
+                                    <div className="h-9 w-24 bg-muted/30 skeleton-pulse rounded" />
+                                    <div className="h-9 w-24 bg-muted/30 skeleton-pulse rounded" />
                                 </div>
                             </div>
                             <Card className="border-primary/10 shadow-sm bg-card/40">
                                 <CardHeader>
-                                    <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+                                    <div className="h-6 w-32 bg-muted skeleton-pulse rounded" />
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
                                         <div key={i} className="flex items-center justify-between py-2 border-b border-muted/10 last:border-0">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-muted/30 animate-pulse" />
+                                                <div className="h-10 w-10 rounded-full bg-muted/30 skeleton-pulse" />
                                                 <div className="space-y-2">
-                                                    <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                                                    <div className="h-3 w-24 bg-muted/50 animate-pulse rounded" />
+                                                    <div className="h-4 w-32 bg-muted skeleton-pulse rounded" />
+                                                    <div className="h-3 w-24 bg-muted/50 skeleton-pulse rounded" />
                                                 </div>
                                             </div>
-                                            <div className="h-5 w-20 bg-primary/10 animate-pulse rounded" />
+                                            <div className="h-5 w-20 bg-primary/10 skeleton-pulse rounded" />
                                         </div>
                                     ))}
                                 </CardContent>
@@ -122,19 +154,19 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
                     {/* CONFIG SKELETON */}
                     {type === "config" && (
                         <div className="space-y-6 max-w-4xl mx-auto">
-                            <div className="h-8 w-48 bg-muted animate-pulse rounded mb-8" />
+                            <div className="h-8 w-48 bg-muted skeleton-pulse rounded mb-8" />
                             <div className="grid md:grid-cols-2 gap-6">
                                 {[1, 2].map(i => (
                                     <Card key={i} className="h-48 border-primary/10 bg-card/40">
                                         <CardHeader className="space-y-2">
-                                            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-                                            <div className="h-4 w-full bg-muted/50 animate-pulse rounded" />
+                                            <div className="h-6 w-32 bg-muted skeleton-pulse rounded" />
+                                            <div className="h-4 w-full bg-muted/50 skeleton-pulse rounded" />
                                         </CardHeader>
                                     </Card>
                                 ))}
                                 <Card className="md:col-span-2 h-64 border-primary/10 bg-card/40">
                                     <CardHeader>
-                                        <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+                                        <div className="h-6 w-48 bg-muted skeleton-pulse rounded" />
                                     </CardHeader>
                                 </Card>
                             </div>
@@ -145,26 +177,26 @@ export function AdaptiveSkeleton({ type = "default" }: AdaptiveSkeletonProps) {
                     {(type === "savings" || type === "loans" || type === "budgets") && (
                         <>
                             <div className="flex items-center justify-between">
-                                <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-                                <div className="h-10 w-32 bg-primary/20 animate-pulse rounded" />
+                                <div className="h-8 w-48 bg-muted skeleton-pulse rounded" />
+                                <div className="h-10 w-32 bg-primary/20 skeleton-pulse rounded" />
                             </div>
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {[1, 2, 3].map(i => (
                                     <Card key={i} className="h-48 border-primary/10 bg-card/40 flex flex-col justify-between p-6">
                                         <div className="space-y-3">
                                             <div className="flex justify-between">
-                                                <div className="h-5 w-24 bg-muted animate-pulse rounded" />
-                                                <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+                                                <div className="h-5 w-24 bg-muted skeleton-pulse rounded" />
+                                                <div className="h-8 w-8 rounded-full bg-primary/10 skeleton-pulse" />
                                             </div>
-                                            <div className="h-8 w-32 bg-primary/20 animate-pulse rounded" />
-                                            <div className="h-2 w-full bg-muted/30 animate-pulse rounded-full" />
+                                            <div className="h-8 w-32 bg-primary/20 skeleton-pulse rounded" />
+                                            <div className="h-2 w-full bg-muted/30 skeleton-pulse rounded-full" />
                                         </div>
-                                        <div className="h-9 w-full bg-muted/20 animate-pulse rounded" />
+                                        <div className="h-9 w-full bg-muted/20 skeleton-pulse rounded" />
                                     </Card>
                                 ))}
                                 {/* Add New Card Placeholder */}
                                 <div className="h-48 border-2 border-dashed border-muted/30 rounded-xl flex items-center justify-center">
-                                    <div className="h-12 w-12 rounded-full bg-muted/20 animate-pulse" />
+                                    <div className="h-12 w-12 rounded-full bg-muted/20 skeleton-pulse" />
                                 </div>
                             </div>
                         </>

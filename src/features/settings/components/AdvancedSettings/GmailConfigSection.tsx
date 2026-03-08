@@ -73,11 +73,11 @@ export function GmailConfigSection({
             </p>
             <div className="w-full space-y-3">
                 <div className="rounded-lg border border-border/60 bg-white/70 dark:bg-muted/30 px-3 py-2 shadow-sm">
-                    <div className="flex flex-col gap-1 text-[15px]">
-                        <p className="text-muted-foreground">Facturas procesadas manualmente <span className="font-semibold text-foreground">{manualProcessedCount.toLocaleString('es-CO')}</span></p>
-                        <p className="text-muted-foreground">Facturas procesadas automaticamente <span className="font-semibold text-foreground">{automaticProcessedCount.toLocaleString('es-CO')}</span></p>
-                        <p className="text-muted-foreground">Facturas procesadas por AI <span className="font-semibold text-foreground">{aiProcessedCount.toLocaleString('es-CO')}</span></p>
-                    </div>
+                    <ul className="flex flex-col text-[15px] list-disc list-inside m-0 p-0 text-muted-foreground">
+                        <li>Facturas procesadas manualmente <span className="font-semibold text-foreground">{manualProcessedCount.toLocaleString('es-CO')}</span></li>
+                        <li>Facturas procesadas por filtro <span className="font-semibold text-foreground">{automaticProcessedCount.toLocaleString('es-CO')}</span></li>
+                        <li>Facturas procesadas por AI <span className="font-semibold text-foreground">{aiProcessedCount.toLocaleString('es-CO')}</span></li>
+                    </ul>
                 </div>
                 <div className="flex justify-end">
                     {configStatus?.gmailConnected ? (

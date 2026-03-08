@@ -37,6 +37,7 @@ export interface PaymentMethod {
     closing_date?: number | null;
     payment_day?: number | null;
     color?: string | null;
+    initial_date?: string | null;
 }
 
 // Row type returned by Supabase for payment_methods table

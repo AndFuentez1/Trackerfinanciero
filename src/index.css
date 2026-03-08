@@ -85,13 +85,20 @@
 
   html {
     font-family: var(--font-base);
-    font-size: 16px;
-    line-height: var(--leading-normal);
+    font-size: 17px; /* Aumenta tamaño base en móvil para eliminar sensación de desorden */
+    line-height: var(--leading-relaxed);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
     scrollbar-gutter: stable; /* Evita salto al mostrar/ocultar scrollbar */
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px; /* Restaura tamaño original en PC */
+      line-height: var(--leading-normal);
+    }
   }
 
   body {

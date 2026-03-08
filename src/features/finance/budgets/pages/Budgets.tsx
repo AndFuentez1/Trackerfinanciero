@@ -24,6 +24,7 @@ import { IncomeCard } from "@/features/finance/budgets/components/IncomeCard";
 import { AddBudgetDialog } from '@/features/finance/budgets/components/AddBudgetDialog';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { FutureExpensesList } from "@/features/finance/budgets/components/FutureExpensesList";
+import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
 
 // import { Sidebar } from '@/components/Sidebar'; // Removed to fix double sidebar
 
@@ -58,6 +59,7 @@ export default function BudgetsPage() {
     const budgetInsights = insights.filter(i => i.id.startsWith('budget-'));
 
     const isLoading = authLoading || budgetsLoading;
+    usePageBootLoading(isLoading);
     const selectedMonth = budgetMonth === 'all' ? 'all' : (budgetMonth - 1).toString();
     const selectedYear = budgetYear === 'all' ? 'all' : budgetYear.toString();
 

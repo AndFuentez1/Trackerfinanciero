@@ -8,7 +8,7 @@ import { AddTransactionDialog } from '@/features/finance/transactions/components
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
 import { HistoryTab } from '@/features/finance/transactions/components/HistoryTab';
-import { Wallet, LogOut, BarChart3, ChevronDown, AlertCircle, Plus, FilterX, Receipt } from 'lucide-react';
+import { ChevronDown, Receipt, BarChart3, AlertCircle, FilterX } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { Input } from '@/shared/ui/input';
@@ -25,6 +25,7 @@ import {
 import { PendingInvoicesPanel } from '@/features/finance/transactions/components/PendingInvoicesPanel';
 import { ImportStatusBar } from '@/features/finance/transactions/components/ImportStatusBar';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
+import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
 import { useState, useMemo, useEffect } from 'react';
 import type { Transaction } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
@@ -45,6 +46,7 @@ export default function HistoryPage() {
         transactions,
         paymentMethods,
         loading: dataLoading,
+        bootLoading: dataBootLoading,
         deleteTransaction,
         addTransaction,
         addTransactionsBulk,
@@ -64,9 +66,10 @@ export default function HistoryPage() {
         addPaymentMethod,
         addTransfer,
         rangeTransactions,
-        allTransactions, // Use full dataset for filter options
+        allTransactions,
         totalTransactionsCount,
         pendingInvoices,
+        transactionsLoading,
     } = useFinanceData();
 
     const { currency } = useFinance();
@@ -85,7 +88,9 @@ export default function HistoryPage() {
     const [pendingTx, setPendingTx] = useState<Transaction | null>(null);
 
     // Computed values (not hooks, safe to compute here)
+    const isBootLoading = authLoading || dataBootLoading;
     const isLoading = authLoading || dataLoading;
+    usePageBootLoading(isBootLoading && !transactions.length);
 
     // Debounce search term
     useEffect(() => {
@@ -103,17 +108,20 @@ export default function HistoryPage() {
         debouncedSearchTerm.trim() || typeFilter || categoryFilter || paymentMethodFilter || statusFilter || dateFilter?.period !== 'all'
     ), [debouncedSearchTerm, typeFilter, categoryFilter, paymentMethodFilter, statusFilter, dateFilter]);
 
+    const transactionsForHistoryMeta = useMemo(() => {
+        return allTransactions.length > 0 ? allTransactions : transactions;
+    }, [allTransactions, transactions]);
+
     const yearOptions = useMemo(() => {
         const setYears = new Set<number>();
-        // Use allTransactions to ensure years don't disappear when filtering
-        (allTransactions || []).forEach(tx => {
+        transactionsForHistoryMeta.forEach(tx => {
             const y = new Date(tx.date).getFullYear();
             if (!isNaN(y)) { setYears.add(y); }
         });
         // Always include current year
         setYears.add(currentYear);
         return Array.from(setYears).sort((a, b) => b - a).map(String);
-    }, [allTransactions, currentYear]);
+    }, [transactionsForHistoryMeta, currentYear]);
 
     const monthOptions = useMemo(() => {
         const baseMonths = [
@@ -167,13 +175,12 @@ export default function HistoryPage() {
     };
 
     const reclassifyTxs = useMemo(() => {
-        const safeTransactions = allTransactions || [];
-        return safeTransactions.filter(tx => {
+        return transactionsForHistoryMeta.filter(tx => {
             const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
             if (isTransfer) { return false; }
             return (!tx.category_id || !tx.payment_method_id) && tx.type !== 'saving' && tx.type !== 'investment';
         });
-    }, [allTransactions]);
+    }, [transactionsForHistoryMeta]);
 
     const totalPendingCount = (pendingInvoices?.length || 0) + reclassifyTxs.length;
 
@@ -209,346 +216,332 @@ export default function HistoryPage() {
     // ============================================================================
     // CONDITIONAL RETURNS (after all hooks)
     // ============================================================================
-    // Loading state (High Fidelity Skeleton Reveal)
-    // Removed global blocking to allow layout to render immediately
-    /* if (isLoading) {
-        return <SkeletonLoader tab="transactions" fullPage={false} withLayoutWrapper />;
-    } */
-
-    const hasEmptyPaymentMethods = useMemo(() => {
-        const list = allTransactions || transactions;
-        return list.some(t => !t.payment_method_id && t.type !== 'saving' && t.type !== 'investment');
-    }, [allTransactions, transactions]);
-
-    if (!user) { return null; }
-    if (isLoading && !transactions.length) {
-        return <SkeletonLoader tab="transactions" withLayoutWrapper fullPage={false} />;
-    }
+    if (!user && !isBootLoading) { return null; }
 
     return (
         <div className="min-h-screen bg-background/30">
             <main className="container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8 animate-in fade-in duration-700">
-                <header className="border-b border-border pb-8">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
-                                <Receipt className="h-6 w-6" />
-                            </div>
-                            <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Historial</h1>
-                                <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona y consulta tus transacciones</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap md:mt-1">
-                            <AddTransactionDialog
-                                onAdd={addTransaction}
-                                onAddTransfer={addTransfer}
-                                categories={categories}
-                                paymentMethods={paymentMethods}
-                            />
-                            <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
-                        </div>
-                    </div>
-                </header>
-
-                {transactions.length > 0 ? (
+                {isBootLoading && !transactions.length ? (
+                    <SkeletonLoader tab="transactions" withLayoutWrapper fullPage={false} />
+                ) : (
                     <>
-                        {/* Barra de estado: Mostrar siempre que haya datos cargados */}
-                        <ImportStatusBar
-                            uiState={
-                                // La fuente de verdad UX es pendingImportData.length
-                                pendingImportData.length > 0
-                                    ? importProgress.status === 'loading'
-                                        ? 'applying'
-                                        : 'pending-approval'
-                                    : 'none'
-                            }
-                            recordCount={pendingImportData.length}
-                            onReviewAndApprove={async () => {
-                                await confirmImportData();
-                            }}
-                            onDiscard={async () => {
-                                await cancelImport();
-                            }}
-                        />
-
-                        {/* Reclassification Zone Card MOVED to PendingInvoicesPanel */}
-                        <PendingInvoicesPanel />
-
-                        {/* FILTROS UNIFICADOS */}
-                        <div className={cn(
-                            "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border flex flex-col gap-8",
-                            filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
-                        )}>
-                            <div className="flex items-start gap-4">
-                                <div className="flex shrink-0 items-center justify-center p-1">
-                                    <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
-                                        Filtros
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                {/* Primera fila: Búsqueda + Tipo/Categoría/Método */}
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
-                                        {/* Búsqueda */}
-                                        <div className="flex-1">
-                                            <Input
-                                                placeholder="Buscar descripción"
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="h-10 w-full bg-background/50 border-zinc-300 focus:border-primary transition-colors"
-                                            />
-                                        </div>
-
-
-
-                                        {/* Tipo, Categoría, Método */}
-                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                                            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
-                                                <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
-                                                    <SelectValue placeholder="Tipo" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all" className="justify-center pl-2">Todos</SelectItem>
-                                                    <SelectItem value="income" className="justify-center pl-2">Ingreso</SelectItem>
-                                                    <SelectItem value="expense" className="justify-center pl-2">Gasto</SelectItem>
-                                                    <SelectItem value="transfer_in" className="justify-center pl-2">Transferencia (entrada)</SelectItem>
-                                                    <SelectItem value="transfer_out" className="justify-center pl-2">Transferencia (salida)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-
-                                            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
-                                                <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
-                                                    <SelectValue placeholder="Categoría" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all" className="justify-center pl-2">Todas</SelectItem>
-                                                    {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => (
-                                                        <SelectItem key={c.id} value={c.id} className="justify-center pl-2">{c.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                        <header className="border-b border-border pb-8">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shadow-sm border border-border shrink-0">
+                                        <Receipt className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">Historial</h1>
+                                        <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Gestiona y consulta tus transacciones</p>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap md:mt-1">
+                                    <AddTransactionDialog
+                                        onAdd={addTransaction}
+                                        onAddTransfer={addTransfer}
+                                        categories={categories}
+                                        paymentMethods={paymentMethods}
+                                    />
+                                    <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+                                </div>
+                            </div>
+                        </header>
 
-                                {/* Segunda fila: Mes/Año + Rápidos + Limpiar */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-between">
-                                    {/* Grupo fecha: alerta + Mes + Año + botón limpiar (visible en mobile junto a los selects) */}
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        {totalPendingCount > 0 && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className={cn(
-                                                    "h-auto min-h-[52px] py-3 px-4 font-semibold transition-all w-full sm:flex-1 justify-center rounded-xl !whitespace-normal gap-2",
-                                                    isPanelVisible
-                                                        ? "text-slate-700 bg-white border-slate-300 shadow-sm hover:bg-slate-100 hover:text-slate-700"
-                                                        : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100 hover:text-orange-700"
+                        {transactions.length > 0 ? (
+                            <>
+                                {/* Barra de estado: Mostrar siempre que haya datos cargados */}
+                                <ImportStatusBar
+                                    uiState={
+                                        // La fuente de verdad UX es pendingImportData.length
+                                        pendingImportData.length > 0
+                                            ? importProgress.status === 'loading'
+                                                ? 'applying'
+                                                : 'pending-approval'
+                                            : 'none'
+                                    }
+                                    recordCount={pendingImportData.length}
+                                    onReviewAndApprove={async () => {
+                                        await confirmImportData();
+                                    }}
+                                    onDiscard={async () => {
+                                        await cancelImport();
+                                    }}
+                                />
+
+                                {/* Reclassification Zone Card MOVED to PendingInvoicesPanel */}
+                                <PendingInvoicesPanel />
+
+                                {/* FILTROS UNIFICADOS */}
+                                <div className={cn(
+                                    "bg-gray-50/50 dark:bg-muted/20 p-4 rounded-xl border border-border flex flex-col gap-8",
+                                    filtersApplied && "shadow-md shadow-primary/15 ring-1 ring-primary/10 bg-card"
+                                )}>
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex shrink-0 items-center justify-center p-1">
+                                            <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <p className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
+                                                Filtros
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        {/* Primera fila: Búsqueda + Tipo/Categoría/Método */}
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+                                                {/* Búsqueda */}
+                                                <div className="flex-1">
+                                                    <Input
+                                                        placeholder="Buscar descripción"
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        className="h-10 w-full bg-background/50 border-zinc-300 focus:border-primary transition-colors"
+                                                    />
+                                                </div>
+
+
+
+                                                {/* Tipo, Categoría, Método */}
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                                    <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value)}>
+                                                        <SelectTrigger className="w-full sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
+                                                            <SelectValue placeholder="Tipo" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all" className="justify-center pl-2">Todos</SelectItem>
+                                                            <SelectItem value="income" className="justify-center pl-2">Ingreso</SelectItem>
+                                                            <SelectItem value="expense" className="justify-center pl-2">Gasto</SelectItem>
+                                                            <SelectItem value="transfer_in" className="justify-center pl-2">Transferencia (entrada)</SelectItem>
+                                                            <SelectItem value="transfer_out" className="justify-center pl-2">Transferencia (salida)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value === 'all' ? undefined : value)}>
+                                                        <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-zinc-300 h-10 transition-colors justify-center text-center">
+                                                            <SelectValue placeholder="Categoría" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all" className="justify-center pl-2">Todas</SelectItem>
+                                                            {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                                                                <SelectItem key={c.id} value={c.id} className="justify-center pl-2">{c.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Segunda fila: Mes/Año + Rápidos + Limpiar */}
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-between">
+                                            {/* Grupo fecha: alerta + Mes + Año + botón limpiar (visible en mobile junto a los selects) */}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {totalPendingCount > 0 && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-10 px-4 font-semibold transition-all w-full sm:w-auto justify-center rounded-xl gap-2",
+                                                            isPanelVisible
+                                                                ? "text-slate-700 bg-white border-slate-300 shadow-sm hover:bg-slate-100 hover:text-slate-700"
+                                                                : "text-orange-700 bg-orange-50 border-orange-200 shadow-sm hover:bg-orange-100 hover:text-orange-700"
+                                                        )}
+                                                        onClick={() => {
+                                                            updateConfig({ hide_incomplete_alert: isPanelVisible });
+                                                        }}
+                                                    >
+                                                        <AlertCircle className="w-5 h-5 shrink-0" />
+                                                        <span className="text-sm font-semibold">
+                                                            {isPanelVisible ? 'Ocultar aprobación de facturas' : 'Aprobación de facturas'} ({totalPendingCount})
+                                                        </span>
+                                                    </Button>
                                                 )}
-                                                onClick={() => {
-                                                    updateConfig({ hide_incomplete_alert: isPanelVisible });
-                                                }}
-                                            >
-                                                <AlertCircle className="w-5 h-5 shrink-0" />
-                                                <span className="text-sm font-semibold">
-                                                    {isPanelVisible ? 'Ocultar Acción Requerida' : 'Mostrar Acción Requerida'} ({totalPendingCount})
-                                                </span>
-                                            </Button>
-                                        )}
-                                        {/* Mes */}
-                                        <Select value={monthFilter} onValueChange={(value) => {
-                                            setMonthFilter(value);
-                                            const year = yearFilter === 'all' ? new Date().getFullYear().toString() : yearFilter;
-                                            if (value === 'all' && yearFilter === 'all') {
-                                                updateFilter('all');
-                                            } else {
-                                                const monthNum = value === 'all' ? null : Number(value);
-                                                const yearNum = Number(year);
-                                                let from: string, to: string;
-                                                if (monthNum) {
-                                                    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
-                                                    from = toDateString(yearNum, monthNum, 1);
-                                                    to = toDateString(yearNum, monthNum, daysInMonth);
-                                                } else {
-                                                    from = toDateString(yearNum, 1, 1);
-                                                    to = toDateString(yearNum, 12, 31);
-                                                }
-                                                updateFilter('custom', from, to);
-                                            }
-                                        }}>
-                                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
-                                                <SelectValue placeholder="Mes" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {monthOptions.map(m => (
-                                                    <SelectItem key={m.value} value={m.value}>
-                                                        {m.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                {/* Mes */}
+                                                <Select value={monthFilter} onValueChange={(value) => {
+                                                    setMonthFilter(value);
+                                                    const year = yearFilter === 'all' ? new Date().getFullYear().toString() : yearFilter;
+                                                    if (value === 'all' && yearFilter === 'all') {
+                                                        updateFilter('all');
+                                                    } else {
+                                                        const monthNum = value === 'all' ? null : Number(value);
+                                                        const yearNum = Number(year);
+                                                        let from: string, to: string;
+                                                        if (monthNum) {
+                                                            const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+                                                            from = toDateString(yearNum, monthNum, 1);
+                                                            to = toDateString(yearNum, monthNum, daysInMonth);
+                                                        } else {
+                                                            from = toDateString(yearNum, 1, 1);
+                                                            to = toDateString(yearNum, 12, 31);
+                                                        }
+                                                        updateFilter('custom', from, to);
+                                                    }
+                                                }}>
+                                                    <SelectTrigger className="flex-1 sm:flex-none sm:w-[140px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
+                                                        <SelectValue placeholder="Mes" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {monthOptions.map(m => (
+                                                            <SelectItem key={m.value} value={m.value}>
+                                                                {m.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
 
-                                        {/* Año */}
-                                        <Select value={yearFilter} onValueChange={(value) => {
-                                            setYearFilter(value);
-                                            const month = monthFilter;
-                                            if (month === 'all' && value === 'all') {
-                                                updateFilter('all');
-                                            } else {
-                                                const monthNum = month === 'all' ? null : Number(month);
-                                                const yearNum = value === 'all' ? new Date().getFullYear() : Number(value);
-                                                let from: string, to: string;
-                                                if (monthNum) {
-                                                    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
-                                                    from = toDateString(yearNum, monthNum, 1);
-                                                    to = toDateString(yearNum, monthNum, daysInMonth);
-                                                } else {
-                                                    from = toDateString(yearNum, 1, 1);
-                                                    to = toDateString(yearNum, 12, 31);
-                                                }
-                                                updateFilter('custom', from, to);
-                                            }
-                                        }}>
-                                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[155px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
-                                                <SelectValue placeholder="Año" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos los años</SelectItem>
-                                                {yearOptions.map(y => (
-                                                    <SelectItem key={y} value={y}>{y}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                {/* Año */}
+                                                <Select value={yearFilter} onValueChange={(value) => {
+                                                    setYearFilter(value);
+                                                    const month = monthFilter;
+                                                    if (month === 'all' && value === 'all') {
+                                                        updateFilter('all');
+                                                    } else {
+                                                        const monthNum = month === 'all' ? null : Number(month);
+                                                        const yearNum = value === 'all' ? new Date().getFullYear() : Number(value);
+                                                        let from: string, to: string;
+                                                        if (monthNum) {
+                                                            const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+                                                            from = toDateString(yearNum, monthNum, 1);
+                                                            to = toDateString(yearNum, monthNum, daysInMonth);
+                                                        } else {
+                                                            from = toDateString(yearNum, 1, 1);
+                                                            to = toDateString(yearNum, 12, 31);
+                                                        }
+                                                        updateFilter('custom', from, to);
+                                                    }
+                                                }}>
+                                                    <SelectTrigger className="flex-1 sm:flex-none sm:w-[155px] bg-background/50 border-zinc-300 h-10 transition-colors [&>span]:flex-1 [&>span]:text-center">
+                                                        <SelectValue placeholder="Año" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todos los años</SelectItem>
+                                                        {yearOptions.map(y => (
+                                                            <SelectItem key={y} value={y}>{y}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
 
-                                        {/* Botón limpiar filtros: visible en mobile al lado de los selects de fecha */}
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-10 w-10 border border-border/60 sm:hidden shrink-0"
-                                            onClick={clearAllFilters}
-                                            title="Quitar filtros"
-                                        >
-                                            <FilterX className="h-4 w-4" />
-                                            <span className="sr-only">Quitar filtros</span>
-                                        </Button>
-                                    </div>
+                                                {/* Botón limpiar filtros: visible en mobile al lado de los selects de fecha */}
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-10 w-10 border border-border/60 sm:hidden shrink-0"
+                                                    onClick={clearAllFilters}
+                                                    title="Quitar filtros"
+                                                >
+                                                    <FilterX className="h-4 w-4" />
+                                                    <span className="sr-only">Quitar filtros</span>
+                                                </Button>
+                                            </div>
 
-                                    {/* Botones rápidos + botón limpiar (desktop) */}
-                                    <div className="flex gap-2 justify-end">
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => {
-                                                const now = new Date();
-                                                const weekStart = new Date(now);
-                                                weekStart.setDate(now.getDate() - 7);
-                                                updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
-                                            }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
-                                        >
-                                            Esta semana
-                                        </Button>
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => {
-                                                const now = new Date();
-                                                updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
-                                            }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
-                                        >
-                                            Este mes
-                                        </Button>
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => {
-                                                const now = new Date();
-                                                const yearStart = toDateString(now.getFullYear(), 1, 1);
-                                                const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
-                                                updateFilter('custom', yearStart, today);
-                                            }}
-                                            className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
-                                        >
-                                            Este año
-                                        </Button>
+                                            {/* Botones rápidos + botón limpiar (desktop) */}
+                                            <div className="flex gap-2 justify-end">
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const now = new Date();
+                                                        const weekStart = new Date(now);
+                                                        weekStart.setDate(now.getDate() - 7);
+                                                        updateFilter('custom', toDateString(weekStart.getFullYear(), weekStart.getMonth() + 1, weekStart.getDate()), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                                    }}
+                                                    className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
+                                                >
+                                                    Esta semana
+                                                </Button>
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const now = new Date();
+                                                        updateFilter('custom', toDateString(now.getFullYear(), now.getMonth() + 1, 1), toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+                                                    }}
+                                                    className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
+                                                >
+                                                    Este mes
+                                                </Button>
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const now = new Date();
+                                                        const yearStart = toDateString(now.getFullYear(), 1, 1);
+                                                        const today = toDateString(now.getFullYear(), now.getMonth() + 1, now.getDate());
+                                                        updateFilter('custom', yearStart, today);
+                                                    }}
+                                                    className="h-10 px-3 text-xs whitespace-nowrap hover:bg-primary/70 hover:text-white"
+                                                >
+                                                    Este año
+                                                </Button>
 
-                                        {/* Botón limpiar filtros: solo visible en desktop (sm+) */}
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-10 w-10 border border-border/60 hidden sm:flex shrink-0"
-                                            onClick={clearAllFilters}
-                                            title="Quitar filtros"
-                                        >
-                                            <FilterX className="h-4 w-4" />
-                                            <span className="sr-only">Quitar filtros</span>
-                                        </Button>
+                                                {/* Botón limpiar filtros: solo visible en desktop (sm+) */}
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-10 w-10 border border-border/60 hidden sm:flex shrink-0"
+                                                    onClick={clearAllFilters}
+                                                    title="Quitar filtros"
+                                                >
+                                                    <FilterX className="h-4 w-4" />
+                                                    <span className="sr-only">Quitar filtros</span>
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <HistoryTab
-                            transactions={transactions}
-                            allTransactions={rangeTransactions}
-                            totalCount={totalTransactionsCount}
-                            paymentMethods={paymentMethods}
-                            onDeleteTransaction={async (id) => { await deleteTransaction(id); }}
-                            onUpdateTransaction={async (id, updates) => { await updateTransaction(id, updates); }}
-                            onEditTransaction={handleEdit}
-                            categories={categories}
-                            highlightOrphaned={false}
-                            searchTerm={debouncedSearchTerm}
-                            typeFilter={typeFilter}
-                            categoryFilter={categoryFilter}
-                            statusFilter={statusFilter as "attention" | "ok" | undefined}
-                            paymentMethodFilter={paymentMethodFilter}
-                            setPaymentMethodFilter={setPaymentMethodFilter}
-                            setStatusFilter={setStatusFilter}
-                            loading={isLoading}
-                        />
+                                <HistoryTab
+                                    transactions={transactions}
+                                    allTransactions={rangeTransactions}
+                                    totalCount={totalTransactionsCount}
+                                    paymentMethods={paymentMethods}
+                                    onDeleteTransaction={async (id) => { await deleteTransaction(id); }}
+                                    onUpdateTransaction={async (id, updates) => { await updateTransaction(id, updates); }}
+                                    onEditTransaction={handleEdit}
+                                    categories={categories}
+                                    highlightOrphaned={false}
+                                    searchTerm={debouncedSearchTerm}
+                                    typeFilter={typeFilter}
+                                    categoryFilter={categoryFilter}
+                                    statusFilter={statusFilter as "attention" | "ok" | undefined}
+                                    paymentMethodFilter={paymentMethodFilter}
+                                    setPaymentMethodFilter={setPaymentMethodFilter}
+                                    setStatusFilter={setStatusFilter}
+                                    loading={isBootLoading}
+                                />
 
-                        {hasMore && (
-                            <div className="flex justify-center pt-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={loadMore}
-                                    disabled={dataLoading}
-                                    className="gap-2 px-8 py-6 rounded-xl border-2 border-primary hover:bg-primary/5 transition-all text-primary font-semibold min-w-[240px] shadow-sm"
-                                >
-                                    {dataLoading ? (
-                                        <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
-                                    ) : (
-                                        <ChevronDown className="h-5 w-5" />
-                                    )}
-                                    <span className="font-medium">Cargar más transacciones</span>
-                                </Button>
+                                {hasMore && (
+                                    <div className="flex justify-center pt-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={loadMore}
+                                            disabled={transactionsLoading}
+                                            className="gap-2 px-8 py-6 rounded-xl border-2 border-primary hover:bg-primary/5 transition-all text-primary font-semibold min-w-[240px] shadow-sm"
+                                        >
+                                            {transactionsLoading ? (
+                                                <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+                                            ) : (
+                                                <ChevronDown className="h-5 w-5" />
+                                            )}
+                                            <span className="font-medium">Cargar más transacciones</span>
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-gray-50/50 dark:bg-muted/20 rounded-2xl border border-border shadow-sm transition-all duration-300">
+                                <Receipt className="h-12 w-12 text-muted-foreground opacity-20" />
+                                <div className="space-y-1">
+                                    <h3 className="text-lg font-semibold">No hay transacciones</h3>
+                                    <p className="text-muted-foreground">No hemos encontrado movimientos para este periodo.</p>
+                                </div>
                             </div>
                         )}
                     </>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-gray-50/50 dark:bg-muted/20 rounded-2xl border border-border shadow-sm transition-all duration-300">
-                        <Receipt className="h-12 w-12 text-muted-foreground opacity-20" />
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-semibold">No hay transacciones</h3>
-                            <p className="text-muted-foreground">No hemos encontrado movimientos para este periodo.</p>
-                        </div>
-                    </div>
                 )}
-            </main >
-        </div >
+            </main>
+        </div>
     );
 }
-
-
-
-
-
-

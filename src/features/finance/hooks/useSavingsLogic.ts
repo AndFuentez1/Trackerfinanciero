@@ -8,6 +8,7 @@ import type { Database } from '@/integrations/supabase/types';
 import type { SavingsAccount, SavingsTransaction } from './useSavingsData';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
+import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
 
 
 
@@ -19,6 +20,14 @@ export function useSavingsDataLogic() {
   const [savingsTransactions, setSavingsTransactions] = useState<SavingsTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const accountsCacheKey = useMemo(
+    () => (user?.id ? buildFinanceCacheKey('savings-accounts', user.id) : null),
+    [user?.id]
+  );
+  const transactionsCacheKey = useMemo(
+    () => (user?.id ? buildFinanceCacheKey('savings-transactions', user.id) : null),
+    [user?.id]
+  );
 
   // Calculate previous balance for yield percentage calculation
   const calculatePreviousSavingsBalance = useCallback(async (paymentMethodId: string, beforeDate: string): Promise<number> => {
@@ -41,10 +50,38 @@ export function useSavingsDataLogic() {
     }, 0);
   }, [user]);
 
-  const fetchData = useCallback(async () => {
+  const hydrateFromCache = useCallback(() => {
+    let hasCache = false;
+
+    if (accountsCacheKey) {
+      const cachedAccounts = readFinanceCache<SavingsAccount[]>(accountsCacheKey, 12 * 60 * 60 * 1000);
+      if (cachedAccounts) {
+        setSavingsAccounts(cachedAccounts);
+        hasCache = true;
+      }
+    }
+
+    if (transactionsCacheKey) {
+      const cachedTransactions = readFinanceCache<SavingsTransaction[]>(transactionsCacheKey, 12 * 60 * 60 * 1000);
+      if (cachedTransactions) {
+        setSavingsTransactions(cachedTransactions);
+        hasCache = true;
+      }
+    }
+
+    if (hasCache) {
+      setLoading(false);
+    }
+
+    return hasCache;
+  }, [accountsCacheKey, transactionsCacheKey]);
+
+  const fetchData = useCallback(async (options?: { background?: boolean }) => {
     if (!user) { return; }
 
-    setLoading(true);
+    if (!options?.background) {
+      setLoading(true);
+    }
     setError(null);
 
     const { data: accountsData, error: accountsError } = await supabase
@@ -73,6 +110,9 @@ export function useSavingsDataLogic() {
     }));
 
     setSavingsAccounts(accounts);
+    if (accountsCacheKey) {
+      writeFinanceCache(accountsCacheKey, accounts);
+    }
 
     if (accounts.length > 0) {
       const accountIds = accounts.map(a => a.id);
@@ -102,25 +142,45 @@ export function useSavingsDataLogic() {
           balance_after_transaction: t.balance_after_transaction ? Number(t.balance_after_transaction) : null,
         }));
         setSavingsTransactions(mappedTransactions);
+        if (transactionsCacheKey) {
+          writeFinanceCache(transactionsCacheKey, mappedTransactions);
+        }
       }
     } else {
       setSavingsTransactions([]);
+      if (transactionsCacheKey) {
+        writeFinanceCache(transactionsCacheKey, []);
+      }
       setError(null);
     }
 
     setLoading(false);
-  }, [user, toast]);
+  }, [user, toast, accountsCacheKey, transactionsCacheKey]);
 
   useEffect(() => {
     if (!user) {
       setSavingsAccounts([]);
       setSavingsTransactions([]);
+      setError(null);
       setLoading(false);
       return;
     }
 
-    fetchData();
-  }, [user, fetchData]);
+    const hasCache = hydrateFromCache();
+    fetchData({ background: hasCache });
+  }, [user, hydrateFromCache, fetchData]);
+
+  useEffect(() => {
+    if (accountsCacheKey) {
+      writeFinanceCache(accountsCacheKey, savingsAccounts);
+    }
+  }, [accountsCacheKey, savingsAccounts]);
+
+  useEffect(() => {
+    if (transactionsCacheKey) {
+      writeFinanceCache(transactionsCacheKey, savingsTransactions);
+    }
+  }, [transactionsCacheKey, savingsTransactions]);
 
   const addSavingsAccount = async (account: { name: string; balance?: number; interest_rate?: number; estimated_yield?: number; savings_goal?: number }) => {
     if (!user) { return { error: 'No autenticado' }; }
@@ -512,6 +572,7 @@ export function useSavingsDataLogic() {
     savingsAccounts,
     savingsTransactions,
     loading,
+    bootLoading: loading && savingsAccounts.length === 0 && savingsTransactions.length === 0,
     error,
     addSavingsAccount,
     deleteSavingsAccount,
@@ -521,7 +582,7 @@ export function useSavingsDataLogic() {
     deleteSavingsTransaction,
     accountPerformance,
     totalSavingsBalance,
-    refetch: fetchData,
+    refetch: () => fetchData(),
   };
 }
 

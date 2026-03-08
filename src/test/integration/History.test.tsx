@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type * as ReactRouterDom from 'react-router-dom';
 
 // 1. Setup Hoisted Variables for mocks
 const { HistoryTabMock, mockFinanceData } = vi.hoisted(() => {
@@ -8,9 +10,16 @@ const { HistoryTabMock, mockFinanceData } = vi.hoisted(() => {
         HistoryTabMock: vi.fn(() => <div data-testid="history-tab">Tabla Historial</div>),
         mockFinanceData: {
             loading: false,
-            transactions: [],
-            allTransactions: [],
-            rangeTransactions: [],
+            bootLoading: false,
+            transactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
+            allTransactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
+            rangeTransactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
             categories: [],
             paymentMethods: [],
             refresh: vi.fn(),
@@ -32,8 +41,9 @@ const { HistoryTabMock, mockFinanceData } = vi.hoisted(() => {
             addCategory: vi.fn(),
             addPaymentMethod: vi.fn(),
             addTransfer: vi.fn(),
-            totalTransactionsCount: 0,
+            totalTransactionsCount: 1,
             pendingInvoices: [],
+            transactionsLoading: false,
         }
     };
 });
@@ -69,7 +79,7 @@ vi.mock('@/features/finance/transactions/components/ImportExcelDialog', () => ({
 }));
 
 vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual<any>('react-router-dom');
+    const actual = await vi.importActual<typeof ReactRouterDom>('react-router-dom');
     return {
         ...actual,
         useNavigate: vi.fn(() => vi.fn()),
@@ -100,6 +110,7 @@ describe('HistoryPage', () => {
         (useFinanceData as Mock).mockReturnValue({
             ...mockFinanceData,
             loading: true,
+            bootLoading: true,
             transactions: [],
         });
 
@@ -108,6 +119,20 @@ describe('HistoryPage', () => {
     });
 
     it('filters transactions by type', async () => {
+        (useFinanceData as Mock).mockReturnValue({
+            ...mockFinanceData,
+            transactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
+            allTransactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
+            rangeTransactions: [
+                { id: 't1', type: 'income', date: '2026-03-01', amount: 100, description: 'Ingreso' }
+            ],
+            totalTransactionsCount: 1,
+        });
+
         render(<HistoryPage />, { wrapper: MemoryRouter });
 
         const typeSelect = screen.getByText('Tipo');
@@ -124,7 +149,17 @@ describe('HistoryPage', () => {
     it('filters transactions by category', async () => {
         (useFinanceData as Mock).mockReturnValue({
             ...mockFinanceData,
+            transactions: [
+                { id: 't1', type: 'expense', date: '2026-03-01', amount: 50, description: 'Comida', category_id: 'c1' }
+            ],
+            allTransactions: [
+                { id: 't1', type: 'expense', date: '2026-03-01', amount: 50, description: 'Comida', category_id: 'c1' }
+            ],
+            rangeTransactions: [
+                { id: 't1', type: 'expense', date: '2026-03-01', amount: 50, description: 'Comida', category_id: 'c1' }
+            ],
             categories: [{ id: 'c1', name: 'Comida', type: 'expense' }],
+            totalTransactionsCount: 1,
         });
 
         render(<HistoryPage />, { wrapper: MemoryRouter });

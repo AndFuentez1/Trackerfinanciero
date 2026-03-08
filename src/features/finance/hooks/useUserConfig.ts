@@ -12,6 +12,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 export interface UserConfigRow {
   hide_incomplete_alert: boolean;
   keep_session_alive: boolean;
+  /** Map of currency code → usage count. Used to sort the currency selector by frequency. */
+  currency_usage: Record<string, number>;
+  /** Whether the "Add a password?" dialog has been shown to this user (cross-device). */
+  password_dialog_shown: boolean;
   email?: string;
   [key: string]: unknown; // Catch all other columns from DB
 }
@@ -20,11 +24,18 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
   const queryClient = useQueryClient();
   const queryKey = ['user_config', userId];
 
-  const { data: config = { hide_incomplete_alert: false, keep_session_alive: true }, isFetched: loaded } = useQuery({
+  const DEFAULT_CONFIG: UserConfigRow = {
+    hide_incomplete_alert: false,
+    keep_session_alive: true,
+    currency_usage: {},
+    password_dialog_shown: false,
+  };
+
+  const { data: config = DEFAULT_CONFIG, isFetched: loaded } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!userId) {
-        return { hide_incomplete_alert: false, keep_session_alive: true };
+        return DEFAULT_CONFIG;
       }
       const { data, error } = await supabase
         .from('user_configs')
@@ -38,9 +49,11 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
           ...data,
           hide_incomplete_alert: !!data.hide_incomplete_alert,
           keep_session_alive: data.keep_session_alive !== false,
-        };
+          currency_usage: (data.currency_usage as Record<string, number>) ?? {},
+          password_dialog_shown: data.password_dialog_shown === true,
+        } satisfies UserConfigRow;
       }
-      return { hide_incomplete_alert: false, keep_session_alive: true };
+      return DEFAULT_CONFIG;
     },
     enabled: !!userId,
     staleTime: Infinity,
@@ -78,18 +91,11 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
       const previousConfig = queryClient.getQueryData<UserConfigRow>(queryKey);
 
       // Optimistically update to the new value
-      if (previousConfig) {
-        queryClient.setQueryData<UserConfigRow>(queryKey, {
-          ...previousConfig,
-          ...updates,
-        });
-      } else {
-        queryClient.setQueryData<UserConfigRow>(queryKey, {
-          hide_incomplete_alert: false,
-          keep_session_alive: true,
-          ...updates,
-        });
-      }
+      const base = previousConfig ?? DEFAULT_CONFIG;
+      queryClient.setQueryData<UserConfigRow>(queryKey, {
+        ...base,
+        ...updates,
+      });
 
       return { previousConfig };
     },

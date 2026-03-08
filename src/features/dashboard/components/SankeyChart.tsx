@@ -369,8 +369,10 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
 
   if (!graph || nodes.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full w-full bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border min-h-[200px]">
-        <p className="text-muted-foreground text-sm">No hay suficientes datos de flujo para este período.</p>
+      <div ref={containerRef} className="w-full h-[400px] relative overflow-hidden flex items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center rounded-xl border border-border bg-gray-50/50 p-6 text-center dark:bg-muted/20 md:p-8">
+          <p className="max-w-md text-sm text-muted-foreground">No hay suficientes datos de flujo para este período.</p>
+        </div>
       </div>
     );
   }

@@ -837,8 +837,9 @@ export function AdvancedSettings({
     const normalizeProducts = (products?: GmailProduct[], meta?: GmailHistoryItem) => {
         if (!products || products.length === 0) {
             // Guarantee at least one fallback product so the UI can be approved
+            const safeSubj = meta?.subject && meta.subject.length > 3 ? meta.subject.substring(0, 30) : 'Factura';
             return [{
-                description: `Compra manual - ${meta?.subject || 'Factura'}`,
+                description: `Manual - ${safeSubj}`,
                 quantity: 1,
                 price: 0,
                 total: 0,

@@ -1,8 +1,6 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/shared/hooks/use-toast';
-
 // Import specialized hooks
 import { useFinanceQueries } from './useFinanceQueries';
 import { useFinanceUI } from './useFinanceUI';
@@ -63,7 +61,7 @@ export function useFinanceDataLogic() {
   // 2. Specialized Managers
   const ui = useFinanceUI();
   const profileMgmt = useProfileManagement(profile);
-  const theme = useTheme(profile?.base_color);
+  const theme = useTheme(profileMgmt.profileData?.base_color ?? profile?.base_color);
 
   // 3. Transactions & Derived Logic
   const tx = useTransactionData(
@@ -76,6 +74,12 @@ export function useFinanceDataLogic() {
     budgets,
     profile?.currency || 'COP'
   );
+
+
+
+  const bootLoading = useMemo(() => {
+    return ui.loading || profileLoading || pmLoading || catsLoading || (tx.transactionsLoading && tx.transactions.length === 0);
+  }, [ui.loading, profileLoading, pmLoading, catsLoading, tx.transactionsLoading, tx.transactions.length]);
 
   // 4. Mutations
   const mut = useFinanceMutations(user?.id);
@@ -124,15 +128,15 @@ export function useFinanceDataLogic() {
     if (user && !pmLoading && !catsLoading) {
       const t = setTimeout(() => {
         ui.setManualLoading(false);
-        if (!ui.lastUpdated) {
-          ui.setLastUpdated(new Date());
-        }
+
       }, 100);
       return () => clearTimeout(t);
     } else if (!user) {
       ui.setManualLoading(false);
     }
   }, [user, pmLoading, catsLoading, ui]);
+
+
 
   // Sync onboarding/profile flags into UI state
   useEffect(() => {
@@ -151,7 +155,7 @@ export function useFinanceDataLogic() {
     transactions: tx.transactions,
     allTransactions: tx.allTransactions,
     rangeTransactions: tx.rangeTransactions,
-    budgets: budgets,
+    budgets,
     budgetsWithSpending: tx.budgetsWithSpending,
     paymentMethods,
     categories,
@@ -165,7 +169,8 @@ export function useFinanceDataLogic() {
     totalTransactionsCount: tx.totalTransactionsCount,
 
     // --- UI STATE ---
-    loading: ui.loading || queriesLoading || tx.transactionsLoading,
+    loading: bootLoading,
+    bootLoading,
     categoriesLoading: catsLoading,
     paymentMethodsLoading: pmLoading,
     budgetsLoading,
@@ -193,7 +198,7 @@ export function useFinanceDataLogic() {
     cancelImport: ui.cancelImport,
     setImportProgress: ui.setImportProgress,
     confirmPendingImport,
-    confirmImportData: confirmPendingImport, // Alias
+    confirmImportData: confirmPendingImport,
 
     // --- ACTIONS ---
     addTransaction: mut.addTransaction,
@@ -222,22 +227,22 @@ export function useFinanceDataLogic() {
     refreshData,
 
     // --- PROFILE & THEME ---
+    profile,
     currency: profileMgmt.currency,
+    country: profileMgmt.profileData?.country ?? null,
     decimalPlaces: profileMgmt.decimalPlaces,
     baseColor: theme.baseColor,
     themeVars: theme.themeVars,
     themeOptions: theme.themeOptions,
     keepSessionAlive: config.keep_session_alive,
-    setKeepSessionAlive: (keepAlive: boolean) => {
-      return updateConfig({ keep_session_alive: keepAlive });
-    },
-    setAppThemePreference: (color: string) => {
-      theme.setBaseColor(color);
-      return profileMgmt.updateProfile({ base_color: color });
-    },
+    setKeepSessionAlive: (keepAlive: boolean) => updateConfig({ keep_session_alive: keepAlive }),
+    currencyUsage: config.currency_usage,
+    passwordDialogShown: config.password_dialog_shown,
+    updateConfig,
     updateProfile: profileMgmt.updateProfile,
     resetProfileData: profileMgmt.resetProfileData,
     resetOperationalData,
+    setAppThemePreference: (color: string) => profileMgmt.updateProfile({ base_color: color }),
     convertCurrency: profileMgmt.convertCurrency,
 
     // --- CALCULATED VALUES ---
@@ -256,6 +261,7 @@ export function useFinanceDataLogic() {
     tx.orphanedTransactions,
     tx.totalTransactionsCount,
     tx.transactionsLoading,
+    tx.allTransactionsLoading,
     tx.hasMore,
     budgets,
     paymentMethods,
@@ -267,6 +273,7 @@ export function useFinanceDataLogic() {
     budgetsLoading,
     profileLoading,
     pendingInvoicesLoading,
+    bootLoading,
     ui.loading,
     ui.manualLoading,
     ui.actionLoading,
@@ -288,13 +295,19 @@ export function useFinanceDataLogic() {
     ui.setPage,
     ui.setHighlightedCard,
     ui.setOnboardingDecision,
+    profile,
     profileMgmt.currency,
+    profileMgmt.profileData?.country,
     profileMgmt.decimalPlaces,
+    profileMgmt.updateProfile,
+    profileMgmt.resetProfileData,
+    profileMgmt.convertCurrency,
     theme.baseColor,
     theme.themeVars,
     theme.themeOptions,
-    theme.setBaseColor,
     config.keep_session_alive,
+    config.currency_usage,
+    config.password_dialog_shown,
     updateConfig,
     refreshData,
     confirmPendingImport,

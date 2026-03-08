@@ -1,18 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, PiggyBank, HandCoins, Settings, PieChart, Wallet } from "lucide-react";
 import { cn } from "@/core/utils";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
 import { getOnboardingGateState, isOnboardingAllowedRoute } from "@/core/utils";
-
-const items = [
-    { name: "Panel", icon: LayoutDashboard, href: "/dashboard" },
-    { name: "Historial", icon: Receipt, href: "/history" },
-    { name: "Flujo de Caja", icon: Wallet, href: "/cashflow" },
-    { name: "Presupuestos", icon: PieChart, href: "/budgets" },
-    { name: "Ahorros", icon: PiggyBank, href: "/savings" },
-    { name: "Préstamos", icon: HandCoins, href: "/loans" },
-    { name: "Configuración", icon: Settings, href: "/settings" },
-];
+import { APP_TAB_ITEMS, preloadTabRoute } from "./tabRoutes";
 
 export function MobileNav() {
     const location = useLocation();
@@ -23,8 +13,11 @@ export function MobileNav() {
         categories,
         onboardingDecision,
         welcomeCompleted,
-        loading: financeLoading,
+        categoriesLoading,
+        paymentMethodsLoading,
+        profileLoading,
     } = useFinanceData();
+    const onboardingGateLoading = categoriesLoading || paymentMethodsLoading || profileLoading;
 
     const { isOnboardingLocked } = getOnboardingGateState({
         currency,
@@ -32,12 +25,16 @@ export function MobileNav() {
         categories,
         onboardingDecision,
         welcomeCompleted,
-        isLoading: financeLoading,
+        isLoading: onboardingGateLoading,
     });
+
+    const handlePrefetch = (path: (typeof APP_TAB_ITEMS)[number]["href"]) => {
+        void preloadTabRoute(path);
+    };
 
     return (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border px-2 py-2 pb-safe z-50 flex justify-around items-center">
-            {items.map((item) => {
+            {APP_TAB_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 const isDisabled = isOnboardingLocked && !isOnboardingAllowedRoute(item.href);
                 return (
@@ -58,6 +55,9 @@ export function MobileNav() {
                                 "flex items-center justify-center p-3 rounded-xl transition-colors min-w-[48px]",
                                 isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted"
                             )}
+                            onMouseEnter={() => handlePrefetch(item.href)}
+                            onFocus={() => handlePrefetch(item.href)}
+                            onTouchStart={() => handlePrefetch(item.href)}
                         >
                             <item.icon className="w-6 h-6" />
                         </Link>

@@ -17,15 +17,16 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/ui/accordion';
-import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight } from 'lucide-react';
+import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight, FileText, DownloadCloud, ArrowRight, XCircle, ChevronDown, Inbox, FilterX } from 'lucide-react';
 import { cn } from '@/core/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
 import { Plus } from 'lucide-react';
+import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import type { CategoryItem, PaymentMethod } from '@/features/finance/types/financeTypes';
 
 // Types mapped from AdvancedSettings
@@ -168,11 +169,28 @@ export function GmailHistoryDialog({
     onCancel
 }: GmailHistoryDialogProps) {
     const { toast } = useToast();
-    const { addCategory } = useFinanceData();
+    const {
+        paymentMethods: allPaymentMethods,
+        categories: allCategories,
+        addCategory,
+        addPaymentMethod,
+        loading
+    } = useFinanceData();
     const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+    const [localPaymentMethods, setLocalPaymentMethods] = useState<PaymentMethod[]>([]);
+
+    const availablePaymentMethods = useMemo(() => {
+        const combined = [...paymentMethods];
+        localPaymentMethods.forEach(localPm => {
+            if (!combined.some(p => p.id === localPm.id)) {
+                combined.push(localPm);
+            }
+        });
+        return combined.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+    }, [paymentMethods, localPaymentMethods]);
 
     // Solo categorías de tipo gasto para facturas importadas
-    const expenseCategories = [...categories, ...localCategories]
+    const expenseCategories = [...allCategories, ...localCategories]
         .filter(c => c.type === 'expense')
         .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
@@ -363,11 +381,20 @@ export function GmailHistoryDialog({
                                                                                                         <SelectValue placeholder="Método" />
                                                                                                     </SelectTrigger>
                                                                                                     <SelectContent>
-                                                                                                        {paymentMethods.map(method => (
+                                                                                                        {availablePaymentMethods.map(method => (
                                                                                                             <SelectItem key={method.id} value={method.id}>
                                                                                                                 {method.name}
                                                                                                             </SelectItem>
                                                                                                         ))}
+                                                                                                        <div className="border-t border-border/50 px-2 py-2 mt-1">
+                                                                                                            <AddPaymentMethodDialog
+                                                                                                                onAdd={addPaymentMethod}
+                                                                                                                onSuccess={(pm) => {
+                                                                                                                    setLocalPaymentMethods(prev => [...prev, pm]);
+                                                                                                                    updateImportProduct(item.messageId, pIndex, { payment_method_id: pm.id });
+                                                                                                                }}
+                                                                                                            />
+                                                                                                        </div>
                                                                                                     </SelectContent>
                                                                                                 </Select>
                                                                                             </TableCell>
