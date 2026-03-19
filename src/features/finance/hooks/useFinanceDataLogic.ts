@@ -24,7 +24,8 @@ import type {
   PaymentMethod,
   Transaction,
   Budget,
-  Insight
+  Insight,
+  StagingTransaction
 } from '../types/financeTypes';
 
 export type {
@@ -34,7 +35,8 @@ export type {
   PaymentMethod,
   Transaction,
   Budget,
-  Insight
+  Insight,
+  StagingTransaction
 };
 
 export function useFinanceDataLogic() {
@@ -55,6 +57,7 @@ export function useFinanceDataLogic() {
     budgetsLoading,
     profileLoading,
     pendingInvoicesLoading,
+    stagingTransactions,
     queriesLoading
   } = useFinanceQueries(user?.id);
 
@@ -163,6 +166,7 @@ export function useFinanceDataLogic() {
     summary: tx.summary,
     filteredSummary: tx.filteredSummary,
     pendingInvoices,
+    stagingTransactions,
     expensesByCategory: tx.expensesByCategory,
     yieldStatistics: tx.yieldStatistics,
     orphanedTransactions: tx.orphanedTransactions,
@@ -214,6 +218,9 @@ export function useFinanceDataLogic() {
     deletePaymentMethod: mut.deletePaymentMethod,
     addBudget: mut.addBudget,
     deleteBudget: mut.deleteBudget,
+    addToStaging: mut.addToStaging,
+    confirmStagingImport: mut.confirmStagingImport,
+    clearStaging: mut.clearStaging,
     initializeDefaultCategories,
     recalculatePaymentMethodBalances: async () => { await refreshData(); return { success: true }; },
 
@@ -267,6 +274,7 @@ export function useFinanceDataLogic() {
     paymentMethods,
     categories,
     pendingInvoices,
+    stagingTransactions,
     queriesLoading,
     catsLoading,
     pmLoading,

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { GmailService } from '../services/gmail.service.ts';
+import type { BankNotification } from '../services/bankNotification.service.ts';
 import { processInvoiceXML } from '../services/xml.service.js';
 import { classifyInvoice } from '../services/classifier.service.js';
 import { classifyWithAI } from '../services/gemini.service.js';
@@ -8,7 +9,9 @@ import { loadTelegramConfig, loadGmailTokens } from '../services/userConfig.serv
 import { fetchMessageStatuses, markMessagesArchived, markMessagesDeleted, markMessagesRead, fetchRegisteredMessageIds, unmarkMessagesArchived } from '../services/gmailStatus.service.js';
 import {
     checkDuplicate,
+    checkDuplicateLoanMessage,
     insertPendingInvoice,
+    insertLoanDraft,
     deletePendingByMessageId,
     getPendingInvoices,
     getCategoryId,
@@ -82,6 +85,35 @@ const formatCategoryLabel = (category: string) => {
         return 'Otros';
     }
     return category.toString().trim();
+};
+
+const buildLoanDraftFromNotification = (notification: BankNotification, userId: string, messageId: string) => {
+    const direction = notification.direction;
+    const isOutgoing = direction === 'outgoing';
+    const isIncoming = direction === 'incoming';
+    const type: 'lent' | 'borrowed' = isOutgoing ? 'lent' : 'borrowed';
+    const accountHint = isOutgoing
+        ? (notification.destinationAccount || notification.sourceAccount)
+        : (notification.sourceAccount || notification.destinationAccount);
+    const label = isOutgoing
+        ? 'Transferencia salida'
+        : isIncoming
+            ? 'Transferencia entrada'
+            : 'Transferencia bancaria';
+    const name = accountHint ? `${label} ${accountHint}` : `${label} ${notification.bank}`;
+
+    return {
+        user_id: userId,
+        name,
+        total_amount: Number(notification.amount),
+        type,
+        interest_rate: 0,
+        due_date: null,
+        payment_method_id: null,
+        is_disbursed: true,
+        installments: null,
+        source_message_id: messageId,
+    };
 };
 
 const buildGroupDescription = (store: string, category: string, products: ClassifiedProduct[]) => {
@@ -243,8 +275,49 @@ export async function processGmailInvoices(req: Request, res: Response) {
         let errorCount = 0;
 
         // 2. Procesar cada factura
-        for (const email of emails as { messageId: string, xmlContent: string, isBankNotification?: boolean, bankNotification?: any }[]) {
+        for (const email of emails as { messageId: string, xmlContent: string, isBankNotification?: boolean, bankNotification?: BankNotification }[]) {
             try {
+                if (email.isBankNotification && email.bankNotification) {
+                    const isDuplicateLoan = await checkDuplicateLoanMessage(email.messageId, userId);
+                    if (isDuplicateLoan) {
+                        skippedCount++;
+                        approvedMessageIds.push(email.messageId);
+                        results.push({ messageId: email.messageId, status: 'duplicate' });
+                        continue;
+                    }
+
+                    const loanDraft = buildLoanDraftFromNotification(email.bankNotification, userId, email.messageId);
+                    let insertedLoan;
+                    try {
+                        insertedLoan = await insertLoanDraft(loanDraft);
+                    } catch (err: unknown) {
+                        const errCode = (err as { code?: string })?.code;
+                        if (errCode === '23505') {
+                            skippedCount++;
+                            approvedMessageIds.push(email.messageId);
+                            results.push({ messageId: email.messageId, status: 'duplicate' });
+                            continue;
+                        }
+                        throw err;
+                    }
+
+                    results.push({
+                        messageId: email.messageId,
+                        status: 'loan_queued',
+                        loanId: insertedLoan?.id,
+                        amount: email.bankNotification.amount,
+                        date: email.bankNotification.date || new Date().toISOString(),
+                        direction: email.bankNotification.direction,
+                        description: email.bankNotification.description,
+                        groups: [{
+                            amount: Number(email.bankNotification.amount),
+                            description: email.bankNotification.description,
+                            category: 'Transferencias'
+                        }]
+                    });
+                    continue;
+                }
+
                 // Verificar duplicados
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
                 if (isDuplicate) {
@@ -328,6 +401,12 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     invoiceData.total
                 );
 
+                // Ensure products have category_id for frontend
+                const enrichedProducts = await Promise.all(resolvedProducts.map(async (p) => {
+                    const catId = await getCategoryId(p.category || 'Otros', userId);
+                    return { ...p, category_id: catId };
+                }));
+
                 const resolvedPaymentMethodId = invoiceData.paymentMethod
                     ? await getPaymentMethodId(invoiceData.paymentMethod, userId)
                     : null;
@@ -390,7 +469,7 @@ export async function processGmailInvoices(req: Request, res: Response) {
                     messageId: email.messageId,
                     status: shouldNotify ? 'telegram' : 'pending',
                     groups: pendingRows,
-                    products: resolvedProducts
+                    products: enrichedProducts
                 });
 
             } catch (innerError: unknown) {
@@ -480,7 +559,7 @@ export async function searchGmailHistory(req: Request, res: Response) {
     const { userId } = req.query as { userId: string };
     try {
         const { markRead } = req.query as Record<string, unknown>;
-        const { days, maxResults } = req.query as Record<string, unknown>;
+        const { days, maxResults, type } = req.query as Record<string, unknown>;
 
         if (!userId) {
             return res.status(400).json({ error: 'userId requerido' });
@@ -511,7 +590,7 @@ export async function searchGmailHistory(req: Request, res: Response) {
 
         const gmailService = new GmailService();
         gmailService.setTokens(tokens, userId);
-        const results = await gmailService.searchHistoricalMessages(validDays, limit);
+        const results = await gmailService.searchHistoricalMessages(validDays, limit, type as string);
         const messageIds = results.map(r => r.id);
         const statusMap = await fetchMessageStatuses(userId, messageIds);
         await fetchRegisteredMessageIds(userId, messageIds);
@@ -618,13 +697,83 @@ export async function importGmailBatch(req: Request, res: Response) {
         let skippedCount = 0;
         let errorCount = 0;
 
-        for (const email of emails as { messageId: string, xmlContent: string, isBankNotification?: boolean, bankNotification?: any }[]) {
+        for (const email of emails as {
+            messageId: string,
+            xmlContent: string,
+            subject?: string,
+            from?: string,
+            date?: string | null,
+            isBankNotification?: boolean,
+            bankNotification?: BankNotification
+        }[]) {
             try {
+                const baseResult = {
+                    messageId: email.messageId,
+                    subject: email.subject,
+                    from: email.from,
+                    date: email.date || new Date().toISOString()
+                };
+
+                if (email.isBankNotification && email.bankNotification) {
+                    const isDuplicateLoan = await checkDuplicateLoanMessage(email.messageId, userId);
+                    if (isDuplicateLoan) {
+                        skippedCount++;
+                        approvedMessageIds.push(email.messageId);
+                        results.push({
+                            ...baseResult,
+                            status: 'duplicate',
+                            store: email.bankNotification.bank,
+                            total: email.bankNotification.amount
+                        });
+                        continue;
+                    }
+
+                    const loanDraft = buildLoanDraftFromNotification(email.bankNotification, userId, email.messageId);
+                    let insertedLoan;
+                    try {
+                        insertedLoan = await insertLoanDraft(loanDraft);
+                    } catch (err: unknown) {
+                        const errCode = (err as { code?: string })?.code;
+                        if (errCode === '23505') {
+                            skippedCount++;
+                            approvedMessageIds.push(email.messageId);
+                            results.push({
+                                ...baseResult,
+                                status: 'duplicate',
+                                store: email.bankNotification.bank,
+                                total: email.bankNotification.amount
+                            });
+                            continue;
+                        }
+                        throw err;
+                    }
+
+                    await gmailService.markAsProcessed(userId, email.messageId);
+                    processedCount++;
+                    approvedMessageIds.push(email.messageId);
+                    results.push({
+                        ...baseResult,
+                        status: 'loan_queued',
+                        loanId: insertedLoan?.id,
+                        store: email.bankNotification.bank,
+                        total: email.bankNotification.amount,
+                        amount: email.bankNotification.amount,
+                        date: email.bankNotification.date || new Date().toISOString(),
+                        direction: email.bankNotification.direction,
+                        description: email.bankNotification.description
+                    });
+                    continue;
+                }
+
                 const isDuplicate = await checkDuplicate(email.messageId, userId);
                 if (isDuplicate) {
                     skippedCount++;
                     approvedMessageIds.push(email.messageId);
-                    results.push({ messageId: email.messageId, status: 'duplicate' });
+                    results.push({
+                        ...baseResult,
+                        status: 'duplicate',
+                        store: email.isBankNotification ? email.bankNotification?.bank : 'Factura'
+                    });
                     continue;
                 }
 
@@ -685,6 +834,12 @@ export async function importGmailBatch(req: Request, res: Response) {
                     resolvedCategory,
                     invoiceData.total
                 );
+
+                // Ensure products have category_id for frontend
+                const enrichedProducts = await Promise.all(resolvedProducts.map(async (p) => {
+                    const catId = await getCategoryId(p.category || 'Otros', userId);
+                    return { ...p, category_id: catId };
+                }));
 
                 const resolvedPaymentMethodId = invoiceData.paymentMethod
                     ? await getPaymentMethodId(invoiceData.paymentMethod, userId)
@@ -762,7 +917,7 @@ export async function importGmailBatch(req: Request, res: Response) {
                 processedCount++;
                 approvedMessageIds.push(email.messageId);
                 results.push({
-                    messageId: email.messageId,
+                    ...baseResult,
                     status: finalStatus,
                     stepOfFailure,
                     store: invoiceData.tienda,

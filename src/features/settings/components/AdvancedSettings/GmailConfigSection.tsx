@@ -55,8 +55,8 @@ export function GmailConfigSection({
                                 Necesita revisión (Conexión expirada)
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                                <CheckCircle2 className="h-4 w-4" />
+                            <div className="flex items-center gap-1.5 text-primary bg-primary/10 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm transition-all duration-300">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
                                 Conectado
                             </div>
                         )}
@@ -109,7 +109,7 @@ export function GmailConfigSection({
                                 </span>
                             )}
                             {backendStatus === 'ready' && (
-                                <span className="flex items-center gap-1 text-[11px] text-green-600">
+                                <span className="flex items-center gap-1 text-[11px] text-primary font-medium">
                                     <CheckCircle2 className="h-3 w-3" />
                                     Servidor listo
                                 </span>

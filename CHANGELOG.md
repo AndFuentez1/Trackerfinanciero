@@ -4,6 +4,32 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-03-18]
+
+### Importación y Validaciones
+- **Excel Import (Deduplicación):** Se reemplazó la validación lenta por RPC con una validación local extremadamente rápida, evaluando la fecha, categoría, tipo y monto directamente contra la caché cargada.
+- **Gmail Import (Gemini):** Se agregó el envío del \`Subject\` (Asunto) del correo al prompt de Gemini para mejorar la precisión de la clasificación de compras.
+- **Cron Jobs y Sincronización:** Se preparó la arquitectura de endpoints de forma que Render pueda ejecutar rutinas automáticas de verificación cada 30 minutos independientemente de los clientes y se verificó que el front end no estrese y agote el endpoint innecesariamente on-load.
+
+## [2026-03-11]
+
+### Integración Gmail & Importación
+- **Validación de Facturas**: Restaurado el título con el **Asunto del Correo** en el modal de validación para mayor contexto.
+- **Soporte para Grupos**: Implementado el renderizado dinámico de "grupos" extraídos por Gemini cuando no se detectan productos individuales; ahora son editables y validables como cualquier transacción.
+- **Flujo de Transferencias**: Rediseñado el layout para transferencias bancarias (Bancolombia, Nequi) con una tarjeta simplificada (Fecha, Descripción, Pago, Valor) y acción directa "Mandar a Préstamos".
+- **Detección de Duplicados**: Reforzada la lógica en el RPC `find_import_duplicates` con validación estricta de descripción (case-insensitive) para evitar registros redundantes.
+
+### UI / UX Unification
+- **Sistema de Badges**: Unificado el estilo de indicadores de estado ("Conectado", "Configurado", "Verificado") en Advanced Settings (Gmail, Gemini, Telegram) usando tokens `primary` (`bg-primary/10`).
+- **Toasts Estándar**: Sincronizados todos los mensajes de éxito de importación y conexión con el estándar visual de la app (✅ Emoji + Título descriptivo).
+- **Advanced Settings**: Limpieza visual de labels y botones para garantizar una alineación perfecta con el theme base.
+
+### Correcciones Técnicas
+- **Tipado Estricto**: Corrección de firma en `handleApproveInvoice` para manejar transacciones de tipo `transfer` y redirigirlas correctamente al módulo de Préstamos en estado borrador.
+- **Parsing de Montos**: Mejora en `parseNumberValue` para limpiar símbolos de moneda y caracteres no numéricos de forma robusta.
+
+---
+
 ## [2026-03-07]
 
 ### Skeleton Loading — Animación Premium

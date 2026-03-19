@@ -63,26 +63,42 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
 
     const incomeMap = new Map<string, number>();
     const expenseMap = new Map<string, number>();
+    const categoryNameByKey = new Map<string, string>();
+
+    const normalizeCategoryLabel = (value?: string | null) => (value ?? '').trim();
+    const getCategoryKey = (tx: Transaction) => {
+      if (tx.category_id) {
+        return tx.category_id;
+      }
+      const label = normalizeCategoryLabel(tx.category) || 'Sin categoría';
+      const key = `name:${label.toLowerCase()}`;
+      categoryNameByKey.set(key, label);
+      return key;
+    };
 
     let totalIncome = 0;
     let totalExpense = 0;
 
     incomeTxs.forEach(tx => {
-      if (!tx.category_id) {
+      const key = getCategoryKey(tx);
+      const amount = Math.abs(tx.amount || 0);
+      if (!key || amount <= 0) {
         return;
       }
-      const val = incomeMap.get(tx.category_id) || 0;
-      incomeMap.set(tx.category_id, val + tx.amount);
-      totalIncome += tx.amount;
+      const val = incomeMap.get(key) || 0;
+      incomeMap.set(key, val + amount);
+      totalIncome += amount;
     });
 
     expenseTxs.forEach(tx => {
-      if (!tx.category_id) {
+      const key = getCategoryKey(tx);
+      const amount = Math.abs(tx.amount || 0);
+      if (!key || amount <= 0) {
         return;
       }
-      const val = expenseMap.get(tx.category_id) || 0;
-      expenseMap.set(tx.category_id, val + tx.amount);
-      totalExpense += tx.amount;
+      const val = expenseMap.get(key) || 0;
+      expenseMap.set(key, val + amount);
+      totalExpense += amount;
     });
 
     const categoryDict = new Map(categories.map(c => [c.id, c]));
@@ -111,7 +127,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
     };
 
     const processMap = (map: Map<string, number>, isIncome: boolean, page: number) => {
-      let items = Array.from(map.entries()).map(([id, amount]) => ({ id, amount }));
+      let items = Array.from(map.entries()).map(([id, amount]) => ({ id, amount })).filter(i => i.amount > 0);
       const specialId = isIncome ? 'in_previous' : 'out_remaining';
       const specialItem = items.find(i => i.id === specialId);
       items = items.filter(i => i.id !== specialId);
@@ -125,7 +141,9 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
         const top9 = slicedItems.slice(0, 9);
         const extras = slicedItems.slice(9);
         const othersAmount = extras.reduce((sum, item) => sum + item.amount, 0);
-        top9.push({ id: isIncome ? 'in_other' : 'out_other', amount: othersAmount });
+        if (othersAmount > 0) {
+          top9.push({ id: isIncome ? 'in_other' : 'out_other', amount: othersAmount });
+        }
         slicedItems = top9;
       }
 
@@ -157,10 +175,15 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
             if (cat) {
               name = cat.name;
               color = cat.color || color;
+            } else if (categoryNameByKey.has(id)) {
+              name = categoryNameByKey.get(id) || name;
+              if (name.toLowerCase() === 'por clasificar' || name.toLowerCase() === 'sin categoría') {
+                color = "hsl(var(--muted-foreground))";
+              }
             }
             label = `${name} (${getPercentage(amount, 'income')}%)`;
           }
-          const nodeId = `in_${id}`;
+          const nodeId = id.startsWith('in_') ? id : `in_${id}`;
           nodeArray.push({ id: nodeId, name: label || name, categoryType: 'income', color });
           linkArray.push({ source: nodeId, target: rootName, value: amount });
         });
@@ -181,10 +204,15 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
             if (cat) {
               name = cat.name;
               color = cat.color || color;
+            } else if (categoryNameByKey.has(id)) {
+              name = categoryNameByKey.get(id) || name;
+              if (name.toLowerCase() === 'por clasificar' || name.toLowerCase() === 'sin categoría') {
+                color = "hsl(var(--muted-foreground))";
+              }
             }
             label = `${name} (${getPercentage(amount, 'expense')}%)`;
           }
-          const nodeId = `out_${id}`;
+          const nodeId = id.startsWith('out_') ? id : `out_${id}`;
           nodeArray.push({ id: nodeId, name: label || name, categoryType: 'expense', color });
           linkArray.push({ source: rootName, target: nodeId, value: amount });
         });
@@ -196,7 +224,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
     const finalExpenses = processMap(expenseMap, false, 0);
 
     // Root Node
-    const rootName = "";
+    const rootName = "sankey_root";
     nodeArray.push({ id: rootName, name: rootName, categoryType: 'root', color: "hsl(var(--muted-foreground))" });
 
     finalIncomes.forEach(({ id, amount }) => {
@@ -216,6 +244,11 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
         if (cat) {
           name = cat.name;
           color = cat.color || color;
+        } else if (categoryNameByKey.has(id)) {
+          name = categoryNameByKey.get(id) || name;
+          if (name.toLowerCase() === 'por clasificar' || name.toLowerCase() === 'sin categoría') {
+            color = "hsl(var(--muted-foreground))";
+          }
         }
         label = `${name} (${getPercentage(amount, 'income')}%)`;
       }
@@ -242,6 +275,11 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
         if (cat) {
           name = cat.name;
           color = cat.color || color;
+        } else if (categoryNameByKey.has(id)) {
+          name = categoryNameByKey.get(id) || name;
+          if (name.toLowerCase() === 'por clasificar' || name.toLowerCase() === 'sin categoría') {
+            color = "hsl(var(--muted-foreground))";
+          }
         }
         label = `${name} (${getPercentage(amount, 'expense')}%)`;
       }
@@ -329,10 +367,12 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
       // d3-sankey starts nodes from the top of the extent. With few nodes,
       // content clusters at the top instead of centering. We shift all
       // node and link y positions so the content block is vertically centered.
-      const visibleNodes = result.nodes.filter(n => n.id !== '');
+      const visibleNodes = result.nodes;
       if (visibleNodes.length > 0) {
-        const minY = Math.min(...visibleNodes.map(n => n.y0 ?? 0));
-        const maxY = Math.max(...visibleNodes.map(n => n.y1 ?? 0));
+        // Filtrar nodos sin coordenadas válidas para evitar NaN
+        const layoutNodes = visibleNodes.filter(n => typeof n.y0 === 'number' && typeof n.y1 === 'number');
+        const minY = Math.min(...layoutNodes.map(n => n.y0));
+        const maxY = Math.max(...layoutNodes.map(n => n.y1));
         const contentHeight = maxY - minY;
         const availableTop = 10;
         const availableBottom = dimensions.height - 50;
@@ -456,6 +496,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
         <g>
           {graph.nodes.map((node, i) => {
             const isOtherNode = node.id === 'in_other' || node.id === 'out_other';
+            const isOtherExpenseNode = node.id === 'out_other';
             return (
               <g
                 key={`node-${i}`}
@@ -469,7 +510,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
                   }
                 }}
               >
-                {node.id !== '' && (
+                {node.id !== 'sankey_root' && (
                   <>
                     <rect
                       x={node.x0}
@@ -491,7 +532,16 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
                       fontSize={12}
                       fontWeight={500}
                       fill="hsl(var(--foreground))"
-                      style={{ pointerEvents: 'none' }}
+                      onClick={(e) => {
+                        if (!isOtherExpenseNode) { return; }
+                        e.stopPropagation();
+                        onDrillDownChange?.(drillDown ? { ...drillDown, page: drillDown.page + 1 } : { type: 'expense', page: 1 });
+                      }}
+                      style={{
+                        pointerEvents: isOtherExpenseNode ? 'auto' : 'none',
+                        cursor: isOtherExpenseNode ? 'pointer' : 'default',
+                        textDecoration: isOtherExpenseNode ? 'underline' : 'none'
+                      }}
                     >
                       {node.name}
                     </text>

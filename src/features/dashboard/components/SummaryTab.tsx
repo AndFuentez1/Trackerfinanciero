@@ -262,12 +262,63 @@ export function SummaryTab({
     const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const monthlyPaidExpenses = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-    // GASTOS PENDIENTES: Gastos del mes que aún no se pagan.
-    // We filter pending invoices for current month
-    const monthlyPendingExpenses = pendingInvoices.filter((inv) => {
-      const d = new Date(inv.arrival_date);
-      return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
-    }).reduce((sum: number, inv) => sum + Number(inv.amount || 0), 0);
+    // GASTOS PENDIENTES: Suma de todas las facturas pendientes y deudas por préstamos.
+    // Lógica: Si el préstamo tiene cuotas definidas, se suma el valor prorrateado. Si no, se suma el total restante.
+    const pendingLoansSum = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => {
+      const remaining = l.total_amount - l.paid_amount;
+      if (remaining <= 0) return sum;
+      
+      // Si tiene cuotas mensuales definidas (>1), sumamos la proporción mensual
+      if (l.installments && l.installments > 1) {
+        // La cuota mensual es el total dividido por las cuotas
+        const standardInstallment = l.total_amount / l.installments;
+        return sum + Math.min(standardInstallment, remaining);
+      }
+      
+      // Si es una deuda de un solo pago o sin cuotas definidas, sumamos el total restante
+      return sum + remaining;
+    }, 0);
+
+    const pendingNonLoanInvoices = pendingInvoices.filter(inv => {
+      const amount = Number(inv.amount || 0);
+      const cat = (inv.category as string || '').toLowerCase();
+      const desc = (inv.description as string || '').toLowerCase();
+      
+      // 1. Filtrado por palabras clave (robusto contra tildes y caracteres rotos)
+      const isLoanRelated = 
+        cat.includes('préstamo') || cat.includes('prestamo') || 
+        cat.includes('loan') || cat.includes('deuda') || 
+        cat.includes('cuota') || cat.includes('crédito') || cat.includes('credito') ||
+        cat.includes('banco') ||
+        desc.includes('cuota') || desc.includes('préstamo') || desc.includes('prestamo') ||
+        desc.includes('pago banco') || desc.includes('amortización') || desc.includes('amortizacion') ||
+        desc.includes('interés') || desc.includes('interes') || desc.includes('crédito') || desc.includes('credito') ||
+        desc.includes('pago de deuda');
+      
+      if (isLoanRelated) return false;
+
+      // 2. Filtrado por monto y sync_code: 
+      // Si tenemos un sync_code, la deduplicación es exacta.
+      const invSyncCode = (inv.sync_code as string) || (inv.message_id as string);
+      const isDuplicateOfLoan = loans.some(l => {
+        if (l.type !== 'borrowed') return false;
+        
+        // Prioridad: Coincidencia por sync_code (o message_id como fallback de Gmail)
+        if (invSyncCode && (l.sync_code === invSyncCode || l.id === invSyncCode)) return true;
+
+        // Heurística de monto:
+        if (Math.abs(l.total_amount - amount) < 1) return true;
+        if (l.installments && l.installments > 1) {
+          const installment = l.total_amount / l.installments;
+          if (Math.abs(installment - amount) < 1) return true;
+        }
+        return false;
+      });
+
+      return !isDuplicateOfLoan;
+    });
+
+    const monthlyPendingExpenses = pendingNonLoanInvoices.reduce((sum: number, inv) => sum + Number(inv.amount || 0), 0) + pendingLoansSum;
 
     const monthlyBalance = monthlyIncome - (monthlyPaidExpenses + monthlyPendingExpenses);
 

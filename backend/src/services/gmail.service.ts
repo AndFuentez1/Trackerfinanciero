@@ -23,6 +23,7 @@ export interface InvoiceSearchResult {
     isValidInvoice: boolean;
     fileNames: string[];
     date?: string; // Human readable date for frontend
+    amount?: string | number; // Extracted amount from snippet if possible
     status?: 'unread' | 'read' | 'archived' | 'deleted' | 'approved';
 }
 
@@ -488,12 +489,20 @@ export class GmailService {
         }
     }
 
-    public async searchHistoricalMessages(days?: number, maxLimit?: number): Promise<InvoiceSearchResult[]> {
+    public async searchHistoricalMessages(days?: number, maxLimit?: number, type: string = 'all'): Promise<InvoiceSearchResult[]> {
         const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
         const attachmentQuery = 'has:attachment (filename:xml OR filename:zip OR filename:rar)';
         const keywordQuery = '(factura OR "factura electronica" OR "factura electrónica" OR "factura de venta" OR invoice OR bill OR recibo)';
         const bankQuery = getBankNotificationQuery();
-        const baseQuery = `(${attachmentQuery} ${keywordQuery}) OR (${bankQuery})`;
+
+        let baseQuery = '';
+        if (type === 'invoice') {
+            baseQuery = `(${attachmentQuery} ${keywordQuery})`;
+        } else if (type === 'transfer') {
+            baseQuery = `(${bankQuery})`;
+        } else {
+            baseQuery = `(${attachmentQuery} ${keywordQuery}) OR (${bankQuery})`;
+        }
 
         let messages: any[] = [];
         const effectiveLimit = (!days && !maxLimit) ? 1 : maxLimit;
@@ -560,11 +569,16 @@ export class GmailService {
                             snippet: details.data.snippet || '',
                             internalDate: details.data.internalDate!,
                             date: dateHeader || undefined,
-                            subject,
                             from,
                             hasZip: false, // Placeholder for metadata search
                             isValidInvoice: true, // Assume valid for listing, confirm during import
-                            fileNames: []
+                            fileNames: [],
+                            amount: (() => {
+                                const snippet = details.data.snippet || '';
+                                // Common pattern for amounts in snippets: $ 123.456,00 or $123,456.00
+                                const match = snippet.match(/\$\s*([\d.,]+)/);
+                                return match ? match[0] : undefined;
+                            })()
                         };
                     } catch (err) {
                         console.error(`Error fetching metadata for message ${messageId}:`, err);
@@ -591,7 +605,16 @@ export class GmailService {
      */
     public async fetchSpecificMessages(messageIds: string[]) {
         const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-        const invoices: { messageId: string, filename: string, xmlContent: string, date: string | null | undefined, isBankNotification?: boolean, bankNotification?: BankNotification }[] = [];
+        const invoices: {
+            messageId: string,
+            filename: string,
+            xmlContent: string,
+            date: string | null | undefined,
+            subject?: string,
+            from?: string,
+            isBankNotification?: boolean,
+            bankNotification?: BankNotification
+        }[] = [];
 
         for (const messageId of messageIds) {
             try {
@@ -621,6 +644,8 @@ export class GmailService {
                             filename: 'Notificación Bancaria',
                             xmlContent: '',
                             date: details.data.internalDate,
+                            subject,
+                            from,
                             isBankNotification: true,
                             bankNotification: parsedNotif
                         });
@@ -647,7 +672,9 @@ export class GmailService {
                                 messageId,
                                 filename: p.filename,
                                 xmlContent,
-                                date: details.data.internalDate
+                                date: details.data.internalDate,
+                                subject,
+                                from
                             });
                         }
                     }

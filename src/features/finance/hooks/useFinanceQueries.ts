@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
 import type { Database } from '@/integrations/supabase/types';
-import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, Budget } from '../types/financeTypes';
+import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, Budget, StagingTransaction } from '../types/financeTypes';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '../utils/localCache';
 
 // Supabase row types
@@ -19,6 +19,7 @@ export interface UseFinanceQueriesReturn {
     budgets: Budget[];
     profile: ProfileSelect | null;
     pendingInvoices: Record<string, unknown>[];
+    stagingTransactions: StagingTransaction[];
 
     // Loading states
     pmLoading: boolean;
@@ -26,6 +27,7 @@ export interface UseFinanceQueriesReturn {
     budgetsLoading: boolean;
     profileLoading: boolean;
     pendingInvoicesLoading: boolean;
+    stagingTransactionsLoading: boolean;
     queriesLoading: boolean;
 }
 
@@ -178,6 +180,24 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
         staleTime: 5 * 60 * 1000,
     });
 
+    // 6. Staging Transactions Query
+    const { data: stagingTransactionsData, isLoading: stagingTransactionsLoading } = useQuery({
+        queryKey: queryKeys.finance.stagingTransactions(userId ?? ''),
+        queryFn: async () => {
+            if (!userId) { return []; }
+            const { data, error } = await supabase
+                .from('excel_import_staging')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+            if (error) { throw error; }
+            return data as StagingTransaction[];
+        },
+        enabled: !!userId,
+        staleTime: 0, // We want staging to be relatively fresh always
+    });
+    const stagingTransactions = stagingTransactionsData ?? [];
+
     useEffect(() => {
         if (paymentMethodsCacheKey && paymentMethodsFetched && paymentMethodsData !== undefined) {
             writeFinanceCache(paymentMethodsCacheKey, paymentMethodsData);
@@ -210,11 +230,13 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
         budgets,
         profile,
         pendingInvoices,
+        stagingTransactions,
         pmLoading,
         catsLoading,
         budgetsLoading,
         profileLoading,
         pendingInvoicesLoading,
+        stagingTransactionsLoading,
         queriesLoading,
     };
 }

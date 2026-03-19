@@ -5,8 +5,8 @@ import { useSEO } from '@/shared/hooks/useSEO';
 import { useFinanceData, CategoryItem } from '../../hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
-import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
+import { ReviewStagingDialog } from '@/features/finance/transactions/components/ReviewStagingDialog';
 import { HistoryTab } from '@/features/finance/transactions/components/HistoryTab';
 import { ChevronDown, Receipt, BarChart3, AlertCircle, FilterX } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -49,7 +49,7 @@ export default function HistoryPage() {
         bootLoading: dataBootLoading,
         deleteTransaction,
         addTransaction,
-        addTransactionsBulk,
+        addToStaging,
         categories,
         updateTransaction,
         dateFilter,
@@ -70,9 +70,16 @@ export default function HistoryPage() {
         totalTransactionsCount,
         pendingInvoices,
         transactionsLoading,
+        stagingTransactions,
+        clearStaging,
+        confirmStagingImport
     } = useFinanceData();
 
     const { currency } = useFinance();
+
+    // States for Staging Review Dialog
+    const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+    const [isConfirmingStaging, setIsConfirmingStaging] = useState(false);
 
     // useState hooks - MUST be before any conditionals
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -243,7 +250,7 @@ export default function HistoryPage() {
                                         categories={categories}
                                         paymentMethods={paymentMethods}
                                     />
-                                    <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+                                    <ImportExcelDialog paymentMethods={paymentMethods} onImport={addToStaging} />
                                 </div>
                             </div>
                         </header>
@@ -253,18 +260,19 @@ export default function HistoryPage() {
                                 {/* Barra de estado: Mostrar siempre que haya datos cargados */}
                                 <ImportStatusBar
                                     uiState={
-                                        // La fuente de verdad UX es pendingImportData.length
-                                        pendingImportData.length > 0
+                                        // La fuente de verdad UX es stagingTransactions.length
+                                        (stagingTransactions && stagingTransactions.length > 0)
                                             ? importProgress.status === 'loading'
                                                 ? 'applying'
                                                 : 'pending-approval'
                                             : 'none'
                                     }
-                                    recordCount={pendingImportData.length}
-                                    onReviewAndApprove={async () => {
-                                        await confirmImportData();
+                                    recordCount={stagingTransactions ? stagingTransactions.length : 0}
+                                    onReviewAndApprove={() => {
+                                        setIsReviewDialogOpen(true);
                                     }}
                                     onDiscard={async () => {
+                                        await clearStaging();
                                         await cancelImport();
                                     }}
                                 />
@@ -542,6 +550,29 @@ export default function HistoryPage() {
                     </>
                 )}
             </main>
+
+            <ReviewStagingDialog
+                open={isReviewDialogOpen}
+                onOpenChange={setIsReviewDialogOpen}
+                stagingTransactions={stagingTransactions || []}
+                onConfirm={async (selectedIds) => {
+                    if (selectedIds.length === 0) return;
+                    setIsConfirmingStaging(true);
+                    try {
+                        await confirmStagingImport(selectedIds);
+                        setIsReviewDialogOpen(false);
+                    } catch (error) {
+                        console.error('Error confirming import:', error);
+                    } finally {
+                        setIsConfirmingStaging(false);
+                    }
+                }}
+                onCancel={async () => {
+                    await clearStaging();
+                    setIsReviewDialogOpen(false);
+                }}
+                isLoading={isConfirmingStaging}
+            />
         </div>
     );
 }

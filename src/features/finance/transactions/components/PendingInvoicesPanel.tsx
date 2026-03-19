@@ -48,13 +48,25 @@ export function PendingInvoicesPanel() {
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<PanelItem | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<{ amount: number, description: string, category: string, type: TransactionType, payment_method_id: string | null }>({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
+    const [editForm, setEditForm] = useState<{ amount: number, description: string, category: string, type: TransactionType, payment_method_id: string | null, date: string }>({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null, date: '' });
+
+    const normalizeDateInput = (value: string) => {
+        if (!value) { return '1900-01-01'; }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { return value; }
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) { return '1900-01-01'; }
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
 
     const categories = financeCategories;
     const resolveCategoryName = (invoice: { category_id?: string | null, category?: string | null } | PendingInvoice) =>
         categories.find(cat => cat.id === invoice.category_id)?.name ||
         invoice.category ||
         '';
+    const normalizeCategoryLabel = (value?: string | null) => (value ?? '').trim().toLowerCase();
 
     const reclassifyTxs = useMemo(() => {
         const safeTransactions = allTransactions || [];
@@ -64,6 +76,25 @@ export function PendingInvoicesPanel() {
             return (!tx.category_id || !tx.payment_method_id) && tx.type !== 'saving' && tx.type !== 'investment';
         });
     }, [allTransactions]);
+
+    const isPorClasificarTransaction = (tx: { category?: string | null, category_id?: string | null }) => {
+        const label = normalizeCategoryLabel(resolveCategoryName(tx) || tx.category);
+        return label === 'por clasificar';
+    };
+
+    const isPorClasificarInvoice = (inv: PendingInvoice) => {
+        const label = normalizeCategoryLabel(resolveCategoryName(inv) || inv.category);
+        return label === 'por clasificar';
+    };
+
+    const porClasificarTxs = useMemo(() => {
+        const safeTransactions = allTransactions || [];
+        return safeTransactions.filter(tx => {
+            const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
+            if (isTransfer) { return false; }
+            return isPorClasificarTransaction(tx);
+        });
+    }, [allTransactions, categories]);
 
     useEffect(() => {
         if (!user) return;
@@ -130,13 +161,14 @@ export function PendingInvoicesPanel() {
             description: invoice.description,
             category: resolvedCategory,
             type: resolvedType,
-            payment_method_id: defaultPaymentMethod
+            payment_method_id: defaultPaymentMethod,
+            date: normalizeDateInput(invoice.date)
         });
     };
 
     const handleCancelEdit = () => {
         setEditingId(null);
-        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
+        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null, date: '' });
     };
 
     const handleApprove = async (invoice: PanelItem) => {
@@ -147,6 +179,7 @@ export function PendingInvoicesPanel() {
         const finalDescription = isEditing ? editForm.description : invoice.description;
         const finalCategory = (isEditing ? editForm.category : originalCategory).trim();
         const finalType = isEditing ? editForm.type : (invoice.type || 'expense');
+        const finalDate = (isEditing ? editForm.date : normalizeDateInput(invoice.date)) || '1900-01-01';
         const finalPaymentMethodId = isEditing
             ? editForm.payment_method_id
             : (invoice.payment_method_id ?? (paymentMethods.length > 0 ? paymentMethods[0].id : null));
@@ -164,7 +197,7 @@ export function PendingInvoicesPanel() {
             setInvoices(prev => prev.filter(item => item.id !== invoice.id));
         }
         setEditingId(null);
-        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null });
+        setEditForm({ amount: 0, description: '', category: '', type: 'expense', payment_method_id: null, date: '' });
 
         // Soft success toast for perception of speed
         toast({ title: 'Aprobada', description: 'Procesando transacción...', duration: 2000 });
@@ -195,7 +228,7 @@ export function PendingInvoicesPanel() {
 
                 const transactionData = {
                     amount: finalAmount, description: finalDescription, category: finalCategory.trim() || null,
-                    category_id: categoryId, type: finalType, payment_method_id: finalPaymentMethodId, date: invoice.date,
+                    category_id: categoryId, type: finalType, payment_method_id: finalPaymentMethodId, date: finalDate, sync_code: (invoice as any).message_id || invoice.id,
                 };
 
                 if (invoice.isTransaction) {
@@ -268,8 +301,8 @@ export function PendingInvoicesPanel() {
 
 
 
-    const missingDataInvoices: PanelItem[] = [
-        ...reclassifyTxs.map(tx => ({
+    const porClasificarItems: PanelItem[] = [
+        ...porClasificarTxs.map(tx => ({
             id: tx.id,
             isTransaction: true,
             amount: tx.amount ?? 0,
@@ -281,7 +314,7 @@ export function PendingInvoicesPanel() {
             date: tx.date || '',
             originalData: tx
         })),
-        ...invoices.filter(inv => !inv.payment_method_id || !resolveCategoryName(inv) || inv.amount <= 0).map(inv => ({
+        ...invoices.filter(inv => isPorClasificarInvoice(inv)).map(inv => ({
             id: inv.id,
             isTransaction: false,
             amount: inv.amount,
@@ -295,25 +328,62 @@ export function PendingInvoicesPanel() {
         }))
     ];
 
-    const readyToApproveInvoices: PanelItem[] = invoices.filter(inv => !!inv.payment_method_id && !!resolveCategoryName(inv) && inv.amount > 0).map(inv => ({
-        id: inv.id,
-        isTransaction: false,
-        amount: inv.amount,
-        description: inv.description,
-        category: inv.category,
-        category_id: inv.category_id,
-        payment_method_id: inv.payment_method_id,
-        type: inv.type as TransactionType,
-        date: inv.arrival_date,
-        originalData: inv
-    }));
+    const missingDataInvoices: PanelItem[] = [
+        ...reclassifyTxs.filter(tx => !isPorClasificarTransaction(tx)).map(tx => ({
+            id: tx.id,
+            isTransaction: true,
+            amount: tx.amount ?? 0,
+            description: tx.description || '',
+            category: tx.category,
+            category_id: tx.category_id,
+            payment_method_id: tx.payment_method_id,
+            type: tx.type,
+            date: tx.date || '',
+            originalData: tx
+        })),
+        ...invoices
+            .filter(inv => !isPorClasificarInvoice(inv))
+            .filter(inv => !inv.payment_method_id || !resolveCategoryName(inv) || inv.amount <= 0)
+            .map(inv => ({
+            id: inv.id,
+            isTransaction: false,
+            amount: inv.amount,
+            description: inv.description,
+            category: inv.category,
+            category_id: inv.category_id,
+            payment_method_id: inv.payment_method_id,
+            type: inv.type as TransactionType,
+            date: inv.arrival_date,
+            originalData: inv
+        }))
+    ];
+
+    const readyToApproveInvoices: PanelItem[] = invoices
+        .filter(inv => !isPorClasificarInvoice(inv))
+        .filter(inv => !!inv.payment_method_id && !!resolveCategoryName(inv) && inv.amount > 0)
+        .map(inv => ({
+            id: inv.id,
+            isTransaction: false,
+            amount: inv.amount,
+            description: inv.description,
+            category: inv.category,
+            category_id: inv.category_id,
+            payment_method_id: inv.payment_method_id,
+            type: inv.type as TransactionType,
+            date: inv.arrival_date,
+            originalData: inv
+        }));
+
+    const defaultTab = porClasificarItems.length > 0
+        ? 'por-clasificar'
+        : (missingDataInvoices.length > 0 ? 'missing' : 'ready');
 
     const renderInvoiceList = (invoiceList: PanelItem[], isReadyTab: boolean = false) => {
         if (invoiceList.length === 0) {
             return (
-                <div className="py-10 text-center bg-muted/20 rounded-[20px] border-2 border-dashed border-border/60 animate-in fade-in duration-700">
+                <div className="py-10 text-center bg-muted/20 rounded-[20px] border-2 border-solid border-border/40 animate-in fade-in duration-700">
                     <div className="mx-auto w-14 h-14 rounded-full bg-background flex items-center justify-center mb-4 ring-1 ring-border shadow-sm">
-                        <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+                        <CheckCircle2 className="w-7 h-7 text-primary" />
                     </div>
                     <p className="text-base font-extrabold text-foreground tracking-tight">¡Todo al día!</p>
                     <p className="text-[15px] font-medium text-muted-foreground mt-1">No hay transacciones pendientes de revisión.</p>
@@ -334,7 +404,7 @@ export function PendingInvoicesPanel() {
                         <div key={invoice.id} className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col gap-5 transition-all duration-300 hover:shadow-md hover:border-primary/30">
                             {isEditing ? (
                                 <div className="space-y-4 w-full">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                                         <div className="space-y-1">
                                             <label className="text-xs font-medium text-slate-500">Descripción</label>
                                             <input
@@ -350,6 +420,15 @@ export function PendingInvoicesPanel() {
                                                 className="w-full mt-1 p-2 h-10 text-sm border rounded-md focus:ring-2 focus:ring-orange-500"
                                                 value={editForm.amount}
                                                 onChange={val => setEditForm({ ...editForm, amount: val })}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-slate-500">Fecha</label>
+                                            <input
+                                                type="date"
+                                                className="w-full mt-1 p-2 h-10 text-sm border rounded-md focus:ring-2 focus:ring-orange-500"
+                                                value={editForm.date}
+                                                onChange={e => setEditForm({ ...editForm, date: e.target.value })}
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -508,7 +587,8 @@ export function PendingInvoicesPanel() {
     };
 
     const isPanelHidden = config.hide_incomplete_alert;
-    if (loading || isPanelHidden || invoices.length + reclassifyTxs.length === 0) {
+    const totalPanelItems = porClasificarItems.length + missingDataInvoices.length + readyToApproveInvoices.length;
+    if (loading || isPanelHidden || totalPanelItems === 0) {
         return null;
     }
 
@@ -522,7 +602,7 @@ export function PendingInvoicesPanel() {
                     <div className="flex flex-col min-w-0 flex-1">
                         <div className="flex items-center">
                             <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none">
-                                Revisiones pendientes ({invoices.length + reclassifyTxs.length})
+                                Revisiones pendientes ({totalPanelItems})
                             </h2>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium leading-tight">Acciones rápidas para mantener tu flujo financiero al día.</p>
@@ -543,32 +623,39 @@ export function PendingInvoicesPanel() {
 
 
                 <div className="p-5 sm:p-6">
-                    <Tabs defaultValue="missing" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border/50 h-auto mb-3">
+                    <Tabs defaultValue={defaultTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-xl border border-border/50 h-auto mb-3">
+                            <TabsTrigger value="por-clasificar" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
+                                <span className="flex items-center gap-2">
+                                    <span className="text-sm font-bold">Errores críticos</span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                                        {porClasificarItems.length}
+                                    </Badge>
+                                </span>
+                            </TabsTrigger>
                             <TabsTrigger value="missing" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
                                 <span className="flex items-center gap-2">
-                                    <span className="text-sm font-bold">Falta por clasificar</span>
-                                    {missingDataInvoices.length > 0 && (
-                                        <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
-                                            {missingDataInvoices.length}
-                                        </Badge>
-                                    )}
+                                    <span className="text-sm font-bold">Falta de información</span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                                        {missingDataInvoices.length}
+                                    </Badge>
                                 </span>
                             </TabsTrigger>
                             <TabsTrigger value="ready" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
                                 <span className="flex items-center gap-2">
-                                    <span className="text-sm font-bold">Lista por aprobar</span>
-                                    {readyToApproveInvoices.length > 0 && (
-                                        <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
-                                            {readyToApproveInvoices.length}
-                                        </Badge>
-                                    )}
+                                    <span className="text-sm font-bold">Necesita aprobación</span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                                        {readyToApproveInvoices.length}
+                                    </Badge>
                                 </span>
                             </TabsTrigger>
                         </TabsList>
 
 
 
+                        <TabsContent value="por-clasificar" className="space-y-3 mt-2">
+                            {renderInvoiceList(porClasificarItems)}
+                        </TabsContent>
                         <TabsContent value="missing" className="space-y-3 mt-2">
                             {renderInvoiceList(missingDataInvoices)}
                         </TabsContent>

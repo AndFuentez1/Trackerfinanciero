@@ -14,6 +14,7 @@ export const queryKeys = {
         futureExpenses: (userId: string) => [...queryKeys.finance.all, 'futureExpenses', userId] as const,
         profile: (userId: string) => [...queryKeys.finance.all, 'profile', userId] as const,
         pendingInvoices: (userId: string) => [...queryKeys.finance.all, 'pendingInvoices', userId] as const,
+        stagingTransactions: (userId: string) => [...queryKeys.finance.all, 'stagingTransactions', userId] as const,
     },
     savings: {
         all: ['savings'] as const,

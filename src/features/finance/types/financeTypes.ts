@@ -23,6 +23,25 @@ export interface Transaction {
     payment_method_id?: string | null;
     installments?: number;
     created_at?: string;
+    category_name?: string;
+    payment_method_name?: string;
+    sync_code?: string | null;
+}
+
+export interface StagingTransaction {
+    id: string;
+    user_id: string;
+    date: string;
+    description: string;
+    amount: number;
+    category?: string | null;
+    category_id?: string | null;
+    payment_method?: string | null;
+    payment_method_id?: string | null;
+    type?: TransactionType | null;
+    is_duplicate: boolean;
+    status: 'pending' | 'imported' | 'ignored';
+    created_at?: string;
 }
 
 export interface PaymentMethod {

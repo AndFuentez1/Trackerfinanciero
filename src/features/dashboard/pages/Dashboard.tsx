@@ -44,7 +44,7 @@ export default function Index() {
     confirmImportData,
     loading: financeLoading,
     bootLoading: financeBootLoading,
-    addTransactionsBulk,
+    addToStaging,
     currency,
     welcomeCompleted,
     baseColor,
@@ -161,7 +161,7 @@ export default function Index() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:mt-1 justify-center md:justify-end">
                   <AddTransactionDialog onAdd={addTransaction} onAddTransfer={addTransfer} />
-                  <ImportExcelDialog paymentMethods={paymentMethods} onImport={addTransactionsBulk} />
+                  <ImportExcelDialog paymentMethods={paymentMethods} onImport={addToStaging} />
                 </div>
               </div>
             </header>
@@ -185,13 +185,6 @@ export default function Index() {
               />
             </section>
           </>
-        )}
-        {financeLastUpdated && (
-          <div className="flex justify-center sm:justify-end pt-4">
-            <p className="text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded inline-block">
-              Última sesión finalizada: {format(financeLastUpdated, 'dd/MM/yyyy HH:mm:ss', { locale: es })}
-            </p>
-          </div>
         )}
       </main>
     </div>

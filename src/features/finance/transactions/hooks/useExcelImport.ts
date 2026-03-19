@@ -464,27 +464,20 @@ export function useExcelImport({
         return result;
       }
 
-      const sampleSize = Math.max(1, Math.ceil(transactionsToImport.length * 0.1));
-      const randomIndices = new Set<number>();
-
-      while (randomIndices.size < sampleSize) {
-        randomIndices.add(Math.floor(Math.random() * transactionsToImport.length));
-      }
-
       const validationResults = {
-        total: sampleSize,
+        total: transactionsToImport.length,
         passed: 0,
         failed: 0,
         issues: [] as string[]
       };
 
-      randomIndices.forEach(index => {
-        const tx = transactionsToImport[index];
+      transactionsToImport.forEach((tx, index) => {
         const issues = [];
 
         if (!tx.date || !/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) issues.push(`Fila ${index + 2}: Fecha inválida`);
         if (!tx.description || tx.description.length < 2) issues.push(`Fila ${index + 2}: Descripción muy corta`);
-        if (tx.amount <= 0 || tx.amount > 9999999999.99) issues.push(`Fila ${index + 2}: Monto fuera de rango`);
+        if (tx.amount <= 0 || isNaN(tx.amount)) issues.push(`Fila ${index + 2}: Monto inválido o en cero`);
+        else if (tx.amount > 9999999999.99) issues.push(`Fila ${index + 2}: Monto excesivo (límite superado)`);
         if (!tx.category) issues.push(`Fila ${index + 2}: Sin categoría`);
 
         if (issues.length > 0) {
@@ -498,10 +491,13 @@ export function useExcelImport({
       if (validationResults.failed > 0) {
         toast({
           title: `⚠️ Revisión de formato con problemas`,
-          description: `Se detectaron inconsistencias en algunas filas de muestra:\n${validationResults.issues.slice(0, 3).join('\n')}${validationResults.issues.length > 3 ? '\n...' : ''}`,
+          description: `Se detectaron inconsistencias en algunas filas:\n${validationResults.issues.slice(0, 3).join('\n')}${validationResults.issues.length > 3 ? '\n...' : ''}`,
           variant: "destructive",
           duration: 10000,
         });
+        setIsImporting(false);
+        localStorage.removeItem(importKey);
+        return { count: 0 };
       }
 
       const batchSize = 100;

@@ -113,6 +113,7 @@ export function AdvancedSettings({
     // Gmail History Search
     const [searchRange, setSearchRange] = useState('');
     const [searchLimit, setSearchLimit] = useState('');
+    const [searchType, setSearchType] = useState('all');
     const [searchResults, setSearchResults] = useState<GmailHistoryItem[]>([]);
     const [searchCache, setSearchCache] = useState<{ days: number; results: GmailHistoryItem[] } | null>(null);
     const [lastSearchDays, setLastSearchDays] = useState<number | null>(null);
@@ -227,9 +228,8 @@ export function AdvancedSettings({
                     });
 
                 toast({
-                    title: '¡Conexión Exitosa!',
-                    description: 'Tu cuenta de Gmail ha sido vinculada.',
-                    className: "bg-green-50 border-green-200 text-green-900"
+                    title: '✅ Conexión exitosa',
+                    description: 'Tu cuenta de Gmail ha sido vinculada correctamente.'
                 });
                 queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user?.id) });
             } else if (event.data?.type === 'GMAIL_ERROR') {
@@ -590,7 +590,9 @@ export function AdvancedSettings({
         }
     };
 
-    const normalizeStatus = (status?: string) => (status === 'approved' ? 'archived' : status);
+    const normalizeStatus = (status?: string) => (
+        status === 'approved' || status === 'loan_queued' ? 'archived' : status
+    );
     const getDateMs = (item: GmailHistoryItem) => {
         const internal = item.internalDate ? Number(item.internalDate) : NaN;
         if (!Number.isNaN(internal) && internal > 0) { return internal; }
@@ -655,6 +657,11 @@ export function AdvancedSettings({
         const target = importResults.find(result => result.messageId === messageId);
         if (!target) { return; }
 
+        if (target.status === 'loan_queued') {
+            toast({ title: 'Aviso', description: 'Esta transferencia ya fue enviada a préstamos.' });
+            return;
+        }
+
         if (target.status === 'pending') {
             toast({ title: 'Aviso', description: 'Esta factura ya ha sido importada a la zona de reclasificación.' });
             return;
@@ -706,37 +713,81 @@ export function AdvancedSettings({
                 return null;
             };
 
+            if (target.status === 'loan_queued') {
+                const totalAmount = target.products?.reduce((acc, p) => acc + parseNumberValue(p.total), 0) 
+                    || target.groups?.reduce((acc, g) => acc + parseNumberValue(g.amount), 0) 
+                    || 0;
+                
+                const description = target.subject || target.store || 'Préstamo desde Gmail';
+                const paymentMethodId = target.products?.[0]?.payment_method_id || target.groups?.[0]?.payment_method_id || null;
+
+                const { error: loanError } = await supabase
+                    .from('loans' as any)
+                    .insert({
+                        name: description.substring(0, 100),
+                        total_amount: totalAmount,
+                        paid_amount: 0,
+                        type: 'borrowed', // Default to borrowed, user can change in the Loans form
+                        user_id: user.id,
+                        payment_method_id: paymentMethodId,
+                        is_disbursed: false,
+                        updated_at: new Date().toISOString()
+                    });
+
+                if (loanError) throw loanError;
+
+                await archiveMessages([messageId]);
+                toast({ title: 'Enviado a Préstamos', description: 'El registro se ha creado como pendiente en la sección de Préstamos.' });
+                setImportResults(prev => prev.filter(result => result.messageId !== messageId));
+                refreshData();
+                setApprovingMessageId(null);
+                return;
+            }
+
             const transactionsToAdd = [];
 
-            for (const product of target.products!) {
+            // If no products but has groups (like in transfers), use groups as pseudo-products for transaction creation
+            const itemsToProcess = (target.products && target.products.length > 0) 
+                ? target.products 
+                : (target.groups || []).map(g => ({
+                    description: g.description,
+                    total: g.amount,
+                    category: g.category,
+                    payment_method_id: g.payment_method_id,
+                    type: 'transfer'
+                }));
+
+            for (const product of itemsToProcess) {
                 const amount = Number(product.total);
                 if (!amount || Number.isNaN(amount) || amount <= 0) {
-                    toast({ title: 'Aviso', description: 'Uno o más productos tienen costo cero y deben ser corregidos antes de importar.', variant: 'destructive' });
+                    toast({ title: 'Aviso', description: 'Uno o más items tienen costo cero y deben ser corregidos antes de importar.', variant: 'destructive' });
                     setApprovingMessageId(null);
                     return;
                 }
 
                 if (!product.payment_method_id) {
-                    toast({ title: 'Error', description: 'Selecciona un método de pago para todos los productos', variant: 'destructive' });
+                    toast({ title: 'Error', description: 'Selecciona un método de pago para todos los items', variant: 'destructive' });
                     setApprovingMessageId(null);
                     return;
                 }
 
                 const categoryName = product.category?.trim() || '';
-                const categoryId = product.category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
+                const categoryId = (product as any).category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
 
-                if (!categoryName && !categoryId) {
+                if (!categoryName && !categoryId && (product as any).type !== 'transfer') {
                     toast({ title: 'Error', description: 'Selecciona o ingresa una categoría para todos los productos', variant: 'destructive' });
                     setApprovingMessageId(null);
                     return;
                 }
 
+                const transactionType = (product as any).type || (target.status === 'loan_queued' ? 'loan' : 'expense');
+
                 transactionsToAdd.push({
                     amount,
                     description: product.description,
-                    category: categoryName || null,
+                    category: categoryName || (transactionType === 'transfer' ? 'Transferencia' : null),
                     category_id: categoryId,
-                    type: 'expense' as const,
+                    type: transactionType as any,
                     payment_method_id: product.payment_method_id,
                     date: target.date || new Date().toISOString()
                 });
@@ -787,7 +838,7 @@ export function AdvancedSettings({
     const parseNumberValue = (value?: string | number | null) => {
         if (value === null || value === undefined) { return 0; }
         if (typeof value === 'number') { return Number.isFinite(value) ? value : 0; }
-        const raw = value.toString().trim();
+        const raw = value.toString().trim().replace(/[^0-9,.]/g, ''); // Remove non-numeric except , and .
         if (!raw) { return 0; }
         let normalized = raw;
         const hasComma = raw.includes(',');
@@ -799,7 +850,13 @@ export function AdvancedSettings({
                 normalized = raw.replace(/,/g, '');
             }
         } else if (hasComma && !hasDot) {
-            normalized = raw.replace(/,/g, '.');
+            // Check if it's thousands separator or decimal
+            const parts = raw.split(',');
+            if (parts.length === 2 && parts[1].length <= 2) {
+                normalized = raw.replace(/,/g, '.');
+            } else {
+                normalized = raw.replace(/,/g, '');
+            }
         }
 
         const parsed = Number.parseFloat(normalized);
@@ -826,37 +883,48 @@ export function AdvancedSettings({
         return category || 'Otros';
     };
 
-    const buildFallbackGroup = (messageId: string, meta?: GmailHistoryItem, index: number = 0): GmailApprovalGroup => ({
+    const buildFallbackGroup = (messageId: string, meta?: GmailHistoryItem, index: number = 0, defaultAmount: number = 0, defaultTitle?: string): GmailApprovalGroup => ({
         id: `manual-${messageId}-${index}`,
-        description: meta?.subject || meta?.snippet || 'Factura Gmail',
+        description: defaultTitle || meta?.subject || meta?.snippet || 'Factura Gmail',
         category: 'Otros',
-        amount: 0,
+        amount: defaultAmount,
         arrival_date: resolveDateIso(meta?.date, meta?.internalDate),
         payment_method_id: paymentMethods[0]?.id ?? null,
     });
-    const normalizeProducts = (products?: GmailProduct[], meta?: GmailHistoryItem) => {
+    const normalizeProducts = (products?: GmailProduct[], metaOrTitle?: GmailHistoryItem | string, amount: number = 0) => {
         if (!products || products.length === 0) {
             // Guarantee at least one fallback product so the UI can be approved
-            const safeSubj = meta?.subject && meta.subject.length > 3 ? meta.subject.substring(0, 30) : 'Factura';
+            const title = typeof metaOrTitle === 'string' ? metaOrTitle : metaOrTitle?.subject;
+            const safeSubj = title && title.length > 3 ? title.substring(0, 30) : 'Factura';
             return [{
                 description: `Manual - ${safeSubj}`,
                 quantity: 1,
-                price: 0,
-                total: 0,
+                price: amount,
+                total: amount,
                 category: 'Otros',
                 payment_method_id: paymentMethods.length > 0 ? paymentMethods[0].id : null,
             }];
         }
-        return products.map((product, index) => ({
-            ...product,
-            description: product.description || `Producto ${index + 1}`,
-            quantity: parseNumberValue(product.quantity),
-            price: parseNumberValue(product.price),
-            total: parseNumberValue(product.total),
-            totalExclTax: Number.isFinite(parseNumberValue(product.totalExclTax)) ? parseNumberValue(product.totalExclTax) : undefined,
-            taxAmount: Number.isFinite(parseNumberValue(product.taxAmount)) ? parseNumberValue(product.taxAmount) : undefined,
-            payment_method_id: paymentMethods.length > 0 ? paymentMethods[0].id : null,
-        }));
+        return products.map((product, index) => {
+            let catId = product.category_id;
+            if (!catId && product.category) {
+                const match = categories.find(c =>
+                    c.name.toLowerCase().trim() === product.category?.toLowerCase().trim()
+                );
+                catId = match?.id || null;
+            }
+            return {
+                ...product,
+                description: product.description || `Producto ${index + 1}`,
+                quantity: parseNumberValue(product.quantity),
+                price: parseNumberValue(product.price),
+                total: parseNumberValue(product.total),
+                category_id: catId,
+                totalExclTax: Number.isFinite(parseNumberValue(product.totalExclTax)) ? parseNumberValue(product.totalExclTax) : undefined,
+                taxAmount: Number.isFinite(parseNumberValue(product.taxAmount)) ? parseNumberValue(product.taxAmount) : undefined,
+                payment_method_id: paymentMethods.length > 0 ? paymentMethods[0].id : null,
+            };
+        });
     };
     const normalizeImportResults = (
         results: GmailImportResult[],
@@ -866,17 +934,23 @@ export function AdvancedSettings({
         const normalized = results.map(result => {
             const meta = lookupHistoryItem(result.messageId);
             const hasGroups = Boolean(result.groups && result.groups.length > 0);
-            const products = normalizeProducts(result.products, meta);
-            const groups = hasGroups
-                ? result.groups!.map((group, index) => ({
-                    ...group,
-                    id: group.id || `manual-${result.messageId}-${index}`,
-                    description: group.description || meta?.subject || meta?.snippet || 'Factura Gmail',
-                    category: resolveCategoryLabel(group.category, group.category_id),
-                    amount: Number.isFinite(Number(group.amount)) ? Number(group.amount) : 0,
-                    arrival_date: resolveDateIso(group.arrival_date, meta?.date, meta?.internalDate),
-                }))
-                : (result.status === 'telegram' ? [] : [buildFallbackGroup(result.messageId, meta)]);
+            const isLoanQueued = result.status === 'loan_queued';
+            const totalVal = result.total || 0;
+            const fallbackTitle = result.subject || result.store;
+
+            const products = isLoanQueued ? [] : normalizeProducts(result.products, meta || (fallbackTitle as any), totalVal);
+            const groups = isLoanQueued
+                ? []
+                : hasGroups
+                    ? result.groups!.map((group, index) => ({
+                        ...group,
+                        id: group.id || `manual-${result.messageId}-${index}`,
+                        description: group.description || result.subject || meta?.subject || meta?.snippet || 'Factura Gmail',
+                        category: resolveCategoryLabel(group.category, group.category_id),
+                        amount: Number.isFinite(Number(group.amount)) ? Number(group.amount) : 0,
+                        arrival_date: resolveDateIso(group.arrival_date, meta?.date, meta?.internalDate),
+                    }))
+                    : (result.status === 'telegram' ? [] : [buildFallbackGroup(result.messageId, meta, 0, totalVal, fallbackTitle)]);
 
             return {
                 ...result,
@@ -932,10 +1006,11 @@ export function AdvancedSettings({
 
         const daysParam = searchRange ? `&days=${searchRange}` : '';
         const limitParam = searchLimit ? `&maxResults=${searchLimit}` : '';
+        const typeParam = searchType !== 'all' ? `&type=${searchType}` : '';
 
         setSearching(true);
         try {
-            const res = await fetch(`${BACKEND_URL}/api/gmail/search?userId=${user?.id}${daysParam}${limitParam}&markRead=1`);
+            const res = await fetch(`${BACKEND_URL}/api/gmail/search?userId=${user?.id}${daysParam}${limitParam}${typeParam}&markRead=1`);
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 const message = data?.error || data?.details || 'No se pudo buscar en el historial';
@@ -972,7 +1047,7 @@ export function AdvancedSettings({
     };
 
     const handleImportSelectedClick = async (overrideIds?: string[]) => {
-        const idsToImport = overrideIds || selectedMessages;
+        const idsToImport = Array.isArray(overrideIds) ? overrideIds : (selectedMessages ?? []);
         const selectedSnapshot = [...idsToImport];
         setImporting(true);
         try {
@@ -990,12 +1065,12 @@ export function AdvancedSettings({
 
             if (!overrideIds) {
                 toast({
-                    title: 'Importación finalizada',
+                    title: '✅ Importación finalizada',
                     description: `Procesadas: ${data.processed ?? results.length}, Duplicadas: ${data.skipped ?? 0}, Errores: ${data.errors ?? 0}`
                 });
             } else {
                 toast({
-                    title: 'Factura lista para revisión',
+                    title: '✅ Factura lista para revisión',
                     description: `Procesada 1 factura correctamente.`
                 });
             }
@@ -1129,6 +1204,8 @@ export function AdvancedSettings({
                 setSearchRange={setSearchRange}
                 searchLimit={searchLimit}
                 setSearchLimit={setSearchLimit}
+                searchType={searchType}
+                setSearchType={setSearchType}
                 hideApproved={hideApproved}
                 setHideApproved={setHideApproved}
                 searching={searching}

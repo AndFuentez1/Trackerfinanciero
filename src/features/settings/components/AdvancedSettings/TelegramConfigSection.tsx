@@ -51,14 +51,14 @@ export function TelegramConfigSection({
                         Sincronizando
                     </div>
                 ) : configStatus?.telegramVerified ? (
-                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                        <CheckCircle2 className="h-4 w-4" />
+                    <div className="flex items-center gap-1.5 text-primary bg-primary/10 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm transition-all duration-300">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         Verificado
                     </div>
                 ) : configStatus?.telegramConfigured ? (
-                    <div className="flex items-center gap-2 text-sm text-amber-600 font-medium">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Configurado (sin prueba)
+                    <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm border border-amber-100 transition-all duration-300">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Configurado
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

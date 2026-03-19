@@ -75,7 +75,7 @@ export function useCreateLoan() {
         await addTransaction({
             type: loan.type === 'borrowed' ? 'transfer_in' : 'transfer_out',
             category: 'Préstamos',
-            amount: loan.total_amount,
+            amount: loan.type === 'borrowed' ? Math.abs(loan.total_amount) : -Math.abs(loan.total_amount),
             description: `Préstamo: ${loan.name}${loan.is_disbursed === false ? ' (Sin desembolso)' : ''}`,
             date: getTodayLocalDate(),
             payment_method_id: loan.is_disbursed === false ? null : (loan.payment_method_id || null),
@@ -86,7 +86,7 @@ export function useCreateLoan() {
             await addTransaction({
                 type: loan.type === 'borrowed' ? 'transfer_out' : 'transfer_in',
                 category: 'Préstamos',
-                amount: initialPaidAmount,
+                amount: loan.type === 'borrowed' ? -Math.abs(initialPaidAmount) : Math.abs(initialPaidAmount),
                 description: `Abono inicial préstamo: ${loan.name}`,
                 date: getTodayLocalDate(),
                 payment_method_id: loan.is_disbursed === false ? null : (loan.payment_method_id || null),
@@ -194,7 +194,7 @@ export function useCreateLoanPayment() {
         await addTransaction({
             type: payment.type === 'borrowed' ? 'transfer_out' : 'transfer_in',
             category: 'Préstamos',
-            amount: payment.amount,
+            amount: payment.type === 'borrowed' ? -Math.abs(payment.amount) : Math.abs(payment.amount),
             description: `Abono a préstamo: ${payment.name}${isOverpayment ? ' (con excedente)' : ''}`,
             date: payment.date,
             payment_method_id: payment.payment_method_id || null

@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { ImportExcelDialog } from '@/features/finance/transactions/components/ImportExcelDialog';
-import type { PaymentMethod, Transaction } from '@/features/finance/hooks/useFinanceData';
+import type { PaymentMethod, Transaction, StagingTransaction } from '@/features/finance/hooks/useFinanceData';
 import { cn } from '@/core/utils';
 
 interface ThemeOption {
@@ -28,7 +28,7 @@ interface OnboardingDecisionPanelProps {
   importProgress: ImportProgress;
   onCancelImport: () => void;
   paymentMethods: PaymentMethod[];
-  onImportComplete: (data: Omit<Transaction, 'id'>[]) => Promise<void> | void;
+  onImportComplete: (data: Partial<StagingTransaction>[]) => Promise<void> | void;
   showCompletionCard: boolean;
   baseColor?: string;
   themeOptions?: ThemeOption[];

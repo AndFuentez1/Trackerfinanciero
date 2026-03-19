@@ -60,7 +60,17 @@ const parseAmount = (rawAmount: string): number | null => {
             normalized = value.replace(/,/g, '');
         }
     } else if (hasComma && !hasDot) {
-        normalized = value.replace(/,/g, '.');
+        const lastComma = value.lastIndexOf(',');
+        const decimalLength = value.length - lastComma - 1;
+        normalized = decimalLength === 3
+            ? value.replace(/,/g, '')
+            : value.replace(/,/g, '.');
+    } else if (hasDot && !hasComma) {
+        const lastDot = value.lastIndexOf('.');
+        const decimalLength = value.length - lastDot - 1;
+        normalized = decimalLength === 3
+            ? value.replace(/\./g, '')
+            : value;
     }
 
     const amount = Number.parseFloat(normalized);

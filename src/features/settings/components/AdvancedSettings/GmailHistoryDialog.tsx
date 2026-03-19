@@ -17,7 +17,7 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/ui/accordion';
-import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight, FileText, DownloadCloud, ArrowRight, XCircle, ChevronDown, Inbox, FilterX } from 'lucide-react';
+import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight, FileText, DownloadCloud, ArrowRight, XCircle, ChevronDown, Inbox, FilterX, AlertCircle } from 'lucide-react';
 import { cn } from '@/core/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -36,6 +36,7 @@ export type GmailHistoryItem = {
     from?: string;
     date?: string;
     internalDate?: string;
+    amount?: string | number;
     snippet?: string;
     status?: string;
 };
@@ -67,8 +68,10 @@ export type GmailProduct = {
 
 export type GmailImportResult = {
     messageId: string;
-    status: 'pending' | 'telegram' | 'duplicate' | 'error' | string;
+    status: 'pending' | 'telegram' | 'duplicate' | 'error' | 'loan_queued' | string;
     stepOfFailure?: 'rules' | 'ai' | null;
+    subject?: string;
+    from?: string;
     store?: string;
     total?: number;
     date?: string;
@@ -89,6 +92,8 @@ interface GmailHistoryDialogProps {
     setSearchRange: (val: string) => void;
     searchLimit: string;
     setSearchLimit: (val: string) => void;
+    searchType: string;
+    setSearchType: (val: string) => void;
     hideApproved: boolean;
     setHideApproved: (val: boolean) => void;
     searching: boolean;
@@ -141,6 +146,8 @@ export function GmailHistoryDialog({
     setSearchRange,
     searchLimit,
     setSearchLimit,
+    searchType,
+    setSearchType,
     hideApproved,
     setHideApproved,
     searching,
@@ -173,7 +180,6 @@ export function GmailHistoryDialog({
         paymentMethods: allPaymentMethods,
         categories: allCategories,
         addCategory,
-        addPaymentMethod,
         loading
     } = useFinanceData();
     const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
@@ -239,6 +245,7 @@ export function GmailHistoryDialog({
                                         const meta = item.meta as GmailHistoryItem | undefined;
                                         const isTelegram = item.status === 'telegram';
                                         const isDuplicate = item.status === 'duplicate';
+                                        const isLoanQueued = item.status === 'loan_queued';
                                         const hasGroups = Boolean(item.groups && item.groups.length > 0);
                                         const statusLabel = isTelegram
                                             ? 'Enviado a Telegram'
@@ -248,15 +255,19 @@ export function GmailHistoryDialog({
                                                     ? 'Ya importado'
                                                     : item.status === 'error'
                                                         ? 'Error en procesamiento'
-                                                        : 'Listo para revisión';
+                                                        : item.status === 'loan_queued'
+                                                            ? 'En préstamos'
+                                                            : 'Listo para revisión';
 
-                                        const isProcessed = isTelegram || isDuplicate;
+                                        const isProcessed = isTelegram || isDuplicate || isLoanQueued;
                                         const hasError = item.status === 'error';
 
                                         const hasProducts = Boolean(item.products && item.products.length > 0);
                                         const productsTotal = hasProducts
                                             ? item.products?.reduce((sum, product) => sum + parseNumberValue(product.total), 0) ?? 0
-                                            : item.groups?.reduce((sum, g) => sum + parseNumberValue(g.amount), 0) ?? 0;
+                                            : (item.groups && item.groups.length > 0)
+                                                ? item.groups.reduce((sum, g) => sum + parseNumberValue(g.amount), 0)
+                                                : (parseNumberValue(item.total) || parseNumberValue((item as any).amount) || 0);
 
                                         return (
                                             <AccordionItem value={item.messageId} key={item.messageId} className="rounded-lg border bg-card/50 overflow-hidden">
@@ -265,9 +276,9 @@ export function GmailHistoryDialog({
                                                         <div className="flex-1 space-y-1 min-w-0 pr-2">
                                                             <p className="text-sm font-semibold truncate max-w-0 min-w-full">
                                                                 <span className="text-muted-foreground mr-2 font-normal">#{index + 1}</span>
-                                                                {meta?.subject || item.store || 'Factura'}
+                                                                {item.subject || meta?.subject || item.store || 'Factura'}
                                                             </p>
-                                                            <p className="text-xs text-muted-foreground truncate">{meta?.from || item.store || 'Remitente desconocido'}</p>
+                                                            <p className="text-xs text-muted-foreground truncate">{item.from || meta?.from || item.store || 'Remitente desconocido'}</p>
                                                         </div>
                                                         <div className="flex items-center gap-3 shrink-0">
                                                             <div className="text-right flex flex-col items-end">
@@ -281,159 +292,283 @@ export function GmailHistoryDialog({
                                                 </AccordionTrigger>
 
                                                 <AccordionContent className="p-4 pt-2 border-t bg-card/30">
+                                                    <div className="mb-4 pb-2 border-b border-border/50">
+                                                        <h3 className="text-sm font-bold text-foreground/90 flex items-center gap-2">
+                                                            <FileText className="h-4 w-4 text-primary" />
+                                                            {item.subject || meta?.subject || item.store || 'Factura / Transferencia'}
+                                                        </h3>
+                                                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                            {item.from || meta?.from || 'Remitente desconocido'}
+                                                        </p>
+                                                    </div>
+
                                                     {hasError && item.error && (
                                                         <div className="text-[10px] text-destructive font-medium truncate bg-destructive/5 px-2 py-1 rounded mb-3">
                                                             {item.error}
                                                         </div>
                                                     )}
 
-                                                    {isTelegram && !hasGroups && !hasProducts ? (
+                                                    {isLoanQueued ? (
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Transferencia enviada a préstamos para completar los datos.
+                                                        </div>
+                                                    ) : isTelegram && !hasGroups && !hasProducts ? (
                                                         <div className="text-xs text-muted-foreground">
                                                             Enviado a Telegram para revisión manual. No se creó pendiente en la app.
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-3">
                                                             {isProcessed && (
-                                                                <div className="text-xs text-muted-foreground">
+                                                                <div className="text-xs text-muted-foreground mb-2">
                                                                     {item.status === 'duplicate'
                                                                         ? "Esta factura ya había sido importada y se omitió para evitar duplicados."
                                                                         : isTelegram
                                                                             ? "También se envió a Telegram para revisión manual."
-                                                                            : "Esta factura ya fue procesada."}
+                                                                            : isLoanQueued
+                                                                                ? "Esta transferencia quedó como préstamo en borrador."
+                                                                                : "Esta factura ya fue procesada."}
                                                                 </div>
                                                             )}
-                                                            {hasProducts ? (
-                                                                <div className="rounded-md border bg-muted/30 overflow-hidden">
-                                                                    <div className={cn("overflow-x-auto", isProcessed && "opacity-60 pointer-events-none grayscale")}>
-                                                                        <Table className="min-w-[520px] w-full">
-                                                                            <TableHeader>
-                                                                                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                                                                    <TableHead className="h-8 text-[10px] font-bold w-[35%]">Descripción</TableHead>
-                                                                                    <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Categoría</TableHead>
-                                                                                    <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Pago</TableHead>
-                                                                                    <TableHead className="h-8 text-[10px] font-bold w-[100px] min-w-[100px] text-right">Total</TableHead>
-                                                                                </TableRow>
-                                                                            </TableHeader>
-                                                                            <TableBody>
-                                                                                {(() => {
-                                                                                    // Normaliza decimales: usa el mayor nro de decimales entre todos los totales
-                                                                                    const maxDecimals = (item.products ?? []).reduce((max, p) => {
-                                                                                        const raw = String(parseNumberValue(p.total));
-                                                                                        const dec = raw.includes('.') ? raw.split('.')[1].length : 0;
-                                                                                        return Math.max(max, dec);
-                                                                                    }, 0);
-                                                                                    const fmtTotal = (val: number) => val.toLocaleString('es-CO', {
-                                                                                        minimumFractionDigits: maxDecimals,
-                                                                                        maximumFractionDigits: maxDecimals
-                                                                                    });
-                                                                                    return item.products?.map((product, pIndex) => (
-                                                                                        <TableRow key={`${item.messageId}-p-${pIndex}`} className="hover:bg-muted/30">
-                                                                                            <TableCell className="text-[10px] py-2 leading-snug font-medium max-w-[160px]">
-                                                                                                <span className="line-clamp-2 block">{product.description}</span>
-                                                                                            </TableCell>
-                                                                                            <TableCell className="py-1">
-                                                                                                <Select
-                                                                                                    value={product.category_id || product.category || ""}
-                                                                                                    onValueChange={(val) => {
-                                                                                                        const isId = categories.some(c => c.id === val);
-                                                                                                        updateImportProduct(item.messageId, pIndex, {
-                                                                                                            category_id: isId ? val : null,
-                                                                                                            category: isId ? categories.find(c => c.id === val)?.name : val
-                                                                                                        });
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <SelectTrigger className="h-7 text-xs">
-                                                                                                        <SelectValue placeholder="Categoría" />
-                                                                                                    </SelectTrigger>
-                                                                                                    <SelectContent>
-                                                                                                        {expenseCategories.map(cat => (
-                                                                                                            <SelectItem key={cat.id} value={cat.id}>
-                                                                                                                {cat.name}
-                                                                                                            </SelectItem>
-                                                                                                        ))}
-                                                                                                        {expenseCategories.length === 0 && (
-                                                                                                            <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
-                                                                                                                Sin categorías de gasto
-                                                                                                            </div>
-                                                                                                        )}
-                                                                                                        <div className="border-t border-border/50 px-1 py-1 mt-1">
-                                                                                                            <AddCategoryDialog
-                                                                                                                type="expense"
-                                                                                                                onAdd={addCategory}
-                                                                                                                onSuccess={(cat) => {
-                                                                                                                    setLocalCategories(prev => [...prev, cat]);
-                                                                                                                    updateImportProduct(item.messageId, pIndex, {
-                                                                                                                        category_id: cat.id,
-                                                                                                                        category: cat.name
-                                                                                                                    });
-                                                                                                                }}
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                    </SelectContent>
-                                                                                                </Select>
-                                                                                            </TableCell>
-                                                                                            <TableCell className="py-1">
-                                                                                                <Select
-                                                                                                    value={product.payment_method_id || ""}
-                                                                                                    onValueChange={(val) => updateImportProduct(item.messageId, pIndex, { payment_method_id: val })}
-                                                                                                >
-                                                                                                    <SelectTrigger className="h-7 text-xs">
-                                                                                                        <SelectValue placeholder="Método" />
-                                                                                                    </SelectTrigger>
-                                                                                                    <SelectContent>
-                                                                                                        {availablePaymentMethods.map(method => (
-                                                                                                            <SelectItem key={method.id} value={method.id}>
-                                                                                                                {method.name}
-                                                                                                            </SelectItem>
-                                                                                                        ))}
-                                                                                                        <div className="border-t border-border/50 px-2 py-2 mt-1">
-                                                                                                            <AddPaymentMethodDialog
-                                                                                                                onAdd={addPaymentMethod}
-                                                                                                                onSuccess={(pm) => {
-                                                                                                                    setLocalPaymentMethods(prev => [...prev, pm]);
-                                                                                                                    updateImportProduct(item.messageId, pIndex, { payment_method_id: pm.id });
-                                                                                                                }}
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                    </SelectContent>
-                                                                                                </Select>
-                                                                                            </TableCell>
-                                                                                            <TableCell className="text-[10px] text-right font-medium py-2">
-                                                                                                ${fmtTotal(parseNumberValue(product.total))}
-                                                                                            </TableCell>
+                                                            {(() => {
+                                                                const isTransfer = (item as any).type === 'transfer' || item.status === 'loan_queued' || (!hasProducts && !hasGroups && (item.subject?.toLowerCase().includes('transferencia') || item.store?.toLowerCase().includes('bancolombia') || item.store?.toLowerCase().includes('nequi')));
+                                                                
+                                                                if (isTransfer) {
+                                                                    return (
+                                                                        <div className="space-y-4">
+                                                                            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-orange-50/30 border border-orange-100/50">
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Fecha</p>
+                                                                                    <p className="text-sm font-medium">{safeFormatDate(item.date || meta?.date)}</p>
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Monto</p>
+                                                                                    <p className="text-sm font-bold text-primary">${productsTotal.toLocaleString('es-CO')}</p>
+                                                                                </div>
+                                                                                <div className="space-y-1 col-span-2">
+                                                                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Descripción</p>
+                                                                                    <p className="text-sm">{item.subject || meta?.subject || item.store || 'Transferencia'}</p>
+                                                                                </div>
+                                                                                <div className="space-y-1 col-span-2">
+                                                                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Método de Pago</p>
+                                                                                    <Select
+                                                                                        value={(item.groups?.[0]?.payment_method_id) || (paymentMethods.length > 0 ? paymentMethods[0].id : "")}
+                                                                                        onValueChange={(val) => {
+                                                                                            // Para transferencias que no tienen productos, actualizamos el payment_method del primer grupo (o creamos uno)
+                                                                                            setImportResults(prev => prev.map(r => {
+                                                                                                if (r.messageId !== item.messageId) return r;
+                                                                                                const updatedGroups = [...(r.groups || [])];
+                                                                                                if (updatedGroups.length === 0) {
+                                                                                                    updatedGroups.push({
+                                                                                                        id: `manual-${item.messageId}-0`,
+                                                                                                        description: item.subject || 'Transferencia',
+                                                                                                        category: 'Otros',
+                                                                                                        amount: productsTotal,
+                                                                                                        arrival_date: item.date || new Date().toISOString(),
+                                                                                                        payment_method_id: val
+                                                                                                    });
+                                                                                                } else {
+                                                                                                    updatedGroups[0] = { ...updatedGroups[0], payment_method_id: val };
+                                                                                                }
+                                                                                                return { ...r, groups: updatedGroups };
+                                                                                            }));
+                                                                                        }}
+                                                                                    >
+                                                                                        <SelectTrigger className="h-9 w-full">
+                                                                                            <SelectValue placeholder="Seleccionar método" />
+                                                                                        </SelectTrigger>
+                                                                                        <SelectContent>
+                                                                                            {availablePaymentMethods.map(method => (
+                                                                                                <SelectItem key={method.id} value={method.id}>
+                                                                                                    {method.name}
+                                                                                                </SelectItem>
+                                                                                            ))}
+                                                                                        </SelectContent>
+                                                                                    </Select>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between p-3 rounded-md bg-muted/20 border border-dashed border-muted-foreground/30">
+                                                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                                                                                    <span>Esta transferencia se enviará a la zona de <strong>Préstamos</strong> para configurar el pago y categoría.</span>
+                                                                                </div>
+                                                                                <div className="flex gap-2">
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        variant="outline"
+                                                                                        onClick={() => setImportResults(prev => prev.filter(r => r.messageId !== item.messageId))}
+                                                                                    >
+                                                                                        Descartar
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                                                                                        onClick={async () => {
+                                                                                            // Marcamos como loan_queued y aprobamos
+                                                                                            setImportResults(prev => prev.map(r => r.messageId === item.messageId ? { ...r, status: 'loan_queued', type: 'transfer' } : r));
+                                                                                            setTimeout(() => handleApproveInvoice(item.messageId), 100);
+                                                                                        }}
+                                                                                        disabled={approvingMessageId === item.messageId}
+                                                                                    >
+                                                                                        {approvingMessageId === item.messageId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ChevronRight className="h-3 w-3 mr-1" />}
+                                                                                        Mandar a Préstamos
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                if (hasProducts || hasGroups) {
+                                                                    const itemsToRender = hasProducts ? item.products! : item.groups!.map(g => ({
+                                                                        description: g.description,
+                                                                        quantity: 1,
+                                                                        price: g.amount,
+                                                                        total: g.amount,
+                                                                        category: g.category,
+                                                                        category_id: g.category_id,
+                                                                        payment_method_id: g.payment_method_id
+                                                                    }));
+
+                                                                    return (
+                                                                        <div className="rounded-md border bg-muted/30 overflow-hidden">
+                                                                            <div className={cn("overflow-x-auto", isProcessed && "opacity-60 pointer-events-none grayscale")}>
+                                                                                <Table className="min-w-[520px] w-full">
+                                                                                    <TableHeader>
+                                                                                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[35%]">Descripción</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[35%]">Categoría</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Pago</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[100px] min-w-[100px] text-right">Total</TableHead>
                                                                                         </TableRow>
-                                                                                    ));
-                                                                                })()}
-                                                                            </TableBody>
-                                                                        </Table>
-                                                                    </div>
-                                                                    <div className="flex items-center justify-end px-4 py-3 border-t bg-muted/10">
+                                                                                    </TableHeader>
+                                                                                    <TableBody>
+                                                                                        {itemsToRender.map((product, pIndex) => (
+                                                                                            <TableRow key={`${item.messageId}-p-${pIndex}`} className="hover:bg-muted/30">
+                                                                                                <TableCell className="text-[10px] py-2 leading-snug font-medium max-w-[160px]">
+                                                                                                    <span className="line-clamp-2 block">{product.description}</span>
+                                                                                                </TableCell>
+                                                                                                <TableCell className="py-1">
+                                                                                                    <Select
+                                                                                                        value={product.category_id || ""}
+                                                                                                        onValueChange={(val) => {
+                                                                                                            const match = expenseCategories.find(c => c.id === val);
+                                                                                                            if (hasProducts) {
+                                                                                                                updateImportProduct(item.messageId, pIndex, {
+                                                                                                                    category_id: match?.id || null,
+                                                                                                                    category: match?.name || val
+                                                                                                                });
+                                                                                                            } else {
+                                                                                                                // Update group
+                                                                                                                setImportResults(prev => prev.map(r => {
+                                                                                                                    if (r.messageId !== item.messageId) return r;
+                                                                                                                    const newGroups = [...(r.groups || [])];
+                                                                                                                    if (newGroups[pIndex]) {
+                                                                                                                        newGroups[pIndex] = {
+                                                                                                                            ...newGroups[pIndex],
+                                                                                                                            category_id: match?.id || null,
+                                                                                                                            category: match?.name || val
+                                                                                                                        };
+                                                                                                                    }
+                                                                                                                    return { ...r, groups: newGroups };
+                                                                                                                }));
+                                                                                                            }
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        <SelectTrigger className="h-7 text-xs">
+                                                                                                            <SelectValue placeholder="Categoría" />
+                                                                                                        </SelectTrigger>
+                                                                                                        <SelectContent>
+                                                                                                            {expenseCategories.map(cat => (
+                                                                                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                                                                                            ))}
+                                                                                                            <div className="border-t border-border/50 px-1 py-1 mt-1">
+                                                                                                                <AddCategoryDialog
+                                                                                                                    type="expense"
+                                                                                                                    onAdd={addCategory}
+                                                                                                                    onSuccess={(cat) => {
+                                                                                                                        setLocalCategories(prev => [...prev, cat]);
+                                                                                                                        const updates = { category_id: cat.id, category: cat.name };
+                                                                                                                        if (hasProducts) {
+                                                                                                                            updateImportProduct(item.messageId, pIndex, updates);
+                                                                                                                        } else {
+                                                                                                                            setImportResults(prev => prev.map(r => {
+                                                                                                                                if (r.messageId !== item.messageId) return r;
+                                                                                                                                const newGroups = [...(r.groups || [])];
+                                                                                                                                if (newGroups[pIndex]) {
+                                                                                                                                    newGroups[pIndex] = { ...newGroups[pIndex], ...updates };
+                                                                                                                                }
+                                                                                                                                return { ...r, groups: newGroups };
+                                                                                                                            }));
+                                                                                                                        }
+                                                                                                                    }}
+                                                                                                                />
+                                                                                                            </div>
+                                                                                                        </SelectContent>
+                                                                                                    </Select>
+                                                                                                </TableCell>
+                                                                                                <TableCell className="py-1">
+                                                                                                    <Select
+                                                                                                        value={product.payment_method_id || ""}
+                                                                                                        onValueChange={(val) => {
+                                                                                                            if (hasProducts) {
+                                                                                                                updateImportProduct(item.messageId, pIndex, { payment_method_id: val });
+                                                                                                            } else {
+                                                                                                                setImportResults(prev => prev.map(r => {
+                                                                                                                    if (r.messageId !== item.messageId) return r;
+                                                                                                                    const newGroups = [...(r.groups || [])];
+                                                                                                                    if (newGroups[pIndex]) {
+                                                                                                                        newGroups[pIndex] = { ...newGroups[pIndex], payment_method_id: val };
+                                                                                                                    }
+                                                                                                                    return { ...r, groups: newGroups };
+                                                                                                                }));
+                                                                                                            }
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        <SelectTrigger className="h-7 text-xs">
+                                                                                                            <SelectValue placeholder="Método" />
+                                                                                                        </SelectTrigger>
+                                                                                                        <SelectContent>
+                                                                                                            {availablePaymentMethods.map(method => (
+                                                                                                                <SelectItem key={method.id} value={method.id}>{method.name}</SelectItem>
+                                                                                                            ))}
+                                                                                                        </SelectContent>
+                                                                                                    </Select>
+                                                                                                </TableCell>
+                                                                                                <TableCell className="text-[10px] text-right font-medium py-2">
+                                                                                                    ${parseNumberValue(product.total).toLocaleString('es-CO')}
+                                                                                                </TableCell>
+                                                                                            </TableRow>
+                                                                                        ))}
+                                                                                    </TableBody>
+                                                                                </Table>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-end px-4 py-3 border-t bg-muted/10">
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={() => setImportResults(prev => prev.filter(r => r.messageId !== item.messageId))}
+                                                                                    disabled={approvingMessageId === item.messageId}
+                                                                                >
+                                                                                    Descartar Extraída
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return (
+                                                                    <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-center justify-between gap-3">
+                                                                        <span>No se detectaron productos ni información de transferencia válida.</span>
                                                                         <Button
                                                                             size="sm"
                                                                             variant="outline"
-                                                                            onClick={() => {
-                                                                                setImportResults(prev => prev.filter(r => r.messageId !== item.messageId));
-                                                                            }}
-                                                                            disabled={approvingMessageId === item.messageId}
+                                                                            onClick={() => setImportResults(prev => prev.filter(r => r.messageId !== item.messageId))}
                                                                         >
-                                                                            Descartar Extraída
+                                                                            Descartar
                                                                         </Button>
                                                                     </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-center justify-between gap-3">
-                                                                    <span>No se detectaron productos en el XML de esta factura.</span>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        onClick={() => {
-                                                                            setImportResults(prev => prev.filter(r => r.messageId !== item.messageId));
-                                                                        }}
-                                                                    >
-                                                                        Descartar
-                                                                    </Button>
-                                                                </div>
-                                                            )}
+                                                                );
+                                                            })()}
                                                         </div>
                                                     )}
                                                 </AccordionContent>
@@ -459,7 +594,8 @@ export function GmailHistoryDialog({
                                     const pendingToApprove = reviewItems.filter(item => {
                                         const isTelegram = item.status === 'telegram';
                                         const isDuplicate = item.status === 'duplicate';
-                                        return !(isTelegram || isDuplicate);
+                                        const isLoanQueued = item.status === 'loan_queued';
+                                        return !(isTelegram || isDuplicate || isLoanQueued);
                                     });
 
                                     if (pendingToApprove.length === 0) {
@@ -485,11 +621,11 @@ export function GmailHistoryDialog({
                     </TabsContent>
 
                     <TabsContent value="search" className="flex flex-col flex-1 min-h-0 mt-0 data-[state=inactive]:hidden">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4 mb-4">
-                            <div className="flex-1 space-y-1">
-                                <Label className="text-xs">Rango de tiempo</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Rango de tiempo</Label>
                                 <Select value={searchRange} onValueChange={setSearchRange}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-9">
                                         <SelectValue placeholder="Selecciona rango" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -500,10 +636,10 @@ export function GmailHistoryDialog({
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex-1 space-y-1">
-                                <Label className="text-xs">Cantidad de facturas</Label>
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Cantidad de facturas</Label>
                                 <Select value={searchLimit} onValueChange={setSearchLimit}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-9">
                                         <SelectValue placeholder="Límite" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -514,18 +650,25 @@ export function GmailHistoryDialog({
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex items-center gap-2 pb-1">
-                                <Label className="text-xs text-muted-foreground">Ocultar archivadas</Label>
-                                <Switch checked={hideApproved} onCheckedChange={setHideApproved} />
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Tipo de transacción</Label>
+                                <Select value={searchType} onValueChange={setSearchType}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas</SelectItem>
+                                        <SelectItem value="invoice">Facturas</SelectItem>
+                                        <SelectItem value="transfer">Transferencias</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Button
-                                onClick={handleSearch}
-                                disabled={searching}
-                            >
-                                {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-                                Buscar
-                            </Button>
                         </div>
+                        <div className="flex items-center gap-2 mb-4 pb-1 border-b">
+                            <Label className="text-xs text-muted-foreground">Ocultar archivadas</Label>
+                            <Switch checked={hideApproved} onCheckedChange={setHideApproved} />
+                        </div>
+
 
                         <ScrollArea className="flex-1 min-h-0 border rounded-md">
                             {visibleResults.length > 0 ? (
@@ -598,7 +741,10 @@ export function GmailHistoryDialog({
                                                         </div>
                                                     </div>
                                                     <p className="text-xs text-muted-foreground truncate">{res.from}</p>
-                                                    <p className="text-[11px] text-muted-foreground line-clamp-1 italic">"{res.snippet}"</p>
+                                                    <p className="text-[11px] text-muted-foreground line-clamp-1 italic">
+                                                        {res.amount && <span className="font-bold text-primary mr-1">{typeof res.amount === 'number' ? `$ ${res.amount.toLocaleString('es-CO')}` : res.amount} -</span>}
+                                                        "{res.snippet}"
+                                                    </p>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     {isArchived ? (
@@ -648,18 +794,29 @@ export function GmailHistoryDialog({
                             )}
                         </ScrollArea>
 
-                        <AlertDialogFooter className="mt-4">
-                            <AlertDialogCancel onClick={onCancel}>
-                                Cancelar
-                            </AlertDialogCancel>
+                        <AlertDialogFooter className="mt-4 flex flex-col sm:flex-row sm:justify-end items-center gap-3">
+                            <Button
+                                onClick={handleSearch}
+                                disabled={searching}
+                                variant="default"
+                                className="w-full sm:w-auto"
+                            >
+                                {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+                                Buscar transacciones
+                            </Button>
                             <Button
                                 disabled={selectedMessages.length === 0 || importing}
                                 onClick={handleImportSelected}
+                                className="w-full sm:w-auto"
                             >
                                 {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckSquare className="h-4 w-4 mr-2" />}
                                 Importar Seleccionadas ({selectedMessages.length})
                             </Button>
+                            <AlertDialogCancel onClick={onCancel} className="mt-0 w-full sm:w-auto">
+                                Cancelar
+                            </AlertDialogCancel>
                         </AlertDialogFooter>
+
                     </TabsContent>
                 </Tabs>
             </AlertDialogContent>

@@ -21,7 +21,8 @@ import type {
     PaymentMethodType,
     PaymentMethod,
     Budget,
-    CategoryItem
+    CategoryItem,
+    StagingTransaction
 } from '../types/financeTypes';
 
 export function useFinanceMutations(userId: string | undefined) {
@@ -59,6 +60,11 @@ export function useFinanceMutations(userId: string | undefined) {
     const invalidateBudgets = useCallback(() => {
         if (!userId) { return; }
         queryClient.invalidateQueries({ queryKey: queryKeys.finance.budgets(userId) });
+    }, [queryClient, userId]);
+
+    const invalidateStaging = useCallback(() => {
+        if (!userId) { return; }
+        queryClient.invalidateQueries({ queryKey: queryKeys.finance.stagingTransactions(userId) });
     }, [queryClient, userId]);
 
     type TransactionListQueryData = {
@@ -102,8 +108,8 @@ export function useFinanceMutations(userId: string | undefined) {
         mutationFn: async (txn: Omit<Transaction, 'id' | 'created_at'>) => {
             if (!userId) { throw new Error('Unauthenticated'); }
 
-            // Remove frontend-only fields like 'installments' if they don't exist in DB
-            const { installments, ...dbData } = txn as Record<string, unknown> & { installments?: unknown };
+            // Remove frontend-only or protected fields
+            const { installments, created_at, ...dbData } = txn as Record<string, unknown> & { installments?: unknown, created_at?: unknown };
 
             const { data, error } = await supabase.from('transactions')
                 .insert([{ ...dbData, user_id: userId }])
@@ -121,9 +127,9 @@ export function useFinanceMutations(userId: string | undefined) {
                     .single();
 
                 if (pm) {
-                    const amount = Number(dbData.amount);
+                    const absAmount = Math.abs(Number(dbData.amount));
                     const isPositive = ['income', 'transfer_in'].includes(dbData.type as string);
-                    const newBalance = isPositive ? pm.balance + amount : pm.balance - amount;
+                    const newBalance = isPositive ? pm.balance + absAmount : pm.balance - absAmount;
 
                     await supabase
                         .from('payment_methods')
@@ -951,6 +957,134 @@ export function useFinanceMutations(userId: string | undefined) {
         }
     };
 
+    // 6. Staging Mutations
+    const addToStaging = useMutation({
+        mutationFn: async (transactions: Partial<StagingTransaction>[]) => {
+            if (!userId) { throw new Error('Unauthenticated'); }
+
+            // Delete existing pending staging for this user first
+            await supabase.from('excel_import_staging').delete().eq('user_id', userId).eq('status', 'pending');
+
+            const dataToInsert = transactions.map(t => ({
+                ...t,
+                user_id: userId,
+                status: 'pending' as const
+            }));
+
+            const { data, error } = await supabase.from('excel_import_staging').insert(dataToInsert).select();
+            if (error) { throw error; }
+
+            // Run duplicate detection RPC
+            const { error: rpcError } = await supabase.rpc('mark_staging_duplicates', { p_user_id: userId });
+            if (rpcError) { throw rpcError; }
+
+            return { count: data?.length || 0 };
+        },
+        onSuccess: () => {
+            invalidateStaging();
+        }
+    });
+
+    const addToStagingFn = async (transactions: Partial<StagingTransaction>[]) => {
+        try {
+            const result = await addToStaging.mutateAsync(transactions);
+            return { error: null, count: result.count };
+        } catch (error) {
+            return { error, count: 0 };
+        }
+    };
+
+    const confirmStagingImport = useMutation({
+        mutationFn: async (stagingIds: string[]) => {
+            if (!userId) { throw new Error('Unauthenticated'); }
+            if (stagingIds.length === 0) return { count: 0 };
+
+            // Fetch selected staging records
+            const { data: stagingRecords, error: fetchError } = await supabase
+                .from('excel_import_staging')
+                .select('*')
+                .in('id', stagingIds)
+                .eq('user_id', userId)
+                .eq('status', 'pending');
+
+            if (fetchError) throw fetchError;
+            if (!stagingRecords || stagingRecords.length === 0) return { count: 0 };
+
+            // Format for transactions table
+            const transactionsToInsert = stagingRecords.map(record => ({
+                user_id: userId,
+                date: record.date,
+                description: record.description,
+                amount: record.amount,
+                category: record.category || 'Por Clasificar',
+                category_id: record.category_id,
+                payment_method_id: record.payment_method_id,
+                type: record.type || 'expense',
+            }));
+
+            // Insert into transactions
+            const { data: inserted, error: insertError } = await supabase
+                .from('transactions')
+                .insert(transactionsToInsert)
+                .select();
+
+            if (insertError) throw insertError;
+
+            // Mark as imported in staging
+            const { error: updateError } = await supabase
+                .from('excel_import_staging')
+                .update({ status: 'imported' })
+                .in('id', stagingIds);
+
+            if (updateError) throw updateError;
+
+            // Mark remaining pending as ignored
+            const { error: ignoreError } = await supabase
+                .from('excel_import_staging')
+                .update({ status: 'ignored' })
+                .eq('user_id', userId)
+                .eq('status', 'pending');
+
+            if (ignoreError) throw ignoreError;
+
+            return { count: inserted?.length || 0 };
+        },
+        onSuccess: () => {
+            invalidateTransactions();
+            invalidateStaging();
+            invalidatePaymentMethods();
+        }
+    });
+
+    const confirmStagingImportFn = async (stagingIds: string[]) => {
+        try {
+            const result = await confirmStagingImport.mutateAsync(stagingIds);
+            return { error: null, count: result.count };
+        } catch (error) {
+            return { error, count: 0 };
+        }
+    };
+
+    const clearStaging = useMutation({
+        mutationFn: async () => {
+            if (!userId) { throw new Error('Unauthenticated'); }
+            const { error } = await supabase.from('excel_import_staging').delete().eq('user_id', userId).eq('status', 'pending');
+            if (error) { throw error; }
+        },
+        onSuccess: () => {
+            invalidateStaging();
+        }
+    });
+
+    const clearStagingFn = async () => {
+        try {
+            await clearStaging.mutateAsync();
+            return { error: null };
+        } catch (error) {
+            return { error };
+        }
+    };
+
     return {
         addTransaction: addTransactionFn,
         updateTransaction: updateTransactionFn,
@@ -966,5 +1100,8 @@ export function useFinanceMutations(userId: string | undefined) {
         deletePaymentMethod: deletePaymentMethodFn,
         addBudget: addBudgetFn,
         deleteBudget: deleteBudgetFn,
+        addToStaging: addToStagingFn,
+        confirmStagingImport: confirmStagingImportFn,
+        clearStaging: clearStagingFn,
     };
 }
