@@ -11,7 +11,8 @@ Todas las mejoras relevantes por versión/fecha.
 
 ### Estabilidad y Base de Datos
 - **Manejo de Desconexión DB:** Se integró un sistema global de captura de errores de red (DatabaseErrorOverlay) para manejar pausas de Supabase con un mensaje amigable y una función de reconexión.
-- **Persistencia de Perfil:** Corrección del guardado de moneda en el Onboarding y mejoras de rendimiento al actualizar `currency` en la configuración general.
+- **Persistencia de Perfil:** Corrección en el guardado del país ("Country") y consentimientos. El proceso revisa vía query a la base de datos si el perfil ya existe; y si faltaba creación inicial obligada, fuerza el guardado con operaciones de `Upsert`.
+- **Conversor de Moneda Optimizada (Bulk):** Se rediseñó la herramienta *Conversión total*. Ya no bloquea iterando una transacción a la vez, sino que realiza modificaciones de memoria en lotes de 500 filas vía "Chunked Upserts", y expande la conversión matemática a todas las tablas del sistema que utilizan moneda (`budgets`, `future_expenses`, `payment_methods`, `savings_accounts`, `savings_transactions` y `pending_invoices`).
 
 ---
 

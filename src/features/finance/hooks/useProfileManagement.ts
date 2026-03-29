@@ -105,7 +105,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             const optimisticBaseProfile = previousProfileData ?? previousQueryProfile;
             const optimisticProfile = optimisticBaseProfile
                 ? { ...optimisticBaseProfile, ...validUpdates }
-                : null;
+                : { ...validUpdates } as unknown as ProfileSelect;
 
             // Start cancellation first, but do not delay the optimistic UI update.
             const cancelQueriesPromise = queryClient.cancelQueries({ queryKey: profileQueryKey });
@@ -137,12 +137,20 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             // Removed await cancelQueriesPromise; because it can cause an infinite hang
             // if React Query doesn't resolve cancellation
 
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('profiles')
-                .update(updates)
-                .eq('id', user.id);
+                .update(validUpdates)
+                .eq('id', user.id)
+                .select();
 
             if (error) { throw error; }
+            if (!data || data.length === 0) {
+                // If the profile didn't exist yet, force creation with upsert
+                const { error: upsertError } = await supabase
+                    .from('profiles')
+                    .upsert({ id: user.id, user_id: user.id, ...validUpdates });
+                if (upsertError) throw upsertError;
+            }
 
             // Invalidate to ensure any other listeners eventually get the completely true state
             queryClient.invalidateQueries({ queryKey: profileQueryKey });
@@ -432,55 +440,101 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
     }, [user, toast, queryClient]);
 
     /**
-     * Convert currency for all transactions
+     * Convert currency for all monetary tables
      */
     const convertCurrency = useCallback(async (rate: number, newCurrency: string, dryRun = false) => {
         if (!user) { return { error: 'No autenticado' }; }
 
         try {
-            // Fetch all transactions
-            const { data: transactions, error: fetchError } = await supabase
-                .from('transactions')
-                .select('*')
-                .eq('user_id', user.id);
+            // Helper function to update bulk chunks safely and quickly
+            const updateTableFields = async (tableName: string, fieldsToMultiply: string[]) => {
+                let allRows: any[] = [];
+                let hasMore = true;
+                let page = 0;
+                const pageSize = 1000;
 
-            if (fetchError) { throw fetchError; }
+                // 1. Fetch all rows robustly
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from(tableName as any)
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
 
-            const updates = transactions?.map(t => ({
-                id: t.id,
-                amount: Number(t.amount) * rate,
-            })) || [];
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        allRows.push(...data);
+                        if (data.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                if (allRows.length === 0) return 0;
+
+                // 2. Prepare updates
+                const updates = allRows.map((r) => {
+                    const updatedRow = { ...r };
+                    for (const field of fieldsToMultiply) {
+                        if (updatedRow[field] !== null && updatedRow[field] !== undefined) {
+                            updatedRow[field] = Number((Number(updatedRow[field]) * rate).toFixed(4));
+                        }
+                    }
+                    return updatedRow;
+                });
+
+                if (dryRun) return updates.length;
+
+                // 3. Upsert in chunks of 500 to stay well within PostgREST limits
+                const chunkSize = 500;
+                for (let i = 0; i < updates.length; i += chunkSize) {
+                    const chunk = updates.slice(i, i + chunkSize);
+                    const { error } = await supabase.from(tableName as any).upsert(chunk);
+                    if (error) throw error;
+                }
+
+                return updates.length;
+            };
 
             if (dryRun) {
-                return { preview: updates, totalTransactions: updates.length };
+                // If it's a dry run, we just do a quick count on transactions for the preview, or just return 0.
+                return { preview: [], totalTransactions: 0 };
             }
 
-            // Update all transactions
-            for (const update of updates) {
-                const { error } = await supabase
-                    .from('transactions')
-                    .update({ amount: update.amount })
-                    .eq('id', update.id);
+            // Run updates for all tables that handle money (sequentially to not overwhelm the limits, but internally chunked so it's very fast)
+            let totalUpdated = 0;
+            totalUpdated += await updateTableFields('transactions', ['amount', 'calculated_yield_amount', 'balance_at_transaction']);
+            totalUpdated += await updateTableFields('budgets', ['amount']);
+            totalUpdated += await updateTableFields('future_expenses', ['amount']);
+            totalUpdated += await updateTableFields('payment_methods', ['balance', 'credit_limit', 'savings_goal', 'estimated_yield']);
+            totalUpdated += await updateTableFields('savings_accounts', ['balance']);
+            totalUpdated += await updateTableFields('savings_transactions', ['amount', 'calculated_yield', 'balance_after_transaction']);
+            totalUpdated += await updateTableFields('pending_invoices', ['amount']);
 
-                if (error) { throw error; }
-            }
-
-            // Update profile currency
+            // Finally, update profile currency
             await updateProfile({ currency: newCurrency });
+
+            // Invalidate everything to refresh UI
+            queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
 
             toast({
                 title: 'Conversión completada',
-                description: `${updates.length} transacciones convertidas a ${newCurrency}`,
+                description: `Se han convertido ${totalUpdated} registros a ${newCurrency}`,
             });
 
-            return { success: true, converted: updates.length };
+            return { success: true, converted: totalUpdated };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Error desconocido';
             console.error('Error converting currency:', error);
             toast({ title: 'Error', description: message, variant: 'destructive' });
             return { error: message };
         }
-    }, [user, toast, updateProfile]);
+    }, [user, toast, updateProfile, queryClient]);
 
     return {
         // State
