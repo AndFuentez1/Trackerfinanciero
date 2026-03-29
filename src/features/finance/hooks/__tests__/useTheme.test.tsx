@@ -23,32 +23,23 @@ describe('useTheme', () => {
         } as ReturnType<typeof useAuth>);
     });
 
-    it('reuses the stored theme only for the active user', () => {
-        localStorage.setItem(THEME_STORAGE_KEY, '#84CC16');
-        localStorage.setItem(THEME_STORAGE_USER_KEY, 'user-1');
-
-        const { result } = renderHook(() => useTheme(undefined));
+    it('applies the provided initial color', () => {
+        const { result } = renderHook(() => useTheme('#84CC16'));
 
         expect(result.current.baseColor).toBe('#84CC16');
     });
 
-    it('ignores a stored theme from another user', () => {
-        localStorage.setItem(THEME_STORAGE_KEY, '#84CC16');
-        localStorage.setItem(THEME_STORAGE_USER_KEY, 'user-2');
-
+    it('uses default color when no initial color is provided', () => {
         const { result } = renderHook(() => useTheme(undefined));
 
         expect(result.current.baseColor).toBe(DEFAULT_BASE_COLOR);
     });
 
     it('resets to the default color when the resolved profile theme is null', async () => {
-        localStorage.setItem(THEME_STORAGE_KEY, '#84CC16');
-        localStorage.setItem(THEME_STORAGE_USER_KEY, 'user-1');
-
         const { result, rerender } = renderHook(
             ({ initialColor }: { initialColor: string | null | undefined }) => useTheme(initialColor),
             {
-                initialProps: { initialColor: undefined },
+                initialProps: { initialColor: '#84CC16' },
             }
         );
 

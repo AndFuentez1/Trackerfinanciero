@@ -4,6 +4,17 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-03-29]
+
+### Autenticación y Privacidad
+- **GDPR Compliance:** Implementación mandatoria del consentimiento de procesamiento de datos (Términos y Privacidad) integrado en todos los flujos de autenticación (Magic Link, Google OAuth y Contraseña).
+
+### Estabilidad y Base de Datos
+- **Manejo de Desconexión DB:** Se integró un sistema global de captura de errores de red (DatabaseErrorOverlay) para manejar pausas de Supabase con un mensaje amigable y una función de reconexión.
+- **Persistencia de Perfil:** Corrección del guardado de moneda en el Onboarding y mejoras de rendimiento al actualizar `currency` en la configuración general.
+
+---
+
 ## [2026-03-18]
 
 ### Importación y Validaciones

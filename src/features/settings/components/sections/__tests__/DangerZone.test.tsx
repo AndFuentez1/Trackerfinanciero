@@ -63,9 +63,7 @@ describe('DangerZone UI/UX Logic', () => {
         const futureExpensesSwitch = screen.getByLabelText(/gastos futuros/i);
         const paymentMethodsSwitch = screen.getByLabelText(/métodos de pago/i);
         const categoriesSwitch = screen.getByLabelText(/categorías/i);
-        const statusSwitch = screen.getByLabelText(/estado del perfil/i);
-
-        // Uncheck all defaults (Transactions, Budgets, Savings, Loans, Future, PM, Categories, Flags are true by default)
+        // Uncheck all defaults (Transactions, Budgets, Savings, Loans, Future, PM, Categories are true by default)
         fireEvent.click(transactionsSwitch);
         fireEvent.click(budgetsSwitch);
         fireEvent.click(savingsSwitch);
@@ -73,7 +71,6 @@ describe('DangerZone UI/UX Logic', () => {
         fireEvent.click(futureExpensesSwitch);
         fireEvent.click(paymentMethodsSwitch);
         fireEvent.click(categoriesSwitch);
-        fireEvent.click(statusSwitch);
 
         // Validating the "canDeleteProfile" logic: should be disabled now
         expect(continueButton).toBeDisabled();

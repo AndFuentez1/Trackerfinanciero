@@ -149,9 +149,8 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
                 .from('profiles')
                 .select('currency, onboarding_decision, has_pending_import, welcome_completed, decimal_places, base_color, country, data_treatment_accepted')
                 .eq('id', userId)
-                .single();
+                .maybeSingle();
             if (error) {
-                if (error.code === 'PGRST116') { return null; }
                 throw error;
             }
             return data as ProfileSelect;

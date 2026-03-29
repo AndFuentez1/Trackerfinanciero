@@ -48,7 +48,7 @@ describe('useFinanceQueries', () => {
                 select: vi.fn(() => ({
                     eq: vi.fn((field, val) => {
                         if (table === 'profiles') {
-                            return { single: vi.fn().mockResolvedValue({ data: { currency: 'COP', onboarding_decision: 'completed' }, error: null }) };
+                            return { maybeSingle: vi.fn().mockResolvedValue({ data: { currency: 'COP', onboarding_decision: 'completed' }, error: null }) };
                         }
                         if (table === 'pending_invoices') {
                             return {

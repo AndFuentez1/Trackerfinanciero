@@ -46,7 +46,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
     const queryClient = useQueryClient();
 
     // Profile state
-    const [currency, setCurrency] = useState('COP');
+    const [currency, setCurrency] = useState('');
     const [decimalPlaces, setDecimalPlaces] = useState(0);
     const [profileData, setProfileData] = useState<ProfileSelect | null>(null);
 
@@ -134,7 +134,8 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             );
 
             // Finish cancellation before the network write so stale in-flight responses do not win.
-            await cancelQueriesPromise;
+            // Removed await cancelQueriesPromise; because it can cause an infinite hang
+            // if React Query doesn't resolve cancellation
 
             const { error } = await supabase
                 .from('profiles')

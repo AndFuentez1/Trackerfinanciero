@@ -196,7 +196,7 @@ export function GmailHistoryDialog({
     }, [paymentMethods, localPaymentMethods]);
 
     // Solo categorías de tipo gasto para facturas importadas
-    const expenseCategories = [...allCategories, ...localCategories]
+    const expenseCategories = [...(allCategories || []), ...(localCategories || [])]
         .filter(c => c.type === 'expense')
         .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
