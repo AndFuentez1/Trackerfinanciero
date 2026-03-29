@@ -7,7 +7,7 @@ export function getBackendUrl(): string {
 
     // En desarrollo local (Vite proxy o ejecución directa)
     if (import.meta.env.DEV) {
-        return 'http://localhost:3001';
+        return '';
     }
 
     // Fallback para producción si no se definió VITE_BACKEND_URL

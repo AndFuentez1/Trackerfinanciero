@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { FinanceProvider } from '@/features/finance/context/FinanceContext';
 import { LoansProvider } from '@/features/finance/loans/context/LoansContext';
@@ -8,6 +8,7 @@ import { SavingsProvider } from '@/features/finance/savings/context/SavingsConte
 import { Toaster } from '@/shared/ui/toaster';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { DatabaseErrorOverlay } from '@/shared/components/DatabaseErrorOverlay';
 import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonUtils';
 
 // Auth is imported directly (not lazy) because:
@@ -15,7 +16,30 @@ import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonU
 // 2. Dynamic imports of Auth.tsx have been unreliable in this environment
 import Auth from '@/features/auth/pages/Auth';
 
+const isSupabasePausedError = (error: any) => {
+  const msg = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  return msg.includes('failed to fetch') || 
+         msg.includes('networkerror') || 
+         msg.includes('503') ||
+         error?.status === 503 || 
+         error?.code === '503';
+};
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (isSupabasePausedError(error)) {
+        window.dispatchEvent(new CustomEvent('db-connection-error', { detail: error }));
+      }
+    }
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (isSupabasePausedError(error)) {
+        window.dispatchEvent(new CustomEvent('db-connection-error', { detail: error }));
+      }
+    }
+  }),
   defaultOptions: {
     queries: {
       retry: 1,
@@ -113,8 +137,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   return (
     <ErrorBoundary>
+      <DatabaseErrorOverlay />
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <Suspense fallback={<SkeletonLoader tab={getSkeletonTypeFromPath(window.location.pathname) as any} fullPage />}>
               <Routes>

@@ -3,9 +3,13 @@ import App from "./App.tsx";
 import { DEFAULT_BASE_COLOR, applyThemeToDocument } from "./features/finance/utils/themeRuntime";
 import "./core/api/gmailErrorHandler"; // Initialize Gmail token error handler
 import "./index.css";
+import { initAnalytics } from "@/lib/analytics";
+
+initAnalytics();
 
 // Prevent Vite from showing the error overlay for benign Supabase abort errors during HMR/Strict Mode
 if (typeof window !== 'undefined') {
+  // Prevent Vite from showing the error overlay for benign Supabase abort errors
   window.addEventListener('unhandledrejection', (event) => {
     const isAbortError =
       event.reason?.name === 'AbortError' ||
@@ -15,6 +19,13 @@ if (typeof window !== 'undefined') {
       event.preventDefault(); // Stop the error from crashing the app/showing Vite overlay
       console.warn('⚠️ [Global] Ignored unhandled AbortError (common in Supabase during React StrictMode/HMR)', event.reason);
     }
+  });
+
+  // Handle Vite dynamic import errors (e.g., when a new deployment invalidates old chunks)
+  window.addEventListener('vite:preloadError', (event) => {
+    console.warn('Vite preload error (likely due to a new deployment). Reloading page...');
+    event.preventDefault();
+    window.location.reload();
   });
 }
 

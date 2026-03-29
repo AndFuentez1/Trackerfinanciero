@@ -701,7 +701,7 @@ export function ImportExcelDialog({
         'ingreso': 'income', 'ingresos': 'income',
         'gasto': 'expense', 'gastos': 'expense',
         'transferencia': 'transfer_out', 'transfer': 'transfer_out',
-        'ahorro': 'saving', 'ahorros': 'saving',
+        'ahorro': 'savings', 'ahorros': 'savings',
         'inversión': 'investment', 'inversion': 'investment',
         'préstamo': 'loan', 'prestamo': 'loan',
       };
@@ -717,15 +717,16 @@ export function ImportExcelDialog({
         if (['ingreso', 'salario', 'venta', 'honorarios', 'nómina', 'renta'].some(k => rawCatLower.includes(k))) {
           normalizedType = 'income';
         } else if (['ahorro', 'cdt', 'inversión', 'inversion'].some(k => rawCatLower.includes(k))) {
-          normalizedType = 'saving';
+          normalizedType = 'savings';
         } else if (['prestamo', 'préstamo', 'deuda'].some(k => rawCatLower.includes(k))) {
           normalizedType = 'loan';
         }
 
         const isCriticalError = !row.isValid;
+        const needsReview = row.amount > MAX_AMOUNT;
 
         // --- AUTO-CATEGORIZATION FOR SAVINGS/INVESTMENT ACCOUNTS ---
-        let finalCategory = isCriticalError ? 'Por Clasificar' : rawCat;
+        let finalCategory = (isCriticalError || needsReview) ? 'Por Clasificar' : rawCat;
         let finalType: TransactionType = normalizedType;
         let finalCategoryId: string | undefined = undefined;
 
@@ -830,7 +831,7 @@ export function ImportExcelDialog({
           amount: row.amount,
           description: row.description,
           date: row.date,
-          payment_method_id: pmId,
+          payment_method_id: needsReview ? null : pmId,
         });
 
         if (i % 200 === 0) {
@@ -879,18 +880,17 @@ export function ImportExcelDialog({
       // Verificar duplicados contra la BD (misma fecha, valor y cuenta)
       const normalizedTransactions = transactionsToImport.map((t, idx) => {
         const truncatedAmount = Math.min(t.amount, MAX_AMOUNT);
-        const needsReview = t.amount > MAX_AMOUNT;
 
         return {
           row_index: idx,
           user_id: user.id,
           type: (t.type === 'transfer_out' || t.type === 'transfer_in') ? 'transfer' : t.type,
-          category: needsReview ? 'Por Clasificar' : t.category,
-          category_id: needsReview ? null : t.category_id,
+          category: t.category,
+          category_id: t.category_id,
           amount: truncatedAmount,
           description: t.description,
           date: t.date,
-          payment_method_id: needsReview ? null : t.payment_method_id,
+          payment_method_id: t.payment_method_id,
         };
       });
 
