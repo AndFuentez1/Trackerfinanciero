@@ -31,6 +31,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [emailSent, setEmailSent] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [userName, setUserName] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   // Rate limiting states
   const [lastEmailSentTime, setLastEmailSentTime] = useState(0);
   const [rateLimitError, setRateLimitError] = useState(false);
@@ -166,6 +167,11 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     if (e) { e.preventDefault(); }
     setError('');
 
+    if (!acceptTerms) {
+      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para continuar.');
+      return;
+    }
+
     // Validar rate limit antes de proceder
     if (!checkAndUpdateRateLimit()) {
       return;
@@ -204,6 +210,12 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
   const handleGoogleSignIn = async () => {
     setError('');
+
+    if (!acceptTerms) {
+      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para continuar.');
+      return;
+    }
+
     setIsGoogleSubmitting(true);
 
     try {
@@ -272,6 +284,11 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const handlePasswordCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!acceptTerms) {
+      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para registrarte.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden');
@@ -396,6 +413,21 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TrackFinance</h1>
             <p className="text-muted-foreground text-[15px] mt-1">Tu control financiero, simplificado.</p>
           </div>
+        </div>
+
+        <div className="flex items-start space-x-3 bg-muted/30 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 animate-in fade-in duration-500 delay-150">
+          <Checkbox
+            id="global-terms"
+            checked={acceptTerms}
+            onCheckedChange={(checked) => {
+              setAcceptTerms(checked as boolean);
+              if (checked) setError('');
+            }}
+            className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <Label htmlFor="global-terms" className="text-[11.5px] text-muted-foreground leading-relaxed cursor-pointer select-none">
+            Acepto los <a href="#" className="underline text-foreground hover:text-primary transition-colors">Términos y Privacidad</a>, y consiento que mis datos sean almacenados de forma segura en servidores de <span className="font-semibold text-foreground">Estados Unidos</span>.
+          </Label>
         </div>
 
         <Button
@@ -731,10 +763,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
           </TabsContent>
         </Tabs>
-
-        <p className="text-center text-xs text-muted-foreground px-8 leading-relaxed">
-          Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad.
-        </p>
       </div>
     </div>
   );
