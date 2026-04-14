@@ -125,6 +125,81 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_payments: {
+        Row: {
+          id: string
+          loan_id: string
+          amount: number
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          loan_id: string
+          amount: number
+          date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          loan_id?: string
+          amount?: number
+          date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      loans: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          total_amount: number
+          paid_amount: number
+          interest_rate: number
+          due_date: string | null
+          payment_method_id: string | null
+          type: string
+          is_disbursed: boolean
+          installments: number | null
+          created_at: string
+          updated_at: string
+          source_message_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          total_amount: number
+          paid_amount?: number
+          interest_rate?: number
+          due_date?: string | null
+          payment_method_id?: string | null
+          type: string
+          is_disbursed?: boolean
+          installments?: number | null
+          created_at?: string
+          updated_at?: string
+          source_message_id?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          total_amount?: number
+          paid_amount?: number
+          interest_rate?: number
+          due_date?: string | null
+          payment_method_id?: string | null
+          type?: string
+          is_disbursed?: boolean
+          installments?: number | null
+          created_at?: string
+          updated_at?: string
+          source_message_id?: string | null
+        }
+        Relationships: []
+      }
       gmail_message_status: {
         Row: {
           id: string
@@ -464,7 +539,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_import_duplicates: {
+        Args: {
+          p_user_id: string
+          p_rows: Json
+        }
+        Returns: {
+          row_index: number
+        }[]
+      }
+      mark_staging_duplicates: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

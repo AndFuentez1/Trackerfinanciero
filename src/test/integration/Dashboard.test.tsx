@@ -44,6 +44,7 @@ vi.mock('@/features/finance/utils/financeUtils', () => ({
         totalExpenses: 500,
         totalSavings: 200,
         totalInvestments: 100,
+        periodNetFlow: 500,
         netWorth: 500,
         currency: 'COP'
     })),

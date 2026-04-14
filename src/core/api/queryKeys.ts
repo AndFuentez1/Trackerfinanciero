@@ -6,6 +6,7 @@ export const queryKeys = {
     },
     finance: {
         all: ['finance'] as const,
+        allTransactions: (userId: string) => [...queryKeys.finance.all, 'allTransactions', userId] as const,
         transactions: (userId: string) => [...queryKeys.finance.all, 'transactions', userId] as const,
         transactionsFiltered: (userId: string, filters: Record<string, any>) => [...queryKeys.finance.transactions(userId), filters] as const,
         budgets: (userId: string) => [...queryKeys.finance.all, 'budgets', userId] as const,

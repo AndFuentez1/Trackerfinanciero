@@ -13,7 +13,7 @@ import { Settings2, Heart, ChevronDown, Shield, Info, Activity } from 'lucide-re
 import { Separator } from '@/shared/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible';
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/core/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
@@ -150,6 +150,14 @@ export default function ConfiguracionPage() {
                                 <CardContent className="space-y-4 pt-0">
                                     <p className="text-[15px] text-balance leading-relaxed text-muted-foreground">
                                         Todos tus datos se guardan de forma segura en la nube y se sincronizan en tiempo real con todos tus dispositivos.
+                                    </p>
+                                    <p className="text-sm flex flex-wrap gap-x-4 gap-y-1">
+                                        <Link to="/terms" className="font-medium text-primary underline-offset-4 hover:underline">
+                                            Términos del servicio
+                                        </Link>
+                                        <Link to="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
+                                            Política de privacidad
+                                        </Link>
                                     </p>
 
                                     <Separator className="my-4 opacity-50" />

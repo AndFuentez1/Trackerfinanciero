@@ -124,7 +124,7 @@ export function useTransactionData(
 
     // 2. All Transactions Query (Historical)
     const { data: allTransactions = [], isLoading: allTransactionsLoading } = useQuery({
-        queryKey: ['finance', 'allTransactions', userId],
+        queryKey: userId ? queryKeys.finance.allTransactions(userId) : ['finance', 'allTransactions', 'none'],
         queryFn: async () => {
             if (!userId) { return []; }
 

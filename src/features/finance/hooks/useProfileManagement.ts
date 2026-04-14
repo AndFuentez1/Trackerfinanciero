@@ -13,6 +13,7 @@ import { CURRENCIES, getDefaultDecimals } from '../constants/currencyConstants';
 import { queryKeys } from '@/core/api/queryKeys';
 import { getBackendUrl } from '@/core/api/backend';
 import type { ProfileSelect } from './useFinanceQueries';
+import type { Database } from '@/integrations/supabase/types';
 
 export type ResetProfileOptions = {
     transactions: boolean;
@@ -440,29 +441,47 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
     }, [user, toast, queryClient]);
 
     /**
-     * Convert currency for all monetary tables
+     * Conversión de moneda: no escala `estimated_yield` (porcentaje, no importe).
+     * Ante fallo a mitad de proceso, revierte con tasa inversa las tablas ya actualizadas.
      */
     const convertCurrency = useCallback(async (rate: number, newCurrency: string, dryRun = false) => {
         if (!user) { return { error: 'No autenticado' }; }
+        if (!Number.isFinite(rate) || rate <= 0) {
+            return { error: 'Tasa de conversión inválida' };
+        }
+
+        type AppTable = keyof Database['public']['Tables'];
+        type TableStep = { table: AppTable; fields: string[] };
+        type Completed = TableStep | 'loan_payments';
 
         try {
-            // Helper function to update bulk chunks safely and quickly
-            const updateTableFields = async (tableName: string, fieldsToMultiply: string[]) => {
-                let allRows: any[] = [];
+            const amountDecimals =
+                typeof decimalPlaces === 'number' && decimalPlaces >= 0
+                    ? Math.min(decimalPlaces, 8)
+                    : 4;
+
+            const makeScale = (factor: number) => (value: number) =>
+                Number((Number(value) * factor).toFixed(amountDecimals));
+
+            const updateTableFieldsScaled = async (
+                tableName: AppTable,
+                fieldsToMultiply: string[],
+                scale: (n: number) => number
+            ) => {
+                let allRows: Record<string, unknown>[] = [];
                 let hasMore = true;
                 let page = 0;
                 const pageSize = 1000;
 
-                // 1. Fetch all rows robustly
                 while (hasMore) {
                     const { data, error } = await supabase
-                        .from(tableName as any)
+                        .from(tableName)
                         .select('*')
                         .eq('user_id', user.id)
                         .range(page * pageSize, (page + 1) * pageSize - 1);
 
                     if (error) throw error;
-                    
+
                     if (data && data.length > 0) {
                         allRows.push(...data);
                         if (data.length < pageSize) {
@@ -477,12 +496,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
                 if (allRows.length === 0) return 0;
 
-                // 2. Prepare updates
                 const updates = allRows.map((r) => {
                     const updatedRow = { ...r };
                     for (const field of fieldsToMultiply) {
                         if (updatedRow[field] !== null && updatedRow[field] !== undefined) {
-                            updatedRow[field] = Number((Number(updatedRow[field]) * rate).toFixed(4));
+                            updatedRow[field] = scale(Number(updatedRow[field]));
                         }
                     }
                     return updatedRow;
@@ -490,11 +508,66 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
 
                 if (dryRun) return updates.length;
 
-                // 3. Upsert in chunks of 500 to stay well within PostgREST limits
                 const chunkSize = 500;
                 for (let i = 0; i < updates.length; i += chunkSize) {
                     const chunk = updates.slice(i, i + chunkSize);
-                    const { error } = await supabase.from(tableName as any).upsert(chunk);
+                    const { error } = await supabase.from(tableName).upsert(chunk as never[]);
+                    if (error) throw error;
+                }
+
+                return updates.length;
+            };
+
+            const updateLoanPaymentsScaled = async (scale: (n: number) => number) => {
+                const { data: loanRows, error: loanErr } = await supabase
+                    .from('loans')
+                    .select('id')
+                    .eq('user_id', user.id);
+                if (loanErr) throw loanErr;
+                const loanIds = (loanRows ?? []).map((r: { id: string }) => r.id);
+                if (loanIds.length === 0) return 0;
+
+                let allRows: Record<string, unknown>[] = [];
+                const pageSize = 1000;
+                const idChunkSize = 80;
+
+                for (let i = 0; i < loanIds.length; i += idChunkSize) {
+                    const idChunk = loanIds.slice(i, i + idChunkSize);
+                    let p = 0;
+                    let hasMore = true;
+                    while (hasMore) {
+                        const { data, error } = await supabase
+                            .from('loan_payments')
+                            .select('*')
+                            .in('loan_id', idChunk)
+                            .range(p * pageSize, (p + 1) * pageSize - 1);
+                        if (error) throw error;
+                        if (data && data.length > 0) {
+                            allRows.push(...data);
+                            if (data.length < pageSize) {
+                                hasMore = false;
+                            } else {
+                                p++;
+                            }
+                        } else {
+                            hasMore = false;
+                        }
+                    }
+                }
+
+                if (allRows.length === 0) return 0;
+
+                const updates = allRows.map((r) => ({
+                    ...r,
+                    amount: scale(Number(r.amount)),
+                }));
+
+                if (dryRun) return updates.length;
+
+                const chunkSize = 500;
+                for (let j = 0; j < updates.length; j += chunkSize) {
+                    const chunk = updates.slice(j, j + chunkSize);
+                    const { error } = await supabase.from('loan_payments').upsert(chunk as never[]);
                     if (error) throw error;
                 }
 
@@ -502,39 +575,74 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             };
 
             if (dryRun) {
-                // If it's a dry run, we just do a quick count on transactions for the preview, or just return 0.
                 return { preview: [], totalTransactions: 0 };
             }
 
-            // Run updates for all tables that handle money (sequentially to not overwhelm the limits, but internally chunked so it's very fast)
+            const forward = makeScale(rate);
+            const backward = makeScale(1 / rate);
+
+            const tableSteps: TableStep[] = [
+                { table: 'transactions', fields: ['amount', 'calculated_yield_amount', 'balance_at_transaction'] },
+                { table: 'budgets', fields: ['amount'] },
+                { table: 'future_expenses', fields: ['amount'] },
+                { table: 'payment_methods', fields: ['balance', 'credit_limit', 'savings_goal'] },
+                { table: 'savings_accounts', fields: ['balance'] },
+                { table: 'savings_transactions', fields: ['amount', 'calculated_yield', 'balance_after_transaction'] },
+                { table: 'pending_invoices', fields: ['amount'] },
+                { table: 'loans', fields: ['total_amount', 'paid_amount'] },
+            ];
+
+            const completed: Completed[] = [];
             let totalUpdated = 0;
-            totalUpdated += await updateTableFields('transactions', ['amount', 'calculated_yield_amount', 'balance_at_transaction']);
-            totalUpdated += await updateTableFields('budgets', ['amount']);
-            totalUpdated += await updateTableFields('future_expenses', ['amount']);
-            totalUpdated += await updateTableFields('payment_methods', ['balance', 'credit_limit', 'savings_goal', 'estimated_yield']);
-            totalUpdated += await updateTableFields('savings_accounts', ['balance']);
-            totalUpdated += await updateTableFields('savings_transactions', ['amount', 'calculated_yield', 'balance_after_transaction']);
-            totalUpdated += await updateTableFields('pending_invoices', ['amount']);
 
-            // Finally, update profile currency
-            await updateProfile({ currency: newCurrency });
+            try {
+                for (const step of tableSteps) {
+                    const n = await updateTableFieldsScaled(step.table, step.fields, forward);
+                    completed.push(step);
+                    totalUpdated += n;
+                }
+                const lp = await updateLoanPaymentsScaled(forward);
+                completed.push('loan_payments');
+                totalUpdated += lp;
 
-            // Invalidate everything to refresh UI
-            queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+                await updateProfile({ currency: newCurrency });
 
-            toast({
-                title: 'Conversión completada',
-                description: `Se han convertido ${totalUpdated} registros a ${newCurrency}`,
-            });
+                queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
 
-            return { success: true, converted: totalUpdated };
+                toast({
+                    title: 'Conversión completada',
+                    description: `Se han convertido ${totalUpdated} registros a ${newCurrency}`,
+                });
+
+                return { success: true, converted: totalUpdated };
+            } catch (convErr) {
+                for (let i = completed.length - 1; i >= 0; i--) {
+                    const step = completed[i];
+                    try {
+                        if (step === 'loan_payments') {
+                            await updateLoanPaymentsScaled(backward);
+                        } else {
+                            await updateTableFieldsScaled(step.table, step.fields, backward);
+                        }
+                    } catch (revertErr) {
+                        console.error('Error revirtiendo conversión parcial:', revertErr, step);
+                    }
+                }
+                queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+                throw convErr;
+            }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Error desconocido';
             console.error('Error converting currency:', error);
-            toast({ title: 'Error', description: message, variant: 'destructive' });
+            toast({
+                title: 'Error en conversión',
+                description:
+                    `${message}. Si algo no cuadra, cierra sesión y vuelve a entrar con red estable para sincronizar.`,
+                variant: 'destructive',
+            });
             return { error: message };
         }
-    }, [user, toast, updateProfile, queryClient]);
+    }, [user, toast, updateProfile, queryClient, decimalPlaces]);
 
     return {
         // State

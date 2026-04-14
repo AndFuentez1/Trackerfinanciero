@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSEO } from '@/shared/hooks/useSEO';
 import { useEffect, useLayoutEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -168,7 +168,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setError('');
 
     if (!acceptTerms) {
-      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para continuar.');
+      setError('Debes aceptar los Términos del servicio y la Política de privacidad para continuar.');
       return;
     }
 
@@ -212,7 +212,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setError('');
 
     if (!acceptTerms) {
-      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para continuar.');
+      setError('Debes aceptar los Términos del servicio y la Política de privacidad para continuar.');
       return;
     }
 
@@ -286,7 +286,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     setError('');
 
     if (!acceptTerms) {
-      setError('Debes aceptar los términos y el almacenamiento de datos en EE.UU. para registrarte.');
+      setError('Debes aceptar los Términos del servicio y la Política de privacidad para registrarte.');
       return;
     }
 
@@ -426,7 +426,16 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
             className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
           <Label htmlFor="global-terms" className="text-[11.5px] text-muted-foreground leading-relaxed cursor-pointer select-none">
-            Acepto los <a href="#" className="underline text-foreground hover:text-primary transition-colors">Términos y Privacidad</a>, y consiento que mis datos sean almacenados de forma segura en servidores de <span className="font-semibold text-foreground">Estados Unidos</span>.
+            He leído y acepto los{' '}
+            <Link to="/terms" className="underline text-foreground hover:text-primary transition-colors">
+              Términos del servicio
+            </Link>{' '}
+            y la{' '}
+            <Link to="/privacy" className="underline text-foreground hover:text-primary transition-colors">
+              Política de privacidad
+            </Link>
+            , y consiento el tratamiento de mis datos personales conforme a dichos documentos, incluido el alojamiento en
+            servidores ubicados en <span className="font-semibold text-foreground">Estados Unidos</span> cuando corresponda.
           </Label>
         </div>
 

@@ -5,6 +5,4 @@ alter table public.profiles
 -- Backfill for existing users that already completed onboarding flows
 update public.profiles
 set welcome_completed = true
-where onboarding_decision is not null
-  or has_pending_import = true
-  or currency is not null;
+where currency is not null;

@@ -79,7 +79,15 @@ vi.mock('../useTransactionData', () => ({
     allTransactions: [],
     rangeTransactions: [],
     budgetsWithSpending: [{ id: 'b1', amount: 500, spent: 100 }],
-    summary: { totalIncome: 0, totalExpenses: 0, totalSavings: 0, totalInvestments: 0 },
+    summary: {
+      totalIncome: 0,
+      totalExpenses: 0,
+      totalSavings: 0,
+      totalInvestments: 0,
+      periodNetFlow: 0,
+      netWorth: 0,
+      currency: 'COP',
+    },
     hasMore: false,
     transactionsLoading: false
   })

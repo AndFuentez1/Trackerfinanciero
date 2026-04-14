@@ -38,12 +38,17 @@ export function calculateSummary(
         .filter(t => t.type === 'investment')
         .reduce((sum, t) => sum + t.amount, 0);
 
+    /** Ingresos menos gastos en el conjunto filtrado (sin transferencias internas). No es patrimonio neto contable. */
+    const periodNetFlow = totalIncome - totalExpenses;
+
     return {
         totalIncome,
         totalExpenses,
         totalSavings,
         totalInvestments,
-        netWorth: totalIncome - totalExpenses,
+        periodNetFlow,
+        /** @deprecated Usar `periodNetFlow`. Se mantiene por compatibilidad; no representa patrimonio neto. */
+        netWorth: periodNetFlow,
         currency,
     };
 }

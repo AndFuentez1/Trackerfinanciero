@@ -897,32 +897,52 @@ export function ImportExcelDialog({
       let transactionsForInsert = normalizedTransactions;
 
       if (mode === 'append') {
-        // Optimized local deduplication
-        let existingTransactions: any[] = queryClient.getQueryData(['finance', 'allTransactions', user.id]) || [];
-        
-        if (!existingTransactions || existingTransactions.length === 0) {
-          // Fallback fetch if cache is empty
-          const { data } = await supabase
-            .from('transactions')
-            .select('date, amount, category, type')
-            .eq('user_id', user.id);
-          existingTransactions = data || [];
-        }
-
-        const existingHashes = new Set(
-          existingTransactions.map((t: any) => `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`)
-        );
-
         const duplicateIndexSet = new Set<number>();
-        
-        normalizedTransactions.forEach(t => {
-          const hash = `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`;
-          if (existingHashes.has(hash)) {
-            duplicateIndexSet.add(t.row_index);
-          }
+
+        const rpcPayload = normalizedTransactions.map((t) => ({
+          row_index: t.row_index,
+          date: t.date,
+          amount: t.amount,
+          description: t.description ?? '',
+          type: t.type,
+          payment_method_id: t.payment_method_id ?? null,
+        }));
+
+        const { data: dupRows, error: dupRpcError } = await supabase.rpc('find_import_duplicates', {
+          p_user_id: user.id,
+          p_rows: rpcPayload,
         });
 
-        transactionsForInsert = normalizedTransactions.filter(t => !duplicateIndexSet.has(t.row_index));
+        if (!dupRpcError && dupRows) {
+          dupRows.forEach((row: { row_index: number }) => duplicateIndexSet.add(row.row_index));
+        } else {
+          if (dupRpcError) {
+            console.warn('[ImportExcel] find_import_duplicates:', dupRpcError);
+          }
+          let existingTransactions: any[] =
+            queryClient.getQueryData(queryKeys.finance.allTransactions(user.id)) || [];
+
+          if (!existingTransactions || existingTransactions.length === 0) {
+            const { data } = await supabase
+              .from('transactions')
+              .select('date, amount, category, type')
+              .eq('user_id', user.id);
+            existingTransactions = data || [];
+          }
+
+          const existingHashes = new Set(
+            existingTransactions.map((t: any) => `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`)
+          );
+
+          normalizedTransactions.forEach((t) => {
+            const hash = `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`;
+            if (existingHashes.has(hash)) {
+              duplicateIndexSet.add(t.row_index);
+            }
+          });
+        }
+
+        transactionsForInsert = normalizedTransactions.filter((t) => !duplicateIndexSet.has(t.row_index));
 
         if (duplicateIndexSet.size > 0) {
           toast({

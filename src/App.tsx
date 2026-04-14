@@ -9,12 +9,15 @@ import { Toaster } from '@/shared/ui/toaster';
 import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { DatabaseErrorOverlay } from '@/shared/components/DatabaseErrorOverlay';
+import { NetworkSyncListener } from '@/shared/components/NetworkSyncListener';
 import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonUtils';
 
 // Auth is imported directly (not lazy) because:
 // 1. It's the first page unauthenticated users see — no benefit from lazy loading
 // 2. Dynamic imports of Auth.tsx have been unreliable in this environment
 import Auth from '@/features/auth/pages/Auth';
+import TermsOfServicePage from '@/pages/TermsOfServicePage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 const isSupabasePausedError = (error: any) => {
   const msg = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
@@ -23,6 +26,21 @@ const isSupabasePausedError = (error: any) => {
          msg.includes('503') ||
          error?.status === 503 || 
          error?.code === '503';
+};
+
+/** Errores de red o servidor a los que conviene reintentar la query antes de mostrar fallo. */
+const isTransientQueryFailure = (error: unknown) => {
+  const msg = typeof (error as Error)?.message === 'string' ? (error as Error).message.toLowerCase() : '';
+  const status = (error as { status?: number })?.status;
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('load failed') ||
+    status === 503 ||
+    status === 502 ||
+    status === 504 ||
+    (typeof status === 'number' && status >= 500)
+  );
 };
 
 const queryClient = new QueryClient({
@@ -42,7 +60,8 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: (failureCount, error) => (isTransientQueryFailure(error) ? failureCount < 3 : failureCount < 1),
+      retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 16000),
       refetchOnWindowFocus: false, // User Requirement: Prevent jarring refetches
       refetchOnReconnect: 'always',
       staleTime: 10 * 60 * 1000, // 10 minutes (User Requirement: Cache inteligente)
@@ -139,6 +158,7 @@ const App = () => {
     <ErrorBoundary>
       <DatabaseErrorOverlay />
       <QueryClientProvider client={queryClient}>
+        <NetworkSyncListener />
         <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <Suspense fallback={<SkeletonLoader tab={getSkeletonTypeFromPath(window.location.pathname) as any} fullPage />}>
@@ -152,6 +172,9 @@ const App = () => {
                     </PublicRoute>
                   }
                 />
+
+                <Route path="/terms" element={<TermsOfServicePage />} />
+                <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
                 {/* Protected routes under MainLayout */}
                 <Route

@@ -33,7 +33,7 @@ export function useFinanceMutations(userId: string | undefined) {
         [userId]
     );
     const allTransactionsKey = useMemo(
-        () => (userId ? ['finance', 'allTransactions', userId] as const : null),
+        () => (userId ? queryKeys.finance.allTransactions(userId) : null),
         [userId]
     );
 

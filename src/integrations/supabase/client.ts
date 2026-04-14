@@ -39,10 +39,6 @@ const warnInterceptor = (...args: unknown[]) => {
 
 console.error = errorInterceptor;
 console.warn = warnInterceptor;
-setTimeout(() => {
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
-}, 10000);
 
 let supabaseClient;
 try {

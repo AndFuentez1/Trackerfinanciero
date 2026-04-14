@@ -24,4 +24,4 @@ CREATE INDEX IF NOT EXISTS idx_classifier_rules_user_pattern ON public.classifie
 
 -- Enable realtime
 ALTER TABLE public.classifier_rules REPLICA IDENTITY FULL;
-PUBLICATION IF NOT EXISTS supabase_realtime ADD TABLE public.classifier_rules;
+alter publication supabase_realtime add table public.classifier_rules;

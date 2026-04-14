@@ -39,7 +39,7 @@ export function useCreateLoan() {
         };
 
         const { data: loanData, error: loanError } = await supabase
-            .from('loans' as any)
+            .from('loans')
             .insert(insertData)
             .select()
             .single();
@@ -118,7 +118,7 @@ export function useCreateLoanPayment() {
 
         // 1. Get current loan data to check remaining balance
         const { data: loanData, error: fetchError } = await supabase
-            .from('loans' as any)
+            .from('loans')
             .select('total_amount, paid_amount, type, name')
             .eq('id', payment.loan_id)
             .single();
@@ -155,7 +155,7 @@ export function useCreateLoanPayment() {
         // 3. Update the paid_amount in the main loans table
         const newPaid = currentPaid + actualLoanPayment;
         await supabase
-            .from('loans' as any)
+            .from('loans')
             .update({ paid_amount: newPaid })
             .eq('id', payment.loan_id);
 
@@ -163,7 +163,7 @@ export function useCreateLoanPayment() {
         if (isOverpayment && surplus > 0) {
             const reverseType = loanData.type === 'borrowed' ? 'lent' : 'borrowed';
             const { error: surplusError } = await supabase
-                .from('loans' as any)
+                .from('loans')
                 .insert({
                     name: `${loanData.name} (Excedente)`,
                     total_amount: surplus,
@@ -221,7 +221,7 @@ export function useUpdateLoan() {
         const { paid_amount, payments, ...dbUpdates } = updates as any;
 
         const { data, error } = await supabase
-            .from('loans' as any)
+            .from('loans')
             .update(dbUpdates)
             .eq('id', id)
             .select()
@@ -239,7 +239,7 @@ export function useUpdateLoan() {
 
     const deleteLoan = async (id: string) => {
         const { error } = await supabase
-            .from('loans' as any)
+            .from('loans')
             .delete()
             .eq('id', id);
 

@@ -56,6 +56,9 @@ interface SummaryTabProps {
     totalExpenses: number;
     totalSavings: number;
     totalInvestments: number;
+    /** Flujo neto ingresos − gastos (sin transferencias). */
+    periodNetFlow: number;
+    /** @deprecated Usar periodNetFlow */
     netWorth: number;
   };
   expensesByCategory: { category: string; amount: number }[];
@@ -75,7 +78,7 @@ export function SummaryTab({
   allTransactions,
   budgets,
   paymentMethods,
-  summary,
+  summary: _summary,
   expensesByCategory,
   insights,
   onDeleteBudget,

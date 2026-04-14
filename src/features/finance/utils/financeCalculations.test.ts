@@ -40,6 +40,7 @@ describe('financeCalculations', () => {
         const summary = calculateSummary(transactions, 'COP');
         expect(summary.totalIncome).toBe(1000);
         expect(summary.totalExpenses).toBe(200);
+        expect(summary.periodNetFlow).toBe(800);
         expect(summary.netWorth).toBe(800);
     });
 
@@ -125,6 +126,7 @@ describe('financeCalculations', () => {
         expect(summary.totalIncome).toBe(3000);
         expect(summary.totalSavings).toBe(100);
         expect(summary.totalInvestments).toBe(50);
+        expect(summary.periodNetFlow).toBe(3000);
         expect(summary.netWorth).toBe(3000); // 3000 - 0 = 3000
     });
 });
