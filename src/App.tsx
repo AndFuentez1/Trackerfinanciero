@@ -71,11 +71,26 @@ const queryClient = new QueryClient({
   },
 });
 
-// Retry wrapper for lazy imports — retries up to 3 times on failure
+// Retry wrapper for lazy imports — retries and force reloads if chunk is missing (e.g. after a deploy)
 function lazyWithRetry<T extends React.ComponentType<unknown>>(importFn: () => Promise<{ default: T }>) {
   return lazy(() =>
     importFn().catch((err: Error) => {
-      console.warn('[lazyWithRetry] Import failed, retrying...', err.message);
+      console.warn('[lazyWithRetry] Import failed:', err.message);
+
+      // Detect if it's a chunk load error (missing file from server after new deploy)
+      const isMissingChunk = err.name === 'ChunkLoadError' || err.message?.toLowerCase().includes('fetch');
+      if (isMissingChunk) {
+        const hasRefreshed = sessionStorage.getItem('tf_chunk_forced_reload');
+        if (!hasRefreshed || (Date.now() - parseInt(hasRefreshed)) > 10000) {
+          sessionStorage.setItem('tf_chunk_forced_reload', Date.now().toString());
+          console.info('[lazyWithRetry] Missing chunk detected. Forcing page reload to fetch new version...');
+          window.location.reload();
+          // Return a hanging promise so React Suspense doesn't crash during the reload
+          return new Promise<any>(() => {});
+        }
+      }
+
+      // Standard retry logic for transient network glitches
       return new Promise<void>((resolve) => setTimeout(resolve, 1500))
         .then(() => importFn())
         .catch((err2: Error) => {
