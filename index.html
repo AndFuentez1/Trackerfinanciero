@@ -376,6 +376,19 @@
           // Ignore irrelevant resources if needed
           if (!src) return;
 
+          // Auto-reload on missing production chunk (e.g. after a new deployment)
+          if ((tag === 'script' || tag === 'link') && src.includes('assets/') && src.match(/\.(js|css)$/)) {
+            const lastRetry = sessionStorage.getItem('tf_chunk_retry');
+            if (!lastRetry || (Date.now() - parseInt(lastRetry)) > 10000) {
+              sessionStorage.setItem('tf_chunk_retry', Date.now().toString());
+              if (window.caches) {
+                caches.keys().then(n => Promise.all(n.map(c => caches.delete(c))));
+              }
+              window.location.reload(true);
+              return; // Prevent showing the error overlay
+            }
+          }
+
           // Specific handling for Module Scripts failing (likely syntax/import error in dependency)
           if (tag === 'script' && src.includes('src/')) {
             window.__tf_showError({
