@@ -111,8 +111,13 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
   });
 
   const updateConfig = useCallback(
-    (updates: Partial<UserConfigRow>) => {
-      return mutation.mutateAsync(updates);
+    async (updates: Partial<UserConfigRow>) => {
+      try {
+        return await mutation.mutateAsync(updates);
+      } catch (err) {
+        console.warn('[useUserConfig] Failed to persist user config:', err);
+        return null;
+      }
     },
     [mutation]
   );
