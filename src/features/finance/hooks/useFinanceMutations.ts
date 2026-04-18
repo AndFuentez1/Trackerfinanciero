@@ -161,7 +161,7 @@ export function useFinanceMutations(userId: string | undefined) {
                 category: newTxn.category,
                 category_id: newTxn.category_id || null,
                 payment_method_id: newTxn.payment_method_id,
-                date: newTxn.date || new Date().toISOString().split('T')[0],
+                date: newTxn.date || new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
                 created_at: new Date().toISOString(),
                 category_name: 'Guardando...',
                 payment_method_name: 'Procesando...',

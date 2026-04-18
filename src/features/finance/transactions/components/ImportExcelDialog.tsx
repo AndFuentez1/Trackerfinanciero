@@ -388,6 +388,12 @@ export function ImportExcelDialog({
         // Strip everything except numbers, commas, dots, and minus sign
         // This handles "special symbols %&$" etc. by removing them
         const val = rawValue.replace(/[^\d.,-]/g, '').trim();
+
+        // Native float bypass for standard/clean decimal formats preventing excessive 
+        // trailing numbers (like 90009.45000002) from triggering the thousand-heuristics
+        if (!Number.isNaN(Number(val)) && !val.includes(',')) {
+          return Number(val).toFixed(2);
+        }
         
         const lastCommaIdx = val.lastIndexOf(',');
         const lastPeriodIdx = val.lastIndexOf('.');

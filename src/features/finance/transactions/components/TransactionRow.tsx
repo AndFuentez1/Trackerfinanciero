@@ -80,7 +80,9 @@ export const TransactionRow = memo(({
     };
 
     const formatDate = (dateString: string) => {
-        const d = new Date(dateString);
+        // Fix UTC timezone drift: parse exactly at noon local to prevent UTC offsets shifting dates backwards
+        const isLiteralDate = /^\d{4}-\d{2}-\d{2}$/.test((dateString || '').trim());
+        const d = isLiteralDate ? new Date(`${dateString}T12:00:00`) : new Date(dateString);
         if (isNaN(d.getTime())) { return ''; }
         const day = String(d.getDate()).padStart(2, '0');
         const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
