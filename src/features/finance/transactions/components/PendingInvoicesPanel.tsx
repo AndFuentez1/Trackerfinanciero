@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/shared/ui/select";
-import type { TransactionType, PendingInvoice } from '@/features/finance/types/financeTypes';
+import type { TransactionType, PendingInvoice, Transaction } from '@/features/finance/types/financeTypes';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Check, X, Edit2, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/shared/hooks/use-toast';
