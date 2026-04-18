@@ -114,7 +114,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
         return (
             <div className="space-y-1 w-full">
-                <div className="relative w-full">
+                <div className="relative w-full text-left">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium z-10 pointer-events-none">
                         {activeSymbol}
                     </span>
@@ -122,7 +122,8 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
                         ref={ref}
                         type="text"
                         inputMode="decimal"
-                        className={cn("w-full", className, "pl-10")}
+                        className={cn("w-full", className)}
+                        style={{ paddingLeft: "3.5rem" }}
                         value={displayValue}
                         onChange={handleChangeWithDots}
                         onBlur={handleBlur}

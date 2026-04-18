@@ -134,11 +134,11 @@ export const TransactionRow = memo(({
             )}
         >
             {/* Date */}
-            <td className="py-3 px-4 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
+            <td className="py-3 px-2 sm:px-4 align-middle text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                 {isEditing ? (
                     <input
                         type="date"
-                        className="h-8 px-2 text-xs bg-background/50 border rounded-md w-[9rem]"
+                        className="h-8 px-1 sm:px-2 text-[11px] sm:text-xs bg-background/50 border rounded-md w-full min-w-[100px] max-w-[125px] mx-auto text-center"
                         value={toInputDate(draft?.date || transaction.date)}
                         onChange={(e) => onDraftChange({ date: e.target.value })}
                     />
@@ -320,13 +320,15 @@ export const TransactionRow = memo(({
             </td>
 
             {/* Amount */}
-            <td className="py-2.5 px-4 align-middle text-center whitespace-nowrap min-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
+            <td className="py-2.5 px-2 sm:px-4 align-middle text-center whitespace-nowrap min-w-[100px] sm:min-w-[120px] border-r border-arquitectura-2/30" style={{ fontStyle: 'normal' }}>
                 {isEditing ? (
-                    <MoneyInput
-                        className="h-8 text-sm w-[10rem] ml-auto text-right"
-                        value={draft?.amount ?? transaction.amount}
-                        onChange={(val) => onDraftChange({ amount: val })}
-                    />
+                    <div className="w-full max-w-[120px] mx-auto">
+                        <MoneyInput
+                            className="h-8 text-xs sm:text-sm w-full text-right"
+                            value={draft?.amount ?? transaction.amount}
+                            onChange={(val) => onDraftChange({ amount: val })}
+                        />
+                    </div>
                 ) : (
                     <span className="text-sm font-bold tabular-nums whitespace-nowrap flex items-center justify-center gap-1 text-foreground">
                         <span className={isNegativeType(transaction.type) ? 'text-red-500' : 'text-green-600'} style={{ fontWeight: 700 }}>
