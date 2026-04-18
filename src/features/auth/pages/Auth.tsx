@@ -31,7 +31,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const [emailSent, setEmailSent] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [userName, setUserName] = useState('');
-  const [acceptTerms, setAcceptTerms] = useState(false);
   // Rate limiting states
   const [lastEmailSentTime, setLastEmailSentTime] = useState(0);
   const [rateLimitError, setRateLimitError] = useState(false);
@@ -167,10 +166,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     if (e) { e.preventDefault(); }
     setError('');
 
-    if (!acceptTerms) {
-      setError('Debes aceptar los Términos del servicio y la Política de privacidad para continuar.');
-      return;
-    }
+    setError('');
 
     // Validar rate limit antes de proceder
     if (!checkAndUpdateRateLimit()) {
@@ -210,11 +206,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
   const handleGoogleSignIn = async () => {
     setError('');
-
-    if (!acceptTerms) {
-      setError('Debes aceptar los Términos del servicio y la Política de privacidad para continuar.');
-      return;
-    }
 
     setIsGoogleSubmitting(true);
 
@@ -285,10 +276,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
     e.preventDefault();
     setError('');
 
-    if (!acceptTerms) {
-      setError('Debes aceptar los Términos del servicio y la Política de privacidad para registrarte.');
-      return;
-    }
+    setError('');
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden');
@@ -415,29 +403,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
         </div>
 
-        <div className="flex items-start space-x-3 bg-muted/30 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 animate-in fade-in duration-500 delay-150">
-          <Checkbox
-            id="global-terms"
-            checked={acceptTerms}
-            onCheckedChange={(checked) => {
-              setAcceptTerms(checked as boolean);
-              if (checked) setError('');
-            }}
-            className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-          />
-          <Label htmlFor="global-terms" className="text-[11.5px] text-muted-foreground leading-relaxed cursor-pointer select-none">
-            He leído y acepto los{' '}
-            <Link to="/terms" className="underline text-foreground hover:text-primary transition-colors">
-              Términos del servicio
-            </Link>{' '}
-            y la{' '}
-            <Link to="/privacy" className="underline text-foreground hover:text-primary transition-colors">
-              Política de privacidad
-            </Link>
-            , y consiento el tratamiento de mis datos personales conforme a dichos documentos, incluido el alojamiento en
-            servidores ubicados en <span className="font-semibold text-foreground">Estados Unidos</span> cuando corresponda.
-          </Label>
-        </div>
+
 
         <Button
           variant="outline"

@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import { Checkbox } from '@/shared/ui/checkbox';
+import { Label } from '@/shared/ui/label';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +43,7 @@ export function WelcomePanel() {
   const [isInitializingCategories, setIsInitializingCategories] = useState(false);
   const [categoriesLocallyCompleted, setCategoriesLocallyCompleted] = useState(false);
   const [currencyOpen, setCurrencyOpen] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   useEffect(() => {
     setSelectedCurrency(currency || '');
@@ -58,31 +61,44 @@ export function WelcomePanel() {
       description: 'Define tu zona para políticas de privacidad',
       completed: !!country,
       action: (
-        <div className="flex gap-2">
-          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Selecciona una región" />
-            </SelectTrigger>
-            <SelectContent className="z-[70]">
-              {REGIONS.map(reg => (
-                <SelectItem key={reg.id} value={reg.id}>
-                  {reg.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={async () => {
-              if (!selectedRegion) { return; }
-              setIsConfiguringRegion(true);
-              await updateProfile({ country: selectedRegion, data_treatment_accepted: true });
-              setIsConfiguringRegion(false);
-            }}
-            disabled={isConfiguringRegion || !selectedRegion}
-            aria-label="Confirmar región"
-          >
-            {isConfiguringRegion ? '...' : <CheckCircle2 className="h-4 w-4" />}
-          </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Selecciona una región" />
+              </SelectTrigger>
+              <SelectContent className="z-[70]">
+                {REGIONS.map(reg => (
+                  <SelectItem key={reg.id} value={reg.id}>
+                    {reg.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={async () => {
+                if (!selectedRegion || !acceptTerms) { return; }
+                setIsConfiguringRegion(true);
+                await updateProfile({ country: selectedRegion, data_treatment_accepted: true });
+                setIsConfiguringRegion(false);
+              }}
+              disabled={isConfiguringRegion || !selectedRegion || !acceptTerms}
+              aria-label="Confirmar región"
+            >
+              {isConfiguringRegion ? '...' : <CheckCircle2 className="h-4 w-4" />}
+            </Button>
+          </div>
+          <div className="flex items-start space-x-2 bg-muted/30 p-3 rounded-xl border border-slate-200/60 dark:border-border">
+            <Checkbox
+              id="global-terms-welcome"
+              checked={acceptTerms}
+              onCheckedChange={(c) => setAcceptTerms(c as boolean)}
+              className="mt-0.5 border-slate-300"
+            />
+            <Label htmlFor="global-terms-welcome" className="text-[11.5px] text-muted-foreground leading-relaxed cursor-pointer select-none">
+              He leído y acepto los Términos de servicio y la Política de privacidad, y consiento el tratamiento de mis datos personales en Estados Unidos.
+            </Label>
+          </div>
         </div>
       ),
     },
@@ -239,7 +255,7 @@ export function WelcomePanel() {
                       <div className={cn(
                         "p-3.5 rounded-[18px] transition-all duration-500 shadow-sm",
                         step.completed ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary group-hover:ring-1 group-hover:ring-primary/20"
-                      )}>
+                       )}>
                         {step.completed ? <CheckCircle2 className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
                       </div>
                       <div className="flex-1">
@@ -284,6 +300,3 @@ export function WelcomePanel() {
     </div>
   );
 }
-
-
-

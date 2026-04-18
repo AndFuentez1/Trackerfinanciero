@@ -384,7 +384,16 @@
               if (window.caches) {
                 caches.keys().then(n => Promise.all(n.map(c => caches.delete(c))));
               }
-              window.location.reload(true);
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) { registration.unregister(); }
+                });
+              }
+              if (window.location.href.indexOf('?nocache') === -1) {
+                  window.location.href = window.location.href + (window.location.href.indexOf('?') > -1 ? '&' : '?') + 'nocache=' + Date.now();
+              } else {
+                  window.location.reload(true);
+              }
               return; // Prevent showing the error overlay
             }
           }
