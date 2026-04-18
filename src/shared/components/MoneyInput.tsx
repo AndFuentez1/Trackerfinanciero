@@ -113,16 +113,16 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         };
 
         return (
-            <div className="space-y-1">
-                <div className={cn("relative", className)}>
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+            <div className="space-y-1 w-full">
+                <div className="relative w-full">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium z-10 pointer-events-none">
                         {activeSymbol}
                     </span>
                     <Input
                         ref={ref}
                         type="text"
                         inputMode="decimal"
-                        className="pl-12" // Space for currency symbol
+                        className={cn("pl-12 w-full", className)}
                         value={displayValue}
                         onChange={handleChangeWithDots}
                         onBlur={handleBlur}

@@ -226,16 +226,17 @@ export function PendingInvoicesPanel() {
                     }
                 }
 
-                const transactionData = {
+                const transactionData: Partial<Transaction> & { sync_code?: string } = {
                     amount: finalAmount, description: finalDescription, category: finalCategory.trim() || null,
-                    category_id: categoryId, type: finalType, payment_method_id: finalPaymentMethodId, date: finalDate, sync_code: (invoice as any).message_id || invoice.id,
+                    category_id: categoryId, type: finalType, payment_method_id: finalPaymentMethodId, date: finalDate,
                 };
 
                 if (invoice.isTransaction) {
                     const result = await updateTransaction(invoice.id, transactionData);
                     if (result && result.error) throw new Error('No se pudo actualizar la transacción.');
                 } else {
-                    const result = await addTransaction(transactionData);
+                    transactionData.sync_code = ((invoice as unknown) as { message_id?: string }).message_id || invoice.id;
+                    const result = await addTransaction(transactionData as Omit<Transaction, 'id' | 'created_at'>);
                     if (result && result.error) {
                         throw new Error('No se pudo crear la transacción. Verifica los datos.');
                     }
