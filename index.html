@@ -274,8 +274,8 @@
             </div>
 
             <div class="tf-actions">
-                <button class="tf-btn" onclick="if(window.caches){caches.keys().then(n=>Promise.all(n.map(c=>caches.delete(c))))};window.location.reload(true)">
-                  Intentar de nuevo
+                <button class="tf-btn" onclick="javascript:(async () => { if(window.caches) await Promise.all((await caches.keys()).map(c=>caches.delete(c))); if('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); regs.forEach(r => r.unregister()); } const u = new URL(window.location.href); u.searchParams.set('v', Date.now()); await fetch(u.href, { cache: 'reload' }).catch(e=>e); window.location.replace(u.href); })()">
+                  Limpiar Caché e Intentar de nuevo
                 </button>
             </div>
           </div>
@@ -373,29 +373,38 @@
         if (event.target && (event.target instanceof HTMLElement)) {
           const tag = event.target.tagName.toLowerCase();
           const src = event.target.src || event.target.href;
+          const rel = event.target.getAttribute('rel');
+          
           // Ignore irrelevant resources if needed
           if (!src) return;
+
+          // 1. Silent fail for modulepreload. The true runtime error will occur when the app evaluates the import asynchronously. 
+          // We bypass this because preloading a chunk that's missing on Github Pages shouldn't kill the app before the Router tries it.
+          if (rel === 'modulepreload') {
+            console.warn(`[ModulePreload] Chunk missing (probably stale session): ${src}`);
+            return; 
+          }
 
           // Auto-reload on missing production chunk (e.g. after a new deployment)
           if ((tag === 'script' || tag === 'link') && src.includes('assets/') && src.match(/\.(js|css)$/)) {
             const lastRetry = sessionStorage.getItem('tf_chunk_retry');
-            if (!lastRetry || (Date.now() - parseInt(lastRetry)) > 10000) {
+            if (!lastRetry || (Date.now() - parseInt(lastRetry)) > 12000) {
               sessionStorage.setItem('tf_chunk_retry', Date.now().toString());
-              if (window.caches) {
-                caches.keys().then(n => Promise.all(n.map(c => caches.delete(c))));
-              }
+              if (window.caches) caches.keys().then(n => Promise.all(n.map(c => caches.delete(c))));
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
                   for(let registration of registrations) { registration.unregister(); }
                 });
               }
-              if (window.location.href.indexOf('?nocache') === -1) {
-                  window.location.href = window.location.href + (window.location.href.indexOf('?') > -1 ? '&' : '?') + 'nocache=' + Date.now();
-              } else {
-                  window.location.reload(true);
-              }
+              const url = new URL(window.location.href);
+              url.searchParams.set('v', Date.now().toString());
+              try { 
+                fetch(url.href, { cache: 'reload' }).then(() => { window.location.replace(url.href); })
+                .catch(() => { window.location.replace(url.href); });
+              } catch(e) { window.location.replace(url.href); }
               return; // Prevent showing the error overlay
             }
+            // If it failed recently, we let it fall through and show the UI so they click "Limpiar Caché" manually
           }
 
           // Specific handling for Module Scripts failing (likely syntax/import error in dependency)
@@ -501,7 +510,7 @@
 
     })();
   </script>
-  <script type="module" crossorigin src="/Trackerfinanciero/assets/index-BfMUAzmm.js"></script>
+  <script type="module" crossorigin src="/Trackerfinanciero/assets/index-CSziKKpP.js"></script>
   <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/router-DL25QeqN.js">
   <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/data-DdQXEbjQ.js">
   <link rel="modulepreload" crossorigin href="/Trackerfinanciero/assets/supabase-DzmerlsF.js">
