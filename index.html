@@ -455,10 +455,27 @@
       }, true);
 
       window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        const name = reason?.name || (typeof reason === 'string' ? reason : '');
+        const message = reason?.message || (typeof reason === 'string' ? reason : '');
+        
+        // Ignore benign AbortError triggers (common when changing tabs or canceling fetches)
+        const isAbortError = 
+          name === 'AbortError' || 
+          message.includes('signal is aborted without reason') ||
+          message.includes('The operation was aborted') ||
+          message.includes('The user aborted a request');
+          
+        if (isAbortError) {
+          event.preventDefault();
+          console.warn('⚠️ [Global/HTML] Ignored unhandled AbortError:', reason);
+          return;
+        }
+
         window.__tf_showError({
           err: {
-            message: 'Promesa rechazada sin manejar: ' + (event.reason?.message || event.reason),
-            stack: event.reason?.stack
+            message: 'Promesa rechazada sin manejar: ' + (message || event.reason),
+            stack: reason?.stack
           }
         });
       });

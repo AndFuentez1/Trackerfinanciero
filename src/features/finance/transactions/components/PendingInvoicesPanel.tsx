@@ -505,20 +505,20 @@ export function PendingInvoicesPanel() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
-                                    <div className="min-w-0 flex-1 space-y-1.5">
-                                        <div className="text-[15px] font-bold text-foreground truncate tracking-tight leading-none" title={invoice.description}>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 w-full">
+                                    <div className="min-w-0 flex-1 space-y-2 sm:space-y-1.5">
+                                        <div className="text-[14px] sm:text-[15px] font-bold text-foreground line-clamp-2 md:truncate tracking-tight leading-snug sm:leading-none" title={invoice.description}>
                                             {invoice.description}
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                             {categoryLabel && (
                                                 <>
-                                                    <span className="text-[15px] font-bold text-foreground leading-none">
+                                                    <span className="text-[13px] sm:text-[15px] font-bold text-foreground leading-none">
                                                         {categoryLabel}
                                                     </span>
                                                     <div
-                                                        className="w-2.5 h-2.5 rounded-sm shadow-sm border border-black/5 shrink-0"
+                                                        className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm shadow-sm border border-black/5 shrink-0"
                                                         style={{ backgroundColor: categories.find(c => c.name.toLowerCase() === categoryLabel.toLowerCase())?.color || '#3b82f6' }}
                                                     />
                                                 </>
@@ -526,48 +526,48 @@ export function PendingInvoicesPanel() {
                                         </div>
 
                                         <div className="flex items-center">
-                                            <span className="font-bold text-[15px] text-foreground shrink-0 tracking-tight leading-none">
+                                            <span className="font-bold text-[14px] sm:text-[15px] text-foreground shrink-0 tracking-tight leading-none">
                                                 ${invoice.amount.toLocaleString('es-CO')}
                                             </span>
                                         </div>
 
                                         <div className="flex items-center gap-3">
-                                            <div className="text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 bg-transparent leading-none">
+                                            <div className="text-[11px] sm:text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 bg-transparent leading-none">
                                                 <Clock className="w-3 h-3 shrink-0" />
                                                 {format(new Date(invoice.date), "d MMM, h:mm a", { locale: es })}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                    <div className="flex flex-row items-center gap-2 w-full mt-3 sm:mt-0 sm:min-w-[280px]">
                                         <Button
                                             size="sm"
-                                            className="h-10 px-4 bg-primary hover:bg-primary/70 text-primary-foreground rounded-xl shadow-md shadow-primary/20 transition-all active:scale-95"
+                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-primary hover:bg-primary/70 text-primary-foreground rounded-xl shadow-md flex-1 justify-center shadow-primary/20 transition-all active:scale-95"
                                             onClick={() => handleApprove(invoice)}
                                             aria-label="Aprobar"
                                             title="Aprobar"
                                         >
-                                            <Check className="w-5 h-5" />
+                                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                                         </Button>
                                         <Button
                                             size="sm"
                                             variant="secondary"
-                                            className="h-10 px-4 bg-muted hover:bg-muted/50 rounded-xl border-none transition-all active:scale-95"
+                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-muted hover:bg-muted/50 rounded-xl border-none flex-1 justify-center transition-all active:scale-95"
                                             onClick={() => handleStartEdit(invoice)}
                                             aria-label="Editar"
                                             title="Editar"
                                         >
-                                            <Edit2 className="w-5 h-5 text-muted-foreground" />
+                                            <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                                         </Button>
                                         <Button
                                             size="sm"
                                             variant="secondary"
-                                            className="h-10 px-4 bg-muted hover:bg-destructive/10 rounded-xl border-none transition-all active:scale-95"
+                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-muted hover:bg-destructive/10 rounded-xl border-none flex-1 justify-center transition-all active:scale-95"
                                             onClick={() => handleReject(invoice)}
                                             aria-label="Eliminar"
                                             title="Eliminar"
                                         >
-                                            <X className="w-5 h-5 text-destructive" />
+                                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                                         </Button>
                                     </div>
                                 </div>
@@ -625,27 +625,33 @@ export function PendingInvoicesPanel() {
 
                 <div className="p-5 sm:p-6">
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-xl border border-border/50 h-auto mb-3">
-                            <TabsTrigger value="por-clasificar" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
-                                <span className="flex items-center gap-2">
-                                    <span className="text-sm font-bold">Errores críticos</span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                        <TabsList className="flex flex-col sm:grid w-full sm:grid-cols-3 bg-muted p-1 rounded-xl border border-border/50 h-auto gap-1 sm:gap-0 mb-3">
+                            <TabsTrigger value="por-clasificar" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 px-1 transition-all duration-300">
+                                <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                                    <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
+                                        <span className="hidden sm:inline">Errores </span>Críticos
+                                    </span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
                                         {porClasificarItems.length}
                                     </Badge>
                                 </span>
                             </TabsTrigger>
-                            <TabsTrigger value="missing" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
-                                <span className="flex items-center gap-2">
-                                    <span className="text-sm font-bold">Falta de información</span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                            <TabsTrigger value="missing" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 px-1 transition-all duration-300">
+                                <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                                    <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
+                                        Incompletos
+                                    </span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
                                         {missingDataInvoices.length}
                                     </Badge>
                                 </span>
                             </TabsTrigger>
-                            <TabsTrigger value="ready" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 transition-all duration-300">
-                                <span className="flex items-center gap-2">
-                                    <span className="text-sm font-bold">Necesita aprobación</span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-2 py-0.5 h-6 font-black text-sm transition-colors">
+                            <TabsTrigger value="ready" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 px-1 transition-all duration-300">
+                                <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                                    <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
+                                        Listos
+                                    </span>
+                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
                                         {readyToApproveInvoices.length}
                                     </Badge>
                                 </span>

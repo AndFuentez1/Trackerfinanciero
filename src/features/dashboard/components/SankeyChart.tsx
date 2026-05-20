@@ -435,16 +435,16 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
       )}
       {/* Total income / expense — bottom left/right */}
       {!drillDown && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-between items-end px-4 pb-1 pointer-events-none">
-          <div className="flex flex-col items-start">
-            <span className="text-[9px] font-medium text-muted-foreground leading-none uppercase tracking-wide">Total Ingresos</span>
-            <span className="text-sm font-bold leading-tight" style={{ color: 'hsl(var(--success))' }}>
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-between items-end px-2 sm:px-4 pb-1 sm:pb-2 pointer-events-none">
+          <div className="flex flex-col items-start bg-background/60 p-1 rounded backdrop-blur-[2px]">
+            <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground leading-none uppercase tracking-wide">Total Ingresos</span>
+            <span className="text-xs sm:text-sm font-bold leading-tight" style={{ color: 'hsl(var(--success))' }}>
               {formatCurrencyCompact(rawTotalIncome, cur)}
             </span>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] font-medium text-muted-foreground leading-none uppercase tracking-wide">Total Gastos</span>
-            <span className="text-sm font-bold leading-tight" style={{ color: 'hsl(var(--destructive))' }}>
+          <div className="flex flex-col items-end bg-background/60 p-1 rounded backdrop-blur-[2px]">
+            <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground leading-none uppercase tracking-wide">Total Gastos</span>
+            <span className="text-xs sm:text-sm font-bold leading-tight" style={{ color: 'hsl(var(--destructive))' }}>
               {formatCurrencyCompact(rawTotalExpense, cur)}
             </span>
           </div>
@@ -525,11 +525,11 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
                       <title>{`${node.name}\n${formatCurrencyCompact(node.value || 0, currency || 'COP')}`}</title>
                     </rect>
                     <text
-                      x={(node.x0 || 0) < dimensions.width / 2 ? (node.x1 || 0) + 8 : (node.x0 || 0) - 8}
+                      x={(node.x0 || 0) < dimensions.width / 2 ? (node.x1 || 0) + (dimensions.width < 500 ? 4 : 8) : (node.x0 || 0) - (dimensions.width < 500 ? 4 : 8)}
                       y={(node.y0 || 0) + ((node.y1 || 0) - (node.y0 || 0)) / 2}
                       dy="0.35em"
                       textAnchor={((node.x0 || 0) < dimensions.width / 2) ? "start" : "end"}
-                      fontSize={12}
+                      fontSize={dimensions.width < 500 ? 10 : 12}
                       fontWeight={500}
                       fill="hsl(var(--foreground))"
                       onClick={(e) => {
@@ -543,7 +543,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({ transactions, categori
                         textDecoration: isOtherExpenseNode ? 'underline' : 'none'
                       }}
                     >
-                      {node.name}
+                      {node.name.length > 20 && dimensions.width < 500 ? node.name.substring(0, 18) + '...' : node.name}
                     </text>
                   </>
                 )}

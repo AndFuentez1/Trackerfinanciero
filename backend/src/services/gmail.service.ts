@@ -41,10 +41,23 @@ interface GmailPart {
 export class GmailService {
     private oauth2Client: OAuth2Client;
 
-    constructor() {
+    constructor(customRedirectUri?: string) {
         const clientId = process.env.GMAIL_CLIENT_ID;
         const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-        const redirectUri = process.env.GMAIL_REDIRECT_URI;
+        
+        let redirectUri = customRedirectUri || process.env.GMAIL_REDIRECT_URI;
+
+        // Auto-detect and correct redirect URI if running on Render in production
+        const isRunningOnRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_URL;
+        if (isRunningOnRender && (!redirectUri || redirectUri.includes('localhost') || redirectUri.includes('127.0.0.1'))) {
+            if (process.env.RENDER_EXTERNAL_URL) {
+                redirectUri = `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/auth/google/callback`;
+            }
+        }
+
+        if (!redirectUri && process.env.BACKEND_URL) {
+            redirectUri = `${process.env.BACKEND_URL.replace(/\/$/, '')}/auth/google/callback`;
+        }
 
         if (!clientId || !clientSecret || !redirectUri) {
             throw new Error('Missing GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, or GMAIL_REDIRECT_URI in environment variables');

@@ -4,6 +4,17 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-04-18]
+
+### Base de Datos y Persistencia
+- **Preferencias de Interfaz**: Se agregaron las columnas `hide_incomplete_alert` y `keep_session_alive` en la tabla `user_configs` para guardar permanentemente la preferencia del usuario sobre los paneles de alertas pendientes/incompletas evitando re-pariciones al recargar o cambiar de dispositivo.
+- **Análisis de Migraciones**: Todos los objetos DTOs (`transactions`, `categories`, `payment_methods`, `user_configs`, `excel_import_staging`) operan exitosamente contra la nueva base de datos. Se garantizó compatibilidad y sincronización estricta.
+
+### Mejoras UI (Panel Principal)
+- **PendingInvoicesPanel Responsivo:** Se rediseñó el panel de transacciones pendientes en el Dashboard para que los botones de acción principal (Check, Edit, Delete) se distribuyan de forma fluida y simétrica llenando `w-full`, mejorando drásticamente el flujo táctil en plataformas móviles y otorgando consistencia en la versión web.
+
+---
+
 ## [2026-03-29]
 
 ### Autenticación y Privacidad
