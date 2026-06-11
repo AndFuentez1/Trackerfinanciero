@@ -115,7 +115,7 @@ describe('cashFlowCalculations', () => {
             // Monthly rate = 0.10/12 = 0.008333...
             // Payment ~ 87.91
             const loan: Loan = {
-                id: 'l1', name: 'Test Loan', total_amount: 1000, paid_amount: 0, interest_rate: 0.10,
+                id: 'l1', name: 'Test Loan', total_amount: 1000, paid_amount: 0, interest_rate: 10,
                 user_id: 'u1', type: 'borrowed', created_at: '', due_date: null, payment_method_id: null,
                 installments: 12
             };

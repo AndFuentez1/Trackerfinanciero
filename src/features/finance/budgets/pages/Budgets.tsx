@@ -22,6 +22,7 @@ import { BudgetTotalCard } from "@/features/finance/budgets/components/BudgetTot
 import { CategoryBudgetList } from "@/features/finance/budgets/components/CategoryBudgetList";
 import { IncomeCard } from "@/features/finance/budgets/components/IncomeCard";
 import { AddBudgetDialog } from '@/features/finance/budgets/components/AddBudgetDialog';
+import { ConfigureBudgetsDialog } from "@/features/finance/budgets/components/ConfigureBudgetsDialog";
 import { AddTransactionDialog } from '@/features/finance/transactions/components/AddTransactionDialog';
 import { FutureExpensesList } from "@/features/finance/budgets/components/FutureExpensesList";
 import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
@@ -106,6 +107,7 @@ export default function BudgetsPage() {
                                         paymentMethods={paymentMethods}
                                         onAddTransfer={addTransfer}
                                     />
+                                    <ConfigureBudgetsDialog />
                                     <AddBudgetDialog
                                         onAdd={saveBudget}
                                         monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
@@ -113,6 +115,45 @@ export default function BudgetsPage() {
                                 </div>
                             </div>
                         </header>
+
+                        {/* Period Filter (Moved above the cards) */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card/40 border border-border p-4 rounded-2xl shadow-sm">
+                            <span className="text-sm font-semibold text-muted-foreground">Filtrar presupuesto y balance por periodo:</span>
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value={selectedMonth}
+                                    onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
+                                >
+                                    <SelectTrigger className="w-[140px] h-9">
+                                        <SelectValue placeholder="Mes" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {monthOptions.map((m) => (
+                                            <SelectItem key={m.value} value={m.value}>
+                                                {m.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={selectedYear}
+                                    onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
+                                >
+                                    <SelectTrigger className="w-[120px] h-9">
+                                        <SelectValue placeholder="Año" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos</SelectItem>
+                                        {availableYears.map((year) => (
+                                            <SelectItem key={year} value={year.toString()}>
+                                                {year}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
                         {/* Top Section: Budget Cards (Side by Side on desktop) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
@@ -128,50 +169,14 @@ export default function BudgetsPage() {
                         <Separator className="my-6" />
 
                         <div>
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="flex shrink-0 items-center justify-center p-1">
-                                        <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
-                                            Presupuestos por Categoría
-                                        </h2>
-                                    </div>
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="flex shrink-0 items-center justify-center p-1">
+                                    <Wallet className="h-5 w-5 text-primary" strokeWidth={2.5} />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Select
-                                        value={selectedMonth}
-                                        onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
-                                    >
-                                        <SelectTrigger className="w-[140px] h-9">
-                                            <SelectValue placeholder="Mes" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {monthOptions.map((m) => (
-                                                <SelectItem key={m.value} value={m.value}>
-                                                    {m.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-
-                                    <Select
-                                        value={selectedYear}
-                                        onValueChange={(val) => setBudgetPeriod(val === 'all' ? 'all' : Number(val), budgetMonth)}
-                                    >
-                                        <SelectTrigger className="w-[120px] h-9">
-                                            <SelectValue placeholder="Año" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {availableYears.map((year) => (
-                                                <SelectItem key={year} value={year.toString()}>
-                                                    {year}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <div className="flex flex-col min-w-0">
+                                    <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight leading-none mt-1">
+                                        Presupuestos por Categoría
+                                    </h2>
                                 </div>
                             </div>
 
@@ -207,10 +212,3 @@ export default function BudgetsPage() {
         </div>
     );
 }
-
-
-
-
-
-
-

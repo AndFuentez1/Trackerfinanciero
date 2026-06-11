@@ -124,23 +124,23 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 mt-4 pr-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-4 items-center">
                             <FormField
                                 control={control}
                                 name="fromId"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-2">
-                                        <FormLabel>Desde</FormLabel>
+                                    <FormItem className="space-y-2 w-full">
+                                        <FormLabel className="text-sm font-semibold">Desde (Cuenta Origen)</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Origen" />
+                                                <SelectTrigger className="h-12 text-sm bg-background">
+                                                    <SelectValue placeholder="Seleccionar origen" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 {paymentMethods.map((pm) => (
                                                     <SelectItem key={pm.id} value={pm.id}>
-                                                        {pm.name}
+                                                        {pm.name} ({getCurrencySymbol()}{Number(pm.balance).toLocaleString()})
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -150,26 +150,26 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                                 )}
                             />
 
-                            <div className="hidden sm:flex justify-center pb-3">
-                                <ArrowRightLeft className="h-4 w-4 text-muted-foreground rotate-90 sm:rotate-0" />
+                            <div className="hidden sm:flex justify-center pt-6">
+                                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
                             </div>
 
                             <FormField
                                 control={control}
                                 name="toId"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-2">
-                                        <FormLabel>Hacia</FormLabel>
+                                    <FormItem className="space-y-2 w-full">
+                                        <FormLabel className="text-sm font-semibold">Hacia (Cuenta Destino)</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Destino" />
+                                                <SelectTrigger className="h-12 text-sm bg-background">
+                                                    <SelectValue placeholder="Seleccionar destino" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 {paymentMethods.map((pm) => (
                                                     <SelectItem key={pm.id} value={pm.id}>
-                                                        {pm.name}
+                                                        {pm.name} ({getCurrencySymbol()}{Number(pm.balance).toLocaleString()})
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -185,14 +185,14 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                             name="amount"
                             render={({ field }) => (
                                 <FormItem className="space-y-2">
-                                    <FormLabel>Monto</FormLabel>
+                                    <FormLabel className="text-sm font-semibold">Monto a Transferir</FormLabel>
                                     <FormControl>
                                         <MoneyInput
                                             id="transfer-amount"
                                             placeholder={getPlaceholderAmount()}
                                             value={field.value}
                                             onChange={field.onChange}
-                                            className="pl-12"
+                                            className="pl-12 h-12 text-base"
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -205,16 +205,16 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                             name="description"
                             render={({ field }) => (
                                 <FormItem className="space-y-2">
-                                    <FormLabel>Descripción (Opcional)</FormLabel>
+                                    <FormLabel className="text-sm font-semibold">Descripción (Opcional)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Ej: Ajuste de saldos" {...field} />
+                                        <Input placeholder="Ej: Ajuste de saldos" {...field} className="h-12 text-sm" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+                        <Button type="submit" className="w-full mt-2 h-12 text-base font-semibold" disabled={isSubmitting}>
                             {isSubmitting ? 'Procesando...' : 'Completar Transferencia'}
                         </Button>
                     </form>

@@ -126,19 +126,59 @@ export function useBudgetsData() {
         const stats: BudgetState[] = [];
 
         const filteredBudgets = budgets.filter(b => {
-            const year = Number(b.month?.substring(0, 4));
-            const month = Number(b.month?.substring(5, 7));
-            if (budgetYear !== 'all' && !Number.isNaN(year) && year !== budgetYear) { return false; }
-            if (budgetMonth !== 'all' && !Number.isNaN(month) && month !== budgetMonth) { return false; }
-
             // Budgets are only for expenses and savings — exclude any income-type budgets
             const cat = categories.find(c => c.id === b.category_id);
             if (cat?.type === 'income') { return false; }
 
-            return true;
+            const bYear = b.month ? Number(b.month.substring(0, 4)) : NaN;
+            const bMonth = b.month ? Number(b.month.substring(5, 7)) : NaN;
+
+            if (b.is_recurrent) {
+                // Recurrent budget: applies starting from its start month
+                if (budgetYear !== 'all' && !Number.isNaN(bYear)) {
+                    if (bYear > budgetYear) { return false; }
+                    if (bYear === budgetYear && budgetMonth !== 'all' && !Number.isNaN(bMonth)) {
+                        if (bMonth > budgetMonth) { return false; }
+                    }
+                }
+                return true;
+            } else {
+                // Specific budget: must match selected year and month exactly
+                if (budgetYear !== 'all' && !Number.isNaN(bYear) && bYear !== budgetYear) { return false; }
+                if (budgetMonth !== 'all' && !Number.isNaN(bMonth) && bMonth !== budgetMonth) { return false; }
+                return true;
+            }
         });
 
-        filteredBudgets.forEach(budget => {
+        // Group candidate budgets by category_id to resolve overrides
+        const budgetsMap = new Map<string, Budget>();
+        filteredBudgets.forEach(b => {
+            const existing = budgetsMap.get(b.category_id);
+            if (!existing) {
+                budgetsMap.set(b.category_id, b);
+            } else {
+                // If existing is recurrent and new is specific, override with specific
+                if (existing.is_recurrent && !b.is_recurrent) {
+                    budgetsMap.set(b.category_id, b);
+                }
+                // If both are recurrent, choose the one with the later start date
+                else if (existing.is_recurrent && b.is_recurrent) {
+                    if (b.month && existing.month && b.month > existing.month) {
+                        budgetsMap.set(b.category_id, b);
+                    }
+                }
+                // If both are specific, choose the latest updated
+                else if (!existing.is_recurrent && !b.is_recurrent) {
+                    if (b.updated_at > existing.updated_at) {
+                        budgetsMap.set(b.category_id, b);
+                    }
+                }
+            }
+        });
+
+        const resolvedBudgets = Array.from(budgetsMap.values());
+
+        resolvedBudgets.forEach(budget => {
             // 1. Find category info - Robust matching
             let category = categories.find(c => c.id === budget.category_id);
             if (!category && budget.category) {
@@ -210,7 +250,14 @@ export function useBudgetsData() {
         };
     }, [budgetsStats]);
 
-    const saveBudget = async (budgetData: { category_id: string; amount: number; category?: string; category_name?: string; month?: string }) => {
+    const saveBudget = async (budgetData: { 
+        category_id: string; 
+        amount: number; 
+        category?: string; 
+        category_name?: string; 
+        month?: string; 
+        is_recurrent?: boolean; 
+    }) => {
         if (!user) { return { error: 'No autenticado' }; }
 
         // BUSCAR EL NOMBRE DE LA CATEGORÍA SI NO VIENE
@@ -223,6 +270,18 @@ export function useBudgetsData() {
             ? budgetData.month.substring(0, 7) + '-01'
             : formatLocalDate(startOfMonth(new Date()));
 
+        const isRecurrent = budgetData.is_recurrent || false;
+
+        // Eliminar presupuesto recurrente previo para esta categoría para evitar conflictos con el índice único
+        if (isRecurrent) {
+            await supabase
+                .from('budgets')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('category_id', budgetData.category_id)
+                .eq('is_recurrent', true);
+        }
+
         const { data, error } = await supabase
             .from('budgets')
             .upsert({
@@ -232,7 +291,8 @@ export function useBudgetsData() {
                 amount: budgetData.amount,
                 period: 'monthly',
                 month: targetMonth,
-            }, { onConflict: 'user_id, category_id' })
+                is_recurrent: isRecurrent,
+            }, { onConflict: 'user_id,category_id,month' })
             .select()
             .single();
 
@@ -279,4 +339,3 @@ export function useBudgetsData() {
         availableYears
     };
 }
-

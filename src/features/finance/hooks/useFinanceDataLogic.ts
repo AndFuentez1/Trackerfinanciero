@@ -216,6 +216,7 @@ export function useFinanceDataLogic() {
     addPaymentMethod: mut.addPaymentMethod,
     updatePaymentMethod: mut.updatePaymentMethod,
     deletePaymentMethod: mut.deletePaymentMethod,
+    mergePaymentMethods: mut.mergePaymentMethods,
     addBudget: mut.addBudget,
     deleteBudget: mut.deleteBudget,
     addToStaging: mut.addToStaging,

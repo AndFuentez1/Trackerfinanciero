@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { FinanceProvider } from '@/features/finance/context/FinanceContext';
@@ -174,7 +174,7 @@ const App = () => {
       <DatabaseErrorOverlay />
       <QueryClientProvider client={queryClient}>
         <NetworkSyncListener />
-        <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <Suspense fallback={<SkeletonLoader tab={getSkeletonTypeFromPath(window.location.pathname) as any} fullPage />}>
               <Routes>
@@ -221,7 +221,7 @@ const App = () => {
             </Suspense>
             <Toaster />
           </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   );

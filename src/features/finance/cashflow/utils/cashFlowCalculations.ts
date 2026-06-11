@@ -165,7 +165,8 @@ export function calculateMonthlySnapshot(
     savingsAccounts.forEach(acc => {
         const prev = prevSavings[acc.id] ?? acc.balance;
         if (acc.estimated_yield && acc.estimated_yield > 0) {
-            const interes = prev * (Math.pow(1 + acc.estimated_yield, 1 / 12) - 1);
+            const yieldVal = acc.estimated_yield / 100;
+            const interes = prev * (Math.pow(1 + yieldVal, 1 / 12) - 1);
             interesesAhorro += interes;
             newSavings[acc.id] = prev + interes;
         } else {
@@ -337,7 +338,7 @@ export function calculateMonthlySnapshot(
             let interes = 0;
 
             if (isAmortized && prev.cuotasRestantes > 0) {
-                const tasa = loan.interest_rate;
+                const tasa = loan.interest_rate / 100;
                 cuota = calcularCuotaFrancesa(prev.saldo, tasa, prev.cuotasRestantes);
                 interes = prev.saldo * tasa / 12;
                 newLoans[loan.id] = { saldo: prev.saldo - (cuota - interes), cuotasRestantes: prev.cuotasRestantes - 1 };
@@ -351,7 +352,7 @@ export function calculateMonthlySnapshot(
                 }
             } else if (!isAmortized && !hasDueDate) {
                 // Fallback: if no installments and no due date, default to 12 months for safety/backward compatibility
-                const tasa = loan.interest_rate;
+                const tasa = loan.interest_rate / 100;
                 const cuotasRestantes = prev.cuotasRestantes || 12;
                 cuota = calcularCuotaFrancesa(prev.saldo, tasa, cuotasRestantes);
                 interes = prev.saldo * tasa / 12;

@@ -18,6 +18,7 @@ import { cn } from '@/core/utils';
 import { AddSavingsAccountDialog } from './AddSavingsAccountDialog';
 import { AddSavingsTransactionDialog } from './AddSavingsTransactionDialog';
 import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
+import { DeleteAccountConfirmDialog } from '@/features/finance/payment-methods/components/DeleteAccountConfirmDialog';
 
 interface AccountPerformance extends SavingsAccount {
   totalDeposits: number;
@@ -37,7 +38,7 @@ interface SavingsPerformanceProps {
   transactions: SavingsTransaction[];
   totalBalance: number;
   onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: unknown }>;
-  onDeleteAccount: (id: string) => Promise<void>;
+  onDeleteAccount: (id: string, option?: 'delete' | 'orphan' | 'transfer', transferToId?: string) => Promise<void>;
   onEdit: (id: string) => void;
   onAddTransaction: (transaction: Omit<SavingsTransaction, 'id'>) => Promise<{ error: unknown }>;
   onUpdateTransactionAmount: (id: string, newAmount: number) => Promise<{ error: unknown }>;
@@ -207,6 +208,8 @@ export function SavingsPerformance({
     type: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id: string;
   } | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleStartEdit = (tx: SavingsTransaction) => {
     setEditingTxId(tx.id);
@@ -357,7 +360,10 @@ export function SavingsPerformance({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm rounded-xl"
-                    onClick={() => onDeleteAccount(account.id)}
+                    onClick={() => {
+                      setAccountToDelete({ id: account.id, name: account.name });
+                      setIsDeleteConfirmOpen(true);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -636,6 +642,20 @@ export function SavingsPerformance({
             </div>
           )}
         </div>
+      )}
+      {accountToDelete && (
+        <DeleteAccountConfirmDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={setIsDeleteConfirmOpen}
+          accountId={accountToDelete.id}
+          accountName={accountToDelete.name}
+          paymentMethods={accounts}
+          isSavings={true}
+          onConfirm={async (option, transferToId) => {
+            await onDeleteAccount(accountToDelete.id, option, transferToId);
+            setAccountToDelete(null);
+          }}
+        />
       )}
     </div>
   );

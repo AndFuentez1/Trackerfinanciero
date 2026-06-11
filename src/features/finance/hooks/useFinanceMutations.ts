@@ -591,12 +591,66 @@ export function useFinanceMutations(userId: string | undefined) {
     });
 
     const deletePaymentMethod = useMutation({
-        mutationFn: async (id: string) => {
+        mutationFn: async ({ id, option, transferToId }: { id: string; option: 'delete' | 'orphan' | 'transfer'; transferToId?: string }) => {
             if (!userId) { throw new Error('Unauthenticated'); }
+
+            if (option === 'delete') {
+                // Delete associated transactions
+                const { error: txError } = await supabase
+                    .from('transactions')
+                    .delete()
+                    .or(`payment_method_id.eq.${id},to_payment_method_id.eq.${id}`);
+                if (txError) { throw txError; }
+
+                // Delete associated savings transactions
+                const { error: savingsTxError } = await supabase
+                    .from('savings_transactions')
+                    .delete()
+                    .eq('payment_method_id', id);
+                if (savingsTxError) { throw savingsTxError; }
+            } else if (option === 'transfer' && transferToId) {
+                // Get balances
+                const { data: pmToDelete } = await supabase.from('payment_methods').select('balance').eq('id', id).single();
+                const { data: pmToReceive } = await supabase.from('payment_methods').select('balance').eq('id', transferToId).single();
+
+                if (pmToDelete && pmToReceive) {
+                    const newBalance = Number(pmToReceive.balance) + Number(pmToDelete.balance);
+                    await supabase.from('payment_methods').update({ balance: newBalance }).eq('id', transferToId);
+                }
+
+                // Update normal transactions
+                const { error: txError1 } = await supabase
+                    .from('transactions')
+                    .update({ payment_method_id: transferToId })
+                    .eq('payment_method_id', id);
+                if (txError1) { throw txError1; }
+
+                const { error: txError2 } = await supabase
+                    .from('transactions')
+                    .update({ to_payment_method_id: transferToId })
+                    .eq('to_payment_method_id', id);
+                if (txError2) { throw txError2; }
+
+                // Update savings transactions
+                const { error: savingsTxError } = await supabase
+                    .from('savings_transactions')
+                    .update({ payment_method_id: transferToId, savings_account_id: transferToId })
+                    .eq('payment_method_id', id);
+                if (savingsTxError) { throw savingsTxError; }
+
+                // Update loans
+                const { error: loansError } = await supabase
+                    .from('loans')
+                    .update({ payment_method_id: transferToId })
+                    .eq('payment_method_id', id);
+                if (loansError) { throw loansError; }
+            }
+
+            // Finally, delete the payment method
             const { error } = await supabase.from('payment_methods').delete().eq('id', id);
             if (error) { throw error; }
         },
-        onMutate: async (id) => {
+        onMutate: async ({ id }) => {
             await queryClient.cancelQueries({ queryKey: queryKeys.finance.paymentMethods(userId!) });
             const previousPaymentMethods = queryClient.getQueryData<PaymentMethod[]>(queryKeys.finance.paymentMethods(userId!));
 
@@ -608,7 +662,7 @@ export function useFinanceMutations(userId: string | undefined) {
 
             return { previousPaymentMethods };
         },
-        onError: (err, id, context) => {
+        onError: (err, variables, context) => {
             if (context?.previousPaymentMethods) {
                 queryClient.setQueryData(queryKeys.finance.paymentMethods(userId!), context.previousPaymentMethods);
             }
@@ -617,6 +671,72 @@ export function useFinanceMutations(userId: string | undefined) {
         onSettled: () => {
             invalidatePaymentMethods();
             invalidateTransactions();
+        }
+    });
+
+    const mergePaymentMethods = useMutation({
+        mutationFn: async ({ duplicateId, primaryId }: { duplicateId: string; primaryId: string }) => {
+            if (!userId) { throw new Error('Unauthenticated'); }
+
+            const { data: duplicatePm } = await supabase.from('payment_methods').select('balance').eq('id', duplicateId).single();
+            const { data: primaryPm } = await supabase.from('payment_methods').select('balance').eq('id', primaryId).single();
+
+            if (!duplicatePm || !primaryPm) {
+                throw new Error('No se encontraron los métodos de pago a fusionar.');
+            }
+
+            const newBalance = Number(primaryPm.balance) + Number(duplicatePm.balance);
+
+            // Reassign normal transactions
+            const { error: txError1 } = await supabase
+                .from('transactions')
+                .update({ payment_method_id: primaryId })
+                .eq('payment_method_id', duplicateId);
+            if (txError1) { throw txError1; }
+
+            const { error: txError2 } = await supabase
+                .from('transactions')
+                .update({ to_payment_method_id: primaryId })
+                .eq('to_payment_method_id', duplicateId);
+            if (txError2) { throw txError2; }
+
+            // Reassign savings transactions
+            const { error: savingsTxError } = await supabase
+                .from('savings_transactions')
+                .update({ payment_method_id: primaryId, savings_account_id: primaryId })
+                .eq('payment_method_id', duplicateId);
+            if (savingsTxError) { throw savingsTxError; }
+
+            // Reassign loans
+            const { error: loansError } = await supabase
+                .from('loans')
+                .update({ payment_method_id: primaryId })
+                .eq('payment_method_id', duplicateId);
+            if (loansError) { throw loansError; }
+
+            // Update destination account balance
+            const { error: balanceError } = await supabase
+                .from('payment_methods')
+                .update({ balance: newBalance })
+                .eq('id', primaryId);
+            if (balanceError) { throw balanceError; }
+
+            // Delete duplicate account
+            const { error: deleteError } = await supabase
+                .from('payment_methods')
+                .delete()
+                .eq('id', duplicateId);
+            if (deleteError) { throw deleteError; }
+        },
+        onSettled: () => {
+            invalidatePaymentMethods();
+            invalidateTransactions();
+        },
+        onSuccess: () => {
+            toast({ title: 'Fusión exitosa', description: 'Las cuentas han sido fusionadas y la duplicada ha sido eliminada.' });
+        },
+        onError: (err) => {
+            toast({ title: 'Error al fusionar', description: (err as Error).message, variant: 'destructive' });
         }
     });
 
@@ -635,7 +755,7 @@ export function useFinanceMutations(userId: string | undefined) {
             };
 
             const { error } = await supabase.from('budgets').upsert(dbData, {
-                onConflict: 'user_id,category,month'
+                onConflict: 'user_id,category_id,month'
             });
             if (error) { throw error; }
         },
@@ -874,9 +994,18 @@ export function useFinanceMutations(userId: string | undefined) {
         }
     };
 
-    const deletePaymentMethodFn = async (id: string) => {
+    const deletePaymentMethodFn = async (id: string, option: 'delete' | 'orphan' | 'transfer' = 'orphan', transferToId?: string) => {
         try {
-            await deletePaymentMethod.mutateAsync(id);
+            await deletePaymentMethod.mutateAsync({ id, option, transferToId });
+            return { error: null };
+        } catch (error) {
+            return { error };
+        }
+    };
+
+    const mergePaymentMethodsFn = async (duplicateId: string, primaryId: string) => {
+        try {
+            await mergePaymentMethods.mutateAsync({ duplicateId, primaryId });
             return { error: null };
         } catch (error) {
             return { error };
@@ -1098,6 +1227,7 @@ export function useFinanceMutations(userId: string | undefined) {
         addPaymentMethod: addPaymentMethodFn,
         updatePaymentMethod: updatePaymentMethodFn,
         deletePaymentMethod: deletePaymentMethodFn,
+        mergePaymentMethods: mergePaymentMethodsFn,
         addBudget: addBudgetFn,
         deleteBudget: deleteBudgetFn,
         addToStaging: addToStagingFn,

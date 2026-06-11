@@ -1505,9 +1505,25 @@ export function ImportExcelDialog({
 
                   {!isImporting && (
                     <Button
-                      onClick={() => {
+                      onClick={async () => {
                         if (validCount === 0 || isImporting) { return; }
-                        setShowImportChoice(true);
+                        
+                        try {
+                          // Verificar si la base de datos está vacía (0 transacciones y 0 métodos de pago)
+                          const { count: txCount, error: countErr } = await supabase
+                            .from('transactions')
+                            .select('*', { count: 'exact', head: true });
+                          
+                          const isEmpty = !countErr && (txCount === 0 || txCount === null) && paymentMethods.length === 0;
+                          
+                          if (isEmpty) {
+                            handleStartImport('append');
+                          } else {
+                            setShowImportChoice(true);
+                          }
+                        } catch (err) {
+                          setShowImportChoice(true);
+                        }
                       }}
                       className="w-full h-11 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:bg-primary/70 hover:text-primary-foreground rounded-xl transition-all active:scale-[0.99] group overflow-hidden"
                       disabled={validCount === 0}

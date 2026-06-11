@@ -72,6 +72,7 @@ export interface Budget {
     spent?: number;
     user_id?: string;
     period?: 'monthly';
+    is_recurrent?: boolean;
     created_at?: string;
     updated_at?: string;
 }

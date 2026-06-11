@@ -18,6 +18,7 @@ CREATE TABLE public.budgets (
   category TEXT NOT NULL,
   amount DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
   month DATE NOT NULL,
+  is_recurrent BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   UNIQUE(user_id, category, month)
@@ -1600,12 +1601,23 @@ BEGIN
   END IF;
 
   -- Validate savings_account_id ownership when provided
+  -- Buscar en savings_accounts o en payment_methods (con is_savings_account = true)
   IF NEW.savings_account_id IS NOT NULL THEN
+    -- Intentar en la tabla legacy savings_accounts
     PERFORM 1 FROM public.savings_accounts
     WHERE id = NEW.savings_account_id
       AND user_id = NEW.user_id;
+      
     IF NOT FOUND THEN
-      RAISE EXCEPTION 'Invalid savings_account_id for user';
+      -- Intentar en payment_methods donde es cuenta de ahorros
+      PERFORM 1 FROM public.payment_methods
+      WHERE id = NEW.savings_account_id
+        AND user_id = NEW.user_id
+        AND is_savings_account = true;
+        
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'Invalid savings_account_id for user';
+      END IF;
     END IF;
   END IF;
 
@@ -2766,3 +2778,8 @@ BEGIN
     );
 END;
 $$;
+
+-- Create partial unique index to ensure at most one recurrent budget per category per user
+CREATE UNIQUE INDEX IF NOT EXISTS idx_budgets_user_id_category_id_recurrent 
+ON public.budgets (user_id, category_id) 
+WHERE (is_recurrent = true);

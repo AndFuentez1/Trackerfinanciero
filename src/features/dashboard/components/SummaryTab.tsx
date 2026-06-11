@@ -13,16 +13,7 @@ import { calculateExpensesByCategory } from '@/features/finance/utils/financeUti
 import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX, ChevronDown } from 'lucide-react';
 import type { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
+import { DeleteAccountConfirmDialog } from '@/features/finance/payment-methods/components/DeleteAccountConfirmDialog';
 import { useLoans } from '@/features/finance/loans/hooks/useLoans';
 import {
   DropdownMenu,
@@ -64,7 +55,7 @@ interface SummaryTabProps {
   expensesByCategory: { category: string; amount: number }[];
   insights: Insight[];
   onDeleteBudget: (id: string) => Promise<{ error: unknown }>;
-  onDeletePaymentMethod: (id: string) => Promise<{ error: unknown }>;
+  onDeletePaymentMethod: (id: string, option?: 'delete' | 'orphan' | 'transfer', transferToId?: string) => Promise<{ error: unknown }>;
   categories: CategoryItem[];
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<{ error: unknown }>;
   dateFilter: { period: string; from: string | null; to: string | null };
@@ -449,32 +440,21 @@ export function SummaryTab({
         )}
 
         {/* Modal de Confirmación de Eliminación */}
-        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-          <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar este método de pago?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se eliminará <strong>{pmToDelete?.name}</strong>.
-                Las transacciones asociadas podrían quedar sin método de pago asignado. Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async () => {
-                  if (pmToDelete) {
-                    await onDeletePaymentMethod(pmToDelete.id);
-                    setIsDeleteConfirmOpen(false);
-                    setPmToDelete(null);
-                  }
-                }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-              >
-                Sí, eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Modal de Confirmación de Eliminación */}
+        <DeleteAccountConfirmDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={setIsDeleteConfirmOpen}
+          accountId={pmToDelete?.id}
+          accountName={pmToDelete?.name}
+          paymentMethods={paymentMethods}
+          onConfirm={async (option, transferToId) => {
+            if (pmToDelete) {
+              await onDeletePaymentMethod(pmToDelete.id, option, transferToId);
+              setIsDeleteConfirmOpen(false);
+              setPmToDelete(null);
+            }
+          }}
+        />
       </div>
 
       {/* SECTION 2: Resumen General */}

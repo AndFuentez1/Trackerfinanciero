@@ -42,7 +42,7 @@ import {
 } from '@/shared/ui/form';
 
 interface AddBudgetDialogProps {
-  onAdd: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: unknown }>;
+  onAdd: (budget: { category_id: string; category: string; amount: number; month: string; is_recurrent?: boolean }) => Promise<{ error: unknown }>;
   onDelete?: (budgetId: string) => Promise<{ error: unknown }>;
   monthOverride?: string;
   editingBudget?: {
@@ -50,6 +50,8 @@ interface AddBudgetDialogProps {
     category_id: string;
     categoryName: string;
     amount: number;
+    is_recurrent?: boolean;
+    month?: string;
   };
   children?: React.ReactNode;
 }
@@ -74,18 +76,28 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     return decimalPlaces > 0 ? `100000${decimals}` : '100000';
   };
 
-  const form = useForm<BudgetFormValues>({
+  const defaultMonth = monthOverride
+    ? monthOverride.substring(0, 7)
+    : (() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      })();
+
+  const form = useForm<BudgetFormValues & { is_recurrent: boolean; month: string }>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
       category_id: editingBudget?.category_id || '',
       category: editingBudget?.categoryName || '',
       amount: editingBudget?.amount || 0,
+      is_recurrent: editingBudget?.is_recurrent || false,
+      month: editingBudget?.month ? editingBudget.month.substring(0, 7) : defaultMonth,
     },
   });
 
   const { control, handleSubmit, reset, setValue, formState: { isSubmitting } } = form;
 
   const watchedCategoryId = useWatch({ control, name: 'category_id' });
+  const watchIsRecurrent = useWatch({ control, name: 'is_recurrent' });
 
   const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
   const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
@@ -100,6 +112,8 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         category_id: editingBudget.category_id,
         category: editingBudget.categoryName,
         amount: editingBudget.amount,
+        is_recurrent: editingBudget.is_recurrent || false,
+        month: editingBudget.month ? editingBudget.month.substring(0, 7) : defaultMonth,
       });
       const cat = categories.find(c => c.id === editingBudget.category_id);
       if (cat?.type === 'saving') {
@@ -121,19 +135,12 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
     [categories, editingBudget, activeTab]);
 
-  const onFormSubmit = async (values: BudgetFormValues) => {
+  const onFormSubmit = async (values: BudgetFormValues & { is_recurrent: boolean; month: string }) => {
     const now = new Date();
-    const currentMonth = monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-
-    const budgetPayload = {
-      category_id: values.category_id,
-      category_name: values.category || '',
-      amount: values.amount,
-      month: currentMonth,
-    };
+    const targetMonth = values.month ? `${values.month}-01` : (monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
 
     // Strict validation
-    if (!budgetPayload.category_id || budgetPayload.amount <= 0) {
+    if (!values.category_id || values.amount <= 0) {
       toast({
         title: 'Error de validación',
         description: 'Debes seleccionar una categoría y el monto debe ser mayor a 0.',
@@ -143,10 +150,11 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     }
 
     const result = await onAdd({
-      category_id: budgetPayload.category_id,
-      category: budgetPayload.category_name,
-      amount: budgetPayload.amount,
-      month: budgetPayload.month,
+      category_id: values.category_id,
+      category: values.category,
+      amount: values.amount,
+      month: targetMonth,
+      is_recurrent: values.is_recurrent,
     });
 
     if (!result?.error) {
@@ -301,6 +309,50 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                     <MoneyInput
                       className="h-11 md:h-9 text-sm placeholder:text-[90%]"
                       placeholder={getPlaceholderAmount()}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="is_recurrent"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-medium">Presupuesto recurrente</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Aplica automáticamente para todos los meses a partir del mes de inicio.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="month"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm">
+                    {watchIsRecurrent ? 'Mes de inicio (recurrencia)' : 'Mes de aplicación'}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="month"
+                      className="h-11 md:h-9 text-sm"
                       value={field.value}
                       onChange={field.onChange}
                     />

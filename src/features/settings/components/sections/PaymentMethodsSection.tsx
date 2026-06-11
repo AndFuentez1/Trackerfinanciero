@@ -9,16 +9,7 @@ import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { PaymentMethodList } from '@/features/finance/payment-methods/components/PaymentMethodList';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
+import { DeleteAccountConfirmDialog } from '@/features/finance/payment-methods/components/DeleteAccountConfirmDialog';
 
 import { AccountsListSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
 
@@ -97,29 +88,18 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
                     />
                 )}
 
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogContent className="rounded-2xl">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar esta cuenta?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Se eliminará <strong>{selectedPM?.name}</strong>.
-                                Las transacciones asociadas se mantendrán pero sin método de pago asignado.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => {
-                                    if (selectedPM) { deletePaymentMethod(selectedPM.id); }
-                                    setIsDeleteDialogOpen(false);
-                                }}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-                            >
-                                Sí, eliminar cuenta
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <DeleteAccountConfirmDialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                    accountId={selectedPM?.id}
+                    accountName={selectedPM?.name}
+                    paymentMethods={paymentMethods}
+                    onConfirm={(option, transferToId) => {
+                        if (selectedPM) {
+                            deletePaymentMethod(selectedPM.id, option, transferToId);
+                        }
+                    }}
+                />
             </CardContent>
         </Card>
     );

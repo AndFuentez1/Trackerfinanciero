@@ -222,7 +222,79 @@ export function useSavingsDataLogic() {
     return { error: null, data };
   };
 
-  const deleteSavingsAccount = async (id: string) => {
+  const deleteSavingsAccount = async (id: string, option: 'delete' | 'orphan' | 'transfer' = 'orphan', transferToId?: string) => {
+    if (!user) return;
+
+    if (option === 'delete') {
+      // Delete associated transactions
+      const { error: txError } = await supabase
+        .from('transactions')
+        .delete()
+        .or(`payment_method_id.eq.${id},to_payment_method_id.eq.${id}`);
+      if (txError) {
+        toast({ title: 'Error', description: 'No se pudieron eliminar las transacciones asociadas', variant: 'destructive' });
+        return;
+      }
+
+      // Delete associated savings transactions
+      const { error: savingsTxError } = await supabase
+        .from('savings_transactions')
+        .delete()
+        .eq('payment_method_id', id);
+      if (savingsTxError) {
+        toast({ title: 'Error', description: 'No se pudieron eliminar los movimientos de ahorro asociados', variant: 'destructive' });
+        return;
+      }
+    } else if (option === 'transfer' && transferToId) {
+      // Get balances
+      const { data: pmToDelete } = await supabase.from('payment_methods').select('balance').eq('id', id).single();
+      const { data: pmToReceive } = await supabase.from('payment_methods').select('balance').eq('id', transferToId).single();
+
+      if (pmToDelete && pmToReceive) {
+        const newBalance = Number(pmToReceive.balance) + Number(pmToDelete.balance);
+        await supabase.from('payment_methods').update({ balance: newBalance }).eq('id', transferToId);
+      }
+
+      // Update normal transactions
+      const { error: txError1 } = await supabase
+        .from('transactions')
+        .update({ payment_method_id: transferToId })
+        .eq('payment_method_id', id);
+      if (txError1) {
+        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones', variant: 'destructive' });
+        return;
+      }
+
+      const { error: txError2 } = await supabase
+        .from('transactions')
+        .update({ to_payment_method_id: transferToId })
+        .eq('to_payment_method_id', id);
+      if (txError2) {
+        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones', variant: 'destructive' });
+        return;
+      }
+
+      // Update savings transactions
+      const { error: savingsTxError } = await supabase
+        .from('savings_transactions')
+        .update({ payment_method_id: transferToId, savings_account_id: transferToId })
+        .eq('payment_method_id', id);
+      if (savingsTxError) {
+        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones de ahorro', variant: 'destructive' });
+        return;
+      }
+
+      // Update loans
+      const { error: loansError } = await supabase
+        .from('loans')
+        .update({ payment_method_id: transferToId })
+        .eq('payment_method_id', id);
+      if (loansError) {
+        toast({ title: 'Error', description: 'No se pudieron transferir los préstamos', variant: 'destructive' });
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from('payment_methods')
       .delete()
@@ -237,7 +309,9 @@ export function useSavingsDataLogic() {
     setSavingsTransactions(prev => prev.filter(t => t.payment_method_id !== id));
     toast({ title: 'Eliminado', description: 'Cuenta de ahorro eliminada' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });
+    queryClient.invalidateQueries({ queryKey: ['savings_transactions', user.id] });
   };
+
 
   const addSavingsTransaction = async (transaction: Omit<SavingsTransaction, 'id'>) => {
     if (!user) { return { error: 'No autenticado' }; }
