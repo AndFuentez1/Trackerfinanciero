@@ -130,6 +130,7 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
                 amount: Number(b.amount),
                 month: b.month,
                 user_id: b.user_id,
+                is_recurrent: !!b.is_recurrent,
                 created_at: b.created_at,
                 updated_at: b.updated_at
             }));

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
-import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { MoneyInput } from '@/shared/components/MoneyInput';
+import { Label } from '@/shared/ui/label';
+import { Switch } from '@/shared/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,17 @@ import {
 } from '@/shared/ui/dialog';
 import { useToast } from '@/shared/hooks/use-toast';
 import { Settings, Trash2, Check } from 'lucide-react';
+import { cn } from '@/core/utils';
+
+interface CategoryConfig {
+  categoryId: string;
+  categoryName: string;
+  categoryColor?: string;
+  amount: number;
+  isRecurrent: boolean;
+  month: string;
+  budgetId?: string;
+}
 
 export function ConfigureBudgetsDialog() {
   const [open, setOpen] = useState(false);
@@ -24,18 +36,9 @@ export function ConfigureBudgetsDialog() {
   const { currency } = useFinance();
   const { toast } = useToast();
 
-  // Keep local state for budget settings per category
-  interface CategoryConfig {
-    categoryId: string;
-    categoryName: string;
-    categoryColor?: string;
-    amount: number;
-    isRecurrent: boolean;
-    month: string;
-    budgetId?: string; // if already exists
-  }
-
   const [configs, setConfigs] = useState<CategoryConfig[]>([]);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // Default month: YYYY-MM
   const getDefaultMonth = () => {
@@ -47,9 +50,8 @@ export function ConfigureBudgetsDialog() {
   useEffect(() => {
     if (open && categories.length > 0) {
       const expenseAndSavingCategories = categories.filter(c => c.type === 'expense' || c.type === 'saving');
-      
+
       const initialConfigs = expenseAndSavingCategories.map(cat => {
-        // Find existing budget for this category
         const budgetState = budgets.find(b => b.budget.category_id === cat.id);
         const dbBudget = budgetState?.budget;
 
@@ -59,10 +61,10 @@ export function ConfigureBudgetsDialog() {
           categoryColor: cat.color || undefined,
           amount: dbBudget ? Number(dbBudget.amount) : 0,
           isRecurrent: dbBudget ? !!dbBudget.is_recurrent : false,
-          month: dbBudget && dbBudget.month 
-            ? dbBudget.month.substring(0, 7) 
+          month: dbBudget && dbBudget.month
+            ? dbBudget.month.substring(0, 7)
             : getDefaultMonth(),
-          budgetId: dbBudget?.id
+          budgetId: dbBudget?.id,
         };
       });
 
@@ -70,7 +72,7 @@ export function ConfigureBudgetsDialog() {
     }
   }, [open, categories, budgets]);
 
-  const handleConfigChange = (categoryId: string, field: keyof CategoryConfig, value: any) => {
+  const handleConfigChange = (categoryId: string, field: keyof CategoryConfig, value: CategoryConfig[keyof CategoryConfig]) => {
     setConfigs(prev => prev.map(c => c.categoryId === categoryId ? { ...c, [field]: value } : c));
   };
 
@@ -78,55 +80,68 @@ export function ConfigureBudgetsDialog() {
     if (config.amount <= 0) {
       toast({
         title: 'Monto inválido',
-        description: `El monto para la categoría ${config.categoryName} debe ser mayor a 0.`,
+        description: `El monto para "${config.categoryName}" debe ser mayor a 0.`,
         variant: 'destructive',
       });
       return;
     }
 
-    const targetMonth = `${config.month}-01`;
+    setSaving(config.categoryId);
+    try {
+      const targetMonth = `${config.month}-01`;
 
-    const result = await saveBudget({
-      category_id: config.categoryId,
-      amount: config.amount,
-      category_name: config.categoryName,
-      month: targetMonth,
-      is_recurrent: config.isRecurrent
-    });
-
-    if (!result?.error) {
-      toast({
-        title: 'Presupuesto Guardado',
-        description: `Presupuesto para ${config.categoryName} guardado correctamente.`,
+      const result = await saveBudget({
+        category_id: config.categoryId,
+        amount: config.amount,
+        category_name: config.categoryName,
+        month: targetMonth,
+        is_recurrent: config.isRecurrent,
       });
-      refreshBudgets();
-      
-      // Update config with budgetId if returned
-      const newBudgetId = (result as any).data?.id;
-      if (newBudgetId) {
-        setConfigs(prev => prev.map(c => c.categoryId === config.categoryId ? { ...c, budgetId: newBudgetId } : c));
+
+      if (!result?.error) {
+        toast({
+          title: 'Presupuesto guardado',
+          description: `${config.categoryName} actualizado correctamente.`,
+        });
+        refreshBudgets();
+
+        const newBudgetId = (result as { data?: { id?: string } }).data?.id;
+        if (newBudgetId) {
+          setConfigs(prev => prev.map(c =>
+            c.categoryId === config.categoryId ? { ...c, budgetId: newBudgetId } : c
+          ));
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: `No se pudo guardar el presupuesto para ${config.categoryName}.`,
+          variant: 'destructive',
+        });
       }
-    } else {
-      toast({
-        title: 'Error',
-        description: `No se pudo guardar el presupuesto para ${config.categoryName}.`,
-        variant: 'destructive',
-      });
+    } finally {
+      setSaving(null);
     }
   };
 
   const handleDeleteCategory = async (config: CategoryConfig) => {
     if (!config.budgetId) return;
 
-    if (confirm(`¿Estás seguro de que deseas eliminar el presupuesto de ${config.categoryName}?`)) {
+    if (!window.confirm(`¿Eliminar el presupuesto de "${config.categoryName}"?`)) return;
+
+    setDeleting(config.categoryId);
+    try {
       const result = await deleteBudget(config.budgetId);
       if (!result?.error) {
         toast({
-          title: 'Presupuesto Eliminado',
-          description: `El presupuesto para ${config.categoryName} ha sido eliminado.`,
+          title: 'Presupuesto eliminado',
+          description: `El presupuesto para ${config.categoryName} fue eliminado.`,
         });
         refreshBudgets();
-        setConfigs(prev => prev.map(c => c.categoryId === config.categoryId ? { ...c, amount: 0, budgetId: undefined, isRecurrent: false } : c));
+        setConfigs(prev => prev.map(c =>
+          c.categoryId === config.categoryId
+            ? { ...c, amount: 0, budgetId: undefined, isRecurrent: false, month: getDefaultMonth() }
+            : c
+        ));
       } else {
         toast({
           title: 'Error',
@@ -134,6 +149,8 @@ export function ConfigureBudgetsDialog() {
           variant: 'destructive',
         });
       }
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -141,9 +158,9 @@ export function ConfigureBudgetsDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
-          className="gap-2 flex items-center justify-center hover:bg-primary hover:text-primary-foreground md:text-[15px]"
+          className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
           aria-label="Configurar Presupuestos"
           title="Configurar Presupuestos"
         >
@@ -151,94 +168,122 @@ export function ConfigureBudgetsDialog() {
           <span className="hidden sm:inline">Configurar presupuesto</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Configurar Presupuestos</DialogTitle>
           <DialogDescription>
-            Gestiona los presupuestos recurrentes y específicos para cada categoría de manera directa.
+            Define el monto, recurrencia y mes de inicio para cada categoría.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="space-y-3 mt-4">
           {categoriesLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Cargando categorías...</p>
+            <p className="text-sm text-muted-foreground text-center py-6">Cargando categorías...</p>
           ) : configs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No hay categorías configuradas.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">No hay categorías de gastos configuradas.</p>
           ) : (
             <div className="divide-y divide-border">
               {configs.map((config) => (
-                <div key={config.categoryId} className="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 min-w-[150px]">
-                    <div 
-                      className="w-3 h-3 rounded-full shrink-0" 
+                <div
+                  key={config.categoryId}
+                  className={cn(
+                    'py-4 first:pt-0 last:pb-0',
+                    config.budgetId ? 'opacity-100' : 'opacity-80'
+                  )}
+                >
+                  {/* Category Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: config.categoryColor || '#CBD5E1' }}
                     />
-                    <span className="font-semibold text-sm">{config.categoryName}</span>
+                    <span className="font-semibold text-sm text-foreground">{config.categoryName}</span>
+                    {config.budgetId && (
+                      <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        Configurado
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 flex-1 md:justify-end">
+                  {/* Fields Row */}
+                  <div className="flex flex-wrap items-end gap-3">
                     {/* Amount Input */}
-                    <div className="w-[120px]">
+                    <div className="flex flex-col gap-1 w-[130px]">
+                      <Label className="text-xs text-muted-foreground">Monto límite</Label>
                       <MoneyInput
-                        className="h-9 text-xs"
-                        placeholder="Monto"
+                        className="h-9 text-sm"
+                        placeholder="0"
                         value={config.amount}
                         onChange={(val) => handleConfigChange(config.categoryId, 'amount', val)}
                       />
                     </div>
 
-                    {/* Recurrent Checklist */}
-                    <div className="flex items-center gap-1.5 border rounded px-2.5 py-1.5 bg-background">
-                      <input
-                        type="checkbox"
-                        id={`recurrent-${config.categoryId}`}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                        checked={config.isRecurrent}
-                        onChange={(e) => handleConfigChange(config.categoryId, 'isRecurrent', e.target.checked)}
-                      />
-                      <label 
-                        htmlFor={`recurrent-${config.categoryId}`}
-                        className="text-xs font-medium cursor-pointer select-none"
-                      >
-                        Recurrente
-                      </label>
-                    </div>
-
                     {/* Month Picker */}
-                    <div className="w-[120px]">
+                    <div className="flex flex-col gap-1 w-[130px]">
+                      <Label className="text-xs text-muted-foreground">
+                        {config.isRecurrent ? 'Mes de inicio' : 'Mes de aplicación'}
+                      </Label>
                       <Input
                         type="month"
-                        className="h-9 text-xs py-0 px-2"
+                        className="h-9 text-sm py-0 px-2"
                         value={config.month}
                         onChange={(e) => handleConfigChange(config.categoryId, 'month', e.target.value)}
                       />
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1">
+                    {/* Recurrent Toggle */}
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs text-muted-foreground">Recurrente</Label>
+                      <div className="h-9 flex items-center">
+                        <Switch
+                          id={`recurrent-${config.categoryId}`}
+                          checked={config.isRecurrent}
+                          onCheckedChange={(checked) =>
+                            handleConfigChange(config.categoryId, 'isRecurrent', checked)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-end gap-1 ml-auto">
                       <Button
                         size="icon"
                         variant="default"
-                        className="h-9 w-9"
+                        className="h-9 w-9 shrink-0"
                         onClick={() => handleSaveCategory(config)}
+                        disabled={saving === config.categoryId}
                         title="Guardar"
                       >
-                        <Check className="h-4 w-4" />
+                        {saving === config.categoryId ? (
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
                       </Button>
-                      
+
                       {config.budgetId && (
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                          className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => handleDeleteCategory(config)}
-                          title="Eliminar"
+                          disabled={deleting === config.categoryId}
+                          title="Eliminar presupuesto"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
                   </div>
+
+                  {/* Recurrent hint */}
+                  {config.isRecurrent && (
+                    <p className="text-xs text-muted-foreground mt-2 pl-5">
+                      Se aplicará automáticamente desde {config.month} en adelante.
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

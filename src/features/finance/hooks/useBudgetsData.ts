@@ -18,6 +18,7 @@ export interface Budget {
     amount: number;
     period: 'monthly';
     month?: string;
+    is_recurrent?: boolean;
     created_at: string;
     updated_at: string;
 }

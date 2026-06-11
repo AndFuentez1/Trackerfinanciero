@@ -100,18 +100,18 @@ export default function BudgetsPage() {
                                         <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Controla tus gastos mensuales</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap md:mt-1">
+                                <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap md:mt-1">
                                     <AddTransactionDialog
                                         onAdd={addTransaction}
                                         categories={categories}
                                         paymentMethods={paymentMethods}
                                         onAddTransfer={addTransfer}
                                     />
-                                    <ConfigureBudgetsDialog />
                                     <AddBudgetDialog
                                         onAdd={saveBudget}
                                         monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
                                     />
+                                    <ConfigureBudgetsDialog />
                                 </div>
                             </div>
                         </header>

@@ -278,7 +278,7 @@ export function useSavingsDataLogic() {
       const { error: savingsTxError } = await supabase
         .from('savings_transactions')
         .update({ payment_method_id: transferToId, savings_account_id: transferToId })
-        .eq('payment_method_id', id);
+        .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
       if (savingsTxError) {
         toast({ title: 'Error', description: 'No se pudieron transferir las transacciones de ahorro', variant: 'destructive' });
         return;
@@ -291,6 +291,42 @@ export function useSavingsDataLogic() {
         .eq('payment_method_id', id);
       if (loansError) {
         toast({ title: 'Error', description: 'No se pudieron transferir los préstamos', variant: 'destructive' });
+        return;
+      }
+    } else if (option === 'orphan') {
+      const { error: txError1 } = await supabase
+        .from('transactions')
+        .update({ payment_method_id: null })
+        .eq('payment_method_id', id);
+      if (txError1) {
+        toast({ title: 'Error', description: 'No se pudieron desasociar las transacciones', variant: 'destructive' });
+        return;
+      }
+
+      const { error: txError2 } = await supabase
+        .from('transactions')
+        .update({ to_payment_method_id: null })
+        .eq('to_payment_method_id', id);
+      if (txError2) {
+        toast({ title: 'Error', description: 'No se pudieron desasociar las transacciones de destino', variant: 'destructive' });
+        return;
+      }
+
+      const { error: savingsTxError } = await supabase
+        .from('savings_transactions')
+        .update({ payment_method_id: null, savings_account_id: null })
+        .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
+      if (savingsTxError) {
+        toast({ title: 'Error', description: 'No se pudieron desasociar los movimientos de ahorro', variant: 'destructive' });
+        return;
+      }
+
+      const { error: loansError } = await supabase
+        .from('loans')
+        .update({ payment_method_id: null })
+        .eq('payment_method_id', id);
+      if (loansError) {
+        toast({ title: 'Error', description: 'No se pudieron desasociar los préstamos', variant: 'destructive' });
         return;
       }
     }

@@ -635,13 +635,37 @@ export function useFinanceMutations(userId: string | undefined) {
                 const { error: savingsTxError } = await supabase
                     .from('savings_transactions')
                     .update({ payment_method_id: transferToId, savings_account_id: transferToId })
-                    .eq('payment_method_id', id);
+                    .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
                 if (savingsTxError) { throw savingsTxError; }
 
                 // Update loans
                 const { error: loansError } = await supabase
                     .from('loans')
                     .update({ payment_method_id: transferToId })
+                    .eq('payment_method_id', id);
+                if (loansError) { throw loansError; }
+            } else if (option === 'orphan') {
+                const { error: txError1 } = await supabase
+                    .from('transactions')
+                    .update({ payment_method_id: null })
+                    .eq('payment_method_id', id);
+                if (txError1) { throw txError1; }
+
+                const { error: txError2 } = await supabase
+                    .from('transactions')
+                    .update({ to_payment_method_id: null })
+                    .eq('to_payment_method_id', id);
+                if (txError2) { throw txError2; }
+
+                const { error: savingsTxError } = await supabase
+                    .from('savings_transactions')
+                    .update({ payment_method_id: null, savings_account_id: null })
+                    .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
+                if (savingsTxError) { throw savingsTxError; }
+
+                const { error: loansError } = await supabase
+                    .from('loans')
+                    .update({ payment_method_id: null })
                     .eq('payment_method_id', id);
                 if (loansError) { throw loansError; }
             }

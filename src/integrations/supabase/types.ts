@@ -438,8 +438,8 @@ export type Database = {
           date: string
           description: string | null
           id: string
-          savings_account_id: string
-          payment_method_id: string
+          savings_account_id: string | null
+          payment_method_id: string | null
           type: string
           user_id: string
           calculated_yield: number | null
@@ -451,8 +451,8 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
-          savings_account_id: string
-          payment_method_id: string
+          savings_account_id?: string | null
+          payment_method_id?: string | null
           type: string
           user_id: string
           calculated_yield?: number | null
@@ -464,8 +464,8 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
-          savings_account_id?: string
-          payment_method_id?: string
+          savings_account_id?: string | null
+          payment_method_id?: string | null
           type?: string
           user_id?: string
           calculated_yield?: number | null
@@ -476,7 +476,7 @@ export type Database = {
             foreignKeyName: "savings_transactions_savings_account_id_fkey"
             columns: ["savings_account_id"]
             isOneToOne: false
-            referencedRelation: "savings_accounts"
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
         ]

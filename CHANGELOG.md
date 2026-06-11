@@ -4,6 +4,24 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-06-11]
+
+### Correcciones de Base de Datos (SQL)
+
+- **FK savings_transactions**: Se eliminó el `NOT NULL` en `savings_account_id` y se revinculó la constraint FK hacia `payment_methods(id) ON DELETE SET NULL`. Esto resolvía el error `savings_transactions_savings_account_id_fkey` al crear movimientos en la pestaña Ahorros.
+- **Trigger `prepare_savings_transaction`**: Actualizado para aceptar `savings_account_id = NULL` y verificar primero en `payment_methods` (con `is_savings_account = true`) antes de intentar en la tabla legacy `savings_accounts`.
+- **Columna `is_recurrent` en `budgets`**: Garantizada la existencia con `ADD COLUMN IF NOT EXISTS` y el índice único parcial `idx_budgets_user_id_category_id_recurrent`.
+- **FK `transactions.to_payment_method_id`**: Convertida a `ON DELETE SET NULL` para permitir eliminar cuentas sin romper transacciones históricas de transferencias.
+
+### Correcciones de UI/UX
+
+- **Botón "Configurar presupuesto"**: Movido al extremo derecho del header de Presupuestos (después de "Nuevo presupuesto"), con estilos uniformes al resto de botones del header (`size="sm"`, mismas clases de hover, icono + texto en desktop, sólo icono en móvil).
+- **Diálogo "Configurar presupuesto"**: Rediseño del layout por categoría. Ahora muestra el nombre e indicador de color como título, y debajo una fila con: campo de monto, selector de mes, toggle de recurrencia (usando `Switch` en lugar de `checkbox`), y botones de guardar/eliminar. Se añadió indicador de estado "Configurado" y hint de recurrencia.
+- **Uniformidad de botones del header**: Los tres botones de acción (Nueva transacción, Nuevo presupuesto, Configurar presupuesto) comparten el mismo `size="sm"`, `variant="default"` y estructura de visibilidad `hidden sm:inline` para el texto.
+
+---
+
+
 ## [2026-04-18]
 
 ### Base de Datos y Persistencia

@@ -212,7 +212,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TABLE public.savings_transactions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
-  savings_account_id UUID NOT NULL REFERENCES public.savings_accounts(id) ON DELETE CASCADE,
+  savings_account_id UUID REFERENCES public.payment_methods(id) ON DELETE SET NULL,
   type TEXT NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'interest')),
   amount NUMERIC NOT NULL,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -2003,19 +2003,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --
 -- Ready for production: ✅ APPROVED
 -- ============================================================================
--- Add explicit foreign key constraint name for savings_transactions -> savings_accounts
--- This ensures PostgREST can find the relationship for joins
+-- Fix savings_transactions.savings_account_id: allow NULL, update FK to payment_methods
 
--- First, drop the existing unnamed foreign key constraint
+-- Step 1: Allow NULL (was NOT NULL, causing FK insert errors)
 ALTER TABLE public.savings_transactions
-DROP CONSTRAINT IF EXISTS savings_transactions_savings_account_id_fkey;
+  ALTER COLUMN savings_account_id DROP NOT NULL;
 
--- Re-add the foreign key with an explicit name
+-- Step 2: Drop existing FK (may reference savings_accounts or have wrong behavior)
 ALTER TABLE public.savings_transactions
-ADD CONSTRAINT savings_transactions_savings_account_id_fkey
-FOREIGN KEY (savings_account_id)
-REFERENCES public.savings_accounts(id)
-ON DELETE CASCADE;
+  DROP CONSTRAINT IF EXISTS savings_transactions_savings_account_id_fkey;
+
+-- Step 3: Re-create FK pointing to payment_methods with ON DELETE SET NULL
+ALTER TABLE public.savings_transactions
+  ADD CONSTRAINT savings_transactions_savings_account_id_fkey
+  FOREIGN KEY (savings_account_id)
+  REFERENCES public.payment_methods(id)
+  ON DELETE SET NULL;
 
 -- Verify the constraint exists
 DO $$
@@ -2783,3 +2786,78 @@ $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_budgets_user_id_category_id_recurrent 
 ON public.budgets (user_id, category_id) 
 WHERE (is_recurrent = true);
+
+-- ============================================================
+-- MIGRATION 20260611: Fix savings FK not null + is_recurrent
+-- ============================================================
+
+-- Budgets: ensure is_recurrent column exists
+ALTER TABLE public.budgets
+  ADD COLUMN IF NOT EXISTS is_recurrent BOOLEAN NOT NULL DEFAULT false;
+
+-- Fix to_payment_method_id FK to support ON DELETE SET NULL
+-- Ensure column exists before adding FK (older DBs may lack it)
+ALTER TABLE public.transactions
+  ADD COLUMN IF NOT EXISTS to_payment_method_id UUID;
+
+ALTER TABLE public.transactions
+  DROP CONSTRAINT IF EXISTS transactions_to_payment_method_id_fkey;
+
+ALTER TABLE public.transactions
+  ADD CONSTRAINT transactions_to_payment_method_id_fkey
+  FOREIGN KEY (to_payment_method_id)
+  REFERENCES public.payment_methods(id)
+  ON DELETE SET NULL;
+
+-- Fix prepare_savings_transaction trigger: accept NULL savings_account_id
+CREATE OR REPLACE FUNCTION public.prepare_savings_transaction()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_savings boolean;
+BEGIN
+  -- Validate payment_method_id ownership when provided
+  IF NEW.payment_method_id IS NOT NULL THEN
+    SELECT is_savings_account INTO v_is_savings
+    FROM public.payment_methods
+    WHERE id = NEW.payment_method_id
+      AND user_id = NEW.user_id;
+
+    IF v_is_savings IS NULL THEN
+      RAISE EXCEPTION 'Invalid payment_method_id for user';
+    END IF;
+
+    IF v_is_savings IS DISTINCT FROM true THEN
+      RAISE EXCEPTION 'payment_method_id is not a savings account';
+    END IF;
+  END IF;
+
+  -- Validate savings_account_id when provided (NULL is accepted)
+  IF NEW.savings_account_id IS NOT NULL THEN
+    PERFORM 1 FROM public.payment_methods
+    WHERE id = NEW.savings_account_id
+      AND user_id = NEW.user_id
+      AND is_savings_account = true;
+
+    IF NOT FOUND THEN
+      PERFORM 1 FROM public.savings_accounts
+      WHERE id = NEW.savings_account_id
+        AND user_id = NEW.user_id;
+
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'Invalid savings_account_id for user';
+      END IF;
+    END IF;
+  END IF;
+
+  -- Compute calculated_yield
+  IF NEW.calculated_yield IS NULL THEN
+    IF NEW.type = 'interest' THEN
+      NEW.calculated_yield := NEW.amount;
+    ELSE
+      NEW.calculated_yield := 0;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
