@@ -139,10 +139,12 @@ export function TransactionList({
 
   // Memos
   const filteredTransactions = useMemo(() => {
+    // Only exclude explicit "sin desembolso" placeholders (undisbursed loans).
+    // Avoid filtering based on the word "préstamo" because payments or repayments
+    // may legitimately include that word and should be visible.
     return transactions.filter(t => {
-      const isUndisbursedLoan = (!t.payment_method_id) &&
-        (t.description.toLowerCase().includes('préstamo') ||
-          t.description.toLowerCase().includes('sin desembolso'));
+      const desc = (t.description || '').toLowerCase();
+      const isUndisbursedLoan = (!t.payment_method_id) && desc.includes('sin desembolso');
       return !isUndisbursedLoan;
     });
   }, [transactions]);

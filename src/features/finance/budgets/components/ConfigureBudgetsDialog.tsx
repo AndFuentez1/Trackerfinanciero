@@ -206,13 +206,13 @@ export function ConfigureBudgetsDialog() {
                     )}
                   </div>
 
-                  {/* Fields Row */}
-                  <div className="flex flex-wrap items-end gap-3">
+                  {/* Fields Row: use responsive grid to avoid truncation and ensure adequate spacing on mobile */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                     {/* Amount Input */}
-                    <div className="flex flex-col gap-1 w-[130px]">
+                    <div className="flex flex-col gap-1 w-full min-w-0">
                       <Label className="text-xs text-muted-foreground">Monto límite</Label>
                       <MoneyInput
-                        className="h-9 text-sm"
+                        className="h-10 text-sm w-full"
                         placeholder="0"
                         value={config.amount}
                         onChange={(val) => handleConfigChange(config.categoryId, 'amount', val)}
@@ -220,22 +220,22 @@ export function ConfigureBudgetsDialog() {
                     </div>
 
                     {/* Month Picker */}
-                    <div className="flex flex-col gap-1 w-[130px]">
+                    <div className="flex flex-col gap-1 w-full min-w-0">
                       <Label className="text-xs text-muted-foreground">
                         {config.isRecurrent ? 'Mes de inicio' : 'Mes de aplicación'}
                       </Label>
                       <Input
                         type="month"
-                        className="h-9 text-sm py-0 px-2"
+                        className="h-10 text-sm w-full py-0 px-2"
                         value={config.month}
                         onChange={(e) => handleConfigChange(config.categoryId, 'month', e.target.value)}
                       />
                     </div>
 
                     {/* Recurrent Toggle */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 w-full sm:w-auto">
                       <Label className="text-xs text-muted-foreground">Recurrente</Label>
-                      <div className="h-9 flex items-center">
+                      <div className="h-10 flex items-center">
                         <Switch
                           id={`recurrent-${config.categoryId}`}
                           checked={config.isRecurrent}
@@ -247,11 +247,11 @@ export function ConfigureBudgetsDialog() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-end gap-1 ml-auto">
+                    <div className="flex items-center gap-2 justify-end">
                       <Button
                         size="icon"
                         variant="default"
-                        className="h-9 w-9 shrink-0"
+                        className="h-10 w-10 shrink-0"
                         onClick={() => handleSaveCategory(config)}
                         disabled={saving === config.categoryId}
                         title="Guardar"
@@ -267,7 +267,7 @@ export function ConfigureBudgetsDialog() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => handleDeleteCategory(config)}
                           disabled={deleting === config.categoryId}
                           title="Eliminar presupuesto"

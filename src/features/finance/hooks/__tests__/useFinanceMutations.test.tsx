@@ -151,17 +151,38 @@ describe('useFinanceMutations', () => {
     });
 
     it('deletePaymentMethod works', async () => {
-        const mockDelete = vi.fn().mockReturnThis();
-        vi.mocked(supabase.from).mockImplementation(() => {
+        const mockDelete = vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+            or: vi.fn().mockResolvedValue({ error: null })
+        });
+        const mockUpdate = vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+            or: vi.fn().mockResolvedValue({ error: null })
+        });
+
+        vi.mocked(supabase.from).mockImplementation((table: string) => {
             return {
                 delete: mockDelete,
+                update: mockUpdate,
+                select: vi.fn().mockReturnValue({
+                    eq: vi.fn().mockResolvedValue({ 
+                        data: { balance: 1000 }, 
+                        error: null 
+                    }),
+                    single: vi.fn().mockResolvedValue({
+                        data: { balance: 1000 },
+                        error: null
+                    })
+                })
             } as any;
         });
-        mockDelete.mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
 
         const { result } = renderHook(() => useFinanceMutations('user1'), { wrapper: createWrapper() });
 
-        const res = await result.current.deletePaymentMethod('pm1');
+        const res = await result.current.deletePaymentMethod({
+            id: 'pm1',
+            option: 'delete'
+        });
         expect(res.error).toBeNull();
         expect(mockDelete).toHaveBeenCalled();
     });

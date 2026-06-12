@@ -305,9 +305,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
               render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel className="text-sm">Monto máximo</FormLabel>
-                  <FormControl>
+                    <FormControl>
                     <MoneyInput
-                      className="h-11 md:h-9 text-sm placeholder:text-[90%]"
+                      className="h-10 text-sm w-full placeholder:text-[90%]"
                       placeholder={getPlaceholderAmount()}
                       value={field.value}
                       onChange={field.onChange}
@@ -349,10 +349,10 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                   <FormLabel className="text-sm">
                     {watchIsRecurrent ? 'Mes de inicio (recurrencia)' : 'Mes de aplicación'}
                   </FormLabel>
-                  <FormControl>
+                    <FormControl>
                     <Input
                       type="month"
-                      className="h-11 md:h-9 text-sm"
+                      className="h-10 text-sm w-full"
                       value={field.value}
                       onChange={field.onChange}
                     />

@@ -140,20 +140,21 @@ function CategoryBudgetMobileCard({
     };
 
     return (
-        <Card className="overflow-hidden bg-card/50 border border-border shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-3">
+            <Card className="overflow-hidden bg-card/50 border border-border shadow-md ring-1 ring-primary/10">
+                <CardContent className="p-5 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className={cn("w-3 h-3 rounded-full", budget.categoryColor?.startsWith('#') ? '' : budget.categoryColor)} style={{ backgroundColor: budget.categoryColor?.startsWith('#') ? budget.categoryColor : undefined }} />
-                        <span className="font-semibold text-base">{budget.categoryName}</span>
-                    </div>
+                    <div className="flex items-center gap-3 min-w-0">
+                            <div className={cn("w-3 h-3 rounded-full flex-shrink-0", budget.categoryColor?.startsWith('#') ? '' : budget.categoryColor)} style={{ backgroundColor: budget.categoryColor?.startsWith('#') ? budget.categoryColor : undefined }} />
+                            <span className="font-semibold text-base break-words">{budget.categoryName}</span>
+                        </div>
                     <div className="flex items-center gap-2">
                         <AddBudgetDialog
                             editingBudget={{
                                 id: budget.budget.id,
                                 category_id: budget.budget.category_id,
                                 categoryName: budget.categoryName,
-                                amount: budget.budget.amount
+                                amount: budget.budget.amount,
+                                is_recurrent: !!budget.budget.is_recurrent
                             }}
                             monthOverride={budget.budget.month}
                             onAdd={async (data) => {
@@ -182,18 +183,18 @@ function CategoryBudgetMobileCard({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex flex-col bg-muted/20 p-2 rounded-lg">
-                        <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Presupuesto</span>
-                        <span className="font-bold">{formatCurrency80(budget.budget.amount)}</span>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex flex-col bg-muted/20 p-3 rounded-lg min-w-0">
+                        <span className="text-muted-foreground text-[11px] uppercase font-bold tracking-wider">Presupuesto</span>
+                        <span className="font-bold break-words">{formatCurrency80(budget.budget.amount)}</span>
                     </div>
-                    <div className="flex flex-col bg-muted/20 p-2 rounded-lg">
-                        <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Total Gastado</span>
-                        <span className="font-bold">{formatCurrency80(budget.spent)}</span>
+                    <div className="flex flex-col bg-muted/20 p-3 rounded-lg min-w-0">
+                        <span className="text-muted-foreground text-[11px] uppercase font-bold tracking-wider">Total Gastado</span>
+                        <span className="font-bold break-words">{formatCurrency80(budget.spent)}</span>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5 mt-1">
+                <div className="flex flex-col gap-1.5 mt-2">
                     <div className="flex justify-between items-center text-sm">
                         <span className="font-medium text-muted-foreground">Restante</span>
                         <span className={cn("font-bold", budget.remaining >= 0 ? "text-emerald-600" : "text-destructive")}>
@@ -337,7 +338,8 @@ function CategoryBudgetRow({
                             id: budget.budget.id,
                             category_id: budget.budget.category_id,
                             categoryName: budget.categoryName,
-                            amount: budget.budget.amount
+                            amount: budget.budget.amount,
+                            is_recurrent: !!budget.budget.is_recurrent
                         }}
                         monthOverride={budget.budget.month}
                         onAdd={async (data) => {

@@ -32,6 +32,18 @@ if not exist ".git" (
     echo    ❌ No se detecta repositorio Git en la raiz.
     goto :end
 )
+echo    Instalando dependencias del front...
+npm install
+if %errorlevel% neq 0 (
+    echo    ❌ npm install falló en el front.
+    goto :end
+)
+echo    Ejecutando npm run deploy...
+npm run deploy
+if %errorlevel% neq 0 (
+    echo    ❌ npm run deploy falló en el front.
+    goto :end
+)
 call :commitAndPush "%~dp0" origin main
 goto :end
 

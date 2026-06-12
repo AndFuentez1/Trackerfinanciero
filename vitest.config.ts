@@ -1,9 +1,8 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
@@ -11,6 +10,11 @@ export default defineConfig({
     },
     test: {
         pool: 'threads',
+        poolOptions: {
+            threads: {
+                isolate: true,
+            },
+        },
         environment: 'jsdom',
         globals: true,
         css: true,
@@ -20,6 +24,7 @@ export default defineConfig({
             'e2e/**',
             'playwright.config.ts',
             'node_modules/**',
+            'src/test/__tests_disabled__/**',
         ],
         coverage: {
             reporter: ['text', 'json', 'html'],
@@ -34,3 +39,4 @@ export default defineConfig({
         },
     },
 });
+

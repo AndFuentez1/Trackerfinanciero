@@ -46,8 +46,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       return child;
     });
 
+    // Detect pattern where a child contains mobile-hidden text (e.g. "hidden sm:inline")
+    // and automatically apply an icon-style compact layout on small screens so header buttons
+    // stay square and consistent on mobile without requiring changes at every call site.
+    const hasHiddenMobileText = React.Children.toArray(children).some((child) => {
+      if (!React.isValidElement(child)) return false;
+      const cnProp = (child.props && child.props.className) || '';
+      return typeof cnProp === 'string' && cnProp.includes('hidden') && cnProp.includes('sm:inline');
+    });
+
+    const responsiveClass = hasHiddenMobileText ? 'sm:h-9 sm:px-3 h-10 w-10 px-0 rounded-full' : '';
+
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props}>
+      <Comp className={cn(buttonVariants({ variant, size, className }), responsiveClass)} ref={ref} {...props}>
         {wrappedChildren}
       </Comp>
     );

@@ -19,6 +19,11 @@ Todas las mejoras relevantes por versión/fecha.
 - **Diálogo "Configurar presupuesto"**: Rediseño del layout por categoría. Ahora muestra el nombre e indicador de color como título, y debajo una fila con: campo de monto, selector de mes, toggle de recurrencia (usando `Switch` en lugar de `checkbox`), y botones de guardar/eliminar. Se añadió indicador de estado "Configurado" y hint de recurrencia.
 - **Uniformidad de botones del header**: Los tres botones de acción (Nueva transacción, Nuevo presupuesto, Configurar presupuesto) comparten el mismo `size="sm"`, `variant="default"` y estructura de visibilidad `hidden sm:inline` para el texto.
 
+- **Correcciones menores (2026-06-11)**: Se aplicaron ajustes puntuales:
+	- Botones del header ahora se renderizan como iconos cuadrados en móvil y mantienen texto en desktop.
+	- El diálogo de edición de presupuesto respeta la propiedad `is_recurrent` al abrirse para editar, evitando desincronías entre configurar/editar.
+	- Se corrigió el filtrado de transacciones para no ocultar pagos de deuda legítimos; sólo se excluyen entradas marcadas explícitamente como "sin desembolso".
+
 ---
 
 

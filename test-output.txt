@@ -1,0 +1,122 @@
+
+> vite_react_shadcn_ts@0.0.0 test:run
+> vitest run
+
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Trackerfinanciero[39m
+
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ [31mÔØ»[39m src/test/__tests_disabled__/History.test.tsx [2m([22m[2m0 test[22m[2m)[22m
+ [31mÔØ»[39m src/test/__tests_disabled__/Dashboard.test.tsx [2m([22m[2m0 test[22m[2m)[22m
+stderr | src/test/integration/Settings.test.tsx > SettingsPage > renders all settings sections
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/test/integration/Settings.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 732[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders all settings sections [33m 624[2mms[22m[39m
+ [31mÔØ»[39m src/test/__tests_disabled__/BudgetsPage.test.tsx [2m([22m[2m0 test[22m[2m)[22m
+stderr | src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > renders pending invoices
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/features/settings/components/sections/__tests__/DangerZone.test.tsx > DangerZone UI/UX Logic > should include "Pr├®stamos" toggle in Borrar datos section
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx > PendingInvoicesPanel > does NOT delete invoice if transaction fails
+[PendingInvoicesPanel] Optimistic update failed on backend Error: No se pudo crear la transacci├│n. Verifica los datos.
+    at performBackendOperation (C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Trackerfinanciero/src/features/finance/transactions/components/PendingInvoicesPanel.tsx:241:31)
+
+ [32mÔ£ô[39m src/features/finance/transactions/components/PendingInvoicesPanel.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1185[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders pending invoices [33m 648[2mms[22m[39m
+stderr | src/test/integration/Loans.test.tsx > LoansPage Integration > renders loan list
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/features/settings/components/sections/__tests__/DangerZone.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 2008[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m should include "Pr├®stamos" toggle in Borrar datos section [33m 1102[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m should allow "Resetear perfil" without marking "Eliminar perfil completo" [33m 896[2mms[22m[39m
+ [32mÔ£ô[39m src/test/integration/Loans.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1059[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders loan list [33m 322[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m opens create dialog [33m 721[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useFinanceQueries.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 263[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useFinanceMutations.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useProfileManagement.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useTheme.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+stderr | src/test/integration/SavingsPage.test.tsx > SavingsPage > renders savings performance component
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/features/settings/components/AdvancedSettings/GmailHistoryDialog.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 428[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m renders duplicate message when import result status is duplicate [33m 423[2mms[22m[39m
+ [32mÔ£ô[39m src/test/integration/SavingsPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+stderr | src/test/integration/CashFlow.test.tsx > CashFlowPage > renders cashflow page with core sections
+ÔÜá´©Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ÔÜá´©Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mÔ£ô[39m src/test/integration/CashFlow.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 210[2mms[22m[39m
+stderr | src/features/auth/hooks/__tests__/useInactivityLogout.test.ts > useInactivityLogout > should logout if inactive for more than timeout
+[InactivityLogout] User inactive for 6 minutes. Logging out.
+
+ [32mÔ£ô[39m src/features/auth/hooks/__tests__/useInactivityLogout.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/utils/financeCalculations.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32mÔ£ô[39m src/core/utils/cn.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/utils/transactionMappers.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m src/core/utils/onboardingGate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/hooks/__tests__/useFinanceDataLogic.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mÔ£ô[39m src/features/finance/cashflow/utils/cashFlowCalculations.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Suites 3 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/test/__tests_disabled__/Dashboard.test.tsx [ src/test/__tests_disabled__/Dashboard.test.tsx ]
+ FAIL  src/test/__tests_disabled__/History.test.tsx [ src/test/__tests_disabled__/History.test.tsx ]
+Error: Failed to resolve entry for package "react-hook-form". The package may have incorrect main/module/exports specified in its package.json.
+  Plugin: vite:import-analysis
+  File: C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Trackerfinanciero/src/features/finance/transactions/components/AddTransactionDialog.tsx:2:24
+  1  |  import { Fragment, jsxDEV } from "react/jsx-dev-runtime";
+  2  |  import { useState, useMemo, useEffect } from "react";
+  3  |  import { useForm } from "react-hook-form";
+     |                           ^
+  4  |  import { zodResolver } from "@hookform/resolvers/zod";
+  5  |  import { useNavigate } from "react-router-dom";
+ ÔØ» packageEntryFailure ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32816:32
+ ÔØ» resolvePackageEntry ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32813:2
+ ÔØ» tryNodeResolve ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32716:70
+ ÔØ» ResolveIdContext.handler ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32555:16
+ ÔØ» EnvironmentPluginContainer.resolveId ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:28717:56
+ ÔØ» TransformPluginContext.resolve ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:28929:13
+ ÔØ» normalizeUrl ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:27111:22
+ ÔØ» ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:27177:32
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/3]ÔÄ»
+
+ FAIL  src/test/__tests_disabled__/BudgetsPage.test.tsx [ src/test/__tests_disabled__/BudgetsPage.test.tsx ]
+Error: Failed to resolve entry for package "react-hook-form". The package may have incorrect main/module/exports specified in its package.json.
+  Plugin: vite:import-analysis
+  File: C:/Users/joan.fuentes/OneDrive - Universidad EIA/Escritorio/Trackerfinanciero/src/features/finance/budgets/components/AddBudgetDialog.tsx:25:34
+  23 |  } from "@/shared/ui/select";
+  24 |  import { AddCategoryDialog } from "@/features/finance/categories/components/AddCategoryDialog";
+  25 |  import { useForm, useWatch } from "react-hook-form";
+     |                                     ^
+  26 |  import { zodResolver } from "@hookform/resolvers/zod";
+  27 |  import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+ ÔØ» packageEntryFailure ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32816:32
+ ÔØ» resolvePackageEntry ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32813:2
+ ÔØ» tryNodeResolve ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32716:70
+ ÔØ» ResolveIdContext.handler ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:32555:16
+ ÔØ» EnvironmentPluginContainer.resolveId ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:28717:56
+ ÔØ» TransformPluginContext.resolve ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:28929:13
+ ÔØ» normalizeUrl ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:27111:22
+ ÔØ» ../../../OneDrive%20-%20Universidad%20EIA/Escritorio/Trackerfinanciero/node_modules/vite/dist/node/chunks/config.js:27177:32
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/3]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (21)[39m
+[2m      Tests [22m [1m[32m65 passed[39m[22m[90m (65)[39m
+[2m   Start at [22m 22:52:51
+[2m   Duration [22m 27.12s[2m (transform 10.81s, setup 12.67s, import 34.88s, tests 6.67s, environment 100.49s)[22m
+

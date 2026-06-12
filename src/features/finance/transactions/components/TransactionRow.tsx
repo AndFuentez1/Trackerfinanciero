@@ -150,16 +150,16 @@ export const TransactionRow = memo(({
             </td>
 
             {/* Description */}
-            <td className="py-2.5 px-2 align-middle max-w-[180px] text-center border-r border-border" style={{ fontStyle: 'normal' }}>
+            <td className="py-2.5 px-2 align-middle min-w-0 max-w-[220px] text-center border-r border-border" style={{ fontStyle: 'normal' }}>
                 {isEditing ? (
                     <Input
                         value={draft?.description ?? transaction.description}
                         onChange={(e) => onDraftChange({ description: e.target.value })}
-                        className="h-8 text-sm max-w-[180px] text-center"
+                        className="h-8 text-sm w-full text-center min-w-0"
                     />
                 ) : (
-                    <div className="flex items-center justify-center gap-2">
-                        <span className="text-[13px] text-foreground font-medium line-clamp-2 leading-tight text-center" style={{ fontStyle: 'normal' }}>
+                    <div className="flex items-center justify-center gap-2 min-w-0">
+                        <span className="text-[13px] text-foreground font-medium leading-snug text-center break-words" style={{ fontStyle: 'normal' }}>
                             {transaction.description}
                         </span>
                         {isOrphan && (
