@@ -79,9 +79,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const defaultMonth = monthOverride
     ? monthOverride.substring(0, 7)
     : (() => {
-        const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      })();
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    })();
 
   const form = useForm<BudgetFormValues & { is_recurrent: boolean; month: string }>({
     resolver: zodResolver(budgetSchema),
@@ -218,7 +218,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
             }}
             variant="default"
             size="sm"
-            className="gap-2 flex items-center justify-center hover:bg-primary/80 hover:text-primary-foreground hover:border-primary/80 md:text-[15px] border border-transparent shadow-sm"
+            className="gap-2 min-w-[124px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
           >
@@ -312,7 +312,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
               render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel className="text-sm">Monto máximo</FormLabel>
-                    <FormControl>
+                  <FormControl>
                     <MoneyInput
                       className="h-10 text-sm w-full placeholder:text-[90%]"
                       placeholder={getPlaceholderAmount()}
@@ -356,7 +356,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                   <FormLabel className="text-sm">
                     {watchIsRecurrent ? 'Mes de inicio (recurrencia)' : 'Mes de aplicación'}
                   </FormLabel>
-                    <FormControl>
+                  <FormControl>
                     <Input
                       type="month"
                       className="h-10 text-sm w-full"

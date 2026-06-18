@@ -160,11 +160,11 @@ export function ConfigureBudgetsDialog() {
         setConfigs(prev => prev.map(c =>
           c.categoryId === config.categoryId
             ? {
-                ...c,
-                budgetId: newBudgetId ?? c.budgetId,
-                isRecurrent: config.isRecurrent,
-                month: config.month,
-              }
+              ...c,
+              budgetId: newBudgetId ?? c.budgetId,
+              isRecurrent: config.isRecurrent,
+              month: config.month,
+            }
             : c
         ));
       } else {
@@ -289,8 +289,7 @@ export function ConfigureBudgetsDialog() {
         <Button
           variant="default"
           size="sm"
-          className="gap-2 flex items-center justify-center hover:bg-primary/80 hover:text-primary-foreground hover:border-primary/80 md:text-[15px] border border-transparent shadow-sm"
-          aria-label="Configurar Presupuestos"
+          className="gap-2 min-w-[124px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
           title="Configurar Presupuestos"
         >
           <Settings className="h-4 w-4" />
@@ -320,9 +319,9 @@ export function ConfigureBudgetsDialog() {
                 <p className="text-sm text-muted-foreground font-medium">
                   No hay presupuestos configurados.
                 </p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => setActiveTab('create')}
                   className="mt-1 text-primary font-bold hover:underline"
                 >
