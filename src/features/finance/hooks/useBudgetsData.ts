@@ -6,23 +6,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import type { Database } from '@/integrations/supabase/types';
 import type { Transaction } from './useFinanceData';
+import type { Budget } from '../types/financeTypes';
 import { useFinanceData, TransactionType } from './useFinanceData';
 import { startOfMonth, parseISO } from 'date-fns';
 import { formatLocalDate } from '@/core/utils';
 import { resolveCanonicalBudgetForCategory } from '../utils/budgetUtils';
 
-export interface Budget {
-    id: string;
-    user_id: string;
-    category_id: string;
-    category?: string; // Legacy or fallback name
-    amount: number;
-    period: 'monthly';
-    month?: string;
-    is_recurrent?: boolean;
-    created_at: string;
-    updated_at: string;
-}
+export type { Budget } from '../types/financeTypes';
 
 export interface BudgetState {
     budget: Budget;

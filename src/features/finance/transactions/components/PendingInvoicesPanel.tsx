@@ -539,35 +539,35 @@ export function PendingInvoicesPanel() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-row items-center gap-2 w-full mt-3 sm:mt-0 sm:min-w-[280px]">
+                                    <div className="flex flex-row items-center gap-1.5 shrink-0">
                                         <Button
-                                            size="sm"
-                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-primary hover:bg-primary/70 text-primary-foreground rounded-xl shadow-md flex-1 justify-center shadow-primary/20 transition-all active:scale-95"
+                                            size="icon"
+                                            className="h-8 w-8 bg-primary hover:bg-primary/70 text-primary-foreground rounded-lg shadow-sm transition-all active:scale-95"
                                             onClick={() => handleApprove(invoice)}
                                             aria-label="Aprobar"
                                             title="Aprobar"
                                         >
-                                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            <Check className="w-4 h-4" />
                                         </Button>
                                         <Button
-                                            size="sm"
+                                            size="icon"
                                             variant="secondary"
-                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-muted hover:bg-muted/50 rounded-xl border-none flex-1 justify-center transition-all active:scale-95"
+                                            className="h-8 w-8 bg-muted hover:bg-muted/50 rounded-lg border-none transition-all active:scale-95"
                                             onClick={() => handleStartEdit(invoice)}
                                             aria-label="Editar"
                                             title="Editar"
                                         >
-                                            <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                                            <Edit2 className="w-4 h-4 text-muted-foreground" />
                                         </Button>
                                         <Button
-                                            size="sm"
+                                            size="icon"
                                             variant="secondary"
-                                            className="h-9 sm:h-10 px-3 sm:px-4 bg-muted hover:bg-destructive/10 rounded-xl border-none flex-1 justify-center transition-all active:scale-95"
+                                            className="h-8 w-8 bg-muted hover:bg-destructive/10 rounded-lg border-none transition-all active:scale-95"
                                             onClick={() => handleReject(invoice)}
                                             aria-label="Eliminar"
                                             title="Eliminar"
                                         >
-                                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
+                                            <X className="w-4 h-4 text-destructive" />
                                         </Button>
                                     </div>
                                 </div>

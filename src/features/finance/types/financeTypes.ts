@@ -66,10 +66,13 @@ export type TransactionRow = Database['public']['Tables']['transactions']['Row']
 
 export interface Budget {
     id: string;
-    category: string;
-    category_id?: string;
+    /** FK to categories table — the primary identifier. */
+    category_id: string;
+    /** Legacy string column kept for backwards-compat display; may be absent. */
+    category?: string;
     amount: number;
-    month: string;
+    /** ISO date (YYYY-MM-DD) of the budget's start month. Optional for recurrent budgets read pre-month assignment. */
+    month?: string;
     spent?: number;
     user_id?: string;
     period?: 'monthly';
