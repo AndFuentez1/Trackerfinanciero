@@ -394,7 +394,7 @@ export function ImportExcelDialog({
         if (!Number.isNaN(Number(val)) && !val.includes(',')) {
           return Number(val).toFixed(2);
         }
-        
+
         const lastCommaIdx = val.lastIndexOf(',');
         const lastPeriodIdx = val.lastIndexOf('.');
 
@@ -1106,7 +1106,7 @@ export function ImportExcelDialog({
           <Button
             variant="default"
             size="sm"
-            className="gap-2 flex items-center justify-center hover:bg-primary/80 hover:text-primary-foreground hover:border-primary/80 md:text-[15px] border border-transparent shadow-sm"
+            className="gap-2 min-w-[120px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
             aria-label="Importar Excel"
             title="Importar Excel"
           >
@@ -1507,15 +1507,15 @@ export function ImportExcelDialog({
                     <Button
                       onClick={async () => {
                         if (validCount === 0 || isImporting) { return; }
-                        
+
                         try {
                           // Verificar si la base de datos está vacía (0 transacciones y 0 métodos de pago)
                           const { count: txCount, error: countErr } = await supabase
                             .from('transactions')
                             .select('*', { count: 'exact', head: true });
-                          
+
                           const isEmpty = !countErr && (txCount === 0 || txCount === null) && paymentMethods.length === 0;
-                          
+
                           if (isEmpty) {
                             handleStartImport('append');
                           } else {
