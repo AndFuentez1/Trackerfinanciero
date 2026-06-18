@@ -218,7 +218,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
             }}
             variant="default"
             size="sm"
-            className="gap-2 min-w-[124px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
+            className="gap-2 min-w-[130px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
           >
