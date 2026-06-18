@@ -431,8 +431,9 @@ export function AddTransactionDialog({
       {!isControlled && (
         <Button
           onClick={validateBeforeOpen}
+          variant="default"
           size="sm"
-          className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+          className="gap-2 flex items-center justify-center hover:bg-primary/80 hover:text-primary-foreground hover:border-primary/80 md:text-[15px] border border-transparent shadow-sm"
           aria-label="Nueva transacción"
           title="Nueva transacción"
         >

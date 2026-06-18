@@ -55,7 +55,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       return typeof cnProp === 'string' && cnProp.includes('hidden') && cnProp.includes('sm:inline');
     });
 
-    const responsiveClass = hasHiddenMobileText ? 'sm:h-9 sm:px-3 h-10 w-10 px-0 rounded-full' : '';
+    const responsiveClass = hasHiddenMobileText ? 'sm:h-9 sm:px-3 h-10 w-10 px-0 rounded-xl' : '';
 
     return (
       <Comp className={cn(buttonVariants({ variant, size, className }), responsiveClass)} ref={ref} {...props}>

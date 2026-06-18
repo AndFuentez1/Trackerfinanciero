@@ -14,6 +14,8 @@ import { queryKeys } from '@/core/api/queryKeys';
 import { getBackendUrl } from '@/core/api/backend';
 import type { ProfileSelect } from './useFinanceQueries';
 import type { Database } from '@/integrations/supabase/types';
+import { clearFinanceCacheForUser } from '../utils/localCache';
+import type { Budget } from '../types/financeTypes';
 
 export type ResetProfileOptions = {
     transactions: boolean;
@@ -206,6 +208,11 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                 return { error: errors.join(', ') };
             }
 
+            clearFinanceCacheForUser(user.id);
+            queryClient.setQueryData<Budget[]>(queryKeys.finance.budgets(user.id), []);
+            queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.savings.all });
+
             toast({ title: 'Datos reseteados', description: 'Tus datos operativos han sido eliminados. Configuración conservada.' });
             return { success: true };
         } catch (error: unknown) {
@@ -214,7 +221,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             toast({ title: 'Error', description: message, variant: 'destructive' });
             return { error: message };
         }
-    }, [user, toast]);
+    }, [user, toast, queryClient]);
 
     /**
      * Reset all profile data (dangerous operation)
@@ -414,6 +421,18 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
                     const message = responseData?.error || 'No se pudo desconectar Telegram';
                     errors.push(`telegram: ${message}`);
                 }
+            }
+
+            clearFinanceCacheForUser(user.id);
+
+            if (enforcedOptions.budgets) {
+                queryClient.setQueryData<Budget[]>(queryKeys.finance.budgets(user.id), []);
+            }
+            if (enforcedOptions.categories) {
+                queryClient.setQueryData(queryKeys.finance.categories(user.id), []);
+            }
+            if (enforcedOptions.paymentMethods || enforcedOptions.savings) {
+                queryClient.setQueryData(queryKeys.finance.paymentMethods(user.id), []);
             }
 
             queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });

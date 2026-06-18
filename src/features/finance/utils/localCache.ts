@@ -57,3 +57,23 @@ export function writeFinanceCache<T>(key: string, value: T) {
         // Ignore quota and serialization errors. Cache is only an optimization layer.
     }
 }
+
+const FINANCE_CACHE_SCOPES = [
+    'budgets',
+    'categories',
+    'payment-methods',
+    'profile',
+    'savings-accounts',
+    'savings-transactions',
+] as const;
+
+/** Elimina todas las claves finance-cache de un usuario (p. ej. tras reset de perfil). */
+export function clearFinanceCacheForUser(userId: string) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    for (const scope of FINANCE_CACHE_SCOPES) {
+        localStorage.removeItem(buildFinanceCacheKey(scope, userId));
+    }
+}

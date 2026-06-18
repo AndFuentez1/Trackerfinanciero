@@ -5,6 +5,7 @@ import { queryKeys } from '@/core/api/queryKeys';
 import type { Database } from '@/integrations/supabase/types';
 import type { PaymentMethod, PaymentMethodType, CategoryItem, TransactionType, Budget, StagingTransaction } from '../types/financeTypes';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '../utils/localCache';
+import { normalizeYieldPeriod } from '../utils/yieldUtils';
 
 // Supabase row types
 export type ProfileSelect = Pick<
@@ -84,6 +85,7 @@ export function useFinanceQueries(userId: string | undefined): UseFinanceQueries
                 is_savings_account: (pm.is_savings_account as boolean) || false,
                 savings_goal: pm.savings_goal ? Number(pm.savings_goal) : null,
                 estimated_yield: pm.estimated_yield ? Number(pm.estimated_yield) : null,
+                yield_period: normalizeYieldPeriod(pm.yield_period),
                 closing_date: (pm.closing_date as number) || null,
                 payment_day: (pm.payment_day as number) || null,
                 color: (pm.color as string) || '#475569',

@@ -53,6 +53,7 @@ export interface PaymentMethod {
     is_savings_account?: boolean;
     savings_goal?: number | null;
     estimated_yield?: number | null; // Rentabilidad Estimada (%)
+    yield_period?: 'annual' | 'monthly';
     closing_date?: number | null;
     payment_day?: number | null;
     color?: string | null;

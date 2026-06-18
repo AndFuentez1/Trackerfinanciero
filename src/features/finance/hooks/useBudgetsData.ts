@@ -9,6 +9,7 @@ import type { Transaction } from './useFinanceData';
 import { useFinanceData, TransactionType } from './useFinanceData';
 import { startOfMonth, parseISO } from 'date-fns';
 import { formatLocalDate } from '@/core/utils';
+import { resolveCanonicalBudgetForCategory } from '../utils/budgetUtils';
 
 export interface Budget {
     id: string;
@@ -252,6 +253,7 @@ export function useBudgetsData() {
     }, [budgetsStats]);
 
     const saveBudget = async (budgetData: { 
+        id?: string;
         category_id: string; 
         amount: number; 
         category?: string; 
@@ -272,28 +274,60 @@ export function useBudgetsData() {
             : formatLocalDate(startOfMonth(new Date()));
 
         const isRecurrent = budgetData.is_recurrent || false;
+        let activeId = budgetData.id;
+
+        // Si se actualiza un presupuesto existente y cambia mes o recurrencia, eliminar el registro anterior
+        if (activeId) {
+            const { data: existing } = await supabase
+                .from('budgets')
+                .select('month, is_recurrent')
+                .eq('id', activeId)
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (existing) {
+                const existingMonth = existing.month?.substring(0, 7);
+                const newMonth = targetMonth.substring(0, 7);
+                if (existingMonth !== newMonth || !!existing.is_recurrent !== isRecurrent) {
+                    await supabase.from('budgets').delete().eq('id', activeId);
+                    activeId = undefined; // Se eliminó, por lo que el upsert debe insertar una nueva fila
+                }
+            }
+        }
 
         // Eliminar presupuesto recurrente previo para esta categoría para evitar conflictos con el índice único
         if (isRecurrent) {
-            await supabase
+            const deleteQuery = supabase
                 .from('budgets')
                 .delete()
                 .eq('user_id', user.id)
                 .eq('category_id', budgetData.category_id)
                 .eq('is_recurrent', true);
+            
+            if (activeId) {
+                await deleteQuery.ne('id', activeId);
+            } else {
+                await deleteQuery;
+            }
+        }
+
+        const upsertData: Record<string, any> = {
+            user_id: user.id,
+            category_id: budgetData.category_id,
+            category: finalCategoryName,
+            amount: budgetData.amount,
+            period: 'monthly',
+            month: targetMonth,
+            is_recurrent: isRecurrent,
+        };
+
+        if (activeId) {
+            upsertData.id = activeId;
         }
 
         const { data, error } = await supabase
             .from('budgets')
-            .upsert({
-                user_id: user.id,
-                category_id: budgetData.category_id,
-                category: finalCategoryName, // Ahora sí garantizamos el nombre
-                amount: budgetData.amount,
-                period: 'monthly',
-                month: targetMonth,
-                is_recurrent: isRecurrent,
-            }, { onConflict: 'user_id,category_id,month' })
+            .upsert(upsertData, { onConflict: 'user_id,category_id,month' })
             .select()
             .single();
 
@@ -328,6 +362,9 @@ export function useBudgetsData() {
 
     return {
         budgets: budgetsStats,
+        rawBudgets: budgets,
+        resolveCanonicalBudgetForCategory: (categoryId: string) =>
+            resolveCanonicalBudgetForCategory(categoryId, budgets),
         totalBudget: totalBudgetStats,
         loading,
         refreshBudgets: refreshData,

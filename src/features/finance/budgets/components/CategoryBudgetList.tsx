@@ -26,10 +26,12 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
     const [expandedCount, setExpandedCount] = useState(0);
 
     if (budgets.length === 0) {
+        return (
         <div className="text-center py-12 bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border shadow-sm transition-all duration-300">
             <p className="text-muted-foreground">No hay presupuestos configurados.</p>
             <p className="text-base text-muted-foreground mt-1">Crea uno en Configuración</p>
         </div>
+        );
     }
 
     return (
@@ -89,7 +91,7 @@ function CategoryBudgetMobileCard({
     paymentMethods
 }: {
     budget: BudgetState,
-    onSave: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>,
+    onSave: (budget: { id?: string; category_id: string; category: string; amount: number; month: string; is_recurrent?: boolean }) => Promise<{ error: any }>,
     onDelete: (id: string) => Promise<{ error: any }>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[]
@@ -154,7 +156,8 @@ function CategoryBudgetMobileCard({
                                 category_id: budget.budget.category_id,
                                 categoryName: budget.categoryName,
                                 amount: budget.budget.amount,
-                                is_recurrent: !!budget.budget.is_recurrent
+                                is_recurrent: !!budget.budget.is_recurrent,
+                                month: budget.budget.month,
                             }}
                             monthOverride={budget.budget.month}
                             onAdd={async (data) => {
@@ -246,7 +249,7 @@ function CategoryBudgetRow({
     onExpandChange
 }: {
     budget: BudgetState,
-    onSave: (budget: { category_id: string; category: string; amount: number; month: string }) => Promise<{ error: any }>,
+    onSave: (budget: { id?: string; category_id: string; category: string; amount: number; month: string; is_recurrent?: boolean }) => Promise<{ error: any }>,
     onDelete: (id: string) => Promise<{ error: any }>,
     onRefresh: () => void,
     paymentMethods: PaymentMethod[],
@@ -339,7 +342,8 @@ function CategoryBudgetRow({
                             category_id: budget.budget.category_id,
                             categoryName: budget.categoryName,
                             amount: budget.budget.amount,
-                            is_recurrent: !!budget.budget.is_recurrent
+                            is_recurrent: !!budget.budget.is_recurrent,
+                            month: budget.budget.month,
                         }}
                         monthOverride={budget.budget.month}
                         onAdd={async (data) => {

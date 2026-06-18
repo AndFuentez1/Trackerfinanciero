@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { useToast } from '@/shared/hooks/use-toast';
+import type { YieldPeriod } from '@/features/finance/utils/yieldUtils';
+import { normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 
 const PAYMENT_METHOD_TYPES = [
   { value: 'cash', label: 'Efectivo' },
@@ -66,6 +68,7 @@ export function EditPaymentMethodDialog({
     isSavingsAccount: false,
     savingsGoal: 0,
     estimatedYield: '',
+    yieldPeriod: 'annual' as YieldPeriod,
     initialDate: '',
   });
 
@@ -83,6 +86,7 @@ export function EditPaymentMethodDialog({
         isSavingsAccount: paymentMethod.is_savings_account || false,
         savingsGoal: Number(paymentMethod.savings_goal || 0),
         estimatedYield: paymentMethod.estimated_yield?.toString() || '',
+        yieldPeriod: normalizeYieldPeriod(paymentMethod.yield_period),
         initialDate: paymentMethod.initial_date?.substring(0, 7) || new Date().toISOString().substring(0, 7),
       });
     }
@@ -140,6 +144,7 @@ export function EditPaymentMethodDialog({
         if (formData.estimatedYield) {
           updates.estimated_yield = parseFloat(formData.estimatedYield);
         }
+        updates.yield_period = formData.yieldPeriod;
       } else {
         // For debit, cash, or any other type
         updates.is_savings_account = false;
@@ -295,6 +300,23 @@ export function EditPaymentMethodDialog({
                   }
                   placeholder="0.00"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="yieldPeriod">Periodo de la tasa</Label>
+                <Select
+                  value={formData.yieldPeriod}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, yieldPeriod: value as YieldPeriod })
+                  }
+                >
+                  <SelectTrigger id="yieldPeriod">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="annual">Anual (EA)</SelectItem>
+                    <SelectItem value="monthly">Mensual</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}

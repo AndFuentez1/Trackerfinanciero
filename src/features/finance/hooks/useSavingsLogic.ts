@@ -9,6 +9,7 @@ import type { SavingsAccount, SavingsTransaction } from './useSavingsData';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
+import { normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 
 
 
@@ -100,12 +101,13 @@ export function useSavingsDataLogic() {
       return;
     }
 
-    const accounts = accountsData.map((a: PaymentMethodRow) => ({
+    const accounts = accountsData.map((a: PaymentMethodRow & { yield_period?: string }) => ({
       id: a.id,
       name: a.name,
       balance: Number(a.balance),
       interest_rate: a.estimated_yield ? Number(a.estimated_yield) : 0,
       estimated_yield: a.estimated_yield ? Number(a.estimated_yield) : 0,
+      yield_period: normalizeYieldPeriod(a.yield_period),
       savings_goal: a.savings_goal ? Number(a.savings_goal) : null,
     }));
 
@@ -182,7 +184,14 @@ export function useSavingsDataLogic() {
     }
   }, [transactionsCacheKey, savingsTransactions]);
 
-  const addSavingsAccount = async (account: { name: string; balance?: number; interest_rate?: number; estimated_yield?: number; savings_goal?: number }) => {
+  const addSavingsAccount = async (account: {
+    name: string;
+    balance?: number;
+    interest_rate?: number;
+    estimated_yield?: number;
+    yield_period?: 'annual' | 'monthly';
+    savings_goal?: number;
+  }) => {
     if (!user) { return { error: 'No autenticado' }; }
 
     // Create a Payment Method of type 'debit' (or cash) but marked as savings
@@ -196,7 +205,8 @@ export function useSavingsDataLogic() {
         is_savings_account: true,
         savings_goal: account.savings_goal ?? null,
         estimated_yield: account.estimated_yield ?? account.interest_rate ?? 0,
-      } satisfies Database['public']['Tables']['payment_methods']['Insert'])
+        yield_period: account.yield_period ?? 'annual',
+      } satisfies Database['public']['Tables']['payment_methods']['Insert'] & { yield_period?: string })
       .select()
       .single();
 
@@ -214,6 +224,7 @@ export function useSavingsDataLogic() {
       balance: Number(row.balance),
       interest_rate: row.estimated_yield ? Number(row.estimated_yield) : 0,
       estimated_yield: row.estimated_yield ? Number(row.estimated_yield) : 0,
+      yield_period: normalizeYieldPeriod((row as PaymentMethodRow & { yield_period?: string }).yield_period),
       savings_goal: row.savings_goal ? Number(row.savings_goal) : null,
     }]);
 

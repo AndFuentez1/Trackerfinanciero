@@ -42,7 +42,7 @@ import {
 } from '@/shared/ui/form';
 
 interface AddBudgetDialogProps {
-  onAdd: (budget: { category_id: string; category: string; amount: number; month: string; is_recurrent?: boolean }) => Promise<{ error: unknown }>;
+  onAdd: (budget: { id?: string; category_id: string; category: string; amount: number; month: string; is_recurrent?: boolean }) => Promise<{ error: unknown }>;
   onDelete?: (budgetId: string) => Promise<{ error: unknown }>;
   monthOverride?: string;
   editingBudget?: {
@@ -59,7 +59,7 @@ interface AddBudgetDialogProps {
 export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, monthOverride }: AddBudgetDialogProps) {
   const [open, setOpen] = useState(false);
   const { categories, addCategory, loading } = useFinanceData();
-  const { budgets } = useBudgetsData();
+  const { rawBudgets } = useBudgetsData();
   const { currency, decimalPlaces } = useFinance();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -98,16 +98,22 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
 
   const watchedCategoryId = useWatch({ control, name: 'category_id' });
   const watchIsRecurrent = useWatch({ control, name: 'is_recurrent' });
+  const watchedMonth = useWatch({ control, name: 'month' });
 
-  const existingBudget = budgets.find(b => b.budget.category_id === watchedCategoryId);
-  const isUpdatingExisting = existingBudget && (!editingBudget || editingBudget.category_id !== watchedCategoryId);
+  const existingBudget = rawBudgets.find(b => {
+    if (b.category_id !== watchedCategoryId) { return false; }
+    if (editingBudget && b.id === editingBudget.id) { return false; }
+    if (b.is_recurrent || watchIsRecurrent) { return true; }
+    return b.month?.substring(0, 7) === watchedMonth;
+  });
+  const isUpdatingExisting = !!existingBudget && !editingBudget;
 
   const [activeTab, setActiveTab] = useState<'expense' | 'saving'>('expense');
   const hasSavingCategories = categories.some(c => c.type === 'saving');
 
-  // Sync state when editingBudget changes
+  // Sync state when editingBudget changes or dialog opens
   useEffect(() => {
-    if (editingBudget) {
+    if (editingBudget && open) {
       reset({
         category_id: editingBudget.category_id,
         category: editingBudget.categoryName,
@@ -122,10 +128,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
         setActiveTab('expense');
       }
     }
-  }, [editingBudget, reset, categories]);
+  }, [editingBudget, open, reset, categories, defaultMonth]);
 
-  // Filter categories based on functionality. We allow Expense and Income now for projection purposes.
-  // Note: Parent component can control this if needed in future, but currently we enable both.
+  // Filter categories based on functionality.
   const availableCategories = useMemo(() =>
     categories
       .filter(c => {
@@ -150,6 +155,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     }
 
     const result = await onAdd({
+      id: editingBudget?.id,
       category_id: values.category_id,
       category: values.category,
       amount: values.amount,
@@ -210,8 +216,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                 });
               }
             }}
+            variant="default"
             size="sm"
-            className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+            className="gap-2 flex items-center justify-center hover:bg-primary/80 hover:text-primary-foreground hover:border-primary/80 md:text-[15px] border border-transparent shadow-sm"
             aria-label="Nuevo Presupuesto"
             title="Nuevo Presupuesto"
           >

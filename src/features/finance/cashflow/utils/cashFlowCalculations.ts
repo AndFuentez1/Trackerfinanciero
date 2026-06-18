@@ -5,6 +5,7 @@ import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
 import { isTransferTransaction } from '@/features/finance/utils/cashflowUtils';
 import { parseLocalDate } from '@/core/utils';
+import { calculateMonthlyInterest, normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 
 // Helper: Redondeo seguro a 2 decimales
 const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -165,8 +166,11 @@ export function calculateMonthlySnapshot(
     savingsAccounts.forEach(acc => {
         const prev = prevSavings[acc.id] ?? acc.balance;
         if (acc.estimated_yield && acc.estimated_yield > 0) {
-            const yieldVal = acc.estimated_yield / 100;
-            const interes = prev * (Math.pow(1 + yieldVal, 1 / 12) - 1);
+            const interes = calculateMonthlyInterest(
+                prev,
+                acc.estimated_yield,
+                normalizeYieldPeriod(acc.yield_period)
+            );
             interesesAhorro += interes;
             newSavings[acc.id] = prev + interes;
         } else {

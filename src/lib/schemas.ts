@@ -38,6 +38,8 @@ export const budgetSchema = z.object({
     category_id: z.string().min(1, "La categoría es requerida"),
     category: z.string().min(1, "El nombre de la categoría es requerido"),
     amount: z.coerce.number().min(0.01, "El monto debe ser mayor a 0"),
+    is_recurrent: z.boolean().default(false),
+    month: z.string().min(1, "El mes es requerido"),
 });
 
 export type BudgetFormValues = z.infer<typeof budgetSchema>;

@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/core/api/queryKeys';
 import { mapTransactionRow } from '../utils/transactionMappers';
 import { DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
+import { calculateMonthlyInterest, normalizeYieldPeriod } from '../utils/yieldUtils';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '../utils/localCache';
 import type {
     Transaction,
@@ -242,7 +243,11 @@ export function useTransactionData(
                 name: pm.name,
                 balance: pm.balance,
                 yield: pm.estimated_yield || 0,
-                monthlyYield: (pm.balance * (pm.estimated_yield || 0)) / 100 / 12
+                monthlyYield: calculateMonthlyInterest(
+                    pm.balance,
+                    pm.estimated_yield || 0,
+                    normalizeYieldPeriod(pm.yield_period)
+                )
             }));
     }, [paymentMethods]);
 

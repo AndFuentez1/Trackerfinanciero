@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { cn } from '@/core/utils';
+import { formatYieldLabel, formatYieldPercent, normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 import { AddSavingsAccountDialog } from './AddSavingsAccountDialog';
 import { AddSavingsTransactionDialog } from './AddSavingsTransactionDialog';
 import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
@@ -37,7 +38,7 @@ interface SavingsPerformanceProps {
   accountPerformance: AccountPerformance[];
   transactions: SavingsTransaction[];
   totalBalance: number;
-  onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: unknown }>;
+  onAddAccount: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number; yield_period?: 'annual' | 'monthly' }) => Promise<{ error: unknown }>;
   onDeleteAccount: (id: string, option?: 'delete' | 'orphan' | 'transfer', transferToId?: string) => Promise<void>;
   onEdit: (id: string) => void;
   onAddTransaction: (transaction: Omit<SavingsTransaction, 'id'>) => Promise<{ error: unknown }>;
@@ -375,7 +376,10 @@ export function SavingsPerformance({
                 <div className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">
-                    Rentabilidad estimada: {account.interest_rate.toFixed(decimalPlaces)}%
+                    Rentabilidad estimada: {formatYieldLabel(
+                      account.interest_rate,
+                      normalizeYieldPeriod(account.yield_period)
+                    )}
                   </span>
                 </div>
               )}
@@ -575,8 +579,8 @@ export function SavingsPerformance({
                               style={{ fontStyle: 'normal' }}
                             >
                               {yieldPercent < 1 && yieldPercent > 0
-                                ? `<${(1).toFixed(decimalPlaces).replace('.', ',')}%`
-                                : `${yieldPercent.toFixed(decimalPlaces)}%`}
+                                ? `<${formatYieldPercent(1)}`
+                                : formatYieldPercent(yieldPercent)}
                             </span>
                           );
                         })()}

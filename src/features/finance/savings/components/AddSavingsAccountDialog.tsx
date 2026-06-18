@@ -11,13 +11,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 import { Plus, Wallet } from 'lucide-react';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useToast } from '@/shared/hooks/use-toast';
+import type { YieldPeriod } from '@/features/finance/utils/yieldUtils';
 
 interface AddSavingsAccountDialogProps {
-  onAdd: (account: { name: string; balance?: number; savings_goal?: number; estimated_yield?: number }) => Promise<{ error: unknown }>;
+  onAdd: (account: {
+    name: string;
+    balance?: number;
+    savings_goal?: number;
+    estimated_yield?: number;
+    yield_period?: YieldPeriod;
+  }) => Promise<{ error: unknown }>;
 }
 
 export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps) {
@@ -26,6 +40,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   const [balance, setBalance] = useState<number>(0);
   const [savingsGoal, setSavingsGoal] = useState<number>(0);
   const [estimatedYield, setEstimatedYield] = useState('');
+  const [yieldPeriod, setYieldPeriod] = useState<YieldPeriod>('annual');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, decimalPlaces } = useFinance();
   const { toast } = useToast();
@@ -35,16 +50,9 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
     return curr?.symbol || currency || '$';
   };
 
-
-
   const getPlaceholderAmount = () => {
     const decimals = '.'.padEnd(decimalPlaces + 1, '0');
     return decimalPlaces > 0 ? `100000${decimals}` : '100000';
-  };
-
-  const getPlaceholderYield = () => {
-    if (decimalPlaces <= 0) { return '3'; }
-    return `3.${'0'.repeat(decimalPlaces)}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +64,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       balance: balance,
       savings_goal: savingsGoal > 0 ? savingsGoal : undefined,
       estimated_yield: estimatedYield ? parseFloat(estimatedYield) : undefined,
+      yield_period: yieldPeriod,
     });
 
     setIsSubmitting(false);
@@ -64,10 +73,10 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       setBalance(0);
       setSavingsGoal(0);
       setEstimatedYield('');
+      setYieldPeriod('annual');
       setOpen(false);
     } else {
       const err = error as { code?: string; message?: string };
-      // Check if it's a duplicate name error
       if (err?.code === '23505' || err?.message?.includes('unique_payment_method_user')) {
         toast({
           title: 'Nombre duplicado',
@@ -131,17 +140,31 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
               className="pl-12"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="interest">Rentabilidad estimada (%)</Label>
-            <Input
-              id="interest"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder={getPlaceholderYield()}
-              value={estimatedYield}
-              onChange={(e) => setEstimatedYield(e.target.value)}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="interest">Rentabilidad estimada (%)</Label>
+              <Input
+                id="interest"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="3,00"
+                value={estimatedYield}
+                onChange={(e) => setEstimatedYield(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="yield-period">Periodo de la tasa</Label>
+              <Select value={yieldPeriod} onValueChange={(v) => setYieldPeriod(v as YieldPeriod)}>
+                <SelectTrigger id="yield-period">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="annual">Anual (EA)</SelectItem>
+                  <SelectItem value="monthly">Mensual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Creando...' : 'Crear cuenta'}
@@ -151,8 +174,3 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
     </Dialog>
   );
 }
-
-
-
-
-

@@ -7,6 +7,7 @@ export interface SavingsAccount {
   interest_rate: number;
   savings_goal?: number | null;
   estimated_yield?: number | null;
+  yield_period?: 'annual' | 'monthly';
 }
 
 export interface SavingsTransaction {

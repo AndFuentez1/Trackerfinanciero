@@ -552,7 +552,7 @@ export function useFinanceMutations(userId: string | undefined) {
             const dbUpdates: Record<string, unknown> = {};
             const allowed: (keyof PaymentMethod)[] = [
                 'name', 'type', 'balance', 'credit_limit',
-                'is_savings_account', 'savings_goal', 'estimated_yield',
+                'is_savings_account', 'savings_goal', 'estimated_yield', 'yield_period',
                 'closing_date', 'payment_day', 'color'
             ];
 
@@ -775,7 +775,8 @@ export function useFinanceMutations(userId: string | undefined) {
                 category: budget.category,
                 category_id: budget.category_id,
                 amount: budget.amount,
-                month: budget.month
+                month: budget.month,
+                is_recurrent: budget.is_recurrent ?? false,
             };
 
             const { error } = await supabase.from('budgets').upsert(dbData, {

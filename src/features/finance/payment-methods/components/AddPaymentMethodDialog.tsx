@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { useToast } from '@/shared/hooks/use-toast';
+import type { YieldPeriod } from '@/features/finance/utils/yieldUtils';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Check, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/core/utils';
@@ -83,6 +84,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   const [creditLimit, setCreditLimit] = useState<number>(0);
   const [savingsGoal, setSavingsGoal] = useState<number>(0);
   const [estimatedYield, setEstimatedYield] = useState('');
+  const [yieldPeriod, setYieldPeriod] = useState<YieldPeriod>('annual');
   const [closingDate, setClosingDate] = useState('');
   const [color, setColor] = useState('#4f46e5');
   const [initialDate, setInitialDate] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
@@ -133,6 +135,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       is_savings_account: type === 'savings',
       savings_goal: type === 'savings' && savingsGoal > 0 ? savingsGoal : null,
       estimated_yield: type === 'savings' && estimatedYield ? parseFloat(estimatedYield) : null,
+      yield_period: type === 'savings' ? yieldPeriod : 'annual',
       closing_date: type === 'credit' && closingDate ? parseInt(closingDate) : null,
       color,
       initial_date: `${initialDate}-01`, // Save as first day of month
@@ -149,6 +152,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
       setCreditLimit(0);
       setSavingsGoal(0);
       setEstimatedYield('');
+      setYieldPeriod('annual');
       setClosingDate('');
       setColor('#4f46e5');
       setInitialDate(new Date().toISOString().substring(0, 7));
@@ -341,11 +345,11 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="yield" className="text-sm">Rentabilidad Estimada (%)</Label>
+                    <Label htmlFor="yield" className="text-sm">Rentabilidad estimada (%)</Label>
                     <Input
                       id="yield"
                       type="number"
-                      placeholder={decimalPlaces > 0 ? 'Ej: 3.50' : 'Ej: 3'}
+                      placeholder="Ej: 3,50"
                       value={estimatedYield}
                       onChange={(e) => setEstimatedYield(e.target.value)}
                       min="0"
@@ -353,6 +357,18 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
                       className="h-11 md:h-9 text-sm"
                       inputMode="decimal"
                     />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="yield-period" className="text-sm">Periodo de la tasa</Label>
+                    <Select value={yieldPeriod} onValueChange={(v) => setYieldPeriod(v as YieldPeriod)}>
+                      <SelectTrigger id="yield-period" className="h-11 md:h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annual">Anual (EA)</SelectItem>
+                        <SelectItem value="monthly">Mensual</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
