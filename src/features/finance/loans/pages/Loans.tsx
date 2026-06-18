@@ -342,7 +342,7 @@ export default function LoansPage() {
                                         <DialogTrigger asChild>
                                             <Button
                                                 size="sm"
-                                                className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+                                                className="gap-2 min-w-[130px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
                                                 aria-label="Nuevo préstamo"
                                                 title="Nuevo préstamo"
                                             >
@@ -352,7 +352,7 @@ export default function LoansPage() {
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
                                             <DialogHeader>
-                                                <DialogTitle>{editingId ? "Editar Préstamo" : "Agregar Nuevo Préstamo"}</DialogTitle>
+                                                <DialogTitle>{editingId ? "Editar Préstamo" : "Nuevo Préstamo"}</DialogTitle>
                                                 <DialogDescription className="sr-only">Formulario de préstamos</DialogDescription>
                                             </DialogHeader>
                                             <form onSubmit={handleCreate} className="space-y-4">

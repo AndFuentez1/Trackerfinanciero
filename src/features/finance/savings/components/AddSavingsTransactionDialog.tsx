@@ -82,7 +82,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60 md:text-[15px]"
+          className="gap-2 min-w-[130px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
         >
           <Coins className="h-4 w-4" />
           <span className="hidden sm:inline">Nuevo ahorro</span>
@@ -94,7 +94,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Nuevo movimiento</DialogTitle>
+          <DialogTitle>Nuevo ahorro</DialogTitle>
           <DialogDescription className="sr-only">Registra un depósito, retiro o interés en una cuenta de ahorro.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
