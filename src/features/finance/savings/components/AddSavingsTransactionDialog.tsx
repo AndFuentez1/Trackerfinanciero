@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog';
+import { cn } from '@/core/utils';
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   const [open, setOpen] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState<'deposit' | 'withdrawal' | 'interest'>('deposit');
+  const [interestMode, setInterestMode] = useState<'new_balance' | 'difference'>('new_balance');
   const [amount, setAmount] = useState<number>(0);
   const [date, setDate] = useState(getTodayLocalDate());
   const [description, setDescription] = useState('');
@@ -57,11 +59,18 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
 
     setIsSubmitting(true);
 
+    let finalAmount = amount;
+    if (type === 'interest' && interestMode === 'new_balance') {
+       const account = accounts.find(a => a.id === accountId);
+       const currentBalance = account?.balance || 0;
+       finalAmount = amount - currentBalance;
+    }
+
     const { error } = await onAdd({
       payment_method_id: accountId,
       savings_account_id: accountId,
       type,
-      amount: amount,
+      amount: finalAmount,
       date,
       description: description.trim() || '',
     });
@@ -82,7 +91,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="gap-2 min-w-[130px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
+          className="inline-flex w-auto min-w-[190px] gap-2 px-4 py-2 items-center justify-center whitespace-nowrap hover:bg-primary/70 hover:text-white"
         >
           <Coins className="h-4 w-4" />
           <span className="hidden sm:inline">Nuevo ahorro</span>
@@ -126,8 +135,34 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
               </SelectContent>
             </Select>
           </div>
+          {type === 'interest' && (
+            <div className="flex items-center gap-2 mt-2">
+               <div className="flex bg-muted/50 p-1 rounded-lg border border-border/50 w-full">
+                 <Button
+                   type="button"
+                   variant="ghost"
+                   size="sm"
+                   className={cn("flex-1 h-7 text-xs rounded-md", interestMode === 'new_balance' ? "bg-background shadow-sm" : "hover:bg-background/50")}
+                   onClick={() => setInterestMode('new_balance')}
+                 >
+                   Nuevo Saldo Total
+                 </Button>
+                 <Button
+                   type="button"
+                   variant="ghost"
+                   size="sm"
+                   className={cn("flex-1 h-7 text-xs rounded-md", interestMode === 'difference' ? "bg-background shadow-sm" : "hover:bg-background/50")}
+                   onClick={() => setInterestMode('difference')}
+                 >
+                   Diferencia
+                 </Button>
+               </div>
+            </div>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="amount">Monto</Label>
+            <Label htmlFor="amount">
+              {type === 'interest' && interestMode === 'new_balance' ? 'Monto (Nuevo Saldo)' : 'Monto'}
+            </Label>
             <MoneyInput
               id="amount"
               placeholder={getPlaceholderAmount()}

@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { useFinance } from '@/features/finance/context/FinanceContext';
@@ -15,11 +17,14 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { cn } from '@/core/utils';
-import { formatYieldLabel, formatYieldPercent, normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
+// ¡CORRECCIÓN 1! Aquí agregamos convertToAnnual y convertToMonthly
+import { formatYieldPercent, normalizeYieldPeriod, convertToAnnual, convertToMonthly } from '@/features/finance/utils/yieldUtils';
 import { AddSavingsAccountDialog } from './AddSavingsAccountDialog';
 import { AddSavingsTransactionDialog } from './AddSavingsTransactionDialog';
 import type { SavingsAccount, SavingsTransaction } from '@/features/finance/hooks/useSavingsData';
 import { DeleteAccountConfirmDialog } from '@/features/finance/payment-methods/components/DeleteAccountConfirmDialog';
+import { AddTransferDialog } from '@/features/finance/transactions/components/AddTransferDialog';
+import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 
 interface AccountPerformance extends SavingsAccount {
   totalDeposits: number;
@@ -29,9 +34,6 @@ interface AccountPerformance extends SavingsAccount {
   performancePercent: number;
   transactionCount: number;
 }
-
-import { AddTransferDialog } from '@/features/finance/transactions/components/AddTransferDialog';
-import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 
 interface SavingsPerformanceProps {
   accounts: SavingsAccount[];
@@ -65,7 +67,6 @@ const formatDate = (dateStr: string) => {
   return `${day}/${month}/${year}`;
 };
 
-
 export function SavingsPerformance({
   accounts,
   accountPerformance,
@@ -83,6 +84,9 @@ export function SavingsPerformance({
   const decimalPlaces = useDecimalPlaces();
   const { formatCurrencySmall: formatCurrency, currency } = useFormatCurrency();
   const { currency: ctxCurrency } = useFinance();
+  const { user } = useAuth();
+  const { config, updateConfig } = useUserConfig(user?.id);
+  const viewMode = config.savings_view_mode || 'monthly';
 
   const formatCurrencyCard70 = (value: number) => {
     const currCode = ctxCurrency || currency || 'COP';
@@ -227,7 +231,7 @@ export function SavingsPerformance({
     if (!draft) { return; }
     const amount = Number(draft.amount) || 0;
     if (amount <= 0) {
-      return; // Prevent saving with invalid amount
+      return; 
     }
     const updates = {
       amount: amount,
@@ -249,14 +253,8 @@ export function SavingsPerformance({
     setDraft(null);
   };
 
-  // Yield calculation per spec:
-  // Yield = Interest / (Deposits_accumulated + Balance_before_interest)
-  // Where:
-  // - Deposits_accumulated = sum of TRANSACTION deposits only (excluding initial balance, interests, withdrawals)
-  // - Balance_before_interest = initial_balance + transaction_deposits - withdrawals + interests_before_current
   const parseDate = (d: string) => new Date(d + 'T00:00:00');
 
-  // Compute initial balance by reversing all transactions from current balance
   const getInitialBalance = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) { return 0; }
@@ -266,15 +264,14 @@ export function SavingsPerformance({
       .filter(t => t.payment_method_id === accountId)
       .forEach(t => {
         const amt = Number(t.amount) || 0;
-        if (t.type === 'withdrawal') { balance += amt; } // reverse withdrawal
-        else { balance -= amt; } // reverse deposit/interest
+        if (t.type === 'withdrawal') { balance += amt; } 
+        else { balance -= amt; } 
       });
     return balance;
   };
 
   const getDepositsAccumulated = (accountId: string, beforeDate: string) => {
     const cutoff = parseDate(beforeDate).getTime();
-    // Only count transaction deposits, NOT initial balance
     return transactions
       .filter(t => t.payment_method_id === accountId && t.type === 'deposit' && parseDate(t.date).getTime() < cutoff)
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -294,9 +291,9 @@ export function SavingsPerformance({
       });
     return { balance: initialBalance + deposits - withdrawals + interests, deposits, withdrawals, interests, initialBalance };
   };
+
   return (
     <div className="space-y-6">
-      {/* Header with total */}
       <Card className="flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border border-border shadow-md">
         <div className="flex flex-col gap-1">
           <div className="flex items-start gap-4">
@@ -320,10 +317,29 @@ export function SavingsPerformance({
               {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''} activa{accounts.length !== 1 ? 's' : ''}
             </p>
           </div>
+          <div className="flex items-center gap-2 mt-2">
+             <div className="flex bg-muted/50 p-1 rounded-lg border border-border/50">
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 className={cn("h-7 px-3 text-xs rounded-md", viewMode === 'monthly' ? "bg-background shadow-sm" : "")}
+                 onClick={() => updateConfig({ savings_view_mode: 'monthly' })}
+               >
+                 Meses
+               </Button>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 className={cn("h-7 px-3 text-xs rounded-md", viewMode === 'annual' ? "bg-background shadow-sm" : "")}
+                 onClick={() => updateConfig({ savings_view_mode: 'annual' })}
+               >
+                 Años
+               </Button>
+             </div>
+          </div>
         </div>
       </Card>
 
-      {/* Actions */}
       <div className="flex gap-2 flex-wrap">
         <AddSavingsAccountDialog onAdd={onAddAccount} />
         {accounts.length > 0 && (
@@ -372,17 +388,61 @@ export function SavingsPerformance({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {account.interest_rate > 0 && (
-                <div className="flex items-center gap-2 text-base">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">
-                    Rentabilidad estimada: {formatYieldLabel(
-                      account.interest_rate,
-                      normalizeYieldPeriod(account.yield_period)
+              {(() => {
+                // ¡CORRECCIÓN 2! Calculamos el yield estimado ANTES del if, para que se use siempre
+                const interestRate = account.interest_rate || 0;
+                const yieldPeriod = account.yield_period || 'annual';
+                
+                let estimatedYield = 0;
+                if (viewMode === 'annual') {
+                  estimatedYield = convertToAnnual(interestRate, normalizeYieldPeriod(yieldPeriod));
+                } else {
+                  estimatedYield = convertToMonthly(interestRate, normalizeYieldPeriod(yieldPeriod));
+                }
+
+                // Cálculo de yield real (Solo si hay transacciones)
+                const accountTxs = transactions.filter(t => t.payment_method_id === account.id);
+                const interestTxs = accountTxs.filter(t => t.type === 'interest');
+                let realReturnElement = null;
+
+                if (interestTxs.length > 0) {
+                  const lastInterest = interestTxs[0];
+                  const depositsAccumulated = getDepositsAccumulated(account.id, lastInterest.date);
+                  const balanceData = getBalanceBeforeInterest(account.id, lastInterest.date);
+                  const balanceBeforeInterest = balanceData.balance;
+                  const denominator = depositsAccumulated + balanceBeforeInterest;
+                  
+                  let realYield = denominator > 0 ? (lastInterest.amount / denominator) * 100 : 0;
+
+                  if (viewMode === 'annual') {
+                    realYield *= 12; // Extrapolación simple a anual
+                  }
+                  
+                  realReturnElement = (
+                    <div className="flex items-center gap-2 text-sm mt-1">
+                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      <span className="text-muted-foreground/80">
+                        Rentabilidad Real: <span className="font-semibold text-foreground">{formatYieldPercent(realYield)} {viewMode === 'annual' ? 'anual' : 'mensual'}</span>
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {account.interest_rate > 0 && (
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                        <span className="text-muted-foreground/80">
+                          {/* ¡CORRECCIÓN 3! Ahora SÍ usamos estimatedYield aquí */}
+                          Rentabilidad estimada: <span className="font-semibold text-foreground">{formatYieldPercent(estimatedYield)}  {viewMode === 'annual' ? 'anual' : 'mensual'}</span>
+                        </span>
+                      </div>
                     )}
-                  </span>
-                </div>
-              )}
+                    {realReturnElement}
+                  </>
+                );
+              })()}
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="bg-card border border-border/40 rounded-xl p-2">
@@ -404,8 +464,6 @@ export function SavingsPerformance({
                   <p className="text-lg font-bold text-primary tracking-tight">{formatCurrencyAccount80(account.totalInterest)}</p>
                 </div>
               </div>
-
-
             </CardContent>
           </Card>
         ))}
@@ -423,7 +481,6 @@ export function SavingsPerformance({
         </Card>
       )}
 
-      {/* Recent transactions (Table) */}
       {transactions.length > 0 && (
         <div className="bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border/40 overflow-hidden shadow-md">
           <div className="w-full overflow-hidden">
@@ -460,7 +517,6 @@ export function SavingsPerformance({
                       )}
                       style={{ animationDelay: `${index * 20}ms` }}
                     >
-                      {/* Date */}
                       <td className="py-2.5 px-2 align-middle text-center">
                         {isEditing ? (
                           <input
@@ -475,8 +531,6 @@ export function SavingsPerformance({
                           </span>
                         )}
                       </td>
-
-                      {/* Description */}
                       <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
@@ -492,8 +546,6 @@ export function SavingsPerformance({
                           </div>
                         )}
                       </td>
-
-                      {/* Type */}
                       <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Select
@@ -515,8 +567,6 @@ export function SavingsPerformance({
                           </span>
                         )}
                       </td>
-
-                      {/* Método de Pago */}
                       <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <div className="mx-auto max-w-[140px]">
@@ -540,8 +590,6 @@ export function SavingsPerformance({
                           </span>
                         )}
                       </td>
-
-                      {/* Amount */}
                       <td className="py-2.5 px-3 align-middle text-center">
                         {isEditing ? (
                           <Input
@@ -561,8 +609,6 @@ export function SavingsPerformance({
                           </span>
                         )}
                       </td>
-
-                      {/* Yield/Rendimiento */}
                       <td className="py-2.5 px-3 align-middle text-center">
                         {(() => {
                           const depositsAccumulated = getDepositsAccumulated(tx.payment_method_id, tx.date);
@@ -570,7 +616,11 @@ export function SavingsPerformance({
                           const balanceBeforeInterest = balanceData.balance;
                           const denominator = depositsAccumulated + balanceBeforeInterest;
                           const isInterest = tx.type === 'interest';
-                          const yieldPercent = isInterest && denominator > 0 ? (tx.amount / denominator) * 100 : 0;
+                          let yieldPercent = isInterest && denominator > 0 ? (tx.amount / denominator) * 100 : 0;
+
+                          if (isInterest && viewMode === 'annual') {
+                            yieldPercent *= 12;
+                          }
 
                           return (
                             <span
@@ -585,8 +635,6 @@ export function SavingsPerformance({
                           );
                         })()}
                       </td>
-
-                      {/* Actions */}
                       <td className="py-2.5 px-2 align-middle text-center">
                         <div className="flex items-center justify-center gap-1">
                           {isEditing ? (
@@ -664,10 +712,3 @@ export function SavingsPerformance({
     </div>
   );
 }
-
-
-
-
-
-
-

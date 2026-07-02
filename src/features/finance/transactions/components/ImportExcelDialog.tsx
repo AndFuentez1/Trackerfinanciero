@@ -1106,7 +1106,7 @@ export function ImportExcelDialog({
           <Button
             variant="default"
             size="sm"
-            className="gap-2 min-w-[130px] sm:min-w-[140px] text-[15px] py-2 flex items-center justify-center hover:bg-primary/70 hover:text-white"
+            className="inline-flex w-auto min-w-[190px] gap-2 px-4 py-2 items-center justify-center whitespace-nowrap hover:bg-primary/70 hover:text-white"
             aria-label="Importar Excel"
             title="Importar Excel"
           >

@@ -202,7 +202,7 @@ export function FutureExpensesList() {
             payload.frequency = newExpense.frequency || 'monthly';
             payload.payment_day = parseInt(newExpense.payment_day);
             payload.start_date = newExpense.start_date;
-            payload.end_date = newExpense.end_date;
+            payload.end_date = newExpense.end_date || null;
 
             // Calculate next payment date only if NEW (to avoid resetting date on simple edits) OR if logic demands it.
             // For now, let's keep it simple: if modifying subscription params, re-calc dates.
@@ -432,8 +432,8 @@ export function FutureExpensesList() {
                                 }
                             }}
                         >
-                            <Plus className="h-4 w-4 mr-1 sm:hidden" />
-                            <span className="hidden sm:inline">Nuevo compromiso / Suscripción</span>
+                            <Plus className="inline-flex h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Nuevo compromiso</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">

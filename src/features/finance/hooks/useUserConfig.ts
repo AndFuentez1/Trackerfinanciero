@@ -16,6 +16,7 @@ export interface UserConfigRow {
   currency_usage: Record<string, number>;
   /** Whether the "Add a password?" dialog has been shown to this user (cross-device). */
   password_dialog_shown: boolean;
+  savings_view_mode?: 'monthly' | 'annual';
   email?: string;
   [key: string]: unknown; // Catch all other columns from DB
 }
@@ -29,6 +30,7 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
     keep_session_alive: true,
     currency_usage: {},
     password_dialog_shown: false,
+    savings_view_mode: 'monthly',
   };
 
   const { data: config = DEFAULT_CONFIG, isFetched: loaded } = useQuery({
@@ -51,6 +53,7 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
           keep_session_alive: data.keep_session_alive !== false,
           currency_usage: (data.currency_usage as Record<string, number>) ?? {},
           password_dialog_shown: data.password_dialog_shown === true,
+          savings_view_mode: (data.savings_view_mode as 'monthly' | 'annual') ?? 'monthly',
         } satisfies UserConfigRow;
       }
       return DEFAULT_CONFIG;

@@ -106,14 +106,25 @@ export function LoanCard({
 
                     <div className="flex items-center gap-2 self-center sm:self-center">
                         {isPendingDisbursement ? (
-                            <Button
-                                size="sm"
-                                className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
-                                onClick={() => onOpenDisbursement(loan)}
-                            >
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span className="text-sm font-medium">{isDebt ? 'Recibir' : 'Confirmar'}</span>
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    className="gap-2 flex items-center justify-center hover:bg-primary/60 hover:text-primary-foreground hover:border-primary/60"
+                                    onClick={() => onOpenDisbursement(loan)}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span className="text-sm font-medium">{isDebt ? 'Recibir' : 'Confirmar'}</span>
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 bg-background border border-primary text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                                    onClick={() => onDelete(loan.id)}
+                                    title="Eliminar"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                         ) : isOrphaned ? (
                             <Button
                                 size="sm"

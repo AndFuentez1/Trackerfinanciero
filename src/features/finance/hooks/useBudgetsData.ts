@@ -117,115 +117,118 @@ export function useBudgetsData() {
     const budgetsStats = useMemo(() => {
         const stats: BudgetState[] = [];
 
-        const filteredBudgets = budgets.filter(b => {
-            // Budgets are only for expenses and savings — exclude any income-type budgets
-            const cat = categories.find(c => c.id === b.category_id);
-            if (cat?.type === 'income') { return false; }
+        // Categories with type !== 'income'
+        const expenseCategories = categories.filter(c => c.type !== 'income');
 
-            const bYear = b.month ? Number(b.month.substring(0, 4)) : NaN;
-            const bMonth = b.month ? Number(b.month.substring(5, 7)) : NaN;
+        expenseCategories.forEach(category => {
+            // Calculate total budget amount for the selected period
+            let periodBudgetAmount = 0;
 
-            if (b.is_recurrent) {
-                // Recurrent budget: applies starting from its start month
-                if (budgetYear !== 'all' && !Number.isNaN(bYear)) {
-                    if (bYear > budgetYear) { return false; }
-                    if (bYear === budgetYear && budgetMonth !== 'all' && !Number.isNaN(bMonth)) {
-                        if (bMonth > budgetMonth) { return false; }
+            const calcMonthBudget = (y: number, m: number) => {
+                const catBudgets = budgets.filter(b => b.category_id === category.id);
+                const specific = catBudgets.filter(b => !b.is_recurrent && b.month?.startsWith(`${y}-${String(m).padStart(2, '0')}`));
+                if (specific.length > 0) {
+                    const latest = specific.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''))[0];
+                    return latest.amount;
+                }
+                const recurrents = catBudgets.filter(b => b.is_recurrent);
+                if (recurrents.length > 0) {
+                    const validRecurrents = recurrents.filter(b => {
+                        if (!b.month) return true;
+                        const bYear = Number(b.month.substring(0, 4));
+                        const bMonth = Number(b.month.substring(5, 7));
+                        if (bYear < y) return true;
+                        if (bYear === y && bMonth <= m) return true;
+                        return false;
+                    });
+                    if (validRecurrents.length > 0) {
+                        const latest = validRecurrents.sort((a, b) => (b.month || '').localeCompare(a.month || ''))[0];
+                        return latest.amount;
                     }
                 }
-                return true;
+                return 0;
+            };
+
+            if (budgetYear !== 'all') {
+                if (budgetMonth !== 'all') {
+                    periodBudgetAmount = calcMonthBudget(budgetYear, budgetMonth);
+                } else {
+                    for (let m = 1; m <= 12; m++) {
+                        periodBudgetAmount += calcMonthBudget(budgetYear, m);
+                    }
+                }
             } else {
-                // Specific budget: must match selected year and month exactly
-                if (budgetYear !== 'all' && !Number.isNaN(bYear) && bYear !== budgetYear) { return false; }
-                if (budgetMonth !== 'all' && !Number.isNaN(bMonth) && bMonth !== budgetMonth) { return false; }
-                return true;
-            }
-        });
-
-        // Group candidate budgets by category_id to resolve overrides
-        const budgetsMap = new Map<string, Budget>();
-        filteredBudgets.forEach(b => {
-            const existing = budgetsMap.get(b.category_id);
-            if (!existing) {
-                budgetsMap.set(b.category_id, b);
-            } else {
-                // If existing is recurrent and new is specific, override with specific
-                if (existing.is_recurrent && !b.is_recurrent) {
-                    budgetsMap.set(b.category_id, b);
-                }
-                // If both are recurrent, choose the one with the later start date
-                else if (existing.is_recurrent && b.is_recurrent) {
-                    if (b.month && existing.month && b.month > existing.month) {
-                        budgetsMap.set(b.category_id, b);
+                // all years
+                availableYears.forEach(y => {
+                    for (let m = 1; m <= 12; m++) {
+                        periodBudgetAmount += calcMonthBudget(y, m);
                     }
-                }
-                // If both are specific, choose the latest updated
-                else if (!existing.is_recurrent && !b.is_recurrent) {
-                    if (b.updated_at > existing.updated_at) {
-                        budgetsMap.set(b.category_id, b);
-                    }
-                }
-            }
-        });
-
-        const resolvedBudgets = Array.from(budgetsMap.values());
-
-        resolvedBudgets.forEach(budget => {
-            // 1. Find category info - Robust matching
-            let category = categories.find(c => c.id === budget.category_id);
-            if (!category && budget.category) {
-                category = categories.find(c => c.name === budget.category);
+                });
             }
 
-            const categoryName = category?.name || budget.category || 'Categoría Desconocida';
-
-            // 2. Filter Transactions
-            const budgetTransactions = transactions.filter(t => {
-                // Must be in date range: match year and, if selected, month
+            // Filter Transactions
+            const budgetTransactions = (allTransactions || []).filter(t => {
+                if (t.category_id !== category.id) { return false; }
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
                 const tMonth = tDate.getMonth() + 1;
                 if (budgetYear !== 'all' && tYear !== budgetYear) { return false; }
                 if (budgetMonth !== 'all' && tMonth !== budgetMonth) { return false; }
-
-                // Must match category_id
-                if (t.category_id !== budget.category_id) { return false; }
-
-                // NEW: Validate type match if category info is available
-                if (category) {
-                    if (t.type !== category.type) { return false; }
-                }
-
+                if (t.type !== category.type) { return false; }
                 return true;
             }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-            // 3. Calculate metrics
             const spent = budgetTransactions.reduce((sum, t) => sum + t.amount, 0);
-            const remaining = Math.max(0, budget.amount - spent);
-            const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
 
-            let status: 'ok' | 'warning' | 'overspent' = 'ok';
-            if (percentage >= 100) { status = 'overspent'; }
-            else if (percentage >= 80) { status = 'warning'; }
+            // Only include in stats if there is a budget > 0 OR if there is spent > 0
+            if (periodBudgetAmount > 0 || spent > 0) {
+                const remaining = Math.max(0, periodBudgetAmount - spent);
+                const percentage = periodBudgetAmount > 0 ? (spent / periodBudgetAmount) * 100 : 0;
+                let status: 'ok' | 'warning' | 'overspent' = 'ok';
+                if (percentage >= 100) { status = 'overspent'; }
+                else if (percentage >= 80) { status = 'warning'; }
 
-            stats.push({
-                budget,
-                categoryName,
-                categoryColor: category?.color || undefined,
-                spent,
-                remaining,
-                percentage,
-                status,
-                transactions: budgetTransactions
-            });
+                // Determine the most representative budget object for editing
+                const catBudgets = budgets.filter(b => b.category_id === category.id);
+                const representativeBudget = catBudgets.find(b => b.is_recurrent) || catBudgets[0] || {
+                    id: '',
+                    category_id: category.id,
+                    amount: periodBudgetAmount,
+                    category: category.name
+                };
+
+                stats.push({
+                    budget: { ...representativeBudget, amount: periodBudgetAmount },
+                    categoryName: category.name,
+                    categoryColor: category.color || undefined,
+                    spent,
+                    remaining,
+                    percentage,
+                    status,
+                    transactions: budgetTransactions
+                });
+            }
         });
 
         return stats;
-    }, [budgets, transactions, categories, budgetYear, budgetMonth]);
+    }, [budgets, allTransactions, categories, budgetYear, budgetMonth, availableYears]);
 
     const totalBudgetStats = useMemo((): TotalBudgetState => {
         const totalBudgeted = budgetsStats.reduce((sum, item) => sum + item.budget.amount, 0);
-        const totalSpent = budgetsStats.reduce((sum, item) => sum + item.spent, 0);
+        
+        // Calculate totalSpent from allTransactions for the period, ensuring we sum all expenses
+        const totalSpent = (allTransactions || [])
+            .filter(t => t.type === 'expense')
+            .filter(t => {
+                const tDate = parseISO(t.date);
+                const tYear = tDate.getFullYear();
+                const tMonth = tDate.getMonth() + 1;
+                if (budgetYear !== 'all' && tYear !== budgetYear) { return false; }
+                if (budgetMonth !== 'all' && tMonth !== budgetMonth) { return false; }
+                return true;
+            })
+            .reduce((sum, t) => sum + t.amount, 0);
+
         const totalRemaining = Math.max(0, totalBudgeted - totalSpent);
         const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
@@ -240,7 +243,7 @@ export function useBudgetsData() {
             percentage,
             status
         };
-    }, [budgetsStats]);
+    }, [budgetsStats, allTransactions, budgetYear, budgetMonth]);
 
     const saveBudget = async (budgetData: { 
         id?: string;

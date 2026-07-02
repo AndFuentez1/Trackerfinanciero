@@ -101,7 +101,7 @@ describe('LoansPage Integration', () => {
         fireEvent.click(createBtn);
 
         await waitFor(() => {
-            expect(screen.getByText('Nuevo Préstamo')).toBeInTheDocument();
+            expect(screen.getByText('Nuevo préstamo')).toBeInTheDocument();
         });
     });
 

@@ -53,7 +53,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
                         <tbody>
                             {budgets.map(budget => (
                                 <CategoryBudgetRow
-                                    key={budget.budget.id}
+                                    key={budget.budget.category_id}
                                     budget={budget}
                                     onSave={saveBudget}
                                     onDelete={deleteBudget}
@@ -70,7 +70,7 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
             <div className="grid grid-cols-1 gap-4 md:hidden">
                 {budgets.map(budget => (
                     <CategoryBudgetMobileCard
-                        key={budget.budget.id}
+                        key={budget.budget.category_id}
                         budget={budget}
                         onSave={saveBudget}
                         onDelete={deleteBudget}

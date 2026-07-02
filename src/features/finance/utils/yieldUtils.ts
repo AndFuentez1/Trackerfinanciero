@@ -36,3 +36,32 @@ export function calculateMonthlyInterest(balance: number, ratePercent: number, p
 export function normalizeYieldPeriod(value: unknown): YieldPeriod {
     return value === 'monthly' ? 'monthly' : 'annual';
 }
+
+/** * Convierte cualquier tasa a su equivalente Anual (Tasa Efectiva Anual).
+ * Si ya es anual, la devuelve intacta. Si es mensual, calcula el interés compuesto.
+ */
+export function convertToAnnual(ratePercent: number, period: YieldPeriod = 'annual'): number {
+    if (ratePercent <= 0) {
+        return 0;
+    }
+    if (period === 'annual') {
+        return ratePercent;
+    }
+    // Fórmula de interés compuesto: (1 + i_mensual)^12 - 1
+    const monthlyDecimal = ratePercent / 100;
+    return (Math.pow(1 + monthlyDecimal, 12) - 1) * 100;
+}
+
+/** * Convierte cualquier tasa a su equivalente Mensual (Tasa Efectiva Mensual).
+ * Reutiliza tu función getMonthlyEffectiveRate para mantener la consistencia.
+ */
+export function convertToMonthly(ratePercent: number, period: YieldPeriod = 'annual'): number {
+    if (ratePercent <= 0) {
+        return 0;
+    }
+    if (period === 'monthly') {
+        return ratePercent;
+    }
+    // Usamos tu función existente y la multiplicamos por 100 para volverla porcentaje
+    return getMonthlyEffectiveRate(ratePercent, 'annual') * 100;
+}

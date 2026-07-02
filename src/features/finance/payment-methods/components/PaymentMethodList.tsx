@@ -74,19 +74,12 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
     }
   };
 
-
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {paymentMethods.map((pm) => {
         const bgColor = pm.color || '#64748b';
         const textColor = getTextColor(bgColor);
         const accountType = getAccountType(pm.type, pm.is_savings_account || false);
-
-        // Custom formatting inside loop to access specific Colors if needed, but we extracted logic.
-        // Actually, formatCurrencyPayment needs 'pm' context for color? 
-        // No, 'pm' is inside the map. The helper above used 'pm' which is not defined there.
-        // Let's move the helper INSIDE the map or pass color.
 
         const renderBalance = (val: number) => {
           return (
@@ -104,12 +97,13 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         return (
           <div
             key={pm.id}
-            className="relative h-48 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between group"
+            // Cambiado h-48 por h-full y min-h-[12rem] para evitar recortes en el contenido
+            className="relative h-full min-h-[12rem] rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between group"
             style={{ backgroundColor: bgColor }}
           >
             {/* Top Level: Icon + Name (Perfect Alignment) + Account Type (Capitalized) */}
             <div className="relative z-10 flex items-start justify-between w-full shrink-0">
-              <div className="flex items-start gap-3 truncate">
+              <div className="flex items-start gap-3 min-w-0">
                 <div className="text-white flex items-center justify-center shrink-0 mt-[1px]">
                   {getIconForType(pm.type)}
                 </div>
@@ -119,7 +113,7 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
             </div>
 
             {/* Middle Level: Balance (Prominent, Centered) */}
-            <div className="relative z-10 flex flex-col items-start">
+            <div className="relative z-10 flex flex-col items-start py-4">
               <div className="" style={{ color: textColor }}>
                 {pm.is_savings_account || pm.type === 'debit' || pm.type === 'cash'
                   ? renderBalance(pm.balance)
@@ -194,7 +188,8 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
       <Button
         onClick={onAdd}
         className={cn(
-          "h-48 rounded-2xl border border-border bg-gray-50/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none",
+          // Añadido w-full, h-full y min-h-[12rem] para forzar tamaño idéntico a sus hermanos
+          "w-full h-full min-h-[12rem] rounded-2xl border border-border bg-gray-50/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none",
           highlighted && [
             "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
             "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
@@ -203,14 +198,9 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         )}
       >
         <Plus className={cn("h-5 w-5", highlighted && "")} />
-        <span className="hidden sm:inline ml-2">Agregar método</span>
+        {/* Removido el ml-2 porque en columna y con gap-2 ya queda centrado */}
+        <span className="hidden sm:inline">Agregar método</span>
       </Button>
     </div>
   );
 }
-
-
-
-
-
-
