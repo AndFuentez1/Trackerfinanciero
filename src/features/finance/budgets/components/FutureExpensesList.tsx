@@ -177,7 +177,7 @@ export function FutureExpensesList() {
 
         // Si es suscripción, validamos campos extra
         if (newExpense.is_subscription) {
-            if (!newExpense.payment_day || !newExpense.start_date || !newExpense.end_date) {
+            if (!newExpense.payment_day || !newExpense.start_date) {
                 toast({ title: 'Error', description: 'Completa los datos de la suscripción.', variant: 'destructive' });
                 return;
             }
@@ -249,6 +249,10 @@ export function FutureExpensesList() {
                 .from('future_expenses' as never)
                 .insert(payload);
             error = insertError;
+        }
+
+        if (!error) {
+            await fetchExpenses();
         }
 
         if (error) {

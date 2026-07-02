@@ -37,7 +37,7 @@ export type TransactionFormValues = z.infer<typeof insertTransactionSchema>;
 export const budgetSchema = z.object({
     category_id: z.string().min(1, "La categoría es requerida"),
     category: z.string().min(1, "El nombre de la categoría es requerido"),
-    amount: z.coerce.number().min(0.01, "El monto debe ser mayor a 0"),
+    amount: z.coerce.number().min(0, "El monto debe ser 0 o mayor"),
     is_recurrent: z.boolean().default(false),
     month: z.string().min(1, "El mes es requerido"),
 });

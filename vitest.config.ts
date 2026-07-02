@@ -9,12 +9,7 @@ export default defineConfig({
         },
     },
     test: {
-        pool: 'threads',
-        poolOptions: {
-            threads: {
-                isolate: true,
-            },
-        },
+        pool: 'forks',
         environment: 'jsdom',
         globals: true,
         css: true,

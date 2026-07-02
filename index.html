@@ -274,7 +274,7 @@
             </div>
 
             <div class="tf-actions">
-                <button class="tf-btn" onclick="javascript:(async () => { if(window.caches) await Promise.all((await caches.keys()).map(c=>caches.delete(c))); if('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); regs.forEach(r => r.unregister()); } const u = new URL(window.location.href); u.searchParams.set('v', Date.now()); await fetch(u.href, { cache: 'reload' }).catch(e=>e); window.location.replace(u.href); })()">
+                <button class="tf-btn" onclick="javascript:(async () => { if(window.caches) await Promise.all((await caches.keys()).map(c=>caches.delete(c))); if('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); regs.forEach(r => r.unregister()); } const u = new window.URL(window.location.href); u.searchParams.set('v', Date.now()); await fetch(u.href, { cache: 'reload' }).catch(e=>e); window.location.replace(u.href); })()">
                   Limpiar Caché e Intentar de nuevo
                 </button>
             </div>

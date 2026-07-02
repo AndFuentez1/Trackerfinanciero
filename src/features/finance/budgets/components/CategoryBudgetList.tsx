@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Budget } from '@/features/finance/types/financeTypes';
 import type { BudgetState } from "@/features/finance/hooks/useBudgetsData";
 import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { cn } from "@/core/utils";
-import { Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { AddBudgetDialog } from "./AddBudgetDialog";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
@@ -25,6 +26,88 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
 
     const [expandedCount, setExpandedCount] = useState(0);
 
+    const [sortField, setSortField] = useState<'categoryName' | 'budgetAmount' | 'spent' | 'remaining' | 'percentage' | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'ok' | 'warning' | 'overspent'>('all');
+
+    const processedBudgets = useMemo(() => {
+        let items = [...budgets];
+
+        // 1. Filtrar por texto
+        if (searchTerm.trim() !== '') {
+            const term = searchTerm.toLowerCase();
+            items = items.filter(item => item.categoryName.toLowerCase().includes(term));
+        }
+
+        // 2. Filtrar por estado
+        if (filterStatus !== 'all') {
+            items = items.filter(item => item.status === filterStatus);
+        }
+
+        // 3. Ordenar
+        if (sortField) {
+            items.sort((a, b) => {
+                let valA: any;
+                let valB: any;
+
+                switch (sortField) {
+                    case 'categoryName':
+                        valA = a.categoryName;
+                        valB = b.categoryName;
+                        break;
+                    case 'budgetAmount':
+                        valA = a.budget.amount;
+                        valB = b.budget.amount;
+                        break;
+                    case 'spent':
+                        valA = a.spent;
+                        valB = b.spent;
+                        break;
+                    case 'remaining':
+                        valA = a.remaining;
+                        valB = b.remaining;
+                        break;
+                    case 'percentage':
+                        valA = a.percentage;
+                        valB = b.percentage;
+                        break;
+                    default:
+                        valA = 0;
+                        valB = 0;
+                }
+
+                if (typeof valA === 'string') {
+                    return sortDirection === 'asc'
+                        ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
+                        : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+                } else {
+                    return sortDirection === 'asc' ? valA - valB : valB - valA;
+                }
+            });
+        }
+
+        return items;
+    }, [budgets, sortField, sortDirection, searchTerm, filterStatus]);
+
+    const handleSort = (field: 'categoryName' | 'budgetAmount' | 'spent' | 'remaining' | 'percentage') => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    const renderSortIcon = (field: 'categoryName' | 'budgetAmount' | 'spent' | 'remaining' | 'percentage') => {
+        if (sortField !== field) {
+            return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-40 hover:opacity-100 transition-opacity inline" />;
+        }
+        return sortDirection === 'asc' 
+            ? <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary inline" />
+            : <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary inline" />;
+    };
+
     if (budgets.length === 0) {
         return (
         <div className="text-center py-12 bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border shadow-sm transition-all duration-300">
@@ -36,49 +119,110 @@ export function CategoryBudgetList({ budgets, paymentMethods = [] }: CategoryBud
 
     return (
         <div className="space-y-4">
-            <div className="hidden md:block bg-gray-50/50 dark:bg-muted/20 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
-                <div className="overflow-x-auto">
-                    <table className="w-full table-fixed">
-                        <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
-                            <tr>
-                                <th className="py-4 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Categoría</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Presupuesto</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Gastado</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Restante</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Progreso</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Editar</th>
-                                <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">{expandedCount > 0 ? 'Cerrar' : 'Abrir'}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {budgets.map(budget => (
-                                <CategoryBudgetRow
-                                    key={budget.budget.category_id}
-                                    budget={budget}
-                                    onSave={saveBudget}
-                                    onDelete={deleteBudget}
-                                    onRefresh={refreshBudgets}
-                                    paymentMethods={paymentMethods}
-                                    onExpandChange={(isExpanded: boolean) => setExpandedCount(count => Math.max(0, count + (isExpanded ? 1 : -1)))}
-                                />
-                            ))}
-                        </tbody>
-                    </table>
+            {/* Barra de Filtros de la Tabla (Diseño Premium) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 bg-muted/20 border border-border/50 p-3 rounded-xl">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Buscar categoría..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 h-9 w-full bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/60"
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Estado:</span>
+                    <Select value={filterStatus} onValueChange={(val: any) => setFilterStatus(val)}>
+                        <SelectTrigger className="w-[150px] h-9">
+                            <SelectValue placeholder="Filtrar estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            <SelectItem value="ok">En límites (OK)</SelectItem>
+                            <SelectItem value="warning">En alerta</SelectItem>
+                            <SelectItem value="overspent">Excedido</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:hidden">
-                {budgets.map(budget => (
-                    <CategoryBudgetMobileCard
-                        key={budget.budget.category_id}
-                        budget={budget}
-                        onSave={saveBudget}
-                        onDelete={deleteBudget}
-                        onRefresh={refreshBudgets}
-                        paymentMethods={paymentMethods}
-                    />
-                ))}
-            </div>
+            {processedBudgets.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border shadow-sm transition-all duration-300">
+                    No se encontraron presupuestos que coincidan.
+                </div>
+            ) : (
+                <>
+                    <div className="hidden md:block bg-gray-50/50 dark:bg-muted/20 rounded-xl border-l border-r border-arquitectura-2/30 overflow-hidden shadow-md">
+                        <div className="overflow-x-auto">
+                            <table className="w-full table-fixed">
+                                <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
+                                    <tr>
+                                        <th className="py-4 px-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('categoryName')}>
+                                            <span className="inline-flex items-center">
+                                                Categoría
+                                                {renderSortIcon('categoryName')}
+                                            </span>
+                                        </th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('budgetAmount')}>
+                                            <span className="inline-flex items-center justify-center w-full">
+                                                Presupuesto
+                                                {renderSortIcon('budgetAmount')}
+                                            </span>
+                                        </th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('spent')}>
+                                            <span className="inline-flex items-center justify-center w-full">
+                                                Gastado
+                                                {renderSortIcon('spent')}
+                                            </span>
+                                        </th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('remaining')}>
+                                            <span className="inline-flex items-center justify-center w-full">
+                                                Restante
+                                                {renderSortIcon('remaining')}
+                                            </span>
+                                        </th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('percentage')}>
+                                            <span className="inline-flex items-center justify-center w-full">
+                                                Progreso
+                                                {renderSortIcon('percentage')}
+                                            </span>
+                                        </th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">Editar</th>
+                                        <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">{expandedCount > 0 ? 'Cerrar' : 'Abrir'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {processedBudgets.map(budget => (
+                                        <CategoryBudgetRow
+                                            key={budget.budget.category_id}
+                                            budget={budget}
+                                            onSave={saveBudget}
+                                            onDelete={deleteBudget}
+                                            onRefresh={refreshBudgets}
+                                            paymentMethods={paymentMethods}
+                                            onExpandChange={(isExpanded: boolean) => setExpandedCount(count => Math.max(0, count + (isExpanded ? 1 : -1)))}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:hidden">
+                        {processedBudgets.map(budget => (
+                            <CategoryBudgetMobileCard
+                                key={budget.budget.category_id}
+                                budget={budget}
+                                onSave={saveBudget}
+                                onDelete={deleteBudget}
+                                onRefresh={refreshBudgets}
+                                paymentMethods={paymentMethods}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

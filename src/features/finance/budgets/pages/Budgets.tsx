@@ -61,11 +61,12 @@ export default function BudgetsPage() {
 
     const isLoading = authLoading || budgetsLoading;
     usePageBootLoading(isLoading);
-    const selectedMonth = budgetMonth === 'all' ? 'all' : (budgetMonth - 1).toString();
+    const selectedMonth = budgetMonth === 'all' || budgetMonth === 'active' ? budgetMonth : (budgetMonth - 1).toString();
     const selectedYear = budgetYear === 'all' ? 'all' : budgetYear.toString();
 
     const monthOptions = [
         { value: 'all', label: 'Todo el año' },
+        { value: 'active', label: 'Meses vigentes' },
         { value: '0', label: 'Enero' },
         { value: '1', label: 'Febrero' },
         { value: '2', label: 'Marzo' },
@@ -122,7 +123,13 @@ export default function BudgetsPage() {
                             <div className="flex items-center gap-2">
                                 <Select
                                     value={selectedMonth}
-                                    onValueChange={(val) => setBudgetPeriod(budgetYear, val === 'all' ? 'all' : Number(val) + 1)}
+                                    onValueChange={(val) => {
+                                        if (val === 'all' || val === 'active') {
+                                            setBudgetPeriod(budgetYear, val);
+                                        } else {
+                                            setBudgetPeriod(budgetYear, Number(val) + 1);
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger className="w-[140px] h-9">
                                         <SelectValue placeholder="Mes" />
@@ -162,7 +169,7 @@ export default function BudgetsPage() {
                             </div>
 
                             <div className="flex h-full flex-col space-y-4">
-                                <IncomeCard />
+                                <IncomeCard budgetYear={budgetYear} budgetMonth={budgetMonth} />
                             </div>
                         </div>
 

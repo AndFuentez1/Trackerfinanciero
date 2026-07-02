@@ -1,20 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Card, CardContent } from "@/shared/ui/card";
 import { TrendingUp } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { useFinanceData } from "@/features/finance/hooks/useFinanceData";
-import { useBudgetsData } from "@/features/finance/hooks/useBudgetsData";
 import { useFormatCurrency } from "@/features/finance/hooks/useFormatCurrency";
-import { cn } from "@/core/utils";
 import { Progress } from "@/shared/ui/progress";
-import { parseISO, isWithinInterval } from "date-fns";
+import { parseISO } from "date-fns";
 import { useFinance } from "@/features/finance/context/FinanceContext";
 import { CURRENCIES } from "@/features/finance/constants/currencyConstants";
 import { useDecimalPlaces } from "@/features/finance/hooks/useDecimalPlaces";
+import { isBudgetMonthInScope } from "@/features/finance/utils/periodFilters";
 
-export function IncomeCard() {
-    const { transactions, allTransactions } = useFinanceData();
-    const { budgetYear, budgetMonth, setBudgetPeriod, availableYears } = useBudgetsData();
-    const { formatCurrencySmall, currency } = useFormatCurrency();
+interface IncomeCardProps {
+    budgetYear: number | 'all';
+    budgetMonth: number | 'all' | 'active';
+}
+
+export function IncomeCard({ budgetYear, budgetMonth }: IncomeCardProps) {
+    const { allTransactions } = useFinanceData();
+    const { currency } = useFormatCurrency();
     const { currency: ctxCurrency } = useFinance();
     const decimalPlaces = useDecimalPlaces();
 
@@ -57,48 +59,24 @@ export function IncomeCard() {
         );
     };
 
-    const selectedMonth = budgetMonth === 'all' ? 'all' : (budgetMonth - 1).toString();
-    const selectedYear = budgetYear === 'all' ? 'all' : budgetYear.toString();
+    const filteredTransactions = (allTransactions || []).filter(t => {
+        const tDate = parseISO(t.date);
+        const tYear = tDate.getFullYear();
+        const tMonth = tDate.getMonth() + 1;
 
-    // Use all transactions when filtering by 'all', otherwise use the filtered transactions
-    const transactionsToFilter = budgetYear === 'all' ? allTransactions : transactions;
+        const yearMatch = budgetYear === 'all' || (typeof budgetYear === 'number' && tYear === budgetYear);
+        if (!yearMatch) { return false; }
 
-    const monthOptions = [
-        { value: 'all', label: 'Todo el año' },
-        { value: '0', label: 'Enero' },
-        { value: '1', label: 'Febrero' },
-        { value: '2', label: 'Marzo' },
-        { value: '3', label: 'Abril' },
-        { value: '4', label: 'Mayo' },
-        { value: '5', label: 'Junio' },
-        { value: '6', label: 'Julio' },
-        { value: '7', label: 'Agosto' },
-        { value: '8', label: 'Septiembre' },
-        { value: '9', label: 'Octubre' },
-        { value: '10', label: 'Noviembre' },
-        { value: '11', label: 'Diciembre' },
-    ];
-
-    // Filter transactions by selected month/year
-    const getFilteredTransactions = () => {
-        return transactionsToFilter.filter(t => {
-            const tDate = parseISO(t.date);
-            const tYear = tDate.getFullYear();
-            const tMonth = tDate.getMonth() + 1;
-
-            // Check year filter
-            const yearMatch = budgetYear === 'all' || (typeof budgetYear === 'number' && tYear === budgetYear);
-            if (!yearMatch) { return false; }
-
-            // Check month filter
-            const monthMatch = budgetMonth === 'all' || (typeof budgetMonth === 'number' && tMonth === budgetMonth);
-            if (!monthMatch) { return false; }
-
-            return true;
+        const monthMatch = isBudgetMonthInScope({
+            year: tYear,
+            month: tMonth,
+            selectedYear: budgetYear,
+            selectedMonth: budgetMonth,
         });
-    };
+        if (!monthMatch) { return false; }
 
-    const filteredTransactions = getFilteredTransactions();
+        return true;
+    });
 
     const totalIncome = filteredTransactions
         .filter(t => t.type === 'income')

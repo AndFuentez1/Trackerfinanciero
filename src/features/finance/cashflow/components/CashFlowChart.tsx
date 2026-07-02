@@ -13,6 +13,7 @@ interface CashFlowChartProps {
   data: CashFlowChartPoint[];
   loading?: boolean;
   isWarning?: boolean;
+  balanceActual?: number;
 }
 
 interface BalanceAdjustmentLabelProps {
@@ -21,7 +22,7 @@ interface BalanceAdjustmentLabelProps {
   payload?: CashFlowChartPoint;
 }
 
-export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isWarning }) => {
+export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isWarning, balanceActual }) => {
   const { formatCurrency, currency } = useFormatCurrency();
   const axisFormatter = useMemo(() => {
     return (value: number) => formatCurrencyCompact(value, currency || 'COP');
@@ -44,6 +45,45 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
     );
   };
 
+  // Dot personalizado que resalta el punto "Hoy" (isSamePivot) en la línea del balance real
+  const renderPivotDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    // No renderizar punto si no hay balance real para este mes (futuros)
+    if (payload?.balanceReal == null || typeof cx !== 'number' || typeof cy !== 'number') {
+      return <g key={`dot-${cx}-${cy}`} />;
+    }
+    if (!payload?.isSamePivot) {
+      return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />;
+    }
+    return (
+      <g key={`pivot-dot-${cx}`}>
+        {/* Halo exterior */}
+        <circle cx={cx} cy={cy} r={10} fill="hsl(var(--primary))" fillOpacity={0.15} />
+        {/* Punto principal */}
+        <circle cx={cx} cy={cy} r={5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />
+        {/* Etiqueta HOY */}
+        <rect
+          x={cx - 16}
+          y={cy - 28}
+          width={32}
+          height={16}
+          rx={4}
+          fill="hsl(var(--primary))"
+        />
+        <text
+          x={cx}
+          y={cy - 16}
+          textAnchor="middle"
+          fill="white"
+          fontSize={9}
+          fontWeight={700}
+        >
+          HOY
+        </text>
+      </g>
+    );
+  };
+
   // Calculate dynamic domain from data
   const yDomain = React.useMemo(() => {
     if (!data || data.length === 0) { return [0, 1000000]; } // Fallback when no data
@@ -59,13 +99,28 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
     if (allValues.length === 0) { return [0, 1000000]; } // Fallback when no valid values
 
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
+    const minVal = Math.min(...allValues);
+    const maxVal = Math.max(...allValues);
 
-    // Add 10% padding
+    // Dynamic scale focusing on +-20% of current balance as minimum range
+    const valActual = balanceActual ?? minVal;
+    const minLimit = valActual * 0.8;
+    const maxLimit = valActual * 1.2;
+
+    const min = Math.min(minVal, minLimit);
+    const max = Math.max(maxVal, maxLimit);
+
+    // Add 10% padding for visual headroom
     const padding = (max - min) * 0.1;
     return [Math.floor(min - padding), Math.ceil(max + padding)];
-  }, [data]);
+  }, [data, balanceActual]);
+
+  // Generate exactly 8 equally spaced ticks from yDomain
+  const yTicks = React.useMemo(() => {
+    const [min, max] = yDomain;
+    const step = (max - min) / 7;
+    return Array.from({ length: 8 }, (_, i) => Math.round(min + step * i));
+  }, [yDomain]);
 
   // Filter States
   const [showIncome, setShowIncome] = useState(false); // Default off to be clean
@@ -74,7 +129,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
   if (loading) {
     return (
-      <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm max-w-4xl mx-auto w-full">
         <CardHeader>
           <Skeleton className="h-6 w-48 mb-2" />
           <Skeleton className="h-4 w-64" />
@@ -91,7 +146,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
   // We can render two lines.
 
   return (
-    <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="mb-6 shadow-sm border-border/50 bg-card/50 backdrop-blur-sm max-w-4xl mx-auto w-full">
       <CardHeader className="pb-2">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -130,7 +185,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
       <CardContent className="p-4 pt-2">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
               <defs>
                 <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.2} />
@@ -175,11 +230,12 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
               />
               <YAxis
                 domain={yDomain}
+                ticks={yTicks}
                 tickFormatter={axisFormatter}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                width={60}
+                width={70}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
@@ -212,13 +268,13 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
 
               {showBalance && (
                 <>
-                  {/* Balance Real (Histórico Descriptivo) */}
+                  {/* Balance Real (Histórico) — el punto del mes actual muestra "HOY" */}
                   <Line
                     type="monotone"
                     dataKey="balanceReal"
                     stroke="hsl(var(--primary))"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                    dot={renderPivotDot}
                     activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
                     connectNulls={true}
                     name="Balance Histórico"
@@ -233,15 +289,15 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading, isW
                     strokeDasharray="5 5"
                     name={isWarning ? "Proyección (Con Pendientes)" : "Proyección"}
                     activeDot={{ r: 6, strokeWidth: 0, fill: isWarning ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
-                    className={isWarning ? "opacity-90" : "opacity-60"}
+                    className={isWarning ? "opacity-100" : "opacity-85"}
                   />
                   {/* Ajuste de Balance Inicial */}
                   <Line
                     type="monotone"
                     dataKey="balanceAjuste"
                     stroke="transparent"
-                    dot={{ r: 4, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))" }}
-                    activeDot={{ r: 6, strokeWidth: 0, fill: "hsl(var(--primary))" }}
+                    dot={false}
+                    activeDot={false}
                     name="Ajuste de Balance Inicial"
                     connectNulls={false}
                   >

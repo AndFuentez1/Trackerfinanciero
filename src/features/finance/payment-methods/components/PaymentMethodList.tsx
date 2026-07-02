@@ -184,23 +184,24 @@ export function PaymentMethodList({ paymentMethods, variant = 'dashboard', onEdi
         );
       })}
 
-      {/* Add Payment Method Card */}
-      <Button
-        onClick={onAdd}
-        className={cn(
-          // Añadido w-full, h-full y min-h-[12rem] para forzar tamaño idéntico a sus hermanos
-          "w-full h-full min-h-[12rem] rounded-2xl border border-border bg-gray-50/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none",
-          highlighted && [
-            "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
-            "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
-            "bg-white text-primary border-white font-bold z-10"
-          ]
-        )}
-      >
-        <Plus className={cn("h-5 w-5", highlighted && "")} />
-        {/* Removido el ml-2 porque en columna y con gap-2 ya queda centrado */}
-        <span className="hidden sm:inline">Agregar método</span>
-      </Button>
+      {/* Add Payment Method Card — div wrapper for correct grid cell stretch */}
+      <div className="min-h-[12rem]">
+        <button
+          type="button"
+          onClick={onAdd}
+          className={cn(
+            "w-full h-full min-h-[12rem] rounded-2xl border border-border bg-gray-50/50 hover:bg-primary/5 hover:border-primary hover:text-primary flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold transition-all duration-500 text-base shadow-none cursor-pointer",
+            highlighted && [
+              "scale-[1.08] ring-4 ring-primary ring-offset-4 ring-offset-background",
+              "shadow-[0_0_30px_0_hsl(var(--primary)/0.8)]",
+              "bg-white text-primary border-white font-bold z-10"
+            ]
+          )}
+        >
+          <Plus className={cn("h-5 w-5", highlighted && "")} />
+          <span className="hidden sm:inline">Agregar método</span>
+        </button>
+      </div>
     </div>
   );
 }

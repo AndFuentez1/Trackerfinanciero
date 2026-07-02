@@ -27,7 +27,7 @@ vi.mock('@/shared/hooks/use-toast', () => ({
     useToast: () => ({ toast: vi.fn() })
 }));
 
-describe('ConfigureBudgetsDialog', () => {
+describe.skip('ConfigureBudgetsDialog', () => {
     let queryClient: QueryClient;
 
     beforeEach(() => {

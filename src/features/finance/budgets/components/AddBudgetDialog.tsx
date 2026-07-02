@@ -145,10 +145,10 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
     const targetMonth = values.month ? `${values.month}-01` : (monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
 
     // Strict validation
-    if (!values.category_id || values.amount <= 0) {
+    if (!values.category_id || Number.isNaN(values.amount) || values.amount < 0) {
       toast({
         title: 'Error de validación',
-        description: 'Debes seleccionar una categoría y el monto debe ser mayor a 0.',
+        description: 'Debes seleccionar una categoría y el monto debe ser 0 o mayor.',
         variant: 'destructive',
       });
       return;

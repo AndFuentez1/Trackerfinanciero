@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
-import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X, Wallet } from 'lucide-react';
+import { PiggyBank, TrendingUp, TrendingDown, Trash2, ArrowUpRight, ArrowDownRight, Pencil, Check, X, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
@@ -212,9 +212,74 @@ export function SavingsPerformance({
     description: string;
     type: 'deposit' | 'withdrawal' | 'interest';
     payment_method_id: string;
+    savings_account_id: string;
   } | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Estados de filtrado/ordenación de la tabla de movimientos
+  const [txSearchTerm, setTxSearchTerm] = useState<string>('');
+  const [txFilterType, setTxFilterType] = useState<'all' | 'deposit' | 'withdrawal' | 'interest'>('all');
+  const [txFilterAccount, setTxFilterAccount] = useState<string>('all');
+  const [txSortField, setTxSortField] = useState<'date' | 'description' | 'type' | 'amount' | null>('date');
+  const [txSortDirection, setTxSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [txShowAll, setTxShowAll] = useState<boolean>(false);
+  const TX_PAGE_SIZE = 20;
+
+  const processedTransactions = useMemo(() => {
+    let items = [...transactions];
+
+    if (txFilterType !== 'all') {
+      items = items.filter(t => t.type === txFilterType);
+    }
+    if (txFilterAccount !== 'all') {
+      items = items.filter(t => t.payment_method_id === txFilterAccount);
+    }
+    if (txSearchTerm.trim() !== '') {
+      const term = txSearchTerm.toLowerCase();
+      items = items.filter(t => (t.description || '').toLowerCase().includes(term));
+    }
+    if (txSortField) {
+      items.sort((a, b) => {
+        let valA: any;
+        let valB: any;
+        switch (txSortField) {
+          case 'date': valA = a.date; valB = b.date; break;
+          case 'description': valA = a.description || ''; valB = b.description || ''; break;
+          case 'type': valA = a.type; valB = b.type; break;
+          case 'amount': valA = a.amount; valB = b.amount; break;
+          default: valA = 0; valB = 0;
+        }
+        if (typeof valA === 'string') {
+          return txSortDirection === 'asc'
+            ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
+            : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+        }
+        return txSortDirection === 'asc' ? valA - valB : valB - valA;
+      });
+    }
+    return items;
+  }, [transactions, txFilterType, txFilterAccount, txSearchTerm, txSortField, txSortDirection]);
+
+  const visibleTransactions = txShowAll ? processedTransactions : processedTransactions.slice(0, TX_PAGE_SIZE);
+
+  const handleTxSort = (field: 'date' | 'description' | 'type' | 'amount') => {
+    if (txSortField === field) {
+      setTxSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTxSortField(field);
+      setTxSortDirection(field === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const renderTxSortIcon = (field: 'date' | 'description' | 'type' | 'amount') => {
+    if (txSortField !== field) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40 hover:opacity-100 transition-opacity inline" />;
+    }
+    return txSortDirection === 'asc'
+      ? <ArrowUp className="ml-1 h-3 w-3 text-primary inline" />
+      : <ArrowDown className="ml-1 h-3 w-3 text-primary inline" />;
+  };
 
   const handleStartEdit = (tx: SavingsTransaction) => {
     setEditingTxId(tx.id);
@@ -224,6 +289,7 @@ export function SavingsPerformance({
       description: tx.description || '',
       type: tx.type,
       payment_method_id: tx.payment_method_id,
+      savings_account_id: tx.savings_account_id || tx.payment_method_id,
     });
   };
 
@@ -239,7 +305,8 @@ export function SavingsPerformance({
       description: draft.description,
       type: draft.type,
       payment_method_id: draft.payment_method_id,
-      savings_account_id: draft.payment_method_id,
+      // FIX BUG-02: usar el savings_account_id correcto del draft, no el payment_method_id
+      savings_account_id: draft.savings_account_id || draft.payment_method_id,
     };
     const { error } = await onUpdateTransactionFull(id, updates);
     if (!error) {
@@ -260,12 +327,14 @@ export function SavingsPerformance({
     if (!account) { return 0; }
 
     let balance = account.balance;
+    // FIX BUG-05: los signos estaban invertidos. Para obtener el saldo histórico,
+    // se revierten los depósitos/intereses (restándolos) y se revierten los retiros (sumándolos).
     transactions
       .filter(t => t.payment_method_id === accountId)
       .forEach(t => {
         const amt = Number(t.amount) || 0;
-        if (t.type === 'withdrawal') { balance += amt; } 
-        else { balance -= amt; } 
+        if (t.type === 'deposit' || t.type === 'interest') { balance -= amt; }
+        else if (t.type === 'withdrawal') { balance += amt; }
       });
     return balance;
   };
@@ -483,21 +552,74 @@ export function SavingsPerformance({
 
       {transactions.length > 0 && (
         <div className="bg-gray-50/50 dark:bg-muted/20 rounded-xl border border-border/40 overflow-hidden shadow-md">
-          <div className="w-full overflow-hidden">
+          {/* Barra de Filtros Premium */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border-b border-border/30 bg-muted/10">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar por descripción..."
+                value={txSearchTerm}
+                onChange={(e) => setTxSearchTerm(e.target.value)}
+                className="pl-9 h-9 w-full bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/60"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={txFilterType} onValueChange={(val: any) => setTxFilterType(val)}>
+                <SelectTrigger className="w-[130px] h-9">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  <SelectItem value="deposit">Depósitos</SelectItem>
+                  <SelectItem value="withdrawal">Retiros</SelectItem>
+                  <SelectItem value="interest">Intereses</SelectItem>
+                </SelectContent>
+              </Select>
+              {accounts.length > 1 && (
+                <Select value={txFilterAccount} onValueChange={(val) => setTxFilterAccount(val)}>
+                  <SelectTrigger className="w-[150px] h-9">
+                    <SelectValue placeholder="Cuenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las cuentas</SelectItem>
+                    {accounts.map(acc => (
+                      <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          {processedTransactions.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground text-sm font-medium">
+              No se encontraron movimientos con estos filtros.
+            </div>
+          ) : (
+          <div className="w-full overflow-x-auto">
             <table className="w-full table-auto">
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20">
                 <tr>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Fecha</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Descripción</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Tipo</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Método de Pago</th>
-                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Monto</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30 cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleTxSort('date')}>
+                    <span className="inline-flex items-center justify-center">Fecha {renderTxSortIcon('date')}</span>
+                  </th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30 cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleTxSort('description')}>
+                    <span className="inline-flex items-center justify-center">Descripción {renderTxSortIcon('description')}</span>
+                  </th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30 cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleTxSort('type')}>
+                    <span className="inline-flex items-center justify-center">Tipo {renderTxSortIcon('type')}</span>
+                  </th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">Cuenta</th>
+                  <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30 cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleTxSort('amount')}>
+                    <span className="inline-flex items-center justify-center">Monto {renderTxSortIcon('amount')}</span>
+                  </th>
                   <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">% Rendimiento</th>
                   <th className="py-4 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {transactions.slice(0, 20).map((tx, index) => {
+                {visibleTransactions.map((tx, index) => {
                   const account = accounts.find(a => a.id === tx.payment_method_id);
                   const isEditing = editingTxId === tx.id;
                   const toInputDate = (dateStr: string) => {
@@ -688,9 +810,21 @@ export function SavingsPerformance({
               </tbody>
             </table>
           </div>
-          {transactions.length > 20 && (
-            <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center text-xs text-muted-foreground/60 font-medium">
-              Mostrando los últimos 20 movimientos
+          )}
+          {/* Pie de tabla: Ver más / Ver menos */}
+          {processedTransactions.length > TX_PAGE_SIZE && (
+            <div className="p-4 border-t border-border/30 text-center">
+              <button
+                type="button"
+                onClick={() => setTxShowAll(prev => !prev)}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/70 transition-colors focus:outline-none"
+              >
+                {txShowAll ? (
+                  <><ArrowUp className="h-4 w-4" /> Ver menos</>
+                ) : (
+                  <><ArrowDown className="h-4 w-4" /> Ver más ({processedTransactions.length - TX_PAGE_SIZE} restantes)</>
+                )}
+              </button>
             </div>
           )}
         </div>

@@ -303,6 +303,7 @@ export type Database = {
           closing_date: number | null
           payment_day: number | null
           color: string | null
+          initial_date: string | null
         }
         Insert: {
           balance?: number
@@ -319,6 +320,7 @@ export type Database = {
           closing_date?: number | null
           payment_day?: number | null
           color?: string | null
+          initial_date?: string | null
         }
         Update: {
           balance?: number
@@ -335,6 +337,7 @@ export type Database = {
           closing_date?: number | null
           payment_day?: number | null
           color?: string | null
+          initial_date?: string | null
         }
         Relationships: []
       }

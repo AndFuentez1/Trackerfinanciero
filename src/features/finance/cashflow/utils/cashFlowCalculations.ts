@@ -164,7 +164,15 @@ export function calculateMonthlySnapshot(
     // --- Ahorros e Intereses ---
     const newSavings: Record<string, number> = { ...prevSavings };
     savingsAccounts.forEach(acc => {
-        const prev = prevSavings[acc.id] ?? acc.balance;
+        const pmInitDate = acc.initial_date ? toLocalDate(acc.initial_date) : null;
+        const hasBeenCreated = !pmInitDate || !isAfter(startOfMonth(pmInitDate), startOfMonth(date));
+
+        if (!hasBeenCreated) {
+            newSavings[acc.id] = 0;
+            return;
+        }
+
+        const prev = prevSavings[acc.id] !== undefined ? prevSavings[acc.id] : acc.balance;
         if (acc.estimated_yield && acc.estimated_yield > 0) {
             const interes = calculateMonthlyInterest(
                 prev,

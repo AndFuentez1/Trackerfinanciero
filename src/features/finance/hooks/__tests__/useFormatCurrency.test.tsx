@@ -3,6 +3,15 @@ import { renderHook } from '@testing-library/react';
 import { useFormatCurrency } from '../useFormatCurrency';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { vi } from 'vitest';
+
+vi.mock('@/features/finance/context/FinanceContext', () => ({
+    useFinance: () => ({
+        currency: 'USD',
+        decimalPlaces: 2
+    })
+}));
+
 
 describe('useFormatCurrency', () => {
     let queryClient: QueryClient;
@@ -56,13 +65,12 @@ describe('useFormatCurrency', () => {
         expect(formatted).toMatch(/99|99/);
     });
 
-    it('formatCurrency80 formats with 80% sizing consideration', () => {
+    it('formatCurrencySmall formats small numbers with sizing consideration', () => {
         const { result } = renderHook(() => useFormatCurrency(), { wrapper: createWrapper() });
         
-        const formatted = result.current.formatCurrency80(1234.56);
-        // Should return formatted string, potentially with adjusted size
+        const formatted = result.current.formatCurrencySmall(1234.56);
+        // Should return formatted React node
         expect(formatted).toBeTruthy();
-        expect(formatted).toMatch(/1[\.,]?234/);
     });
 
     it('handles very small decimals', () => {

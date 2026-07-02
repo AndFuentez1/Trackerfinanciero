@@ -10,6 +10,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/core/utils';
 import type { Loan } from '../hooks/useLoans';
 import type { PaymentMethod } from '@/features/finance/hooks/useFinanceData';
+import { isLoanPendingDisbursement } from '@/features/finance/utils/periodFilters';
 
 interface LoanCardProps {
     loan: Loan;
@@ -39,7 +40,7 @@ export function LoanCard({
     const percentage = loan.total_amount > 0 ? (loan.paid_amount / loan.total_amount) * 100 : 0;
     const isDebt = loan.type === 'borrowed';
     const overdue = isOverdue(loan);
-    const isPendingDisbursement = !loan.is_disbursed && !loan.payment_method_id;
+    const isPendingDisbursement = isLoanPendingDisbursement(loan);
     const isOrphaned = loan.is_disbursed && !loan.payment_method_id;
     const isFullyPaid = loan.paid_amount >= loan.total_amount;
 

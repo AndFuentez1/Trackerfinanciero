@@ -1,27 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { TransactionList } from '../TransactionList';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FinanceProvider } from '@/features/finance/context/FinanceContext';
 import React from 'react';
+
+vi.mock('@/features/finance/hooks/useFinanceData', () => ({
+    useFinanceData: () => ({
+        addCategory: vi.fn(),
+        categories: []
+    })
+}));
+
+vi.mock('@/features/finance/hooks/useDecimalPlaces', () => ({
+    useDecimalPlaces: () => 2
+}));
 
 vi.mock('@/features/finance/hooks/useFormatCurrency', () => ({
     useFormatCurrency: () => ({
         formatCurrency: (val: number) => `$${val.toLocaleString()}`,
-        formatCurrency80: (val: number) => `$${val.toLocaleString()}`
-    })
-}));
-
-vi.mock('@/features/finance/hooks/useFinanceMutations', () => ({
-    useFinanceMutations: () => ({
-        updateTransaction: {
-            mutateAsync: vi.fn().mockResolvedValue({ error: null }),
-            isPending: false
-        },
-        deleteTransaction: {
-            mutateAsync: vi.fn().mockResolvedValue({ error: null }),
-            isPending: false
-        }
+        formatCurrency80: (val: number) => `$${val.toLocaleString()}`,
+        formatCurrencySmall: (val: number) => `$${val.toLocaleString()}`
     })
 }));
 
@@ -32,17 +30,8 @@ vi.mock('@/shared/hooks/use-toast', () => ({
 describe('TransactionList', () => {
     let queryClient: QueryClient;
 
-    beforeEach(() => {
-        queryClient = new QueryClient();
-        vi.clearAllMocks();
-    });
-
-    const createWrapper = () => ({ children }: { children: React.ReactNode }) =>
-        React.createElement(
-            QueryClientProvider,
-            { client: queryClient },
-            React.createElement(FinanceProvider, {}, children)
-        );
+    const paymentMethods = [{ id: 'pm1', name: 'Credit Card', type: 'credit' as const }];
+    const categories = [{ id: 'c1', name: 'Food', type: 'expense' as const, color: '#3b82f6' }];
 
     const mockTransactions = [
         {
@@ -73,46 +62,62 @@ describe('TransactionList', () => {
         }
     ];
 
+    beforeEach(() => {
+        queryClient = new QueryClient();
+        vi.clearAllMocks();
+    });
+
+    const createWrapper = () => ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+
     it('renders transaction table', () => {
         render(
             <TransactionList 
                 transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
-        expect(screen.getByText('Groceries')).toBeTruthy();
-        expect(screen.getByText('Salary')).toBeTruthy();
+        expect(screen.getByRole('table')).toBeTruthy();
+        expect(screen.getAllByText(/Groceries/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Salary/i).length).toBeGreaterThan(0);
     });
 
     it('displays transaction rows', () => {
         render(
             <TransactionList 
                 transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
         const rows = screen.queryAllByRole('row');
-        // Should have header + data rows
-        expect(rows.length).toBeGreaterThanOrEqual(2);
+        expect(rows.length).toBeGreaterThanOrEqual(3);
     });
 
     it('shows column headers', () => {
         render(
             <TransactionList 
                 transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
-        // Should have headers for key columns
         const headers = screen.queryAllByRole('columnheader');
         expect(headers.length).toBeGreaterThan(0);
     });
@@ -121,8 +126,11 @@ describe('TransactionList', () => {
         const { container } = render(
             <TransactionList 
                 transactions={[]}
-                isLoading={true}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={true}
             />,
             { wrapper: createWrapper() }
         );
@@ -134,89 +142,42 @@ describe('TransactionList', () => {
         render(
             <TransactionList 
                 transactions={[]}
-                isLoading={false}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
-        // Should not show data rows
         expect(screen.queryByText('Groceries')).toBeNull();
+        expect(screen.getByText('No hay resultados')).toBeTruthy();
     });
 
-    it('filters transactions', () => {
-        const { rerender } = render(
-            <TransactionList 
-                transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
-                filterType="expense"
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        // After filtering to expenses only, income should not show
-        expect(screen.getByText('Groceries')).toBeTruthy();
-    });
-
-    it('sorts transactions by date', () => {
-        render(
-            <TransactionList 
-                transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
-                sortBy="date"
-                sortOrder="desc"
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        const rows = screen.queryAllByRole('row');
-        // Should have rows
-        expect(rows.length).toBeGreaterThan(0);
-    });
-
-    it('displays pagination controls', () => {
-        const longTransactionList = Array.from({ length: 25 }, (_, i) => ({
-            ...mockTransactions[0],
-            id: `t${i}`,
-            description: `Transaction ${i}`
-        }));
-
-        const { container } = render(
-            <TransactionList 
-                transactions={longTransactionList}
-                isLoading={false}
-                onEdit={vi.fn()}
-                itemsPerPage={10}
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        // Should have pagination if needed
-        expect(container).toBeTruthy();
-    });
-
-    it('calls onEdit when transaction is edited', () => {
-        const onEdit = vi.fn();
+    it('calls onDelete when delete action is clicked', () => {
+        const onDelete = vi.fn();
 
         render(
             <TransactionList 
                 transactions={mockTransactions}
-                isLoading={false}
-                onEdit={onEdit}
+                onDelete={onDelete}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
-        const editButtons = screen.queryAllByRole('button', { name: /editar|edit/i });
-        if (editButtons.length > 0) {
-            fireEvent.click(editButtons[0]);
-            expect(onEdit).toHaveBeenCalled();
-        }
+        const deleteButtons = screen.queryAllByRole('button', { name: /eliminar transacción/i });
+        expect(deleteButtons.length).toBeGreaterThan(0);
+        fireEvent.click(deleteButtons[0]);
+
+        expect(onDelete).toHaveBeenCalledWith('t1');
     });
 
-    it('excludes undisbursed loan transactions', () => {
+    it('excludes undisbursed loan placeholder transactions', () => {
         const transactionsWithUndisbursed = [
             ...mockTransactions,
             {
@@ -227,8 +188,8 @@ describe('TransactionList', () => {
                 category: 'Loans',
                 category_id: 'c3',
                 category_name: 'Loans',
-                payment_method_id: 'pm1',
-                payment_method_name: 'Credit Card',
+                payment_method_id: null,
+                payment_method_name: null,
                 date: '2024-01-10',
                 created_at: '2024-01-10T08:00:00Z'
             }
@@ -237,58 +198,15 @@ describe('TransactionList', () => {
         render(
             <TransactionList 
                 transactions={transactionsWithUndisbursed}
-                isLoading={false}
-                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                paymentMethods={paymentMethods}
+                categories={categories}
+                setStatusFilter={vi.fn()}
+                loading={false}
             />,
             { wrapper: createWrapper() }
         );
 
-        // Should only show legitimate transactions
-        expect(screen.getByText('Groceries')).toBeTruthy();
-        expect(screen.getByText('Salary')).toBeTruthy();
-    });
-
-    it('searches transactions by description', async () => {
-        render(
-            <TransactionList 
-                transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
-                searchTerm="Groc"
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        await waitFor(() => {
-            expect(screen.getByText('Groceries')).toBeTruthy();
-        });
-    });
-
-    it('displays transaction amounts correctly', () => {
-        render(
-            <TransactionList 
-                transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        expect(screen.getByText(/100|Groceries/)).toBeTruthy();
-        expect(screen.getByText(/500|Salary/)).toBeTruthy();
-    });
-
-    it('shows transaction categories', () => {
-        render(
-            <TransactionList 
-                transactions={mockTransactions}
-                isLoading={false}
-                onEdit={vi.fn()}
-            />,
-            { wrapper: createWrapper() }
-        );
-
-        expect(screen.getByText('Food')).toBeTruthy();
-        expect(screen.getByText('Income')).toBeTruthy();
+        expect(screen.queryByText('Loan - sin desembolso')).toBeNull();
     });
 });

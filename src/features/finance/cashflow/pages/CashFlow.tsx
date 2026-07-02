@@ -10,7 +10,7 @@ import { CashFlowFilters } from '@/features/finance/cashflow/components/CashFlow
 import { CashFlowSummaryCards } from '@/features/finance/cashflow/components/CashFlowSummaryCards';
 import { CashFlowChart } from '@/features/finance/cashflow/components/CashFlowChart';
 import { CashFlowTimeline } from "@/features/finance/cashflow/components/CashFlowTimeline";
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ArrowUp, ArrowDown, ArrowUpDown, Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import { useUserConfigStatus } from '@/features/settings/components/hooks/useUserConfigStatus';
@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/core/utils';
 import { DEFAULT_LOCALE, DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 
 const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
 
@@ -52,10 +53,76 @@ export default function CashFlow() {
     return localStorage.getItem(CASHFLOW_REAL_BALANCE_KEY) !== null;
   });
 
-  // Datos reales del hook
+  // Datos reales del hook — debe ir ANTES de cualquier useMemo que use sus valores
   const { cashFlowSeries, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning, balance_actual } = useCashFlow(year, month, range, 'real', useRealBalance);
   const loading = authLoading || financeBootLoading || loansBootLoading || savingsBootLoading || !cashFlowSeries;
   usePageBootLoading(loading);
+
+  // Local sorting states for the Breakdown Table (DESPUÉS de useCashFlow)
+  const [sortField, setSortField] = useState<'mes' | 'ingresosTotales' | 'egresosTotales' | 'balanceNetoMes' | 'balanceAcumulado' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Local filtering states for the Breakdown Table
+  const [filterNet, setFilterNet] = useState<'all' | 'positive' | 'negative'>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const processedBreakdown = useMemo(() => {
+    const items = (monthlyBreakdown ?? []).map((item, index) => ({ ...item, originalIndex: index }));
+
+    let filtered = items;
+    if (filterNet === 'positive') {
+      filtered = filtered.filter(item => item.balanceNetoMes > 0);
+    } else if (filterNet === 'negative') {
+      filtered = filtered.filter(item => item.balanceNetoMes < 0);
+    }
+
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => item.mes.toLowerCase().includes(term));
+    }
+
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let valA: any = a[sortField];
+        let valB: any = b[sortField];
+
+        if (sortField === 'mes') {
+          valA = a.originalIndex;
+          valB = b.originalIndex;
+        }
+
+        if (typeof valA === 'string') {
+          return sortDirection === 'asc'
+            ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
+            : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+        } else {
+          return sortDirection === 'asc'
+            ? (valA as number) - (valB as number)
+            : (valB as number) - (valA as number);
+        }
+      });
+    }
+
+    return filtered;
+  }, [monthlyBreakdown, sortField, sortDirection, filterNet, searchTerm]);
+
+  const handleSort = (field: 'mes' | 'ingresosTotales' | 'egresosTotales' | 'balanceNetoMes' | 'balanceAcumulado') => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIcon = (field: 'mes' | 'ingresosTotales' | 'egresosTotales' | 'balanceNetoMes' | 'balanceAcumulado') => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-40 hover:opacity-100 transition-opacity inline" />;
+    }
+    return sortDirection === 'asc'
+      ? <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary inline" />
+      : <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary inline" />;
+  };
 
   // Años/meses disponibles (debería venir de los datos)
   const availableYears = [2024, 2025, 2026];
@@ -129,6 +196,10 @@ export default function CashFlow() {
     }
   };
 
+  const chartData = useMemo(() => {
+    if (!cashFlowSeries) { return []; }
+    return cashFlowSeries.map(s => ({ ...s, egresos: -s.egresos }));
+  }, [cashFlowSeries]);
 
   if (!user && !loading) { return null; }
 
@@ -176,9 +247,10 @@ export default function CashFlow() {
             </div>
 
             <CashFlowChart
-              data={useMemo(() => cashFlowSeries.map(s => ({ ...s, egresos: -s.egresos })), [cashFlowSeries])}
+              data={chartData}
               loading={loading}
               isWarning={isProjectionWarning}
+              balanceActual={balance_actual}
             />
             {/* Tabla de Desglose Mensual */}
             <div className="w-full">
@@ -194,129 +266,197 @@ export default function CashFlow() {
                   </span>
                 </div>
               </div>
+
+              {/* Barra de Filtros de la Tabla (Diseño Premium) */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 bg-muted/20 border border-border/50 p-3 rounded-xl">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar mes (ej: enero)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-9 w-full bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/60"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Neto:</span>
+                  <Select value={filterNet} onValueChange={(val: any) => setFilterNet(val)}>
+                    <SelectTrigger className="w-[140px] h-9">
+                      <SelectValue placeholder="Filtrar neto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="positive">Neto positivo</SelectItem>
+                      <SelectItem value="negative">Neto negativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="overflow-x-auto rounded-xl border border-input bg-card">
-                <table className="hidden md:table min-w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Mes/Año</th>
-                      <th className="px-3 py-2 text-right text-success">Ingresos Totales</th>
-                      <th className="px-3 py-2 text-right text-destructive">Gastos & Deudas</th>
-                      <th className="px-3 py-2 text-right">Balance Neto</th>
-                      <th className="px-3 py-2 text-right">Balance Acumulado</th>
-                      <th className="px-3 py-2 text-center">Detalle</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyBreakdown.map((row, i) => (
-                      <React.Fragment key={i}>
-                        <tr className="border-b last:border-0 hover:bg-muted/20 group">
-                          <td className="px-3 py-2 font-medium">{row.mes}</td>
-                          <td className="px-3 py-2 text-right text-success">{formatCOP(row.ingresosTotales)}</td>
-                          <td className="px-3 py-2 text-right text-destructive">{formatCOP(row.egresosTotales)}</td>
-                          <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceNetoMes)}</td>
-                          <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceAcumulado)}</td>
-                          <td className="px-3 py-2 text-center">
+                {processedBreakdown.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground text-sm font-medium">
+                    No se encontraron meses en este periodo.
+                  </div>
+                ) : (
+                  <>
+                    <table className="hidden md:table min-w-full text-sm">
+                      <thead className="bg-muted/40">
+                        <tr>
+                          <th className="px-3 py-2 text-left cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('mes')}>
+                            <span className="inline-flex items-center">
+                              Mes/Año
+                              {renderSortIcon('mes')}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2 text-right text-success cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('ingresosTotales')}>
+                            <span className="inline-flex items-center float-right">
+                              Ingresos Totales
+                              {renderSortIcon('ingresosTotales')}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2 text-right text-destructive cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('egresosTotales')}>
+                            <span className="inline-flex items-center float-right">
+                              Gastos & Deudas
+                              {renderSortIcon('egresosTotales')}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2 text-right cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('balanceNetoMes')}>
+                            <span className="inline-flex items-center float-right">
+                              Balance Neto
+                              {renderSortIcon('balanceNetoMes')}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2 text-right cursor-pointer select-none hover:bg-muted/60 transition-colors" onClick={() => handleSort('balanceAcumulado')}>
+                            <span className="inline-flex items-center float-right">
+                              Balance Acumulado
+                              {renderSortIcon('balanceAcumulado')}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2 text-center select-none">Detalle</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {processedBreakdown.map((row, i) => (
+                          <React.Fragment key={i}>
+                            <tr className="border-b last:border-0 hover:bg-muted/20 group">
+                              <td className="px-3 py-2 font-medium capitalize">{row.mes}</td>
+                              <td className="px-3 py-2 text-right text-success">{formatCOP(row.ingresosTotales)}</td>
+                              <td className="px-3 py-2 text-right text-destructive">{formatCOP(row.egresosTotales)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceNetoMes)}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{formatCOP(row.balanceAcumulado)}</td>
+                              <td className="px-3 py-2 text-center">
+                                <button
+                                  type="button"
+                                  className="text-sm underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
+                                  onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                                >
+                                  {expandedRow === i ? 'Ocultar' : 'Ver detalle'}
+                                </button>
+                              </td>
+                            </tr>
+                            {expandedRow === i && (
+                              <tr>
+                                <td colSpan={6} className="bg-muted/20 px-4 py-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                    {/* INGRESOS */}
+                                    <div>
+                                      <div className="font-semibold mb-1 text-success border-b border-success/20 pb-0.5">Ingresos</div>
+                                      <div className="flex justify-between py-0.5"><span>Salario:</span> <span className="font-medium">{formatCOP(row.ingresosSalario)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Intereses Ahorro:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Préstamos que me deben:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Otros Ingresos:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
+                                    </div>
+                                    {/* GASTOS */}
+                                    <div>
+                                      <div className="font-semibold mb-1 text-destructive border-b border-destructive/20 pb-0.5">Gastos</div>
+                                      <div className="flex justify-between py-0.5"><span>Gastos Futuros:</span> <span className="font-medium">{formatCOP(row.gastosFuturos)}</span></div>
+                                      <div className="flex flex-col py-0.5">
+                                        <div className="flex justify-between"><span>Cuotas Préstamos:</span> <span className="font-medium">{formatCOP(row.egresosPrestamos)}</span></div>
+                                        <div className="text-[10px] text-muted-foreground flex justify-between pl-2 italic">
+                                          <span>Cap: {formatCOP(row.egresosPrestamosCapital)}</span>
+                                          <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-between py-0.5"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Gastos:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile Cards for Breakdown */}
+                    <div className="md:hidden flex flex-col divide-y divide-border">
+                      {processedBreakdown.map((row, i) => (
+                        <div key={i} className="flex flex-col p-4 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-base capitalize">{row.mes}</span>
                             <button
                               type="button"
-                              className="text-sm underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
+                              className="text-xs font-medium underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
                               onClick={() => setExpandedRow(expandedRow === i ? null : i)}
                             >
                               {expandedRow === i ? 'Ocultar' : 'Ver detalle'}
                             </button>
-                          </td>
-                        </tr>
-                        {expandedRow === i && (
-                          <tr>
-                            <td colSpan={6} className="bg-muted/20 px-4 py-3">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                {/* INGRESOS */}
-                                <div>
-                                  <div className="font-semibold mb-1 text-success">Ingresos</div>
-                                  <div><span className="font-semibold">Salario:</span> {formatCOP(row.ingresosSalario)}</div>
-                                  <div><span className="font-semibold">Intereses Ahorro:</span> {formatCOP(row.interesesAhorro)}</div>
-                                  <div><span className="font-semibold">Préstamos que me deben:</span> {formatCOP(row.ingresosPrestamos)}</div>
-                                  <div><span className="font-semibold">Otros Ingresos:</span> {formatCOP(row.otrosIngresos)}</div>
-                                </div>
-                                {/* GASTOS */}
-                                <div>
-                                  <div className="font-semibold mb-1 text-destructive">Gastos</div>
-                                  <div><span className="font-semibold">Gastos Futuros:</span> {formatCOP(row.gastosFuturos)}</div>
-                                  <div><span className="font-semibold">Cuotas Préstamos:</span> {formatCOP(row.egresosPrestamos)} <span className="ml-2">(Cap: {formatCOP(row.egresosPrestamosCapital)}, Int: {formatCOP(row.egresosPrestamosInteres)})</span></div>
-                                  <div><span className="font-semibold">Cuotas Tarjeta:</span> {formatCOP(row.egresosTarjeta)}</div>
-                                  <div><span className="font-semibold">Gastos:</span> {formatCOP(row.egresosReales)}</div>
-                                  <div><span className="font-semibold">Ahorros e Inv.:</span> {formatCOP(row.egresosAhorro)}</div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Mobile Cards for Breakdown */}
-                <div className="md:hidden flex flex-col divide-y divide-border">
-                  {monthlyBreakdown.map((row, i) => (
-                    <div key={i} className="flex flex-col p-4 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-base">{row.mes}</span>
-                        <button
-                          type="button"
-                          className="text-xs font-medium underline text-primary hover:text-primary/70 focus:outline-none transition-colors duration-200"
-                          onClick={() => setExpandedRow(expandedRow === i ? null : i)}
-                        >
-                          {expandedRow === i ? 'Ocultar' : 'Ver detalle'}
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground text-xs">Ingresos</span>
-                          <span className="text-success font-medium">{formatCOP(row.ingresosTotales)}</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-muted-foreground text-xs">Egresos</span>
-                          <span className="text-destructive font-medium">{formatCOP(row.egresosTotales)}</span>
-                        </div>
-                        <div className="flex flex-col pt-1">
-                          <span className="text-muted-foreground text-xs">Neto</span>
-                          <span className="font-semibold">{formatCOP(row.balanceNetoMes)}</span>
-                        </div>
-                        <div className="flex flex-col items-end pt-1">
-                          <span className="text-muted-foreground text-xs">Acumulado</span>
-                          <span className="font-semibold text-primary">{formatCOP(row.balanceAcumulado)}</span>
-                        </div>
-                      </div>
-
-                      {expandedRow === i && (
-                        <div className="pt-3 mt-2 border-t border-border/50 grid grid-cols-1 gap-4 text-xs bg-muted/20 p-3 rounded-lg">
-                          <div className="space-y-1">
-                            <div className="font-semibold text-success border-b border-success/20 pb-1 mb-2">Ingresos Detalle</div>
-                            <div className="flex justify-between"><span>Salario:</span> <span className="font-medium">{formatCOP(row.ingresosSalario)}</span></div>
-                            <div className="flex justify-between"><span>Intereses:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
-                            <div className="flex justify-between"><span>Préstamos a favor:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
-                            <div className="flex justify-between"><span>Otros:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
                           </div>
-                          <div className="space-y-1">
-                            <div className="font-semibold text-destructive border-b border-destructive/20 pb-1 mb-2">Gastos Detalle</div>
-                            <div className="flex justify-between"><span>Gastos Futuros:</span> <span className="font-medium">{formatCOP(row.gastosFuturos)}</span></div>
+
+                          <div className="grid grid-cols-2 gap-2 text-sm">
                             <div className="flex flex-col">
-                              <div className="flex justify-between"><span>Cuotas Préstamos:</span> <span className="font-medium">{formatCOP(row.egresosPrestamos)}</span></div>
-                              <div className="text-[10px] text-muted-foreground flex justify-between pl-2">
-                                <span>Cap: {formatCOP(row.egresosPrestamosCapital)}</span>
-                                <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
+                              <span className="text-muted-foreground text-xs">Ingresos</span>
+                              <span className="text-success font-medium">{formatCOP(row.ingresosTotales)}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="text-muted-foreground text-xs">Egresos</span>
+                              <span className="text-destructive font-medium">{formatCOP(row.egresosTotales)}</span>
+                            </div>
+                            <div className="flex flex-col pt-1">
+                              <span className="text-muted-foreground text-xs">Neto</span>
+                              <span className="font-semibold">{formatCOP(row.balanceNetoMes)}</span>
+                            </div>
+                            <div className="flex flex-col items-end pt-1">
+                              <span className="text-muted-foreground text-xs">Acumulado</span>
+                              <span className="font-semibold text-primary">{formatCOP(row.balanceAcumulado)}</span>
+                            </div>
+                          </div>
+
+                          {expandedRow === i && (
+                            <div className="pt-3 mt-2 border-t border-border/50 grid grid-cols-1 gap-4 text-xs bg-muted/20 p-3 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="font-semibold text-success border-b border-success/20 pb-1 mb-2">Ingresos Detalle</div>
+                                <div className="flex justify-between"><span>Salario:</span> <span className="font-medium">{formatCOP(row.ingresosSalario)}</span></div>
+                                <div className="flex justify-between"><span>Intereses:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
+                                <div className="flex justify-between"><span>Préstamos a favor:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
+                                <div className="flex justify-between"><span>Otros:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="font-semibold text-destructive border-b border-destructive/20 pb-1 mb-2">Gastos Detalle</div>
+                                <div className="flex justify-between"><span>Gastos Futuros:</span> <span className="font-medium">{formatCOP(row.gastosFuturos)}</span></div>
+                                <div className="flex flex-col">
+                                  <div className="flex justify-between"><span>Cuotas Préstamos:</span> <span className="font-medium">{formatCOP(row.egresosPrestamos)}</span></div>
+                                  <div className="text-[10px] text-muted-foreground flex justify-between pl-2 italic">
+                                    <span>Cap: {formatCOP(row.egresosPrestamosCapital)}</span>
+                                    <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
+                                <div className="flex justify-between"><span>Gastos Reales:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
+                                <div className="flex justify-between"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
                               </div>
                             </div>
-                            <div className="flex justify-between"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
-                            <div className="flex justify-between"><span>Gastos Reales:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
-                            <div className="flex justify-between"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
-                          </div>
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
+
               </div>
             </div>
           </>

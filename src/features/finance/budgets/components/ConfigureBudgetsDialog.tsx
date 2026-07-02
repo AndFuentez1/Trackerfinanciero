@@ -127,10 +127,10 @@ export function ConfigureBudgetsDialog() {
   };
 
   const handleSaveCategory = async (config: CategoryConfig) => {
-    if (config.amount <= 0) {
+    if (config.amount < 0) {
       toast({
         title: 'Monto inválido',
-        description: `El monto para "${config.categoryName}" debe ser mayor a 0.`,
+        description: `El monto para "${config.categoryName}" debe ser 0 o mayor.`,
         variant: 'destructive',
       });
       return;
@@ -221,10 +221,10 @@ export function ConfigureBudgetsDialog() {
       return;
     }
 
-    if (createAmount <= 0) {
+    if (createAmount < 0) {
       toast({
         title: 'Monto inválido',
-        description: 'El monto del presupuesto debe ser mayor a 0.',
+        description: 'El monto del presupuesto debe ser 0 o mayor.',
         variant: 'destructive',
       });
       return;
@@ -446,19 +446,6 @@ export function ConfigureBudgetsDialog() {
                         Todas las categorías ya tienen un presupuesto.
                       </p>
                     )}
-                    <AddCategoryDialog
-                      type="expense"
-                      onAdd={addCategory}
-                      onSuccess={(cat) => {
-                        setCreateCategoryId(cat.id);
-                      }}
-                      trigger={
-                        <Button variant="outline" size="sm" className="gap-2 shrink-0 h-10" title="Nueva categoría">
-                          <Plus className="h-4 w-4" />
-                          <span className="hidden sm:inline">Nueva</span>
-                        </Button>
-                      }
-                    />
                   </div>
                 </div>
 
@@ -506,7 +493,7 @@ export function ConfigureBudgetsDialog() {
 
               <Button
                 onClick={handleCreateBudget}
-                disabled={saving !== null || !createCategoryId || createAmount <= 0}
+                disabled={saving !== null || !createCategoryId || createAmount < 0}
                 className="w-full h-11 font-semibold rounded-xl mt-2 text-primary-foreground bg-primary hover:bg-primary/80 transition-all shadow-md active:scale-[0.99]"
               >
                 {saving !== null ? (

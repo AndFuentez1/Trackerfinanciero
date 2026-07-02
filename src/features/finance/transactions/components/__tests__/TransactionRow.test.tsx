@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TransactionRow } from '../TransactionRow';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FinanceProvider } from '@/features/finance/context/FinanceContext';
 import React from 'react';
 
 vi.mock('@/features/finance/hooks/useFinanceMutations', () => ({
@@ -18,6 +17,17 @@ vi.mock('@/features/finance/hooks/useFinanceMutations', () => ({
     })
 }));
 
+vi.mock('@/features/finance/hooks/useFinanceData', () => ({
+    useFinanceData: () => ({
+        addCategory: vi.fn(),
+        categories: []
+    })
+}));
+
+vi.mock('@/features/finance/hooks/useDecimalPlaces', () => ({
+    useDecimalPlaces: () => 2
+}));
+
 vi.mock('@/shared/hooks/use-toast', () => ({
     useToast: () => ({ toast: vi.fn() })
 }));
@@ -25,11 +35,12 @@ vi.mock('@/shared/hooks/use-toast', () => ({
 vi.mock('@/features/finance/hooks/useFormatCurrency', () => ({
     useFormatCurrency: () => ({
         formatCurrency: (val: number) => `$${val.toLocaleString()}`,
-        formatCurrency80: (val: number) => `$${val.toLocaleString()}`
+        formatCurrency80: (val: number) => `$${val.toLocaleString()}`,
+        formatCurrencySmall: (val: number) => `$${val.toLocaleString()}`
     })
 }));
 
-describe.skip('TransactionRow', () => {
+describe('TransactionRow', () => {
     let queryClient: QueryClient;
     const mockTransaction = {
         id: 't1',
@@ -45,26 +56,39 @@ describe.skip('TransactionRow', () => {
         created_at: '2024-01-15T10:00:00Z'
     };
 
+    const paymentMethods = [{ id: 'pm1', name: 'Credit Card', type: 'credit' as const }];
+    const categories = [{ id: 'c1', name: 'Food', type: 'expense' as const, color: '#3b82f6' }];
+
     beforeEach(() => {
         queryClient = new QueryClient();
         vi.clearAllMocks();
     });
 
+    const defaultProps = {
+        isEditing: false,
+        draft: null,
+        paymentMethods,
+        categories,
+        highlightOrphaned: false,
+        currency: 'COP',
+        onStartEdit: vi.fn(),
+        onCancelEdit: vi.fn(),
+        onSaveEdit: vi.fn(),
+        onDelete: vi.fn(),
+        onDraftChange: vi.fn(),
+        onUpdate: vi.fn()
+    };
+
     const createWrapper = () => ({ children }: { children: React.ReactNode }) =>
-        React.createElement(
-            QueryClientProvider,
-            { client: queryClient },
-            React.createElement(FinanceProvider, {}, children)
-        );
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
 
     it('renders transaction details', () => {
         render(
             <table>
                 <tbody>
                     <TransactionRow 
+                        {...defaultProps}
                         transaction={mockTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
                     />
                 </tbody>
             </table>,
@@ -73,7 +97,7 @@ describe.skip('TransactionRow', () => {
 
         expect(screen.getByText('Groceries')).toBeTruthy();
         expect(screen.getByText('Food')).toBeTruthy();
-        expect(screen.getByText('Credit Card')).toBeTruthy();
+        expect(screen.getByText(/Credit Card/)).toBeTruthy();
     });
 
     it('displays amount correctly formatted', () => {
@@ -81,9 +105,8 @@ describe.skip('TransactionRow', () => {
             <table>
                 <tbody>
                     <TransactionRow 
+                        {...defaultProps}
                         transaction={mockTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
                     />
                 </tbody>
             </table>,
@@ -94,114 +117,52 @@ describe.skip('TransactionRow', () => {
         expect(amountText).toBeTruthy();
     });
 
-    it('shows expense icon for expense type', () => {
+    it('calls onStartEdit when edit button is clicked', async () => {
+        const onStartEdit = vi.fn();
+        const props = { ...defaultProps, onStartEdit };
+
         render(
             <table>
                 <tbody>
                     <TransactionRow 
+                        {...props}
                         transaction={mockTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
                     />
                 </tbody>
             </table>,
             { wrapper: createWrapper() }
         );
 
-        // Check that expense-related icon or class is present
-        const row = screen.getByText('Groceries').closest('tr');
-        expect(row).toBeTruthy();
-    });
+        const editButton = screen.getByRole('button', { name: /editar transacción/i });
+        fireEvent.click(editButton);
 
-    it('shows income icon for income type', () => {
-        const incomeTransaction = { ...mockTransaction, type: 'income' as const };
-
-        render(
-            <table>
-                <tbody>
-                    <TransactionRow 
-                        transaction={incomeTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
-                    />
-                </tbody>
-            </table>,
-            { wrapper: createWrapper() }
-        );
-
-        expect(screen.getByText('Groceries')).toBeTruthy();
-    });
-
-    it('calls onEdit when edit button is clicked', async () => {
-        const onEdit = vi.fn();
-
-        render(
-            <table>
-                <tbody>
-                    <TransactionRow 
-                        transaction={mockTransaction}
-                        onEdit={onEdit}
-                        onDelete={vi.fn()}
-                    />
-                </tbody>
-            </table>,
-            { wrapper: createWrapper() }
-        );
-
-        const editButtons = screen.queryAllByRole('button', { name: /editar|edit/i });
-        if (editButtons.length > 0) {
-            fireEvent.click(editButtons[0]);
-            await waitFor(() => {
-                expect(onEdit).toHaveBeenCalledWith(mockTransaction);
-            });
-        }
+        await waitFor(() => {
+            expect(onStartEdit).toHaveBeenCalledWith(mockTransaction);
+        });
     });
 
     it('calls onDelete when delete button is clicked', async () => {
         const onDelete = vi.fn();
+        const props = { ...defaultProps, onDelete };
 
         render(
             <table>
                 <tbody>
                     <TransactionRow 
+                        {...props}
                         transaction={mockTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={onDelete}
                     />
                 </tbody>
             </table>,
             { wrapper: createWrapper() }
         );
 
-        const deleteButtons = screen.queryAllByRole('button', { name: /eliminar|delete/i });
-        if (deleteButtons.length > 0) {
-            fireEvent.click(deleteButtons[0]);
-            await waitFor(() => {
-                expect(onDelete).toHaveBeenCalledWith(mockTransaction.id);
-            });
-        }
-    });
+        const deleteButton = screen.getByRole('button', { name: /eliminar transacción/i });
+        fireEvent.click(deleteButton);
 
-    it('handles long descriptions with text wrapping', () => {
-        const longDescriptionTx = {
-            ...mockTransaction,
-            description: 'This is a very long transaction description that should wrap properly without truncating'
-        };
-
-        render(
-            <table>
-                <tbody>
-                    <TransactionRow 
-                        transaction={longDescriptionTx}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
-                    />
-                </tbody>
-            </table>,
-            { wrapper: createWrapper() }
-        );
-
-        expect(screen.getByText(/very long/)).toBeTruthy();
+        await waitFor(() => {
+            expect(onDelete).toHaveBeenCalledWith(mockTransaction.id);
+        });
     });
 
     it('displays transaction date', () => {
@@ -209,15 +170,14 @@ describe.skip('TransactionRow', () => {
             <table>
                 <tbody>
                     <TransactionRow 
+                        {...defaultProps}
                         transaction={mockTransaction}
-                        onEdit={vi.fn()}
-                        onDelete={vi.fn()}
                     />
                 </tbody>
             </table>,
             { wrapper: createWrapper() }
         );
 
-        expect(screen.getByText(/2024|15/)).toBeTruthy();
+        expect(screen.getByText('15/ene/24')).toBeTruthy();
     });
 });

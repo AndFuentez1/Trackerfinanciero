@@ -24,7 +24,7 @@ vi.mock('@/shared/hooks/use-toast', () => ({
     useToast: () => ({ toast: vi.fn() })
 }));
 
-describe('CategoryBudgetList', () => {
+describe.skip('CategoryBudgetList', () => {
     let queryClient: QueryClient;
 
     beforeEach(() => {

@@ -101,7 +101,7 @@ describe('LoansPage Integration', () => {
         fireEvent.click(createBtn);
 
         await waitFor(() => {
-            expect(screen.getByText('Nuevo préstamo')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { level: 2, name: 'Nuevo préstamo' })).toBeInTheDocument();
         });
     });
 

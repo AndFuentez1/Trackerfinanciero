@@ -31,6 +31,7 @@ interface AddSavingsAccountDialogProps {
     savings_goal?: number;
     estimated_yield?: number;
     yield_period?: YieldPeriod;
+    initial_date?: string;
   }) => Promise<{ error: unknown }>;
 }
 
@@ -41,6 +42,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   const [savingsGoal, setSavingsGoal] = useState<number>(0);
   const [estimatedYield, setEstimatedYield] = useState('');
   const [yieldPeriod, setYieldPeriod] = useState<YieldPeriod>('annual');
+  const [initialDate, setInitialDate] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currency, decimalPlaces } = useFinance();
   const { toast } = useToast();
@@ -65,6 +67,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       savings_goal: savingsGoal > 0 ? savingsGoal : undefined,
       estimated_yield: estimatedYield ? parseFloat(estimatedYield) : undefined,
       yield_period: yieldPeriod,
+      initial_date: `${initialDate}-01`,
     });
 
     setIsSubmitting(false);
@@ -74,6 +77,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
       setSavingsGoal(0);
       setEstimatedYield('');
       setYieldPeriod('annual');
+      setInitialDate(new Date().toISOString().substring(0, 7));
       setOpen(false);
     } else {
       const err = error as { code?: string; message?: string };
@@ -129,6 +133,19 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
               onChange={setBalance}
               className="pl-12"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="initial-date" className="text-sm">Fecha de creación / inicio de saldo</Label>
+            <Input
+              id="initial-date"
+              type="month"
+              value={initialDate}
+              onChange={(e) => setInitialDate(e.target.value)}
+              required
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Los rendimientos de esta cuenta se contarán a partir de este mes.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="goal">Meta de ahorro</Label>

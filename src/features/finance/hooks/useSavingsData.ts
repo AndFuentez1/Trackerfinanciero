@@ -8,6 +8,7 @@ export interface SavingsAccount {
   savings_goal?: number | null;
   estimated_yield?: number | null;
   yield_period?: 'annual' | 'monthly';
+  initial_date?: string | null;
 }
 
 export interface SavingsTransaction {

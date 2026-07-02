@@ -109,6 +109,7 @@ export function useSavingsDataLogic() {
       estimated_yield: a.estimated_yield ? Number(a.estimated_yield) : 0,
       yield_period: normalizeYieldPeriod(a.yield_period),
       savings_goal: a.savings_goal ? Number(a.savings_goal) : null,
+      initial_date: a.initial_date,
     }));
 
     setSavingsAccounts(accounts);
@@ -191,6 +192,7 @@ export function useSavingsDataLogic() {
     estimated_yield?: number;
     yield_period?: 'annual' | 'monthly';
     savings_goal?: number;
+    initial_date?: string;
   }) => {
     if (!user) { return { error: 'No autenticado' }; }
 
@@ -206,6 +208,7 @@ export function useSavingsDataLogic() {
         savings_goal: account.savings_goal ?? null,
         estimated_yield: account.estimated_yield ?? account.interest_rate ?? 0,
         yield_period: account.yield_period ?? 'annual',
+        initial_date: account.initial_date || `${new Date().toISOString().substring(0, 7)}-01`,
       } satisfies Database['public']['Tables']['payment_methods']['Insert'] & { yield_period?: string })
       .select()
       .single();
@@ -226,6 +229,7 @@ export function useSavingsDataLogic() {
       estimated_yield: row.estimated_yield ? Number(row.estimated_yield) : 0,
       yield_period: normalizeYieldPeriod((row as PaymentMethodRow & { yield_period?: string }).yield_period),
       savings_goal: row.savings_goal ? Number(row.savings_goal) : null,
+      initial_date: row.initial_date,
     }]);
 
     toast({ title: 'Éxito', description: 'Cuenta de ahorro creada' });
