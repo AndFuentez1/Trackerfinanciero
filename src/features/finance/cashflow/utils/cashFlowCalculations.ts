@@ -168,7 +168,10 @@ export function calculateMonthlySnapshot(
         const hasBeenCreated = !pmInitDate || !isAfter(startOfMonth(pmInitDate), startOfMonth(date));
 
         if (!hasBeenCreated) {
-            newSavings[acc.id] = 0;
+            // FIX: Eliminamos la cuenta del registro en lugar de asignarle 0.
+            // Así, en el mes que se cree, prevSavings[acc.id] será undefined 
+            // y tomará correctamente el acc.balance inicial.
+            delete newSavings[acc.id];
             return;
         }
 
@@ -187,13 +190,12 @@ export function calculateMonthlySnapshot(
     });
 
     // --- Base Balance Calculation (Initial Date aware) ---
-    // If this is the starting month of the calculation (prevBalance == 0 usually indicates the first iteration of the loop in useCashFlow)
-    // or we want to be more explicit: if prevBalance is 0, we should maybe sum the balances of payment methods whose initial_date <= current month.
-    // However, the current loop in useCashFlow sends pb (prevBalance) which is cumulative.
-    // We need to handle the very first month's initial sum.
+    // FIX: Usar prevBalance === 0 es peligroso si el usuario realmente llega a un saldo de $0 en algún mes.
+    // Una forma más segura de detectar la "primera iteración" es ver si los prevSavings están vacíos (ya que iniciamos el reduce con {}).
+    const isFirstIteration = prevBalance === 0 && Object.keys(prevSavings).length === 0;
 
     let initialMonthBalance = 0;
-    if (prevBalance === 0) {
+    if (isFirstIteration) {
         paymentMethods.forEach(pm => {
             const pmInitDate = pm.initial_date ? toLocalDate(pm.initial_date) : null;
             // If the payment method starts in or before this month
@@ -202,8 +204,7 @@ export function calculateMonthlySnapshot(
             }
         });
     }
-    const currentPrevBalance = prevBalance === 0 ? initialMonthBalance : prevBalance;
-
+    const currentPrevBalance = isFirstIteration ? initialMonthBalance : prevBalance;
     const monthKey = getMonthKey(date);
     const monthTransactions = context.transactionsByMonth.get(monthKey) ?? [];
     const realExpensePool = buildRealExpensePool(monthTransactions);

@@ -495,7 +495,8 @@ export function useFinanceMutations(userId: string | undefined) {
                 estimated_yield: pm.estimated_yield,
                 closing_date: pm.closing_date,
                 payment_day: pm.payment_day,
-                color: pm.color
+                color: pm.color,
+                initial_date: pm.initial_date
             };
 
             const { data, error } = await supabase.from('payment_methods')
@@ -553,7 +554,7 @@ export function useFinanceMutations(userId: string | undefined) {
             const allowed: (keyof PaymentMethod)[] = [
                 'name', 'type', 'balance', 'credit_limit',
                 'is_savings_account', 'savings_goal', 'estimated_yield', 'yield_period',
-                'closing_date', 'payment_day', 'color'
+                'closing_date', 'payment_day', 'color', 'initial_date'
             ];
 
             allowed.forEach(key => {

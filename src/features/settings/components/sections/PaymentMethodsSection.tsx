@@ -31,8 +31,9 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
         setIsEditOpen(true);
     };
 
-    return (
-        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden h-full flex flex-col">
+return (
+        // FIX 1: Cambiar h-full por h-fit y remover overflow-hidden si el padre lo impone.
+        <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 h-fit flex flex-col">
             <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -48,8 +49,11 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
-                <ScrollArea className="flex-1 -mx-2 px-2 max-h-[600px]">
+            
+            {/* FIX 2: Remover flex-1 y restricciones de min-h-0 */}
+            <CardContent className="space-y-4">
+                {/* FIX 3: Remover el ScrollArea de Shadcn. El scroll lo maneja el PaymentMethodList */}
+                <div className="-mx-2 px-2">
                     {loading ? (
                         <AccountsListSkeleton count={2} />
                     ) : (
@@ -64,7 +68,7 @@ export function PaymentMethodsSection({ highlighted, onPaymentMethodCreated }: P
                             onAdd={() => setIsAddOpen(true)}
                         />
                     )}
-                </ScrollArea>
+                </div>
 
                 <AddPaymentMethodDialog
                     open={isAddOpen}
