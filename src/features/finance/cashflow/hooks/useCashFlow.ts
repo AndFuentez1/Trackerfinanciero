@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { useLoans } from '@/features/finance/loans/context/LoansContext';
-import { useSavingsData } from '@/features/finance/hooks/useSavingsData';
 import { useFinanceQueries } from '@/features/finance/hooks/useFinanceQueries';
 import { startOfMonth, format, isBefore, addMonths, isSameMonth, isAfter } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +23,20 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const queryClient = useQueryClient();
   const { transactions, allTransactions, paymentMethods, categories } = useFinance();
   const { loans } = useLoans();
-  const { savingsAccounts } = useSavingsData();
+  const savingsAccounts = useMemo(() => {
+    return paymentMethods
+      .filter(pm => pm.is_savings_account)
+      .map(pm => ({
+        id: pm.id,
+        name: pm.name,
+        balance: pm.balance,
+        estimated_yield: pm.estimated_yield,
+        yield_period: pm.yield_period,
+        initial_date: pm.initial_date,
+        savings_goal: pm.savings_goal,
+        interest_rate: pm.estimated_yield || 0
+      }));
+  }, [paymentMethods]);
   const { budgets: rawBudgets } = useFinanceQueries(user?.id);
   const futureExpensesCacheKey = useMemo(
     () => (user?.id ? buildFinanceCacheKey('future-expenses', user.id) : null),

@@ -77,7 +77,7 @@ export function EditPaymentMethodDialog({
     if (paymentMethod) {
       setFormData({
         name: paymentMethod.name,
-        type: paymentMethod.type,
+        type: paymentMethod.is_savings_account ? 'savings' : paymentMethod.type,
         balance: Number(paymentMethod.balance),
         creditLimit: Number(paymentMethod.credit_limit || 0),
         closingDate: paymentMethod.closing_date?.toString() || '',
@@ -119,37 +119,37 @@ export function EditPaymentMethodDialog({
 
       const updates: Partial<Omit<PaymentMethod, 'id'>> = {
         name: formData.name,
-        type: formData.type as PaymentMethod['type'],
+        type: formData.type === 'savings'
+          ? (paymentMethod.type === 'debit' ? 'debit' : 'savings')
+          : (formData.type as PaymentMethod['type']),
         balance: Number(formData.balance) || 0,
         color: formData.color,
         initial_date: formData.initialDate ? `${formData.initialDate}-01` : null,
       };
 
-        if (formData.type === 'credit') {
-          updates.is_savings_account = false;
-          if (formData.creditLimit) {
-            updates.credit_limit = Number(formData.creditLimit);
-          }
-          if (formData.closingDate) {
-            updates.closing_date = parseInt(formData.closingDate);
-          }
-          if (formData.paymentDay) {
-            updates.payment_day = parseInt(formData.paymentDay);
-          }
-        } else if (formData.type === 'savings') {
-          updates.is_savings_account = true;
-          if (formData.savingsGoal) {
-            updates.savings_goal = Number(formData.savingsGoal);
-          }
-          if (formData.estimatedYield) {
-            updates.estimated_yield = parseFloat(formData.estimatedYield);
-          }
-          updates.yield_period = formData.yieldPeriod;
+      if (formData.type === 'credit') {
+        updates.is_savings_account = false;
+        if (formData.creditLimit) {
+          updates.credit_limit = Number(formData.creditLimit);
+        }
+        if (formData.closingDate) {
+          updates.closing_date = parseInt(formData.closingDate);
+        }
+        if (formData.paymentDay) {
+          updates.payment_day = parseInt(formData.paymentDay);
+        }
+      } else if (formData.type === 'savings') {
+        updates.is_savings_account = true;
+        if (formData.savingsGoal) {
+          updates.savings_goal = Number(formData.savingsGoal);
+        }
+        if (formData.estimatedYield) {
+          updates.estimated_yield = parseFloat(formData.estimatedYield);
+        }
+        updates.yield_period = formData.yieldPeriod;
       } else {
-        // Para débito, efectivo u otros.
-        // FIX: Si lockType es true (estamos editando desde la vista de Ahorros) 
-        // o si ya era una cuenta de ahorro, preservamos la flag en lugar de forzar false.
-        updates.is_savings_account = lockType ? formData.isSavingsAccount : false;
+        // For debit, cash, or any other type
+        updates.is_savings_account = false;
       }
 
       if (onSave) {

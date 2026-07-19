@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { getBackendUrl } from '@/core/api/backend';
 
 export interface GmailTokenStatus {
     connected: boolean;
@@ -33,7 +34,7 @@ export function useGmailTokenStatus() {
 
         const fetchStatus = async () => {
             try {
-                const response = await fetch(`/api/user/config/gmail/status?userId=${user.id}`);
+                const response = await fetch(`${getBackendUrl()}/api/user/config/gmail/status?userId=${user.id}`);
                 if (!response.ok) { throw new Error('Failed to fetch Gmail status'); }
                 const data = await response.json();
                 setStatus(data);
