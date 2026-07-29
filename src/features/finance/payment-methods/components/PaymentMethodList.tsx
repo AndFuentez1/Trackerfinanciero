@@ -8,6 +8,7 @@ import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
+import { useIsMobile } from '@/shared/hooks/use-mobile';
 
 interface PaymentMethodListProps {
   paymentMethods: PaymentMethod[];
@@ -63,6 +64,7 @@ export function PaymentMethodList({
   const { currency: ctxCurrency } = useFinance();
   const { currency, formatCurrencySmall } = useFormatCurrency();
   const { addTransfer } = useFinanceData();
+  const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Responsive width tracking
@@ -84,7 +86,7 @@ export function PaymentMethodList({
   }
 
   const totalCards = paymentMethods.length + 1;
-  const isSliderActive = totalCards > maxCards;
+  const isSliderActive = isMobile ? totalCards > 1 : totalCards > maxCards;
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -236,10 +238,10 @@ export function PaymentMethodList({
   if (isSliderActive) {
     return (
       <div className="relative group w-full">
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons (Visibles en desktop/hover) */}
         <button
           onClick={() => scroll('left')}
-          className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto cursor-pointer"
+          className="hidden sm:flex absolute left-[-16px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto cursor-pointer"
           title="Desplazar izquierda"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -247,23 +249,24 @@ export function PaymentMethodList({
 
         <button
           onClick={() => scroll('right')}
-          className="absolute right-[-16px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto cursor-pointer"
+          className="hidden sm:flex absolute right-[-16px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto cursor-pointer"
           title="Desplazar derecha"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
 
-        {/* Horizontal scrollbar slider */}
+        {/* Horizontal scrollbar slider con soporte táctil mejorado */}
         <div
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/25 scrollbar-track-transparent w-full pr-2 -mr-2"
+          className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 pt-1 px-1 overscroll-x-contain touch-pan-x snap-x snap-mandatory scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/25 scrollbar-track-transparent w-full"
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {paymentMethods.map((pm) => (
-            <div key={pm.id} className="snap-start shrink-0 w-full sm:w-[320px] md:w-[340px]">
+            <div key={pm.id} className="snap-start shrink-0 w-[85vw] max-w-[320px] sm:w-[320px] md:w-[340px]">
               {renderCardContent(pm)}
             </div>
           ))}
-          <div className="snap-start shrink-0 w-full sm:w-[320px] md:w-[340px] min-h-[12rem]">
+          <div className="snap-start shrink-0 w-[85vw] max-w-[320px] sm:w-[320px] md:w-[340px] min-h-[12rem]">
             {renderAddButton()}
           </div>
         </div>

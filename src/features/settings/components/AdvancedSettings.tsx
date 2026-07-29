@@ -415,16 +415,18 @@ export function AdvancedSettings({
                 body: JSON.stringify(body)
             });
 
-            if (!response.ok) { throw new Error('Failed to save toggle'); }
+            const responseData = await response.json().catch(() => ({}));
+            if (!response.ok) { throw new Error(responseData?.error || 'Failed to save toggle'); }
 
             // Background revalidation
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
 
-        } catch {
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'No se pudo guardar el cambio';
             // Revert state on error (pessimistic rollback)
             toast({
                 title: 'Error',
-                description: 'No se pudo guardar el cambio',
+                description: errorMessage,
                 variant: 'destructive'
             });
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
@@ -455,7 +457,10 @@ export function AdvancedSettings({
                 body: JSON.stringify(body)
             });
 
-            if (!response.ok) { throw new Error('Error guardando configuración de Telegram'); }
+            const responseData = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(responseData?.error || 'Error guardando configuración de Telegram');
+            }
 
             toast({
                 title: 'Telegram configurado',
@@ -465,10 +470,11 @@ export function AdvancedSettings({
             setTelegramBotToken('');
             setTelegramChatId('');
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
-        } catch {
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'No se pudo guardar la configuración';
             toast({
                 title: 'Error',
-                description: 'No se pudo guardar la configuración',
+                description: errorMessage,
                 variant: 'destructive'
             });
         } finally {
