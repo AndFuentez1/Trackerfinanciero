@@ -49,7 +49,7 @@ NO tienes permitido escribir código de ejecución, crear scripts o modificar la
 
 1. **Impacto Sistémico:** ¿Rompe hooks compartidos? ¿Duplica lógica? ¿Afecta RLS, Supabase, Contextos o estado global?
 2. **Integridad Lógica:** Manejo completo de errores, edge cases (null, loading, race conditions), `useEffect` con dependencias correctas.
-3. **TypeScript Estricto:** No `any`. No type assertions inseguras. Tipos coherentes con `src/domains/types.ts`.
+3. **TypeScript Estricto:** No `any`. No type assertions inseguras. Tipos coherentes con `src/features/finance/types/financeTypes.ts` y `src/integrations/supabase/types.ts`.
 4. **Rendimiento:** No re-renders innecesarios. Memoización estable. Sin closures inestables.
 5. **UX/UI de Sistema:** Solo tokens del sistema. Estados interactivos completos.
 

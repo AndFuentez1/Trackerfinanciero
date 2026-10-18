@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect } from 'react';
+import { useStableCallbacks } from '@/core/hooks/useStableCallbacks';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 // Import specialized hooks
@@ -64,6 +65,7 @@ export function useFinanceDataLogic() {
   // 2. Specialized Managers
   const ui = useFinanceUI();
   const profileMgmt = useProfileManagement(profile);
+  const { updateProfile, resetOperationalData: resetOperationalDataBase } = profileMgmt;
   const theme = useTheme(profileMgmt.profileData?.base_color ?? profile?.base_color);
 
   // 3. Transactions & Derived Logic
@@ -84,74 +86,103 @@ export function useFinanceDataLogic() {
     return ui.loading || profileLoading || pmLoading || catsLoading || (tx.transactionsLoading && tx.transactions.length === 0);
   }, [ui.loading, profileLoading, pmLoading, catsLoading, tx.transactionsLoading, tx.transactions.length]);
 
-  // 4. Mutations
-  const mut = useFinanceMutations(user?.id);
+  // 4. Mutations (identidad estable: no invalidan el memo del contexto en cada render)
+  const mut = useStableCallbacks(useFinanceMutations(user?.id));
+
+  // Setters de useState: estables, a diferencia del objeto `ui` completo
+  const {
+    setLastUpdated, setPage, setImportProgress, setHasPendingImport, setOnboardingDecision,
+    setPendingImportData, setManualLoading, setWelcomeCompleted, pendingImportData,
+  } = ui;
 
   // 5. Orchestrated Helpers
   const refreshData = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['finance'] });
-    ui.setLastUpdated(new Date());
-  }, [queryClient, ui]);
+    setLastUpdated(new Date());
+  }, [queryClient, setLastUpdated]);
 
   const loadMore = useCallback(() => {
     if (!tx.hasMore) { return; }
-    ui.setPage(prev => prev + 1);
-  }, [tx.hasMore, ui]);
+    setPage(prev => prev + 1);
+  }, [tx.hasMore, setPage]);
 
   const confirmPendingImport = useCallback(async () => {
-    if (!user || ui.pendingImportData.length === 0) { return { error: 'Sin datos' }; }
+    if (!user || pendingImportData.length === 0) { return { error: 'Sin datos' }; }
 
-    ui.setImportProgress(prev => ({ ...prev, status: 'loading', message: 'Importando registros...' }));
+    setImportProgress(prev => ({ ...prev, status: 'loading', message: 'Importando registros...' }));
 
     try {
-      await mut.addTransactionsBulk(ui.pendingImportData);
-      await profileMgmt.updateProfile({ has_pending_import: false, onboarding_decision: 'imported' });
-      ui.setHasPendingImport(false);
-      ui.setOnboardingDecision('imported');
-      ui.setPendingImportData([]);
-      ui.setImportProgress({ status: 'completed', progress: 100, message: '¡Importación exitosa!' });
+      await mut.addTransactionsBulk(pendingImportData);
+      await updateProfile({ has_pending_import: false, onboarding_decision: 'imported' });
+      setHasPendingImport(false);
+      setOnboardingDecision('imported');
+      setPendingImportData([]);
+      setImportProgress({ status: 'completed', progress: 100, message: '¡Importación exitosa!' });
       return { success: true };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error desconocido';
-      ui.setImportProgress({ status: 'failed', progress: 0, message: 'Error en la importación', error: message });
+      setImportProgress({ status: 'failed', progress: 0, message: 'Error en la importación', error: message });
       return { error: message };
     }
-  }, [user, ui, mut, profileMgmt]);
+  }, [user, pendingImportData, mut, updateProfile, setImportProgress, setHasPendingImport, setOnboardingDecision, setPendingImportData]);
 
   const resetOperationalData = useCallback(async () => {
-    const res = await profileMgmt.resetOperationalData();
+    const res = await resetOperationalDataBase();
     if (res.success) {
       await refreshData();
     }
     return res;
-  }, [profileMgmt, refreshData]);
+  }, [resetOperationalDataBase, refreshData]);
 
   // Sync loading states
   useEffect(() => {
     if (user && !pmLoading && !catsLoading) {
       const t = setTimeout(() => {
-        ui.setManualLoading(false);
-
+        setManualLoading(false);
       }, 100);
       return () => clearTimeout(t);
     } else if (!user) {
-      ui.setManualLoading(false);
+      setManualLoading(false);
     }
-  }, [user, pmLoading, catsLoading, ui]);
+  }, [user, pmLoading, catsLoading, setManualLoading]);
 
 
 
   // Sync onboarding/profile flags into UI state
   useEffect(() => {
     if (!profile) { return; }
-    ui.setOnboardingDecision((profile.onboarding_decision ?? null) as 'pending' | 'from_scratch' | 'imported' | null);
-    ui.setHasPendingImport(Boolean(profile.has_pending_import));
-    ui.setWelcomeCompleted(Boolean(profile.welcome_completed));
-  }, [profile, ui]);
+    setOnboardingDecision((profile.onboarding_decision ?? null) as 'pending' | 'from_scratch' | 'imported' | null);
+    setHasPendingImport(Boolean(profile.has_pending_import));
+    setWelcomeCompleted(Boolean(profile.welcome_completed));
+  }, [profile, setOnboardingDecision, setHasPendingImport, setWelcomeCompleted]);
 
   const initializeDefaultCategories = useCallback(() => {
     return mut.initializeDefaultCategories(DEFAULT_CATEGORIES);
-  }, [mut.initializeDefaultCategories]);
+  }, [mut]);
+
+  const recalculatePaymentMethodBalances = useCallback(async () => {
+    await refreshData();
+    return { success: true };
+  }, [refreshData]);
+
+  const setKeepSessionAlive = useCallback(
+    (keepAlive: boolean) => updateConfig({ keep_session_alive: keepAlive }),
+    [updateConfig]
+  );
+
+  const setAppThemePreference = useCallback(
+    (color: string) => updateProfile({ base_color: color }),
+    [updateProfile]
+  );
+
+  const totalBudget = useMemo(
+    () => tx.budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
+    [tx.budgetsWithSpending]
+  );
+  const totalSpentCurrentMonth = useMemo(
+    () => tx.budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
+    [tx.budgetsWithSpending]
+  );
 
   return useMemo(() => ({
     // --- DATA ---
@@ -197,7 +228,7 @@ export function useFinanceDataLogic() {
     highlightedCard: ui.highlightedCard,
     importProgress: ui.importProgress,
     pendingImportData: ui.pendingImportData,
-    setPendingImportData: ui.setPendingImportData,
+    setPendingImportData,
     startImport: ui.startImport,
     cancelImport: ui.cancelImport,
     setImportProgress: ui.setImportProgress,
@@ -223,7 +254,7 @@ export function useFinanceDataLogic() {
     confirmStagingImport: mut.confirmStagingImport,
     clearStaging: mut.clearStaging,
     initializeDefaultCategories,
-    recalculatePaymentMethodBalances: async () => { await refreshData(); return { success: true }; },
+    recalculatePaymentMethodBalances,
 
     // --- NAVIGATION / UI ACTIONS ---
     updateFilter: ui.updateFilter,
@@ -243,20 +274,26 @@ export function useFinanceDataLogic() {
     themeVars: theme.themeVars,
     themeOptions: theme.themeOptions,
     keepSessionAlive: config.keep_session_alive,
-    setKeepSessionAlive: (keepAlive: boolean) => updateConfig({ keep_session_alive: keepAlive }),
+    setKeepSessionAlive,
     currencyUsage: config.currency_usage,
     passwordDialogShown: config.password_dialog_shown,
     updateConfig,
     updateProfile: profileMgmt.updateProfile,
     resetProfileData: profileMgmt.resetProfileData,
     resetOperationalData,
-    setAppThemePreference: (color: string) => profileMgmt.updateProfile({ base_color: color }),
+    setAppThemePreference,
     convertCurrency: profileMgmt.convertCurrency,
 
     // --- CALCULATED VALUES ---
-    totalBudget: tx.budgetsWithSpending.reduce((sum, b) => sum + b.amount, 0),
-    totalSpentCurrentMonth: tx.budgetsWithSpending.reduce((sum, b) => sum + (b.spent || 0), 0),
+    totalBudget,
+    totalSpentCurrentMonth,
   }), [
+    mut,
+    totalBudget,
+    totalSpentCurrentMonth,
+    recalculatePaymentMethodBalances,
+    setKeepSessionAlive,
+    setAppThemePreference,
     tx.transactions,
     tx.allTransactions,
     tx.rangeTransactions,
@@ -269,7 +306,6 @@ export function useFinanceDataLogic() {
     tx.orphanedTransactions,
     tx.totalTransactionsCount,
     tx.transactionsLoading,
-    tx.allTransactionsLoading,
     tx.hasMore,
     budgets,
     paymentMethods,
@@ -283,7 +319,6 @@ export function useFinanceDataLogic() {
     profileLoading,
     pendingInvoicesLoading,
     bootLoading,
-    ui.loading,
     ui.manualLoading,
     ui.actionLoading,
     ui.dateFilter,
@@ -299,6 +334,7 @@ export function useFinanceDataLogic() {
     ui.startImport,
     ui.cancelImport,
     ui.setImportProgress,
+    setPendingImportData,
     ui.updateFilter,
     ui.setSortConfig,
     ui.setPage,
@@ -322,6 +358,6 @@ export function useFinanceDataLogic() {
     confirmPendingImport,
     resetOperationalData,
     loadMore,
-    initializeDefaultCategories // Use the stable callback
+    initializeDefaultCategories
   ]);
 }

@@ -11,7 +11,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useToast } from '@/shared/hooks/use-toast';
 import { CURRENCIES, getDefaultDecimals } from '../constants/currencyConstants';
 import { queryKeys } from '@/core/api/queryKeys';
-import { getBackendUrl } from '@/core/api/backend';
+import { getBackendUrl, backendFetch } from '@/core/api/backend';
 import type { ProfileSelect } from './useFinanceQueries';
 import type { Database } from '@/integrations/supabase/types';
 import { clearFinanceCacheForUser } from '../utils/localCache';
@@ -398,7 +398,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             const backendUrl = getBackendUrl();
 
             if (enforcedOptions.gmailPermissions) {
-                const response = await fetch(`${backendUrl}/api/user/config/gmail/disconnect`, {
+                const response = await backendFetch(`${backendUrl}/api/user/config/gmail/disconnect`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id })
@@ -411,7 +411,7 @@ export function useProfileManagement(profile?: ProfileSelect | null) {
             }
 
             if (enforcedOptions.telegramConfig) {
-                const response = await fetch(`${backendUrl}/api/user/config/telegram/disconnect`, {
+                const response = await backendFetch(`${backendUrl}/api/user/config/telegram/disconnect`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id })

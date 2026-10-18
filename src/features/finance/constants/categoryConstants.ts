@@ -6,7 +6,7 @@
 
 import type { TransactionType } from '../types/financeTypes';
 
-export const DEFAULT_CATEGORIES = [
+export const DEFAULT_CATEGORIES: { name: string; type: TransactionType; color: string }[] = [
     { name: 'Salario', type: 'income', color: '#3B82F6' },
     { name: 'Otros ingresos', type: 'income', color: '#6366F1' },
     { name: 'Alimentación', type: 'expense', color: '#06B6D4' },

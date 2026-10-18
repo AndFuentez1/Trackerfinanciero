@@ -24,6 +24,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getBackendUrl } from '@/core/api/backend';
 import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
+import { useFeatureFlags } from '@/features/settings/hooks/useFeatureFlags';
+import { cn } from '@/core/utils';
 
 export interface PanelItem {
     id: string;
@@ -38,11 +40,20 @@ export interface PanelItem {
     originalData: unknown;
 }
 
+type CategoryRef = { category_id?: string | null; category?: string | null };
+
+/** Indica si un ítem tiene la categoría "Por clasificar" (por id o por nombre). */
+function isPorClasificar(item: CategoryRef, categories: Array<{ id: string; name: string }>) {
+    const name = categories.find(cat => cat.id === item.category_id)?.name || item.category || '';
+    return name.trim().toLowerCase() === 'por clasificar';
+}
+
 export function PendingInvoicesPanel() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { addTransaction, paymentMethods, categories: financeCategories, refreshData, allTransactions, updateTransaction, deleteTransaction } = useFinanceData();
     const { config, updateConfig } = useUserConfig(user?.id);
+    const { flags } = useFeatureFlags();
     const [searchParams, setSearchParams] = useSearchParams();
     const [invoices, setInvoices] = useState<PendingInvoice[]>([]);
     const [loading, setLoading] = useState(true);
@@ -66,7 +77,6 @@ export function PendingInvoicesPanel() {
         categories.find(cat => cat.id === invoice.category_id)?.name ||
         invoice.category ||
         '';
-    const normalizeCategoryLabel = (value?: string | null) => (value ?? '').trim().toLowerCase();
 
     const reclassifyTxs = useMemo(() => {
         const safeTransactions = allTransactions || [];
@@ -77,27 +87,20 @@ export function PendingInvoicesPanel() {
         });
     }, [allTransactions]);
 
-    const isPorClasificarTransaction = (tx: { category?: string | null, category_id?: string | null }) => {
-        const label = normalizeCategoryLabel(resolveCategoryName(tx) || tx.category);
-        return label === 'por clasificar';
-    };
-
-    const isPorClasificarInvoice = (inv: PendingInvoice) => {
-        const label = normalizeCategoryLabel(resolveCategoryName(inv) || inv.category);
-        return label === 'por clasificar';
-    };
+    const isPorClasificarTransaction = (tx: CategoryRef) => isPorClasificar(tx, categories);
+    const isPorClasificarInvoice = (inv: PendingInvoice) => isPorClasificar(inv, categories);
 
     const porClasificarTxs = useMemo(() => {
         const safeTransactions = allTransactions || [];
         return safeTransactions.filter(tx => {
             const isTransfer = tx.type === 'transfer_in' || tx.type === 'transfer_out';
             if (isTransfer) { return false; }
-            return isPorClasificarTransaction(tx);
+            return isPorClasificar(tx, categories);
         });
     }, [allTransactions, categories]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {return;}
 
         let cancelled = false;
 
@@ -110,7 +113,7 @@ export function PendingInvoicesPanel() {
                 .or('source.is.null,source.eq.ai,source.eq.gmail')
                 .order('arrival_date', { ascending: false });
 
-            if (cancelled) return;
+            if (cancelled) {return;}
             if (error) {
                 console.error('[PendingInvoicesPanel] Failed to fetch invoices', error);
                 toast({
@@ -140,7 +143,7 @@ export function PendingInvoicesPanel() {
                     if (payload.errors?.length) {
                         console.error('[PendingInvoicesPanel] Realtime error', payload.errors);
                     }
-                    if (!cancelled) fetchInvoices();
+                    if (!cancelled) {fetchInvoices();}
                 }
             )
             .subscribe();
@@ -149,7 +152,7 @@ export function PendingInvoicesPanel() {
             cancelled = true;
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [user, toast]);
 
     const handleStartEdit = (invoice: PanelItem) => {
         setEditingId(invoice.id);
@@ -233,7 +236,7 @@ export function PendingInvoicesPanel() {
 
                 if (invoice.isTransaction) {
                     const result = await updateTransaction(invoice.id, transactionData);
-                    if (result && result.error) throw new Error('No se pudo actualizar la transacción.');
+                    if (result && result.error) {throw new Error('No se pudo actualizar la transacción.');}
                 } else {
                     transactionData.sync_code = ((invoice as unknown) as { message_id?: string }).message_id || invoice.id;
                     const result = await addTransaction(transactionData as Omit<Transaction, 'id' | 'created_at'>);
@@ -287,7 +290,7 @@ export function PendingInvoicesPanel() {
                     await deleteTransaction(invoice.id);
                 } else {
                     const { error } = await supabase.from('pending_invoices').delete().eq('id', invoice.id);
-                    if (error) throw new Error('No se pudo rechazar la factura en servidor');
+                    if (error) {throw new Error('No se pudo rechazar la factura en servidor');}
                 }
             } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : 'No se pudo eliminar';
@@ -359,7 +362,7 @@ export function PendingInvoicesPanel() {
         }))
     ];
 
-    const readyToApproveInvoices: PanelItem[] = invoices
+    const allReadyToApproveInvoices: PanelItem[] = invoices
         .filter(inv => !isPorClasificarInvoice(inv))
         .filter(inv => !!inv.payment_method_id && !!resolveCategoryName(inv) && inv.amount > 0)
         .map(inv => ({
@@ -375,9 +378,19 @@ export function PendingInvoicesPanel() {
             originalData: inv
         }));
 
-    const defaultTab = porClasificarItems.length > 0
+    // Módulos opcionales (Configuración → Módulos): ocultos = sin elementos ni pestaña
+    const showReclassification = flags.reclassificationZone;
+    const showPendingInvoices = flags.pendingInvoices;
+    const visiblePorClasificarItems = showReclassification ? porClasificarItems : [];
+    const visibleMissingDataInvoices = showPendingInvoices ? missingDataInvoices : [];
+    const readyToApproveInvoices = showPendingInvoices ? allReadyToApproveInvoices : [];
+    const visibleTabCount = (showReclassification ? 1 : 0) + (showPendingInvoices ? 2 : 0);
+
+    const defaultTab = visiblePorClasificarItems.length > 0
         ? 'por-clasificar'
-        : (missingDataInvoices.length > 0 ? 'missing' : 'ready');
+        : !showPendingInvoices
+            ? 'por-clasificar'
+            : (visibleMissingDataInvoices.length > 0 ? 'missing' : 'ready');
 
     const renderInvoiceList = (invoiceList: PanelItem[], isReadyTab: boolean = false) => {
         if (invoiceList.length === 0) {
@@ -588,7 +601,7 @@ export function PendingInvoicesPanel() {
     };
 
     const isPanelHidden = config.hide_incomplete_alert;
-    const totalPanelItems = porClasificarItems.length + missingDataInvoices.length + readyToApproveInvoices.length;
+    const totalPanelItems = visiblePorClasificarItems.length + visibleMissingDataInvoices.length + readyToApproveInvoices.length;
     if (loading || isPanelHidden || totalPanelItems === 0) {
         return null;
     }
@@ -625,24 +638,31 @@ export function PendingInvoicesPanel() {
 
                 <div className="p-5 sm:p-6">
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="flex flex-col sm:grid w-full sm:grid-cols-3 bg-muted p-1 rounded-xl border border-border/50 h-auto gap-1 sm:gap-0 mb-3">
+                        <TabsList className={cn(
+                            "flex flex-col sm:grid w-full bg-muted p-1 rounded-xl border border-border/50 h-auto gap-1 sm:gap-0 mb-3",
+                            visibleTabCount === 3 ? "sm:grid-cols-3" : visibleTabCount === 2 ? "sm:grid-cols-2" : "sm:grid-cols-1"
+                        )}>
+                            {showReclassification && (
                             <TabsTrigger value="por-clasificar" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 px-1 transition-all duration-300">
                                 <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                                     <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
                                         <span className="hidden sm:inline">Errores </span>Críticos
                                     </span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
-                                        {porClasificarItems.length}
+                                    <Badge variant="secondary" className="bg-primary/10 text-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
+                                        {visiblePorClasificarItems.length}
                                     </Badge>
                                 </span>
                             </TabsTrigger>
+                            )}
+                            {showPendingInvoices && (
+                            <>
                             <TabsTrigger value="missing" className="group data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50 rounded-lg py-2 px-1 transition-all duration-300">
                                 <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                                     <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
                                         Incompletos
                                     </span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
-                                        {missingDataInvoices.length}
+                                    <Badge variant="secondary" className="bg-primary/10 text-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
+                                        {visibleMissingDataInvoices.length}
                                     </Badge>
                                 </span>
                             </TabsTrigger>
@@ -651,24 +671,32 @@ export function PendingInvoicesPanel() {
                                     <span className="text-[11px] sm:text-sm font-bold leading-none text-center">
                                         Listos
                                     </span>
-                                    <Badge variant="secondary" className="bg-primary/10 text-zinc-700 group-data-[state=active]:bg-primary group-data-[state=active]:text-zinc-700 border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
+                                    <Badge variant="secondary" className="bg-primary/10 text-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground group-data-[state=active]:text-primary-foreground border-none px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-black text-[10px] sm:text-sm transition-colors">
                                         {readyToApproveInvoices.length}
                                     </Badge>
                                 </span>
                             </TabsTrigger>
+                            </>
+                            )}
                         </TabsList>
 
 
 
-                        <TabsContent value="por-clasificar" className="space-y-3 mt-2">
-                            {renderInvoiceList(porClasificarItems)}
-                        </TabsContent>
-                        <TabsContent value="missing" className="space-y-3 mt-2">
-                            {renderInvoiceList(missingDataInvoices)}
-                        </TabsContent>
-                        <TabsContent value="ready" className="space-y-3 mt-2">
-                            {renderInvoiceList(readyToApproveInvoices, true)}
-                        </TabsContent>
+                        {showReclassification && (
+                            <TabsContent value="por-clasificar" className="space-y-3 mt-2">
+                                {renderInvoiceList(visiblePorClasificarItems)}
+                            </TabsContent>
+                        )}
+                        {showPendingInvoices && (
+                            <>
+                                <TabsContent value="missing" className="space-y-3 mt-2">
+                                    {renderInvoiceList(visibleMissingDataInvoices)}
+                                </TabsContent>
+                                <TabsContent value="ready" className="space-y-3 mt-2">
+                                    {renderInvoiceList(readyToApproveInvoices, true)}
+                                </TabsContent>
+                            </>
+                        )}
 
                     </Tabs>
                 </div>

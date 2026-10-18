@@ -12,9 +12,13 @@ import { isBudgetMonthInScope } from "@/features/finance/utils/periodFilters";
 interface IncomeCardProps {
     budgetYear: number | 'all';
     budgetMonth: number | 'all' | 'active';
+    /** Ingreso presupuestado del periodo (presupuesto de ingresos). */
+    estimatedIncome?: number;
+    /** true si existe al menos un presupuesto de ingresos en el periodo. */
+    hasIncomeBudget?: boolean;
 }
 
-export function IncomeCard({ budgetYear, budgetMonth }: IncomeCardProps) {
+export function IncomeCard({ budgetYear, budgetMonth, estimatedIncome = 0, hasIncomeBudget = false }: IncomeCardProps) {
     const { allTransactions } = useFinanceData();
     const { currency } = useFormatCurrency();
     const { currency: ctxCurrency } = useFinance();
@@ -89,6 +93,7 @@ export function IncomeCard({ budgetYear, budgetMonth }: IncomeCardProps) {
     const netFlow = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? (netFlow / totalIncome) * 100 : 0;
     const expensePercentage = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
+    const incomeCompliance = estimatedIncome > 0 ? (totalIncome / estimatedIncome) * 100 : 0;
 
     return (
         <Card className="flex h-full min-h-[360px] flex-col p-6 bg-card hover:shadow-md transition-shadow overflow-hidden">
@@ -124,6 +129,25 @@ export function IncomeCard({ budgetYear, budgetMonth }: IncomeCardProps) {
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-1 gap-3">
+                    <div className="flex justify-between items-center py-2 border-b border-border">
+                        <span className="text-base text-muted-foreground font-medium">Ingresos Estimados</span>
+                        <span className="text-lg font-bold text-foreground">
+                            {hasIncomeBudget ? formatCurrency70(estimatedIncome) : '—'}
+                        </span>
+                    </div>
+                    {hasIncomeBudget && estimatedIncome > 0 && (
+                        <div className="space-y-1 pb-2 border-b border-border">
+                            <Progress
+                                value={Math.max(0, Math.min(incomeCompliance, 100))}
+                                className="h-2"
+                                indicatorClassName="bg-emerald-500"
+                                aria-label="Ingresos reales frente a ingresos estimados"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                {incomeCompliance.toFixed(decimalPlaces)}% de tu ingreso estimado
+                            </p>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center py-2 border-b border-border">
                         <span className="text-base text-muted-foreground font-medium">Ingresos Reales</span>
                         <span className="text-lg font-bold text-foreground">{formatCurrency70(totalIncome)}</span>

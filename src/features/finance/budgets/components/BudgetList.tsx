@@ -63,6 +63,7 @@ export function BudgetList({ budgets, onDelete, categories }: BudgetListProps) {
                     size="icon"
                     className="h-7 w-7 opacity-50 group-hover:opacity-100 transition-all rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     onClick={() => onDelete(budget.id)}
+                    aria-label={`Eliminar presupuesto ${budget.category}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

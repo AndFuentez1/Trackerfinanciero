@@ -53,6 +53,7 @@ import { useToast } from '@/shared/hooks/use-toast';
 import { AddCategoryDialog } from '@/features/finance/categories/components/AddCategoryDialog';
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { getTodayLocalDate } from '@/core/utils';
+import { getCreditDebt, getAvailableCredit } from '@/features/finance/utils/creditCardUtils';
 
 export interface AddTransactionDialogProps {
   onAdd?: (transaction: Omit<Transaction, 'id'>) => Promise<{ error?: unknown } | void>;
@@ -85,6 +86,7 @@ export function AddTransactionDialog({
 }: AddTransactionDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [localPaymentMethods, setLocalPaymentMethods] = useState<PaymentMethod[]>([]);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -309,7 +311,7 @@ export function AddTransactionDialog({
 
       if (selectedPM && selectedPM.type === 'credit') {
         const creditLimit = selectedPM.credit_limit ? Number(selectedPM.credit_limit) : 0;
-        let currentDebt = Number(selectedPM.balance);
+        let currentDebt = getCreditDebt(selectedPM.balance);
 
         // If editing an existing income (payment) on the SAME card, 
         // we add back the old amount to get the actual debt capacity.
@@ -442,7 +444,7 @@ export function AddTransactionDialog({
         </Button>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen} modal={false}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="sm:max-w-md max-h-[90vh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
@@ -512,19 +514,33 @@ export function AddTransactionDialog({
                                 {option.label}
                               </SelectItem>
                             ))}
-                            <div className="border-t border-border/50 px-2 py-2 mt-1">
-                              <AddCategoryDialog
-                                type={currentType}
-                                onAdd={addCategory}
-                                onSuccess={(cat) => {
-                                  setLocalCategories(prev => [...prev, cat]);
-                                  setValue('category_id', cat.id);
-                                  setValue('category', cat.name);
-                                }}
-                              />
-                            </div>
                           </SelectContent>
                         </Select>
+                        {/* Fuera del SelectContent: dentro, el modal se desmontaba al cerrarse el Select */}
+                        {!isCategoryDialogOpen && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 w-full justify-start gap-2 text-xs font-medium"
+                            onClick={() => setIsCategoryDialogOpen(true)}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Nueva categoría
+                          </Button>
+                        )}
+                        <AddCategoryDialog
+                          open={isCategoryDialogOpen}
+                          onOpenChange={setIsCategoryDialogOpen}
+                          trigger={null}
+                          type={currentType}
+                          onAdd={addCategory}
+                          onSuccess={(cat) => {
+                            setLocalCategories(prev => [...prev, cat]);
+                            setValue('category_id', cat.id);
+                            setValue('category', cat.name);
+                          }}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -586,7 +602,7 @@ export function AddTransactionDialog({
                           <SelectItem value="none">Sin método</SelectItem>
                           {paymentMethods.map((pm) => {
                             const isCredit = pm.type === 'credit';
-                            const available = isCredit ? (pm.credit_limit || 0) - pm.balance : pm.balance;
+                            const available = isCredit ? getAvailableCredit(pm.credit_limit, pm.balance) : pm.balance;
                             return (
                               <SelectItem key={pm.id} value={pm.id}>
                                 {pm.name}
@@ -670,7 +686,7 @@ export function AddTransactionDialog({
                             <SelectItem value="none">Seleccionar destino</SelectItem>
                             {paymentMethods.map((pm) => {
                               const isCredit = pm.type === 'credit';
-                              const available = isCredit ? (pm.credit_limit || 0) - pm.balance : pm.balance;
+                              const available = isCredit ? getAvailableCredit(pm.credit_limit, pm.balance) : pm.balance;
                               return (
                                 <SelectItem key={pm.id} value={pm.id}>
                                   {pm.name}

@@ -19,6 +19,8 @@ import { TransactionRow } from './TransactionRow';
 import { TransactionCard } from './TransactionCard';
 import { typeLabels, typeStyles } from './constants';
 import { PulseBlock, CardSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
+import { useIsMobile } from '@/shared/hooks/use-mobile';
+import { useProgressiveList } from '@/shared/hooks/useProgressiveList';
 
 type TransactionDraft = {
   description: string;
@@ -68,6 +70,7 @@ export function TransactionList({
   // Hooks
   const decimalPlaces = useDecimalPlaces();
   const { formatCurrencySmall } = useFormatCurrency();
+  const isMobile = useIsMobile();
 
   // State
   const [sortConfig, setSortConfig] = useState<{
@@ -200,9 +203,28 @@ export function TransactionList({
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
     return sorted;
-  }, [filteredTransactions, sortConfig, categories]);
+  }, [filteredTransactions, sortConfig, categories, paymentMethods]);
 
-  const displayTransactions = showOnlyRecent ? sortedTransactions.slice(0, 10) : sortedTransactions;
+  const displayTransactions = useMemo(
+    () => (showOnlyRecent ? sortedTransactions.slice(0, 10) : sortedTransactions),
+    [showOnlyRecent, sortedTransactions]
+  );
+
+  // Renderizado progresivo: con historiales grandes solo se montan las filas cercanas al viewport.
+  const { visibleItems: visibleTransactions, hasMore, remaining, showMore, sentinelRef } =
+    useProgressiveList(displayTransactions, { pageSize: 100 });
+
+  const loadMoreFooter = hasMore ? (
+    <div ref={sentinelRef} className="flex justify-center py-4">
+      <button
+        type="button"
+        onClick={showMore}
+        className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+      >
+        Mostrar más ({remaining} restantes)
+      </button>
+    </div>
+  ) : null;
 
   // Render skeletons while loading
   if (loading) {
@@ -271,8 +293,9 @@ export function TransactionList({
   // Render list
   return (
     <>
-      {/* Desktop Table View */}
-      <div className="hidden md:block finance-card overflow-hidden transition-all duration-300">
+      {/* Desktop Table View (solo se monta una vista según el breakpoint) */}
+      {!isMobile && (
+      <div className="finance-card overflow-hidden transition-all duration-300">
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[600px] table-auto">
             <thead className="bg-muted/30">
@@ -370,7 +393,7 @@ export function TransactionList({
               </tr>
             </thead>
             <tbody>
-              {displayTransactions.map((transaction) => (
+              {visibleTransactions.map((transaction) => (
                 <TransactionRow
                   key={transaction.id}
                   transaction={transaction}
@@ -391,11 +414,14 @@ export function TransactionList({
             </tbody>
           </table>
         </div>
+        {loadMoreFooter}
       </div>
+      )}
 
       {/* Mobile Card List View */}
-      <div className="md:hidden space-y-3">
-        {displayTransactions.map((transaction) => (
+      {isMobile && (
+      <div className="space-y-3">
+        {visibleTransactions.map((transaction) => (
           <TransactionCard
             key={transaction.id}
             transaction={transaction}
@@ -405,7 +431,9 @@ export function TransactionList({
             onDelete={onDelete}
           />
         ))}
+        {loadMoreFooter}
       </div>
+      )}
     </>
   );
 }

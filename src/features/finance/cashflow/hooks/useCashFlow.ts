@@ -12,6 +12,8 @@ import { calculateCurrentRealBalance } from '@/features/finance/utils/financeUti
 import type { CashFlowChartPoint } from '@/features/finance/cashflow/types/cashflowTypes';
 import { parseLocalDate } from '@/core/utils';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
+import { sumBudgetForMonths, type YearMonth } from '@/features/finance/utils/incomeBudget';
+import type { Budget } from '@/features/finance/types/financeTypes';
 
 // Helper: Redondeo seguro a 2 decimales para evitar errores de punto flotante
 const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -80,7 +82,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     const channel = supabase
       .channel('cf_future_expenses_realtime')
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id = eq.${user.id} ` },
+        { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['finance', 'futureExpenses', user.id] });
         }
@@ -113,11 +115,15 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     return map;
   }, [transactionsSource]);
 
-  const now = new Date();
-  const currentMonthStart = startOfMonth(now);
-  const start = month === 'all'
-    ? startOfMonth(new Date(year, 0, 1))
-    : startOfMonth(new Date(year, Number(month) - 1, 1));
+  // Fechas estables: se recalculan solo cuando cambia el mes/filtro, no en cada render
+  const todayKey = format(new Date(), 'yyyy-MM');
+  const currentMonthStart = useMemo(() => startOfMonth(new Date()), [todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const start = useMemo(
+    () => (month === 'all'
+      ? startOfMonth(new Date(year, 0, 1))
+      : startOfMonth(new Date(year, Number(month) - 1, 1))),
+    [year, month]
+  );
   const monthsCount = range === 'mes' ? 1 : range === '6m' ? 6 : 12;
 
   const monthlyBreakdownRaw = useMemo(() => {
@@ -187,7 +193,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const balanceAdjustment = pivotPoint ? round(balance_actual - pivotPoint.balanceReal_Raw) : 0;
   const showBalanceAdjustment = useRealBalance && Math.abs(balanceAdjustment) > 0.01;
   const pendingPastExpensesTotal = futureExpenses
-    .filter(fe => fe.status === 'pending' && fe.payment_date && isBefore(new Date(fe.payment_date), currentMonthStart))
+    .filter(fe => fe.status === 'pending' && fe.payment_date && isBefore(parseLocalDate(fe.payment_date) ?? new Date(fe.payment_date), currentMonthStart))
     .reduce((sum, fe) => sum + fe.amount, 0);
 
   const finalSeries: CashFlowChartPoint[] = cashFlowSeries.map(p => {
@@ -219,11 +225,25 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     });
   }, [monthlyBreakdownRaw, cashFlowSeries, projectionOffset]);
 
+  // Ingresos estimados del periodo visible: presupuesto de ingresos si existe; si no, la proyección del flujo.
+  const incomeBudgetWindow = useMemo(() => {
+    const windowMonths: YearMonth[] = Array.from({ length: monthsCount }, (_, i) => {
+      const d = addMonths(start, i);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+    const incomeCategoryIds = categories.filter(c => c.type === 'income').map(c => c.id);
+    return sumBudgetForMonths(rawBudgets as Budget[], incomeCategoryIds, windowMonths);
+  }, [categories, rawBudgets, start, monthsCount]);
+
+  const projectedIncomeWindow = finalSeries.reduce((sum, p) => sum + p.ingresos, 0);
+  const estimatedIncome = incomeBudgetWindow.hasBudget ? incomeBudgetWindow.amount : projectedIncomeWindow;
+
   return {
     cashFlowSeries: finalSeries,
     balance_actual,
     monthlyBreakdown,
-    proyeccion_ingresos: finalSeries.length > 0 ? finalSeries[0].ingresos : 0,
+    proyeccion_ingresos: round(estimatedIncome),
+    ingresos_estimados_fuente: (incomeBudgetWindow.hasBudget ? 'presupuesto' : 'proyeccion') as 'presupuesto' | 'proyeccion',
     compromisos_deuda: finalSeries.length > 0 ? (finalSeries[0].breakdown.egresosPrestamos + finalSeries[0].breakdown.egresosTarjeta) : 0,
     isProjectionWarning: pendingPastExpensesTotal > 0,
   };

@@ -27,11 +27,6 @@ export function SecuritySection() {
         return `${minutes} minuto${minutes > 1 ? 's' : ''}`;
     };
 
-    const handleGmailConnect = () => {
-        if (!user?.id || !user?.email) return;
-        window.open(`/auth/google?userId=${user.id}&email=${user.email}`, '_blank', 'width=600,height=700');
-    };
-
     return (
         <Card className="rounded-2xl shadow-sm border-border bg-gray-50/50 dark:bg-muted/20 overflow-hidden">
             <CardHeader className="pb-4">

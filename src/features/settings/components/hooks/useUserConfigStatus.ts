@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
-import { getBackendUrl } from '@/core/api/backend';
+import { getBackendUrl, getAuthHeaders } from '@/core/api/backend';
 
 export interface ConfigStatus {
     gmailConnected: boolean;
@@ -30,7 +30,7 @@ export async function fetchUserConfigStatus(userId: string): Promise<ConfigStatu
     try {
         const response = await fetch(
             `${backendUrl}/api/user/config/status?userId=${encodeURIComponent(userId)}`,
-            { signal: controller.signal }
+            { signal: controller.signal, headers: await getAuthHeaders() }
         );
         if (!response.ok) { throw new Error('Failed to fetch config'); }
         return await response.json() as ConfigStatus;

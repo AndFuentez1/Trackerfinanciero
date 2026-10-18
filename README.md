@@ -366,3 +366,45 @@ La única documentación de referencia obligatoria para el theme base y lineamie
 
 Toda la información de theme, tipografía, colores y accesibilidad está centralizada en ese archivo.
 Para cualquier ajuste visual, consulta y sigue exclusivamente lo definido en `THEME_CONTEXT.md`.
+
+---
+
+## Roadmap de revisión y endurecimiento
+
+### Fase 1 — Completada (2026-07-01)
+Instrucciones del proyecto (`CLAUDE.md`, `.claude/skills/`), creación de categorías, re-importación idempotente, JWT en el backend, presupuesto de ingresos, convención de tarjetas (deuda = balance negativo), modales sin bloqueos, compromisos/suscripciones, y ajuste de saldo registrado como transacción. Detalle en [CHANGELOG.md](CHANGELOG.md).
+
+### Fase 2 — Pendiente (hardening y deuda técnica)
+Orden sugerido: P0 antes de cualquier release; P1 siguiente sprint; P2 backlog.
+
+#### P0 — Seguridad e integridad de datos
+- [ ] **Proteger `/api/gmail/*`, `/api/classifier/*` y rutas de facturas** con `requireAuth` (hoy toman `userId` del cliente). Antes, inventariar webhooks externos (n8n/Telegram) que dependan de ellas.
+- [ ] **Datos legacy de tarjetas:** auditar `payment_methods.balance` de tipo `credit` guardado con deuda positiva y migrar el signo con script verificado (hoy se leen como "sin deuda").
+- [ ] **Saldos atómicos:** reemplazar `select + update` de balance por un incremento en servidor (RPC `adjust_balance`) en `addTransaction`, `addTransfer`, `deleteTransaction` y ahorros (`useSavingsLogic`). Hoy hay condiciones de carrera.
+- [ ] **Eliminar cuentas de ahorro** (`deleteSavingsAccount`): operación atómica; la opción "transferir" suma saldo antes de validar el resto.
+- [ ] **Categorías duplicadas por mayúsculas:** resolver antes de que la migración `20260701120000` pueda crear el índice (hoy solo emite `WARNING`).
+- [ ] **Despliegue conjunto** frontend + backend; definir `OAUTH_STATE_SECRET` en Render; etiquetar el release (tag git).
+
+#### P1 — Correctitud financiera
+- [ ] **Ajustes de saldo:** hoy cuentan como ingreso/gasto real. Evaluar tipo `adjustment` excluido de ingresos/gastos reales pero visible en flujo de caja e historial.
+- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): compromisos `saving` → `egresosAhorro`; `monthDiff` sin `start_date` cobra todos los meses; usar `payment_day`; `consumePayment` por "monto más cercano" puede consumir un compromiso equivocado; `isFirstIteration` frágil con saldo 0.
+- [ ] **Flujo de caja:** `formatCOP` ignora la moneda/decimales del usuario; `futureExpenses = 0` fijo en las tarjetas; `incomeMode` y `budgets` pasan sin usarse (implementar "projected" o eliminar).
+- [ ] **Presupuestos:** `totalSpent` suma gastos de categorías sin presupuesto mientras `totalBudgeted` no; `parseISO` vs `parseLocalDate` (desfase horario); mutaciones con `.sort`.
+- [ ] **Importación:** falsos positivos de duplicados (dos compras iguales el mismo día) y filas repetidas dentro del mismo archivo; lotes parciales sin rollback.
+- [ ] **Compromisos:** no hay forma de revertir un pago ni de terminar una suscripción manualmente; `end_date` y `status` sin vista de histórico.
+- [ ] **Ahorros:** `performancePercent` = 0 cuando `netContributions <= 0`; `addSavingsTransaction` usa el balance local como base.
+
+#### P1 — UX / modales
+- [ ] `GmailHistoryDialog`: `AddCategoryDialog` aún está dentro de `SelectContent` (lista anidada por índices).
+- [ ] `SessionTimeoutWarning`: cerrar con Escape/fuera extiende la sesión; confirmar si es el comportamiento deseado.
+- [ ] `ImportExcelDialog`: bloquear cierre (Escape/X) mientras hay una importación en curso.
+- [ ] Colores hardcodeados restantes (`text-slate-*`, `bg-gray-*`) → tokens del sistema.
+
+#### P2 — Deuda técnica
+- [ ] **Código muerto:** `useExcelImport.ts` (no se importa en ningún lado), `getStepValue`/`dynamicPadding` en `FutureExpensesList`.
+- [ ] **Refactor** `FutureExpensesList.tsx` (870 líneas): hook propio, deduplicar la doble consulta y los formateadores `formatCurrency70/80`.
+- [ ] **Cliente Supabase:** fallar explícitamente sin variables `VITE_*` (hoy usa `placeholder.supabase.co`); revisar el override global de `console.error/warn`.
+- [ ] **Tests:** reactivar los 49 tests omitidos (`BudgetsPage`, `Dashboard`, `History`, `AddBudgetDialog`, `CategoryBudgetList`, `AddTransactionDialog`), corregir los errores de tipos de `tsc` en tests y añadir E2E (Playwright) para crear categoría, re-importar y pagar compromiso.
+- [ ] **Typecheck/lint:** añadir script `typecheck` a CI; resolver los errores `curly` y `no-unused-vars` existentes; `Loan.sync_code` y tipos de `@supabase/supabase-js`.
+- [ ] **Documentación:** `ARCHITECTURE.md` menciona hooks inexistentes (`useInactivity`, `useAuthGuard`); `docs/tests-backlog.md` desactualizado; `src/layouts` sin trackear.
+- [ ] **Backend:** `Procfile` apunta a `gunicorn api_backend:app` (legado Python) mientras `render.yaml` usa Node; unificar y retirar scripts Python legados.

@@ -411,7 +411,7 @@ export function ImportExcelDialog({
 
         // Only one type of separator or none
         const separatorIdx = lastCommaIdx !== -1 ? lastCommaIdx : lastPeriodIdx;
-        if (separatorIdx === -1) return val;
+        if (separatorIdx === -1) {return val;}
 
         const afterSeparator = val.substring(separatorIdx + 1);
         const beforeSeparator = val.substring(0, separatorIdx).replace(/[.,]/g, '');
@@ -420,7 +420,7 @@ export function ImportExcelDialog({
         // If it's followed by exactly 3 digits, it's very likely a thousands separator (e.g. 1.000)
         // unless decimalPlaces is specified as something that could fit (like 3, which is rare for currency).
         if (afterSeparator.length === 3) {
-          if (decimalPlaces !== 3) return beforeSeparator + afterSeparator;
+          if (decimalPlaces !== 3) {return beforeSeparator + afterSeparator;}
         }
 
         // If it's 1 or 2 digits, it's almost certainly decimals (e.g. 1.50)
@@ -929,11 +929,26 @@ export function ImportExcelDialog({
             queryClient.getQueryData(queryKeys.finance.allTransactions(user.id)) || [];
 
           if (!existingTransactions || existingTransactions.length === 0) {
-            const { data } = await supabase
-              .from('transactions')
-              .select('date, amount, category, type')
-              .eq('user_id', user.id);
-            existingTransactions = data || [];
+            // Supabase limita a 1000 filas por consulta: se pagina para no dejar pasar duplicados.
+            const pageSize = 1000;
+            const collected: any[] = [];
+            for (let from = 0; ; from += pageSize) {
+              const { data: page, error: pageError } = await supabase
+                .from('transactions')
+                .select('date, amount, category, type')
+                .eq('user_id', user.id)
+                .order('date', { ascending: true })
+                .order('id', { ascending: true })
+                .range(from, from + pageSize - 1);
+
+              if (pageError) {
+                throw new Error('No se pudo verificar duplicados. Importación cancelada para evitar registros repetidos.');
+              }
+              if (!page || page.length === 0) { break; }
+              collected.push(...page);
+              if (page.length < pageSize) { break; }
+            }
+            existingTransactions = collected;
           }
 
           const existingHashes = new Set(
@@ -1100,7 +1115,7 @@ export function ImportExcelDialog({
   const excessiveCount = parsedRows.filter(r => r.error?.includes('Monto excesivo')).length;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+    <Dialog open={open} onOpenChange={setOpen}>
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
@@ -1182,6 +1197,7 @@ export function ImportExcelDialog({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 absolute top-2 right-2 rounded-full hover:bg-destructive/10 group-hover:opacity-100 transition-opacity"
+                      aria-label="Quitar archivo"
                       onClick={(e) => {
                         e.stopPropagation();
                         setFileName('');

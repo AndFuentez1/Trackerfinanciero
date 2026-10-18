@@ -1,6 +1,8 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { parseLocalDate } from '@/core/utils/dateUtils';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
@@ -22,15 +24,40 @@ import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
 import { useDecimalPlaces } from '@/features/finance/hooks/useDecimalPlaces';
 import { Switch } from '@/shared/ui/switch';
-import { FutureExpense } from '@/features/finance/types/financeTypes';
+import type { FutureExpense } from '@/features/finance/types/financeTypes';
 
 import { MoneyInput } from '@/shared/components/MoneyInput';
 
 // FutureExpense is now imported from financeTypes
 
+const FREQUENCY_MONTHS: Record<string, number> = {
+    monthly: 1,
+    bimonthly: 2,
+    quarterly: 3,
+    semiannual: 6,
+    yearly: 12,
+};
+
+/** Interpreta 'yyyy-MM-dd' como fecha local (evita el desfase UTC de new Date(str)). */
+const toLocalDate = (value: string): Date => parseLocalDate(value) ?? new Date();
+
+/** Suma meses fijando el día; si el mes no tiene ese día usa el último (31 → 28/30). */
+const addMonthsClamped = (base: Date, months: number, day: number): Date => {
+    const year = base.getFullYear();
+    const month = base.getMonth() + months;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    return new Date(year, month, Math.min(Math.max(day, 1), lastDay));
+};
+
+const startOfToday = (): Date => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
 export function FutureExpensesList() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const { categories, paymentMethods, addTransaction, addCategory, loading: dataLoading } = useFinanceData();
     const { currency } = useFormatCurrency();
     const { currency: ctxCurrency } = useFinance();
@@ -110,7 +137,7 @@ export function FutureExpensesList() {
         is_subscription: false,
         payment_day: '1',
         start_date: format(new Date(), 'yyyy-MM-dd'),
-        end_date: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+        end_date: '',
         frequency: 'monthly'
     });
 
@@ -119,11 +146,14 @@ export function FutureExpensesList() {
     const [selectedExpense, setSelectedExpense] = useState<FutureExpense | null>(null);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
     const [paymentDate, setPaymentDate] = useState<string>(format(new Date(), 'yyyy-MM-dd')); // New state
+    const [isPaying, setIsPaying] = useState(false);
+    const recordedPaymentsRef = useRef<Set<string>>(new Set());
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState<FutureExpense | null>(null);
+    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
     const fetchExpenses = async () => {
-        if (!user) return;
+        if (!user) {return;}
         const { data } = await supabase
             .from('future_expenses')
             .select('*')
@@ -131,24 +161,26 @@ export function FutureExpensesList() {
             .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) setExpenses(data as unknown as FutureExpense[]);
+        if (data) {setExpenses(data as unknown as FutureExpense[]);}
         setLoading(false);
+        // El flujo de caja usa su propia consulta de compromisos: se invalida para mantener ambos en sync
+        queryClient.invalidateQueries({ queryKey: ['finance', 'futureExpenses', user.id] });
     };
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {return;}
 
         let cancelled = false;
         const doFetch = async () => {
-            if (!user) return;
+            if (!user) {return;}
             const { data } = await supabase
                 .from('future_expenses')
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
                 .order('payment_date', { ascending: true });
-            if (cancelled) return;
-            if (data) setExpenses(data as unknown as FutureExpense[]);
+            if (cancelled) {return;}
+            if (data) {setExpenses(data as unknown as FutureExpense[]);}
             setLoading(false);
         };
 
@@ -159,7 +191,7 @@ export function FutureExpensesList() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'future_expenses', filter: `user_id=eq.${user.id}` },
-                () => { if (!cancelled) doFetch(); }
+                () => { if (!cancelled) {doFetch();} }
             )
             .subscribe();
 
@@ -170,8 +202,14 @@ export function FutureExpensesList() {
     }, [user]);
 
     const handleCreate = async () => {
-        if (!newExpense.amount || !newExpense.description) {
-            toast({ title: 'Error', description: 'Por favor completa los campos obligatorios.', variant: 'destructive' });
+        if (!user) {
+            toast({ title: 'Error', description: 'Tu sesión expiró. Vuelve a iniciar sesión.', variant: 'destructive' });
+            return;
+        }
+
+        const parsedAmount = parseFloat(newExpense.amount);
+        if (!newExpense.description.trim() || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+            toast({ title: 'Error', description: 'Completa la descripción y un monto mayor a 0.', variant: 'destructive' });
             return;
         }
 
@@ -189,9 +227,9 @@ export function FutureExpensesList() {
         }
 
         const payload: Record<string, unknown> = {
-            user_id: user!.id,
-            description: newExpense.description,
-            amount: parseFloat(newExpense.amount),
+            user_id: user.id,
+            description: newExpense.description.trim(),
+            amount: parsedAmount,
             category_id: newExpense.category_id || null,
             type: newExpense.type,
             status: 'pending',
@@ -199,36 +237,34 @@ export function FutureExpensesList() {
         };
 
         if (newExpense.is_subscription) {
-            payload.frequency = newExpense.frequency || 'monthly';
-            payload.payment_day = parseInt(newExpense.payment_day);
+            const paymentDay = parseInt(newExpense.payment_day, 10);
+            if (!Number.isInteger(paymentDay) || paymentDay < 1 || paymentDay > 31) {
+                toast({ title: 'Error', description: 'El día de pago debe estar entre 1 y 31.', variant: 'destructive' });
+                return;
+            }
+            const frequency = newExpense.frequency || 'monthly';
+
+            payload.frequency = frequency;
+            payload.payment_day = paymentDay;
             payload.start_date = newExpense.start_date;
             payload.end_date = newExpense.end_date || null;
 
-            // Calculate next payment date only if NEW (to avoid resetting date on simple edits) OR if logic demands it.
-            // For now, let's keep it simple: if modifying subscription params, re-calc dates.
-            // But if just editing name/amount, maybe keep `payment_date`?
-            // To be safe and consistent with "logic generator", we re-calculate.
-            const today = new Date();
-            const nextDate = new Date(today.getFullYear(), today.getMonth(), parseInt(newExpense.payment_day));
+            // Al editar, si el día y la periodicidad no cambiaron se conserva el próximo cobro
+            // (ya pudo avanzar por pagos realizados); solo se recalcula cuando cambia la regla.
+            const original = editingId ? expenses.find(e => e.id === editingId) : undefined;
+            const scheduleUnchanged = !!original
+                && original.is_subscription === true
+                && original.payment_day === paymentDay
+                && (original.frequency || 'monthly') === frequency;
 
-            if (nextDate < today) {
-                switch (payload.frequency) {
-                    case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-                    case 'bimonthly': nextDate.setMonth(nextDate.getMonth() + 2); break;
-                    case 'quarterly': nextDate.setMonth(nextDate.getMonth() + 3); break;
-                    case 'semiannual': nextDate.setMonth(nextDate.getMonth() + 6); break;
-                    case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-                    default: nextDate.setMonth(nextDate.getMonth() + 1);
-                }
-            }
-            if (!editingId) {
-                // Only set initial payment date on creation to avoid overriding custom dates/delays?
-                // Actually, for this simple system, always re-calculating ensures data integrity.
-                payload.payment_date = format(nextDate, 'yyyy-MM-dd');
+            if (scheduleUnchanged && original) {
+                payload.payment_date = original.payment_date;
             } else {
-                // On Edit, keep existing payment_date UNLESS user changed subscription params?
-                // Let's assume user might want to fix the date manually? No manual date field for sub in form.
-                // So we must calculate it.
+                const today = startOfToday();
+                let nextDate = addMonthsClamped(today, 0, paymentDay);
+                if (nextDate < today) {
+                    nextDate = addMonthsClamped(nextDate, FREQUENCY_MONTHS[frequency] ?? 1, paymentDay);
+                }
                 payload.payment_date = format(nextDate, 'yyyy-MM-dd');
             }
 
@@ -272,7 +308,7 @@ export function FutureExpensesList() {
                 is_subscription: false,
                 payment_day: '1',
                 start_date: format(new Date(), 'yyyy-MM-dd'),
-                end_date: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+                end_date: '',
                 frequency: 'monthly'
             });
         }
@@ -290,7 +326,7 @@ export function FutureExpensesList() {
             is_subscription: expense.is_subscription || false,
             payment_day: expense.payment_day?.toString() || '1',
             start_date: expense.start_date || format(new Date(), 'yyyy-MM-dd'),
-            end_date: expense.end_date || format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+            end_date: expense.end_date || '',
             frequency: expenseFreq
         });
         setIsAddOpen(true);
@@ -299,73 +335,81 @@ export function FutureExpensesList() {
     const handlePay = async () => {
         if (!selectedExpense || !selectedPaymentMethod || !paymentDate) { return; }
 
+        if (isPaying) { return; }
+        setIsPaying(true);
+
         try {
-            const expenseCategory = categories.find(c => c.id === selectedExpense.category_id);
-            const transactionType = selectedExpense.type === 'income' ? 'income' : 'expense';
+            // Idempotencia: si un intento previo ya registró la transacción pero falló al actualizar
+            // el compromiso, el reintento solo repite la actualización (no duplica el pago).
+            if (!recordedPaymentsRef.current.has(selectedExpense.id)) {
+                const expenseCategory = categories.find(c => c.id === selectedExpense.category_id);
+                const transactionType = selectedExpense.type === 'income'
+                    ? 'income'
+                    : selectedExpense.type === 'saving'
+                        ? 'saving'
+                        : 'expense';
 
-            await addTransaction({
-                type: transactionType,
-                category: expenseCategory?.name || 'Otros',
-                category_id: selectedExpense.category_id,
-                amount: selectedExpense.amount,
-                description: selectedExpense.description,
-                date: paymentDate,
-                payment_method_id: selectedPaymentMethod
-            });
-
-            // 2. Update Future Expense status to 'paid' IF it is NOT a subscription?
-            // User requirement: "Subscriptions should act as recurrent future expenses".
-            // If I pay a subscription instance, does it mark the whole subscription as paid? No.
-            // But currently the data model is 1 row = 1 expense.
-            // If we are implementing subscription as a generator of expenses, we need to handle this.
-            // However, the prompt says "Integración en el formulario...".
-            // If the row creates a SINGLE future expense with `is_subscription` flag, then paying it might just update the "next payment date" or create a log?
-            // Given I cannot change the backend logic (triggers), I will assume paying a subscription just logs the transaction. 
-            // BUT wait, if I mark it as 'paid', it disappears from the list.
-            // If it is a subscription, it should probably STAY in the list but update its date to next month?
-
-            // For now, if simple Future Expense -> mark paid.
-            // If Subscription -> Do NOT mark paid, just update payment_date to next month.
-
-            if (selectedExpense.is_subscription) {
-                // Calculate next month date based on frequency
-                const currentPaymentDate = new Date(selectedExpense.payment_date);
-                const nextDate = new Date(currentPaymentDate);
-                const freq = selectedExpense.frequency || 'monthly';
-
-                switch (freq) {
-                    case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-                    case 'bimonthly': nextDate.setMonth(nextDate.getMonth() + 2); break;
-                    case 'quarterly': nextDate.setMonth(nextDate.getMonth() + 3); break;
-                    case 'semiannual': nextDate.setMonth(nextDate.getMonth() + 6); break;
-                    case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-                    default: nextDate.setMonth(nextDate.getMonth() + 1);
+                // addTransaction no lanza: devuelve { error }. Si falla NO se marca el compromiso como pagado.
+                const result = await addTransaction({
+                    type: transactionType,
+                    category: expenseCategory?.name || 'Otros',
+                    category_id: selectedExpense.category_id,
+                    amount: selectedExpense.amount,
+                    description: selectedExpense.description,
+                    date: paymentDate,
+                    payment_method_id: selectedPaymentMethod
+                });
+                if (result && 'error' in result && result.error) {
+                    throw result.error;
                 }
+                recordedPaymentsRef.current.add(selectedExpense.id);
+            }
+
+            // Compromiso único → 'paid'. Suscripción → avanza la fecha según su periodicidad;
+            // si el siguiente cobro supera la fecha de fin, se marca 'paid' (suscripción terminada).
+            if (selectedExpense.is_subscription) {
+                const currentPaymentDate = toLocalDate(selectedExpense.payment_date);
+                const day = selectedExpense.payment_day ?? currentPaymentDate.getDate();
+                const nextDate = addMonthsClamped(
+                    currentPaymentDate,
+                    FREQUENCY_MONTHS[selectedExpense.frequency || 'monthly'] ?? 1,
+                    day
+                );
+                const endDate = selectedExpense.end_date ? toLocalDate(selectedExpense.end_date) : null;
+                const hasEnded = endDate !== null && nextDate > endDate;
 
                 const { error } = await supabase
                     .from('future_expenses' as never)
-                    .update({
-                        payment_date: format(nextDate, 'yyyy-MM-dd')
-                    })
+                    .update(hasEnded ? { status: 'paid' } : { payment_date: format(nextDate, 'yyyy-MM-dd') })
                     .eq('id', selectedExpense.id);
                 if (error) { throw error; }
-                toast({ title: 'Suscripción Pagada', description: `Se registró el pago. Próximo cobro: ${format(nextDate, 'dd/MM/yyyy')}` });
 
+                toast({
+                    title: 'Suscripción Pagada',
+                    description: hasEnded
+                        ? 'Se registró el último pago. La suscripción llegó a su fecha de fin.'
+                        : `Se registró el pago. Próximo cobro: ${format(nextDate, 'dd/MM/yyyy')}`,
+                });
             } else {
                 const { error } = await supabase
                     .from('future_expenses' as never)
                     .update({ status: 'paid' })
                     .eq('id', selectedExpense.id);
                 if (error) { throw error; }
-                toast({ title: 'Pagado', description: 'El gasto ha sido registrado y descontado.' });
+                toast({ title: 'Pagado', description: 'El pago ha sido registrado correctamente.' });
             }
 
+            recordedPaymentsRef.current.delete(selectedExpense.id);
             setIsPayOpen(false);
             setSelectedExpense(null);
             setSelectedPaymentMethod('');
+            await fetchExpenses();
 
         } catch (error) {
-            toast({ title: 'Error', description: 'Ocurrió un error al procesar el pago.', variant: 'destructive' });
+            console.error('Error al procesar el pago del compromiso:', error);
+            toast({ title: 'Error', description: 'Ocurrió un error al procesar el pago. Puedes reintentar sin duplicar el movimiento.', variant: 'destructive' });
+        } finally {
+            setIsPaying(false);
         }
     };
 
@@ -427,7 +471,7 @@ export function FutureExpensesList() {
                                     is_subscription: false,
                                     payment_day: '1',
                                     start_date: format(new Date(), 'yyyy-MM-dd'),
-                                    end_date: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+                                    end_date: '',
                                     frequency: 'monthly'
                                 });
                                 if (dataLoading) {
@@ -588,13 +632,13 @@ export function FutureExpensesList() {
                                                         )}
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {newExpense.start_date ? format(new Date(newExpense.start_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                                        {newExpense.start_date ? format(toLocalDate(newExpense.start_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
                                                     <Calendar
                                                         mode="single"
-                                                        selected={newExpense.start_date ? new Date(newExpense.start_date) : undefined}
+                                                        selected={newExpense.start_date ? toLocalDate(newExpense.start_date) : undefined}
                                                         onSelect={(d) => d && setNewExpense({ ...newExpense, start_date: format(d, 'yyyy-MM-dd') })}
                                                         initialFocus
                                                         locale={es}
@@ -620,19 +664,30 @@ export function FutureExpensesList() {
                                                         )}
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {newExpense.end_date ? format(new Date(newExpense.end_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                                        {newExpense.end_date ? format(toLocalDate(newExpense.end_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
                                                     <Calendar
                                                         mode="single"
-                                                        selected={newExpense.end_date ? new Date(newExpense.end_date) : undefined}
+                                                        selected={newExpense.end_date ? toLocalDate(newExpense.end_date) : undefined}
                                                         onSelect={(d) => d && setNewExpense({ ...newExpense, end_date: format(d, 'yyyy-MM-dd') })}
                                                         initialFocus
                                                         locale={es}
                                                     />
                                                 </PopoverContent>
                                             </Popover>
+                                            {newExpense.end_date && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 px-2 text-xs text-muted-foreground"
+                                                    onClick={() => setNewExpense({ ...newExpense, end_date: '' })}
+                                                >
+                                                    Quitar fecha de fin
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </>
@@ -655,13 +710,13 @@ export function FutureExpensesList() {
                                                 )}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {newExpense.payment_date ? format(new Date(newExpense.payment_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                                {newExpense.payment_date ? format(toLocalDate(newExpense.payment_date), "PPP", { locale: es }) : <span>Seleccionar</span>}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
                                             <Calendar
                                                 mode="single"
-                                                selected={newExpense.payment_date ? new Date(newExpense.payment_date) : undefined}
+                                                selected={newExpense.payment_date ? toLocalDate(newExpense.payment_date) : undefined}
                                                 onSelect={(d) => d && setNewExpense({ ...newExpense, payment_date: format(d, 'yyyy-MM-dd') })}
                                                 initialFocus
                                                 locale={es}
@@ -686,17 +741,31 @@ export function FutureExpensesList() {
                                                 Sin categorías de {newExpense.type === 'income' ? 'ingreso' : 'gasto'}
                                             </div>
                                         )}
-                                        <div className="border-t border-border/50 px-1 py-1 mt-1">
-                                            <AddCategoryDialog
-                                                type={newExpense.type}
-                                                onAdd={addCategory}
-                                                onSuccess={(cat) => {
-                                                    setNewExpense(p => ({ ...p, category_id: cat.id }));
-                                                }}
-                                            />
-                                        </div>
                                     </SelectContent>
                                 </Select>
+                                {/* Fuera del SelectContent: dentro, el diálogo se desmontaba al cerrarse el Select */}
+                                {!isCategoryDialogOpen && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full justify-start gap-2 text-xs font-medium"
+                                        onClick={() => setIsCategoryDialogOpen(true)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Nueva categoría
+                                    </Button>
+                                )}
+                                <AddCategoryDialog
+                                    open={isCategoryDialogOpen}
+                                    onOpenChange={setIsCategoryDialogOpen}
+                                    trigger={null}
+                                    type={newExpense.type}
+                                    onAdd={addCategory}
+                                    onSuccess={(cat) => {
+                                        setNewExpense(p => ({ ...p, category_id: cat.id }));
+                                    }}
+                                />
                             </div>
                             <Button className="w-full mt-4" onClick={handleCreate}>
                                 {editingId ? 'Guardar Cambios' : (newExpense.is_subscription ? (newExpense.type === 'income' ? 'Crear Renta' : newExpense.type === 'saving' ? 'Crear Ahorro Recurrente' : 'Crear Suscripción') : 'Guardar Compromiso')}
@@ -708,7 +777,7 @@ export function FutureExpensesList() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {expenses.length === 0 && !loading && (
-                    <div className="col-span-full text-center py-8 text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
+                    <div className="col-span-full text-center py-8 text-muted-foreground bg-muted/40 rounded-xl border border-dashed">
                         No tienes compromisos futuros pendientes.
                     </div>
                 )}
@@ -719,10 +788,10 @@ export function FutureExpensesList() {
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h4 className="font-semibold text-slate-800">{expense.description}</h4>
+                                        <h4 className="font-semibold text-foreground">{expense.description}</h4>
                                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                                             <CalendarIcon className="w-3 h-3" />
-                                            {format(new Date(expense.payment_date), "d 'de' MMMM", { locale: es })}
+                                            {format(toLocalDate(expense.payment_date), "d 'de' MMMM", { locale: es })}
                                         </p>
                                     </div>
                                     <span className="font-bold text-primary">
@@ -730,28 +799,28 @@ export function FutureExpensesList() {
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between mt-4">
-                                    <div className="text-xs px-2 py-1 bg-gray-50/50 dark:bg-muted/20 rounded-full border border-border shadow-sm text-slate-600 font-medium">
+                                    <div className="text-xs px-2 py-1 bg-muted/40 rounded-full border border-border shadow-sm text-muted-foreground font-medium">
                                         {category?.name || 'Sin categoría'}
                                     </div>
                                     <div className="flex gap-2">
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 w-8 p-0 border-primary text-black hover:bg-primary/50 hover:text-black transition-colors"
+                                            className="h-8 w-8 p-0 border-primary text-foreground hover:bg-primary/50 hover:text-foreground transition-colors"
                                             onClick={() => handleEdit(expense)}
                                         >
-                                            <Pencil className="w-3.5 h-3.5 text-black" />
+                                            <Pencil className="w-3.5 h-3.5" />
                                         </Button>
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 w-8 p-0 border-primary text-black hover:bg-primary/50 hover:text-black transition-colors"
+                                            className="h-8 w-8 p-0 border-primary text-foreground hover:bg-primary/50 hover:text-foreground transition-colors"
                                             onClick={() => {
                                                 setExpenseToDelete(expense);
                                                 setIsDeleteAlertOpen(true);
                                             }}
                                         >
-                                            <Trash2 className="w-3.5 h-3.5 text-black" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                         </Button>
                                         <Button size="sm" className="h-8 bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 border" onClick={() => {
                                             setSelectedExpense(expense);
@@ -768,7 +837,7 @@ export function FutureExpensesList() {
             </div>
 
             {/* Delete Confirmation Alert */}
-            <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen} modal={false}>
+            <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                 <DialogContent
                     className="sm:max-w-[400px] max-h-[85vh] overflow-y-auto"
                     onInteractOutside={(e) => e.preventDefault()}
@@ -793,7 +862,7 @@ export function FutureExpensesList() {
             </Dialog>
 
             {/* Pay Dialog */}
-            <Dialog open={isPayOpen} onOpenChange={setIsPayOpen} modal={false}>
+            <Dialog open={isPayOpen} onOpenChange={setIsPayOpen}>
                 <DialogContent
                     className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto"
                     onInteractOutside={(e) => e.preventDefault()}
@@ -823,13 +892,13 @@ export function FutureExpensesList() {
                                             )}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {paymentDate ? format(new Date(paymentDate), "PPP", { locale: es }) : <span>Seleccionar</span>}
+                                            {paymentDate ? format(toLocalDate(paymentDate), "PPP", { locale: es }) : <span>Seleccionar</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
                                             mode="single"
-                                            selected={paymentDate ? new Date(paymentDate) : undefined}
+                                            selected={paymentDate ? toLocalDate(paymentDate) : undefined}
                                             onSelect={(d) => d && setPaymentDate(format(d, 'yyyy-MM-dd'))}
                                             initialFocus
                                             locale={es}
@@ -858,8 +927,8 @@ export function FutureExpensesList() {
                                 </Select>
                             </div>
 
-                            <Button className="w-full mt-2" onClick={handlePay} disabled={!selectedPaymentMethod || !paymentDate}>
-                                Confirmar Pago
+                            <Button className="w-full mt-2" onClick={handlePay} disabled={!selectedPaymentMethod || !paymentDate || isPaying}>
+                                {isPaying ? 'Procesando...' : 'Confirmar Pago'}
                             </Button>
                         </div>
                     </div>

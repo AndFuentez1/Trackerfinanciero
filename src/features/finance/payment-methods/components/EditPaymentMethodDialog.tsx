@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import { useToast } from '@/shared/hooks/use-toast';
+import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
+import { getTodayLocalDate } from '@/core/utils';
 import type { YieldPeriod } from '@/features/finance/utils/yieldUtils';
 import { normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 
@@ -56,6 +58,7 @@ export function EditPaymentMethodDialog({
   lockType = false,
 }: EditPaymentMethodDialogProps) {
   const { toast } = useToast();
+  const { addTransaction } = useFinanceData();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -122,7 +125,6 @@ export function EditPaymentMethodDialog({
         type: formData.type === 'savings'
           ? (paymentMethod.type === 'debit' ? 'debit' : 'savings')
           : (formData.type as PaymentMethod['type']),
-        balance: Number(formData.balance) || 0,
         color: formData.color,
         initial_date: formData.initialDate ? `${formData.initialDate}-01` : null,
       };
@@ -155,6 +157,39 @@ export function EditPaymentMethodDialog({
       if (onSave) {
         await onSave(paymentMethod.id, updates);
       }
+
+      // Un cambio manual de saldo NO se escribe directo: se registra como transacción de ajuste
+      // (ingreso si sube, gasto si baja) para que quede evidencia en historial y flujo de caja.
+      // La transacción es la que actualiza el balance del método de pago (sin doble conteo).
+      const newBalance = Number(formData.balance) || 0;
+      const difference = Math.round((newBalance - Number(paymentMethod.balance || 0)) * 100) / 100;
+
+      if (difference !== 0) {
+        const result = await addTransaction({
+          type: difference > 0 ? 'income' : 'expense',
+          category: 'Ajuste de saldo',
+          category_id: null,
+          amount: Math.abs(difference),
+          description: `Ajuste manual de saldo - ${formData.name.trim()}`,
+          date: getTodayLocalDate(),
+          payment_method_id: paymentMethod.id,
+        });
+
+        if (result && 'error' in result && result.error) {
+          toast({
+            title: 'Error',
+            description: 'Se guardaron los cambios, pero no se pudo registrar el ajuste de saldo. Inténtalo de nuevo.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        toast({
+          title: 'Ajuste registrado',
+          description: `Se registró un ${difference > 0 ? 'ingreso' : 'gasto'} de ajuste por la diferencia de saldo.`,
+        });
+      }
+
       onOpenChange(false);
     } finally {
       setIsLoading(false);
@@ -162,7 +197,7 @@ export function EditPaymentMethodDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}

@@ -1118,7 +1118,12 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
 
             // Delete existing pending staging for this user first
-            await supabase.from('excel_import_staging').delete().eq('user_id', userId).eq('status', 'pending');
+            const { error: clearError } = await supabase
+                .from('excel_import_staging')
+                .delete()
+                .eq('user_id', userId)
+                .eq('status', 'pending');
+            if (clearError) { throw clearError; }
 
             const dataToInsert = transactions.map(t => ({
                 ...t,
@@ -1154,15 +1159,17 @@ export function useFinanceMutations(userId: string | undefined) {
             if (!userId) { throw new Error('Unauthenticated'); }
             if (stagingIds.length === 0) return { count: 0 };
 
-            // Fetch selected staging records
-            const { data: stagingRecords, error: fetchError } = await supabase
+            // "Reclamar" las filas: pending -> imported en una sola operación y recibir solo las que
+            // realmente cambiaron. Un doble clic o un reintento recibe 0 filas y no duplica transacciones.
+            const { data: stagingRecords, error: claimError } = await supabase
                 .from('excel_import_staging')
-                .select('*')
+                .update({ status: 'imported' })
                 .in('id', stagingIds)
                 .eq('user_id', userId)
-                .eq('status', 'pending');
+                .eq('status', 'pending')
+                .select('*');
 
-            if (fetchError) throw fetchError;
+            if (claimError) throw claimError;
             if (!stagingRecords || stagingRecords.length === 0) return { count: 0 };
 
             // Format for transactions table
@@ -1183,15 +1190,15 @@ export function useFinanceMutations(userId: string | undefined) {
                 .insert(transactionsToInsert)
                 .select();
 
-            if (insertError) throw insertError;
-
-            // Mark as imported in staging
-            const { error: updateError } = await supabase
-                .from('excel_import_staging')
-                .update({ status: 'imported' })
-                .in('id', stagingIds);
-
-            if (updateError) throw updateError;
+            if (insertError) {
+                // Revertir el reclamo para que el usuario pueda reintentar sin perder las filas.
+                await supabase
+                    .from('excel_import_staging')
+                    .update({ status: 'pending' })
+                    .in('id', stagingRecords.map(r => r.id))
+                    .eq('user_id', userId);
+                throw insertError;
+            }
 
             // Mark remaining pending as ignored
             const { error: ignoreError } = await supabase

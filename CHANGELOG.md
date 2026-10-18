@@ -4,6 +4,63 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-10-18]
+
+### Mejoras pendientes implementadas (`FUTURE_IMPROVEMENTS.md`)
+- **Encriptación**: AES-256-GCM autenticado (`v2:iv:tag:ct`) para tokens de Gmail/Telegram y API key de Gemini; descifra valores CBC previos. Aviso en logs si `ENCRYPTION_KEY` falta o es corta.
+- **BD** (migraciones `20261018120000_integrity_constraints_and_rls_audit.sql` y `20261018121000_user_configs_feature_flags.sql`): préstamos con nombre no vacío y únicos por `lower(btrim(name))`; presupuesto mensual único por `category_id`; `payment_methods.balance` negativo permitido solo en tarjetas de crédito (el CHECK anterior contradecía la convención de deuda); RLS explícito en todas las tablas de usuario, políticas base de propietario donde falten y `public.rls_audit()`; columna `user_configs.feature_flags`.
+- **Rendimiento**: `useFinanceUI` memoizado y `useFinanceDataLogic` con dependencias estables (`useStableCallbacks`): el contexto financiero ya no se recalcula en cada render y las mutaciones no quedan con closures obsoletos. `updateConfig` estable.
+- **Historial**: renderizado progresivo (`useProgressiveList`) y una sola vista montada (antes se renderizaban tabla y tarjetas a la vez); orden por método de pago ya no queda obsoleto.
+- **Carga inicial**: 623 kB → 225 kB. Mixpanel se carga en diferido con cola de eventos y `clsx`/`tailwind-merge` salen del chunk de Recharts (antes cada `cn()` descargaba Recharts completo).
+- **Gmail**: estados de sincronización por fase y `aria-live`.
+- **Onboarding**: tour guiado en Flujo de Caja y Préstamos (`PageTour`).
+- **Configuración**: sección "Módulos y preferencias" con toggles (Facturas Pendientes, Zona de Reclasificación) y exportar/importar preferencias (JSON validado con Zod; no incluye moneda ni datos financieros).
+- **Offline**: indicador de cambios pendientes sin conexión y aviso antes de cerrar la pestaña.
+- **Móvil**: Capacitor 8 (`capacitor.config.ts`, `build:mobile`, `cap:sync`, `cap:android`, `docs/mobile-capacitor.md`); backend acepta el origen del WebView.
+- **QA**: Husky + lint-staged (pre-commit) y `sca:audit:prod` (pre-push); `npm audit fix` sin dependencias de producción con vulnerabilidades altas.
+- **Accesibilidad**: nombres accesibles en botones de solo ícono, `aria-pressed` en temas, "Cerrar" en diálogos.
+
+### Correcciones
+- **CORS**: el backend ya no acepta cualquier `*.github.io` (solo los orígenes explícitos).
+- **Filtros de fecha**: `updateFilter` formatea en hora local (`yyyy-MM-dd`) en vez de `toISOString()`.
+- **Tokens**: `GmailConfigSection` y el panel de revisiones sin colores fuera del sistema (`amber`, `zinc`, `white`).
+- `supabase/config.toml` apunta al proyecto activo (`wpgiyfsrdjmihgwuhrvk`).
+
+### Repositorio
+- Dejan de versionarse `node_modules/`, `.env*` (incluidos los `.env.example`), `.claude/`, `.serena/`, `.cursor/`, `CLAUDE.md`, `dist_mobile/` y artefactos de pruebas (`tmp_invoice/`, `test-*.txt`).
+
+### Notas de despliegue
+- Aplicar las dos migraciones nuevas y luego `select * from public.rls_audit();`.
+- Definir `ENCRYPTION_KEY` (≥ 32 caracteres) en Render **sin cambiar la key con la que ya están cifrados los datos**; rotarla exige re-cifrar.
+- `backend/.env` local apunta al proyecto Supabase antiguo (`pcdwjaxsfirliwnnikff`, ya no resuelve): actualizar `SUPABASE_URL` y la service-role key.
+- Tras `npm install`, el script `prepare` activa los hooks de Husky.
+
+## [2026-07-01]
+
+### Instrucciones y skills del proyecto
+- **`CLAUDE.md`** y **`.claude/skills/`**: instrucciones del proyecto y 8 skills de revisión (`review-categories`, `review-import-idempotency`, `review-backend-connection`, `review-income-budget`, `review-financial-mechanics`, `review-modals`, `review-commitments-subscriptions-savings`, `full-app-review`).
+- `agents.md`: corregida la referencia a tipos (`src/domains/types.ts` no existe).
+
+### Correcciones
+- **Categorías**: `AddCategoryDialog` ya no se cierra ni pierde lo escrito si la creación falla; valida nombre (trim, duplicado por nombre+tipo) y muestra el error en el propio modal. La paleta agotada ya no bloquea el botón.
+- **BD**: unicidad de categorías por `(user_id, lower(name), type)` (migración `20260701120000_categories_unique_name_type.sql`).
+- **Modales**: eliminado `modal={false}` en 10 diálogos (overlay, foco y scroll correctos); `AddCategoryDialog` ya no vive dentro de `SelectContent`; `DataTreatmentGuard` ofrece "Cerrar sesión" y sincroniza la región; `DatabaseErrorOverlay` permite cerrar el aviso tras agotar reintentos; `confirm()` nativo de presupuestos reemplazado por confirmación en el diálogo.
+- **Importación**: el respaldo de detección de duplicados pagina (límite de 1000 filas); el staging "reclama" filas antes de insertar (idempotente ante doble clic/reintento) y revierte si falla.
+- **Compromisos/Suscripciones**: el pago comprueba el error de la transacción (antes marcaba pagado aunque fallara), es idempotente al reintentar, soporta `type='saving'`, no retrocede el próximo cobro al editar, fecha de fin realmente opcional, meses cortos (31 → fin de mes), fechas locales (sin desfase UTC-5), y refresca el flujo de caja.
+- **Presupuesto de ingresos**: nuevo `Ingresos` en `AddBudgetDialog`; `Ingresos Estimados` (Presupuestos y Flujo de caja) usa el presupuesto de ingresos del periodo visible (fallback: proyección). `IncomeCard` muestra Estimado vs Real.
+- **Tarjetas de crédito**: convención única — deuda = balance negativo. Corregidos `PayCreditCardDialog`, `PaymentMethodList`, validación de `AddTransactionDialog`, insights, patrimonio y deuda total del Dashboard (`creditCardUtils.ts`).
+- **Flujo de caja**: filtro realtime sin espacio sobrante, fechas y memos estables, años disponibles derivados de los datos.
+- **Backend (seguridad)**: `/api/user/config/*` exige JWT (`requireAuth`); el `userId` sale del token (403 si no coincide). OAuth Gmail con `state` firmado (HMAC + expiración), `POST /auth/google/init`, HTML escapado, `postMessage` dirigido, sin loguear URLs; `trust proxy` = 1; eliminado `auth.routes.js` duplicado; sin filtrar `error.details`.
+- **Frontend ↔ backend**: `backendFetch`/`getAuthHeaders` (JWT + timeout) en las llamadas de configuración.
+
+- **Ajuste manual de saldo**: editar el saldo de un método de pago (p. ej. +5.000.000 en una tarjeta) ya no escribe el balance directo; registra una transacción de ajuste (ingreso si sube, gasto si baja, categoría "Ajuste de saldo") que queda en historial y flujo de caja sin doble conteo.
+- **Nueva categoría**: el botón desaparece mientras el modal está abierto y el modal ya no vive dentro del `Select` en `AddTransactionDialog` ni `TransactionRow`.
+
+### Notas de despliegue
+- Backend y frontend deben desplegarse juntos (el frontend antiguo no envía JWT).
+- Definir `OAUTH_STATE_SECRET` en Render (si no, usa `SUPABASE_SERVICE_ROLE_KEY`).
+- Si existen categorías duplicadas por mayúsculas, la migración emite un `WARNING` y no crea el índice hasta resolverlas.
+
 ## [2026-06-11]
 
 ### Correcciones de Base de Datos (SQL)

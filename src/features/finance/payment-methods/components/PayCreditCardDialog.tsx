@@ -37,6 +37,7 @@ import { CreditCard, Wallet, Banknote, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { MoneyInput } from '@/shared/components/MoneyInput';
 import { useToast } from '@/shared/hooks/use-toast';
+import { parseLocalDate } from '@/core/utils/dateUtils';
 
 const payCardSchema = z.object({
     sourceId: z.string().min(1, "Selecciona una cuenta de origen"),
@@ -64,7 +65,9 @@ export function PayCreditCardDialog({ card, onPay, trigger }: PayCreditCardDialo
 
     // Calculate debts
     const { totalDebt, monthlyDebt } = useMemo(() => {
-        const total = card.balance; // Assuming balance represents current debt for credit cards
+        // Convención: la deuda de una tarjeta es un balance NEGATIVO (una compra resta del balance).
+        // Un balance >= 0 significa que no hay deuda pendiente.
+        const total = Math.max(0, -Number(card.balance));
 
         let monthly = 0;
         const now = new Date();
@@ -77,7 +80,7 @@ export function PayCreditCardDialog({ card, onPay, trigger }: PayCreditCardDialo
         );
 
         cardTransactions.forEach(tx => {
-            const txDate = new Date(tx.date);
+            const txDate = parseLocalDate(tx.date) ?? new Date(tx.date);
             const installments = tx.installments || 1;
 
             // Calculate months difference

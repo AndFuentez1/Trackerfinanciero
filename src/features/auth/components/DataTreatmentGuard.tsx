@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFinance } from '@/features/finance/context/FinanceContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -17,6 +18,15 @@ export function DataTreatmentGuard({ children }: { children: React.ReactNode }) 
     const [loading, setLoading] = useState(false);
     const [isRejected, setIsRejected] = useState(false);
     const { toast } = useToast();
+    const { signOut } = useAuth();
+
+    // El perfil puede cargar después del primer render: sincronizar región ya guardada
+    const profileCountry = profile?.country;
+    useEffect(() => {
+        if (profileCountry) {
+            setCountry((current) => current || profileCountry);
+        }
+    }, [profileCountry]);
 
     if (profileLoading || !profile) {
         return <>{children}</>;
@@ -57,6 +67,14 @@ export function DataTreatmentGuard({ children }: { children: React.ReactNode }) 
         setIsRejected(false);
     };
 
+    // Salida garantizada: el usuario nunca queda atrapado en este diálogo
+    const handleSignOut = async () => {
+        const { error } = await signOut();
+        if (error) {
+            toast({ title: 'Error', description: 'No se pudo cerrar la sesión. Inténtalo de nuevo.', variant: 'destructive' });
+        }
+    };
+
     return (
         <>
             <Dialog open={needsConsent}>
@@ -84,6 +102,9 @@ export function DataTreatmentGuard({ children }: { children: React.ReactNode }) 
                         <div className="pt-4 flex flex-col gap-3">
                             <Button onClick={handleRevertRejection} variant="default" className="w-full">
                                 Revisar y Aceptar Política
+                            </Button>
+                            <Button onClick={handleSignOut} variant="ghost" className="w-full">
+                                Cerrar sesión
                             </Button>
                         </div>
                     ) : (

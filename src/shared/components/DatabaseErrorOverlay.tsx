@@ -140,6 +140,17 @@ export const DatabaseErrorOverlay: React.FC = () => {
               'Intentar de nuevo'
             )}
           </button>
+
+          {/* Salida: nunca dejar al usuario atrapado tras agotar reintentos */}
+          {isPaused && (
+            <button
+              type="button"
+              onClick={() => setIsVisible(false)}
+              className="mt-3 text-sm font-medium text-slate-300 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+            >
+              Cerrar aviso
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -41,6 +41,7 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
     const [type, setType] = useState<TransactionType>(initialType);
     const [selectedColor, setSelectedColor] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     // Get existing categories to check used colors
     const { categories } = useFinanceData();
@@ -56,12 +57,15 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
     // Initialize visible options when dialog opens, pre-selecting the first available color
     useEffect(() => {
         if (open) {
-            // New category scenario: pre-select the first available color
-            const options = availablePool.slice(0, 10);
+            // Si la paleta única se agotó, se reutilizan colores para no bloquear la creación
+            const pool = availablePool.length > 0 ? availablePool : MASTER_PALETTE;
+            const options = pool.slice(0, 10);
             setVisibleOptions(options);
             setSelectedColor(options[0] || '');
+            setSubmitError(null);
         }
-    }, [open]); // Depend on open to reset. Not on availablePool to avoid reshuffles.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir, para evitar reordenamientos
+    }, [open]);
 
     const handleColorClick = (color: string) => {
         setSelectedColor(color);
@@ -74,27 +78,50 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name) { return; }
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            setSubmitError('Escribe un nombre para la categoría.');
+            return;
+        }
 
+        const normalized = trimmedName.toLowerCase();
+        const isDuplicate = categories.some(
+            (c) => c.name.trim().toLowerCase() === normalized && c.type === type
+        );
+        if (isDuplicate) {
+            setSubmitError('Ya existe una categoría con ese nombre y tipo.');
+            return;
+        }
+
+        setSubmitError(null);
         setIsSubmitting(true);
-        const result = await onAdd({
-            name,
-            type,
-            color: selectedColor || visibleOptions[0], // Fallback
-        });
+        try {
+            const result = await onAdd({
+                name: trimmedName,
+                type,
+                color: selectedColor || visibleOptions[0], // Fallback
+            });
 
-        setIsSubmitting(false);
+            if (result.error || !result.data) {
+                // Mantener el modal abierto y conservar lo escrito para que el usuario reintente
+                setSubmitError('No se pudo crear la categoría. Verifica el nombre e inténtalo de nuevo.');
+                return;
+            }
 
-        if (!result.error && result.data) {
             onSuccess?.(result.data);
             setName('');
+            setOpen(false);
+        } catch {
+            setSubmitError('Ocurrió un error inesperado al crear la categoría.');
+        } finally {
+            setIsSubmitting(false);
         }
-        setOpen(false);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen} modal={false}>
-            {trigger !== undefined ? (
+        <Dialog open={open} onOpenChange={setOpen}>
+            {/* El disparador desaparece mientras el modal está abierto */}
+            {open ? null : trigger !== undefined ? (
                 trigger
             ) : (
                 <DialogTrigger asChild>
@@ -125,8 +152,13 @@ export function AddCategoryDialog({ onAdd, type: initialType = 'expense', onSucc
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
+                            maxLength={50}
+                            aria-invalid={submitError ? true : undefined}
                             className="h-11 md:h-9"
                         />
+                        {submitError && (
+                            <p role="alert" className="text-xs text-destructive">{submitError}</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">

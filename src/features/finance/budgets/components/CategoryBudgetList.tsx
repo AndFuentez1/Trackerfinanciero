@@ -502,6 +502,7 @@ function CategoryBudgetRow({
                             size="icon"
                             className="h-8 w-8 rounded-sm border-primary/80"
                             onClick={(e) => e.stopPropagation()}
+                            aria-label="Editar presupuesto"
                         >
                             <Pencil className="h-4 w-4" />
                         </Button>

@@ -98,7 +98,7 @@ export function AddSavingsAccountDialog({ onAdd }: AddSavingsAccountDialogProps)
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="default" size="sm" className="inline-flex w-auto min-w-[190px] gap-2 px-4 py-2 items-center justify-center whitespace-nowrap hover:bg-primary/70 hover:text-white">
           <Wallet className="h-4 w-4" />

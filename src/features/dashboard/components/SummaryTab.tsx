@@ -36,6 +36,7 @@ import { cn } from '@/core/utils';
 
 
 import { PulseBlock, CardSkeleton, AccountsListSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
+import { getCreditDebt } from '@/features/finance/utils/creditCardUtils';
 
 interface SummaryTabProps {
   transactions: Transaction[];
@@ -237,7 +238,7 @@ export function SummaryTab({
     // DEUDA TOTAL: Deudas totales, creditos y dinero que debe.
     // Calculations: loans 'borrowed' (remaining) + credit card balances
     const moneyBorrowed = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + (l.total_amount - l.paid_amount), 0);
-    const creditBalances = paymentMethods.filter(pm => pm.type === 'credit').reduce((sum, pm) => sum + pm.balance, 0);
+    const creditBalances = paymentMethods.filter(pm => pm.type === 'credit').reduce((sum, pm) => sum + getCreditDebt(pm.balance), 0);
     const totalDebt = moneyBorrowed + creditBalances;
 
     // AHORROS TOTALES: Solo los valores que se encuentran en cuentas de ahorro y tarjetas designadas como ahorros con sus rendimientos.

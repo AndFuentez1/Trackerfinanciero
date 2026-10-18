@@ -5,7 +5,8 @@
  * Includes pagination, filters, onboarding, and import progress.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { format } from 'date-fns';
 import type { Transaction } from '../types/financeTypes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { clearStoredLastUpdated, readStoredLastUpdated, writeStoredLastUpdated } from '../utils/lastUpdatedStorage';
@@ -102,21 +103,21 @@ export function useFinanceUI() {
 
 
 
-    const startImport = () => {
+    const startImport = useCallback(() => {
         setImportProgress({
             status: 'loading',
             progress: 0,
             message: 'Analizando archivo...'
         });
-    };
+    }, []);
 
-    const cancelImport = () => {
+    const cancelImport = useCallback(() => {
         setImportProgress({ status: 'idle', progress: 0, message: '' });
         setPendingImportData([]);
         setHasPendingImport(false);
-    };
+    }, []);
 
-    const updateFilter = (period: string, from?: string | null, to?: string | null) => {
+    const updateFilter = useCallback((period: string, from?: string | null, to?: string | null) => {
         setPage(0);
         if (period === 'custom' && from && to) {
             setDateFilter({ from, to, period });
@@ -147,14 +148,14 @@ export function useFinanceUI() {
             }
 
             setDateFilter({
-                from: fromDate ? fromDate.toISOString().split('T')[0] : null,
-                to: toDate ? toDate.toISOString().split('T')[0] : null,
+                from: fromDate ? format(fromDate, 'yyyy-MM-dd') : null,
+                to: toDate ? format(toDate, 'yyyy-MM-dd') : null,
                 period
             });
         }
-    };
+    }, []);
 
-    return {
+    return useMemo(() => ({
         // Pagination
         page,
         setPage,
@@ -197,5 +198,9 @@ export function useFinanceUI() {
         lastUpdated,
         setLastUpdated,
         updateFilter,
-    };
+    }), [
+        page, hasMore, dateFilter, sortConfig, onboardingDecision, hasPendingImport,
+        welcomeCompleted, highlightedCard, importProgress, pendingImportData, startImport,
+        cancelImport, manualLoading, actionLoading, lastUpdated, updateFilter,
+    ]);
 }

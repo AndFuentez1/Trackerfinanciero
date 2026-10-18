@@ -87,7 +87,7 @@ export function AddSavingsTransactionDialog({ accounts, onAdd }: AddSavingsTrans
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           size="sm"

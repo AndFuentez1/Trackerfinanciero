@@ -5,6 +5,7 @@ import { PaymentMethodsSection } from '../components/sections/PaymentMethodsSect
 import { CurrencySection } from '../components/sections/CurrencySection';
 import { SecuritySection } from '../components/sections/SecuritySection';
 import { DangerZone } from '../components/sections/DangerZone';
+import { PreferencesSection } from '../components/sections/PreferencesSection';
 import { AdvancedSettings } from '@/features/settings/components/AdvancedSettings';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -38,12 +39,12 @@ export default function ConfiguracionPage() {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const highlight = params.get('highlight');
-        if (!highlight) return;
+        if (!highlight) {return;}
 
         setHighlightedSection(highlight);
         const timerId = setTimeout(() => {
             const element = document.getElementById(highlight);
-            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (element) {element.scrollIntoView({ behavior: 'smooth', block: 'center' });}
         }, 300);
         return () => clearTimeout(timerId);
     }, [location.search]);
@@ -116,6 +117,8 @@ export default function ConfiguracionPage() {
                             </div>
 
                             <SecuritySection />
+
+                            <PreferencesSection />
 
                             <Separator className="opacity-50" />
 
@@ -213,7 +216,7 @@ export default function ConfiguracionPage() {
                             {/* Footer */}
                             <footer className="text-center py-6">
                                 <p className="text-muted-foreground" style={{ fontSize: '15px' }}>
-                                    Hecho con <Heart className="inline h-3 w-3 text-red-500 fill-current" /> por Joan Fuentes
+                                    Hecho con <Heart className="inline h-3 w-3 text-destructive fill-current" aria-label="amor" /> por Joan Fuentes
                                 </p>
                             </footer>
                         </div>

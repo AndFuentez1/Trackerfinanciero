@@ -18,7 +18,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
-import { getBackendUrl } from '@/core/api/backend';
+import { getBackendUrl, backendFetch } from '@/core/api/backend';
 import { queryKeys } from '@/core/api/queryKeys';
 import { useUserConfigStatus } from './hooks/useUserConfigStatus';
 import { History, RefreshCw, Mail, CheckCircle2, ChevronDown, CheckSquare, Search, Sparkles, Inbox, AlertCircle } from 'lucide-react';
@@ -30,7 +30,7 @@ import { Settings2 } from 'lucide-react';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 
 // Importing sub-components
-import { GmailConfigSection } from './AdvancedSettings/GmailConfigSection';
+import { GmailConfigSection, type GmailSyncPhase } from './AdvancedSettings/GmailConfigSection';
 import { GeminiConfigSection } from './AdvancedSettings/GeminiConfigSection';
 import { TelegramConfigSection } from './AdvancedSettings/TelegramConfigSection';
 import { GmailHistoryDialog, type GmailHistoryItem, type GmailApprovalGroup, type GmailProduct, type GmailImportResult } from './AdvancedSettings/GmailHistoryDialog';
@@ -127,7 +127,8 @@ export function AdvancedSettings({
     const [approvingMessageId, setApprovingMessageId] = useState<string | null>(null);
 
     // Gmail Connection State
-    const [isConnectingGmail, setIsConnectingGmail] = useState(false);
+    const [gmailPhase, setGmailPhase] = useState<GmailSyncPhase>('idle');
+    const isConnectingGmail = gmailPhase !== 'idle';
 
     // Fetch config status using React Query (fallback when no prop override)
     const { data: queryConfigStatus, isLoading: queryLoading, isError: queryError } = useUserConfigStatus(user?.id);
@@ -219,8 +220,8 @@ export function AdvancedSettings({
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'GMAIL_CONNECTED') {
-                // Optimistic UI update
-                setIsConnectingGmail(false);
+                // Optimistic UI update; luego se verifica el estado real con el backend
+                setGmailPhase('verifying');
                 queryClient.setQueryData(queryKeys.user.config(user?.id ?? 'unknown'), // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (old: Record<string, any> | undefined) => {
                         if (!old) { return old; }
@@ -231,9 +232,10 @@ export function AdvancedSettings({
                     title: '✅ Conexión exitosa',
                     description: 'Tu cuenta de Gmail ha sido vinculada correctamente.'
                 });
-                queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user?.id) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user?.id) })
+                    .finally(() => setGmailPhase('idle'));
             } else if (event.data?.type === 'GMAIL_ERROR') {
-                setIsConnectingGmail(false);
+                setGmailPhase('idle');
                 toast({
                     title: 'Error de Conexión',
                     description: event.data.error || 'No se pudo conectar con Gmail.',
@@ -241,7 +243,7 @@ export function AdvancedSettings({
                 });
             } else if (event.data?.type === 'GMAIL_CLOSED') {
                 // If the user closed the OAuth window manually
-                setIsConnectingGmail(false);
+                setGmailPhase('idle');
             }
         };
 
@@ -261,7 +263,7 @@ export function AdvancedSettings({
         }
     }, [showHistoryDialog]);
 
-    const connectGmail = () => {
+    const connectGmail = async () => {
         if (!user?.id || !user?.email) {
             toast({
                 title: 'Error',
@@ -271,15 +273,47 @@ export function AdvancedSettings({
             return;
         }
 
-        if (backendStatus === 'ready') {
-            setIsConnectingGmail(true);
-            // Abrir OAuth flow en nueva ventana
-            const authUrl = `${BACKEND_URL}/auth/google?userId=${user.id}&email=${encodeURIComponent(user.email)}`;
-            window.open(authUrl, '_blank', 'width=600,height=700');
-        } else {
+        if (backendStatus !== 'ready') {
             toast({
                 title: 'Servidor no disponible',
                 description: 'Por favor, espera a que el servidor esté activo para conectar.',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        setGmailPhase('requesting');
+        // La ventana se abre de forma síncrona (evita el bloqueo de popups) y luego se redirige
+        const popup = window.open('', '_blank', 'width=600,height=700');
+        if (!popup) {
+            setGmailPhase('idle');
+            toast({
+                title: 'Ventana bloqueada',
+                description: 'Permite las ventanas emergentes para conectar tu cuenta de Gmail.',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        try {
+            // El backend emite un state firmado para el usuario autenticado (JWT)
+            const response = await backendFetch(`${BACKEND_URL}/auth/google/init`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origin: window.location.origin })
+            });
+            const data = await response.json().catch(() => ({})) as { state?: string; error?: string };
+            if (!response.ok || !data.state) {
+                throw new Error(data.error || 'No se pudo iniciar la conexión con Google');
+            }
+            popup.location.href = `${BACKEND_URL}/auth/google?state=${encodeURIComponent(data.state)}`;
+            setGmailPhase('authorizing');
+        } catch (error) {
+            popup.close();
+            setGmailPhase('idle');
+            toast({
+                title: 'Error de Conexión',
+                description: error instanceof Error ? error.message : 'No se pudo conectar con Gmail.',
                 variant: 'destructive'
             });
         }
@@ -289,8 +323,9 @@ export function AdvancedSettings({
         if (isPerformingSync) { return; }
         if (!user?.id) { return; }
 
+        setGmailPhase('disconnecting');
         try {
-            const response = await fetch(`${BACKEND_URL}/api/user/config/gmail/disconnect`, {
+            const response = await backendFetch(`${BACKEND_URL}/api/user/config/gmail/disconnect`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -317,6 +352,8 @@ export function AdvancedSettings({
                 description: 'No se pudo desconectar Gmail',
                 variant: 'destructive'
             });
+        } finally {
+            setGmailPhase('idle');
         }
     };
 
@@ -334,7 +371,7 @@ export function AdvancedSettings({
                 body.email = user.email;
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/user/config/gemini`, {
+            const response = await backendFetch(`${BACKEND_URL}/api/user/config/gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -409,7 +446,7 @@ export function AdvancedSettings({
                 body.email = user.email;
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/user/config/telegram`, {
+            const response = await backendFetch(`${BACKEND_URL}/api/user/config/telegram`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -451,7 +488,7 @@ export function AdvancedSettings({
                 body.email = user.email;
             }
 
-            const response = await fetch(`${BACKEND_URL}/api/user/config/telegram`, {
+            const response = await backendFetch(`${BACKEND_URL}/api/user/config/telegram`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -499,7 +536,7 @@ export function AdvancedSettings({
         if (!user?.id) { return; }
         setTestingTelegram(true);
         try {
-            const response = await fetch(`${BACKEND_URL}/api/user/config/telegram/test`, {
+            const response = await backendFetch(`${BACKEND_URL}/api/user/config/telegram/test`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -740,7 +777,7 @@ export function AdvancedSettings({
                         updated_at: new Date().toISOString()
                     });
 
-                if (loanError) throw loanError;
+                if (loanError) {throw loanError;}
 
                 await archiveMessages([messageId]);
                 toast({ title: 'Enviado a Préstamos', description: 'El registro se ha creado como pendiente en la sección de Préstamos.' });
@@ -1111,6 +1148,9 @@ export function AdvancedSettings({
             <GmailConfigSection
                 configStatus={configStatus}
                 isPerformingSync={isPerformingSync}
+                syncPhase={gmailPhase}
+                isSearching={searching}
+                isImporting={importing}
                 backendStatus={backendStatus}
                 onConnect={connectGmail}
                 onDisconnect={disconnectGmail}

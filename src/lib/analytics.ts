@@ -1,18 +1,44 @@
-import type { Dict} from './mixpanel-shim';
-import mixpanel, { Query } from './mixpanel-shim';
+import type { Dict } from './mixpanel-shim';
+import type mixpanelClient from './mixpanel-shim';
 
 // Constants
 const MIXPANEL_TOKEN = 'ed2dc14829d7b4d24069695b97131c0d';
 const IS_PROD = import.meta.env.PROD;
 
+type MixpanelClient = typeof mixpanelClient;
+
+// Mixpanel se carga de forma diferida para no penalizar la carga inicial (TTI).
+// Las llamadas hechas antes de que termine de cargar se encolan y se reproducen en orden.
+let client: MixpanelClient | null = null;
+const pending: Array<(mp: MixpanelClient) => void> = [];
+
+const withMixpanel = (fn: (mp: MixpanelClient) => void) => {
+    if (client) {
+        fn(client);
+    } else {
+        pending.push(fn);
+    }
+};
+
 // Initialize Mixpanel
 export const initAnalytics = () => {
-    mixpanel.init(MIXPANEL_TOKEN, {
-        debug: !IS_PROD, // Enable debug mode in development
-        track_pageview: true,
-        persistence: 'localStorage',
-        ignore_dnt: true,
-    });
+    void import('./mixpanel-shim')
+        .then(({ default: mixpanel }) => {
+            mixpanel.init(MIXPANEL_TOKEN, {
+                debug: !IS_PROD, // Enable debug mode in development
+                track_pageview: true,
+                persistence: 'localStorage',
+                ignore_dnt: true,
+            });
+            client = mixpanel;
+            pending.splice(0).forEach((fn) => {
+                try { fn(mixpanel); } catch (error) { console.error('Mixpanel Error:', error); }
+            });
+        })
+        .catch((error) => {
+            pending.length = 0;
+            console.warn('Mixpanel no disponible:', error);
+        });
 };
 
 // --- Type Definitions for Events ---
@@ -38,7 +64,7 @@ interface TrackingProps extends Dict {
     category?: string;
     installments_count?: number;
     result?: 'success' | 'failure';
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 // --- Core Analytics Functions ---
@@ -49,11 +75,13 @@ interface TrackingProps extends Dict {
 export const trackEvent = (eventName: EventName, props?: TrackingProps) => {
     if (!MIXPANEL_TOKEN) {return;}
 
-    try {
-        mixpanel.track(eventName, props);
-    } catch (error) {
-        console.error('Mixpanel Error:', error);
-    }
+    withMixpanel((mixpanel) => {
+        try {
+            mixpanel.track(eventName, props);
+        } catch (error) {
+            console.error('Mixpanel Error:', error);
+        }
+    });
 };
 
 /**
@@ -62,10 +90,12 @@ export const trackEvent = (eventName: EventName, props?: TrackingProps) => {
 export const identifyUser = (userId: string, traits?: Dict) => {
     if (!MIXPANEL_TOKEN) {return;}
 
-    mixpanel.identify(userId);
-    if (traits) {
-        mixpanel.people.set(traits);
-    }
+    withMixpanel((mixpanel) => {
+        mixpanel.identify(userId);
+        if (traits) {
+            mixpanel.people.set(traits);
+        }
+    });
 };
 
 /**
@@ -73,7 +103,7 @@ export const identifyUser = (userId: string, traits?: Dict) => {
  */
 export const setUserProperties = (props: Dict) => {
     if (!MIXPANEL_TOKEN) {return;}
-    mixpanel.people.set(props);
+    withMixpanel((mixpanel) => mixpanel.people.set(props));
 };
 
 /**
@@ -81,7 +111,7 @@ export const setUserProperties = (props: Dict) => {
  */
 export const startEventTimer = (eventName: EventName) => {
     if (!MIXPANEL_TOKEN) {return;}
-    mixpanel.time_event(eventName);
+    withMixpanel((mixpanel) => mixpanel.time_event(eventName));
 };
 
 /**
@@ -89,7 +119,7 @@ export const startEventTimer = (eventName: EventName) => {
  */
 export const resetAnalytics = () => {
     if (!MIXPANEL_TOKEN) {return;}
-    mixpanel.reset();
+    withMixpanel((mixpanel) => mixpanel.reset());
 };
 
 // --- Specific Insight Helpers ---

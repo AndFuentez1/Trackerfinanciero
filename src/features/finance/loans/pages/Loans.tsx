@@ -44,6 +44,8 @@ import { Badge } from '@/shared/ui/badge';
 import { LoansSummary } from '../components/LoansSummary';
 import { LoanCard } from '../components/LoanCard';
 import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
+import { PageTour } from '@/shared/components/PageTour';
+import { LOANS_TOUR } from '@/shared/components/tours';
 
 export default function LoansPage() {
     useSEO({
@@ -338,6 +340,7 @@ export default function LoansPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-center md:justify-end md:mt-1">
+                                    <PageTour tourId="loans" steps={LOANS_TOUR} />
                                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button

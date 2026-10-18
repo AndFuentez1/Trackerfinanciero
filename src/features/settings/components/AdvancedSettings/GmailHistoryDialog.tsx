@@ -208,6 +208,7 @@ export function GmailHistoryDialog({
                     size="icon"
                     className="absolute right-4 top-4"
                     onClick={() => onOpenChange(false)}
+                    aria-label="Cerrar"
                 >
                     <X className="h-4 w-4" />
                 </Button>
@@ -355,7 +356,7 @@ export function GmailHistoryDialog({
                                                                                         onValueChange={(val) => {
                                                                                             // Para transferencias que no tienen productos, actualizamos el payment_method del primer grupo (o creamos uno)
                                                                                             setImportResults(prev => prev.map(r => {
-                                                                                                if (r.messageId !== item.messageId) return r;
+                                                                                                if (r.messageId !== item.messageId) {return r;}
                                                                                                 const updatedGroups = [...(r.groups || [])];
                                                                                                 if (updatedGroups.length === 0) {
                                                                                                     updatedGroups.push({
@@ -460,7 +461,7 @@ export function GmailHistoryDialog({
                                                                                                             } else {
                                                                                                                 // Update group
                                                                                                                 setImportResults(prev => prev.map(r => {
-                                                                                                                    if (r.messageId !== item.messageId) return r;
+                                                                                                                    if (r.messageId !== item.messageId) {return r;}
                                                                                                                     const newGroups = [...(r.groups || [])];
                                                                                                                     if (newGroups[pIndex]) {
                                                                                                                         newGroups[pIndex] = {
@@ -492,7 +493,7 @@ export function GmailHistoryDialog({
                                                                                                                             updateImportProduct(item.messageId, pIndex, updates);
                                                                                                                         } else {
                                                                                                                             setImportResults(prev => prev.map(r => {
-                                                                                                                                if (r.messageId !== item.messageId) return r;
+                                                                                                                                if (r.messageId !== item.messageId) {return r;}
                                                                                                                                 const newGroups = [...(r.groups || [])];
                                                                                                                                 if (newGroups[pIndex]) {
                                                                                                                                     newGroups[pIndex] = { ...newGroups[pIndex], ...updates };
@@ -514,7 +515,7 @@ export function GmailHistoryDialog({
                                                                                                                 updateImportProduct(item.messageId, pIndex, { payment_method_id: val });
                                                                                                             } else {
                                                                                                                 setImportResults(prev => prev.map(r => {
-                                                                                                                    if (r.messageId !== item.messageId) return r;
+                                                                                                                    if (r.messageId !== item.messageId) {return r;}
                                                                                                                     const newGroups = [...(r.groups || [])];
                                                                                                                     if (newGroups[pIndex]) {
                                                                                                                         newGroups[pIndex] = { ...newGroups[pIndex], payment_method_id: val };

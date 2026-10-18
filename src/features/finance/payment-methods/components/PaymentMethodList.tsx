@@ -9,6 +9,7 @@ import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CurrencyDisplay } from '@/features/finance/components/CurrencyDisplay';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
+import { getAvailableCredit } from '@/features/finance/utils/creditCardUtils';
 
 interface PaymentMethodListProps {
   paymentMethods: PaymentMethod[];
@@ -152,7 +153,7 @@ export function PaymentMethodList({
             {pm.is_savings_account || pm.type === 'debit' || pm.type === 'cash'
               ? renderBalance(pm.balance)
               : pm.type === 'credit'
-                ? renderBalance(pm.credit_limit ? pm.credit_limit - pm.balance : pm.balance)
+                ? renderBalance(pm.credit_limit ? getAvailableCredit(pm.credit_limit, pm.balance) : pm.balance)
                 : renderBalance(pm.balance)}
           </div>
         </div>

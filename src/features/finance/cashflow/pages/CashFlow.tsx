@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/core/utils';
 import { DEFAULT_LOCALE, DEFAULT_CURRENCY_CODE } from '@/features/finance/constants/currencyConstants';
 import { usePageBootLoading } from '@/shared/layouts/PageBootContext';
+import { PageTour } from '@/shared/components/PageTour';
+import { CASHFLOW_TOUR } from '@/shared/components/tours';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 
 const CASHFLOW_REAL_BALANCE_KEY = 'cashflow-use-real-balance';
@@ -30,7 +32,7 @@ export default function CashFlow() {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: configStatus } = useUserConfigStatus(user?.id);
-  const { bootLoading: financeBootLoading } = useFinanceData();
+  const { bootLoading: financeBootLoading, allTransactions } = useFinanceData();
   const { bootLoading: loansBootLoading } = useLoans();
   const { bootLoading: savingsBootLoading } = useSavingsData();
 
@@ -124,8 +126,16 @@ export default function CashFlow() {
       : <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary inline" />;
   };
 
-  // Años/meses disponibles (debería venir de los datos)
-  const availableYears = [2024, 2025, 2026];
+  // Años disponibles: derivados de las transacciones + año actual y el siguiente (proyección)
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = new Set<number>([year, currentYear, currentYear + 1]);
+    (allTransactions ?? []).forEach(t => {
+      const y = Number(String(t.date).substring(0, 4));
+      if (Number.isInteger(y) && y > 1900 && y < 3000) { years.add(y); }
+    });
+    return Array.from(years).sort((a, b) => a - b);
+  }, [allTransactions, year]);
   const availableMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
   // Datos para tarjetas
@@ -221,6 +231,7 @@ export default function CashFlow() {
                     <p className="text-muted-foreground font-medium mt-[-6px] leading-none text-sm">Visualiza tus ingresos futuros y compromisos</p>
                   </div>
                 </div>
+                <PageTour tourId="cashflow" steps={CASHFLOW_TOUR} className="self-start md:mt-1" />
               </div>
             </header>
 

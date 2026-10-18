@@ -31,7 +31,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { useToast } from '@/shared/hooks/use-toast';
-import { AlertCircle, Target } from 'lucide-react';
+import { AlertCircle, Plus, Target } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -108,7 +108,9 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   });
   const isUpdatingExisting = !!existingBudget && !editingBudget;
 
-  const [activeTab, setActiveTab] = useState<'expense' | 'saving'>('expense');
+  const [activeTab, setActiveTab] = useState<'expense' | 'saving' | 'income'>('expense');
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const hasSavingCategories = categories.some(c => c.type === 'saving');
 
   // Sync state when editingBudget changes or dialog opens
@@ -124,6 +126,8 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       const cat = categories.find(c => c.id === editingBudget.category_id);
       if (cat?.type === 'saving') {
         setActiveTab('saving');
+      } else if (cat?.type === 'income') {
+        setActiveTab('income');
       } else {
         setActiveTab('expense');
       }
@@ -187,18 +191,35 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
   const handleDelete = async () => {
     if (!editingBudget?.id || !onDelete) { return; }
 
-    if (confirm('¿Estás seguro de que deseas eliminar este presupuesto?')) {
-      const result = await onDelete(editingBudget.id);
-      if (!result?.error) {
-        setOpen(false);
-      }
+    // Confirmación en dos pasos dentro del propio diálogo (sin confirm() nativo bloqueante)
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+
+    const result = await onDelete(editingBudget.id);
+    setConfirmingDelete(false);
+    if (!result?.error) {
+      setOpen(false);
+    } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar el presupuesto. Intenta de nuevo.',
+        variant: 'destructive',
+      });
     }
   };
 
 
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) { setConfirmingDelete(false); }
+      }}
+    >
       <DialogTrigger asChild>
         {children || (
           <Button
@@ -233,7 +254,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
             {editingBudget ? 'Editar presupuesto' : 'Nuevo presupuesto'}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Define un presupuesto mensual para controlar tus gastos por categoría.
+            Define un presupuesto mensual para controlar tus gastos o estimar tus ingresos por categoría.
           </DialogDescription>
         </DialogHeader>
 
@@ -241,12 +262,13 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 sm:space-y-4 mt-4">
             {!editingBudget && (
               <Tabs value={activeTab} onValueChange={(val) => {
-                setActiveTab(val as 'expense' | 'saving');
+                setActiveTab(val as 'expense' | 'saving' | 'income');
                 setValue('category_id', '');
                 setValue('category', '');
               }}>
-                <TabsList className={`grid w-full mb-2 ${hasSavingCategories ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <TabsList className={`grid w-full mb-2 ${hasSavingCategories ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="expense">Gastos</TabsTrigger>
+                  <TabsTrigger value="income">Ingresos</TabsTrigger>
                   {hasSavingCategories && (
                     <TabsTrigger value="saving">Ahorro</TabsTrigger>
                   )}
@@ -285,20 +307,36 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                               {c.name}
                             </SelectItem>
                           ))}
-                          {!editingBudget && (
-                            <div className="border-t border-border/50 px-1 py-1 mt-1">
-                              <AddCategoryDialog
-                                type={activeTab}
-                                onAdd={addCategory}
-                                onSuccess={(cat) => {
-                                  setValue('category_id', cat.id);
-                                  setValue('category', cat.name);
-                                }}
-                              />
-                            </div>
-                          )}
                         </SelectContent>
                       </Select>
+                      {/* Fuera del SelectContent: dentro, el diálogo se desmontaba al cerrarse el Select */}
+                      {!editingBudget && (
+                        <>
+                          {!isCategoryDialogOpen && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 w-full justify-start gap-2 text-xs font-medium"
+                              onClick={() => setIsCategoryDialogOpen(true)}
+                            >
+                              <Plus className="h-4 w-4" />
+                              Nueva categoría
+                            </Button>
+                          )}
+                          <AddCategoryDialog
+                            open={isCategoryDialogOpen}
+                            onOpenChange={setIsCategoryDialogOpen}
+                            trigger={null}
+                            type={activeTab}
+                            onAdd={addCategory}
+                            onSuccess={(cat) => {
+                              setValue('category_id', cat.id);
+                              setValue('category', cat.name);
+                            }}
+                          />
+                        </>
+                      )}
                     </div>
                   </div>
                   <FormMessage />
@@ -311,7 +349,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
               name="amount"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="text-sm">Monto máximo</FormLabel>
+                  <FormLabel className="text-sm">{activeTab === 'income' ? 'Ingreso estimado' : 'Monto máximo'}</FormLabel>
                   <FormControl>
                     <MoneyInput
                       className="h-10 text-sm w-full placeholder:text-[90%]"
@@ -392,7 +430,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                   onClick={handleDelete}
                   disabled={isSubmitting}
                 >
-                  Eliminar
+                  {confirmingDelete ? 'Confirmar eliminación' : 'Eliminar'}
                 </Button>
               )}
             </div>

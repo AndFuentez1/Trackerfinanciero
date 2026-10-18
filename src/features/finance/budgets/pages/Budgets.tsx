@@ -47,7 +47,16 @@ export default function BudgetsPage() {
         budgetMonth,
         setBudgetPeriod,
         availableYears,
+        incomeBudget,
     } = useBudgetsData();
+
+    // Mes por defecto del diálogo: si el filtro es 'all'/'active' se usa el mes actual (nunca un valor inválido)
+    const dialogMonthOverride = (() => {
+        const today = new Date();
+        const year = budgetYear === 'all' ? today.getFullYear() : budgetYear;
+        const month = typeof budgetMonth === 'number' ? budgetMonth : today.getMonth() + 1;
+        return `${year}-${String(month).padStart(2, '0')}-01`;
+    })();
     const {
         insights,
         addTransaction,
@@ -110,7 +119,7 @@ export default function BudgetsPage() {
                                     />
                                     <AddBudgetDialog
                                         onAdd={saveBudget}
-                                        monthOverride={`${budgetYear}-${String(budgetMonth === 'all' ? 1 : budgetMonth).padStart(2, '0')}-01`}
+                                        monthOverride={dialogMonthOverride}
                                     />
                                     <ConfigureBudgetsDialog />
                                 </div>
@@ -169,7 +178,12 @@ export default function BudgetsPage() {
                             </div>
 
                             <div className="flex h-full flex-col space-y-4">
-                                <IncomeCard budgetYear={budgetYear} budgetMonth={budgetMonth} />
+                                <IncomeCard
+                                    budgetYear={budgetYear}
+                                    budgetMonth={budgetMonth}
+                                    estimatedIncome={incomeBudget.estimated}
+                                    hasIncomeBudget={incomeBudget.hasBudget}
+                                />
                             </div>
                         </div>
 

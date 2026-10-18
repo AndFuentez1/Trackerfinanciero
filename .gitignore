@@ -8,3 +8,22 @@ env.txt
 .DS_Store
 dist_deploy
 dist_final
+
+# Herramientas de IA / editores
+.claude/
+.serena/
+.cursor/
+CLAUDE.md
+
+# Builds y artefactos
+dist_mobile
+android/app/build
+coverage
+*.log
+test-output.txt
+test-results.txt
+tmp_invoice/
+
+# Variables de entorno (incluidos los ejemplos): no se versionan
+.env*
+**/.env*

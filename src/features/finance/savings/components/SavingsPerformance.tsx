@@ -439,6 +439,7 @@ export function SavingsPerformance({
                     size="icon"
                     className="h-8 w-8 bg-background border border-primary text-primary hover:bg-primary/10 hover:text-primary shadow-sm rounded-xl"
                     onClick={() => onEdit(account.id)}
+                    aria-label={`Editar cuenta ${account.name}`}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -450,6 +451,7 @@ export function SavingsPerformance({
                       setAccountToDelete({ id: account.id, name: account.name });
                       setIsDeleteConfirmOpen(true);
                     }}
+                    aria-label={`Eliminar cuenta ${account.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

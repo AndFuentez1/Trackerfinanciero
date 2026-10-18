@@ -17,6 +17,8 @@ export interface UserConfigRow {
   /** Whether the "Add a password?" dialog has been shown to this user (cross-device). */
   password_dialog_shown: boolean;
   savings_view_mode?: 'monthly' | 'annual';
+  /** Módulos opcionales visibles (ver useFeatureFlags). JSONB en user_configs. */
+  feature_flags?: Record<string, boolean>;
   email?: string;
   [key: string]: unknown; // Catch all other columns from DB
 }
@@ -45,7 +47,7 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {throw error;}
       if (data) {
         return {
           ...data,
@@ -83,7 +85,7 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
         { onConflict: 'id' }
       );
 
-      if (error) throw error;
+      if (error) {throw error;}
       return nextState;
     },
     onMutate: async (updates) => {
@@ -113,16 +115,18 @@ export function useUserConfig(userId: string | undefined, userEmail?: string) {
     // of truth. Invalidating would race with the upsert and could reset state to the old value.
   });
 
+  // mutateAsync es estable; depender del objeto `mutation` recreaba updateConfig en cada render
+  const { mutateAsync } = mutation;
   const updateConfig = useCallback(
     async (updates: Partial<UserConfigRow>) => {
       try {
-        return await mutation.mutateAsync(updates);
+        return await mutateAsync(updates);
       } catch (err) {
         console.warn('[useUserConfig] Failed to persist user config:', err);
         return null;
       }
     },
-    [mutation]
+    [mutateAsync]
   );
 
   return { config, updateConfig, loaded };

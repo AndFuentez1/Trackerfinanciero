@@ -78,7 +78,8 @@ describe('financeCalculations', () => {
         ]);
 
         const paymentMethods: PaymentMethod[] = [
-            { id: 'pm1', name: 'TC', type: 'credit', balance: 900, credit_limit: 1000 },
+            // Convención: la deuda de tarjeta es un balance negativo (900 usados de 1000)
+            { id: 'pm1', name: 'TC', type: 'credit', balance: -900, credit_limit: 1000 },
         ];
 
         const budgets: Budget[] = [];

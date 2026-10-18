@@ -28,7 +28,10 @@ export function ThemeSection() {
                     {themeOptions.map((option) => (
                         <button
                             key={option.hex}
+                            type="button"
                             onClick={() => setAppThemePreference(option.hex)}
+                            aria-pressed={baseColor === option.hex}
+                            aria-label={`Tema ${option.label}`}
                             className={cn(
                                 "group relative flex flex-col items-center gap-2 p-2 rounded-xl transition-all duration-200 hover:bg-muted/50 w-full",
                                 baseColor === option.hex && "bg-muted shadow-inner"
@@ -39,7 +42,7 @@ export function ThemeSection() {
                                 style={{ backgroundColor: option.hex }}
                             >
                                 {baseColor === option.hex && (
-                                    <Check className="h-5 w-5 md:h-6 md:w-6 text-white drop-shadow-md" />
+                                    <Check className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground drop-shadow-md" aria-hidden="true" />
                                 )}
                             </div>
                             <span className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">

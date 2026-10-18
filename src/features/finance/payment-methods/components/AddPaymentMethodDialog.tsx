@@ -161,7 +161,7 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+    <Dialog open={open} onOpenChange={setOpen}>
       {trigger !== undefined ? (
         trigger
       ) : !isControlled ? (

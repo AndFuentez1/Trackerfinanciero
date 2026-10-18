@@ -68,6 +68,7 @@ export const TransactionRow = memo(({
     const { formatCurrencySmall } = useFormatCurrency();
     const { addCategory } = useFinanceData();
     const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
     // Helper logic moved from TransactionList
     const toInputDate = (iso: string) => {
@@ -197,18 +198,30 @@ export const TransactionRow = memo(({
                                 {getCategoryOptionsForType(transaction.type).map(c => (
                                     <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                                 ))}
-                                <div className="border-t border-border/50 px-1 py-1 mt-1">
-                                    <AddCategoryDialog
-                                        type={transaction.type as "expense" | "income" | "saving" | "investment"}
-                                        onAdd={addCategory}
-                                        onSuccess={(cat) => {
-                                            setLocalCategories(prev => [...prev, cat]);
-                                            onDraftChange({ category_id: cat.id });
-                                        }}
-                                    />
-                                </div>
                             </SelectContent>
                         </Select>
+                        {!isCategoryDialogOpen && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-1 h-7 w-full text-[10px]"
+                                onClick={() => setIsCategoryDialogOpen(true)}
+                            >
+                                Nueva categoría
+                            </Button>
+                        )}
+                        <AddCategoryDialog
+                            open={isCategoryDialogOpen}
+                            onOpenChange={setIsCategoryDialogOpen}
+                            trigger={null}
+                            type={transaction.type as "expense" | "income" | "saving" | "investment"}
+                            onAdd={addCategory}
+                            onSuccess={(cat) => {
+                                setLocalCategories(prev => [...prev, cat]);
+                                onDraftChange({ category_id: cat.id });
+                            }}
+                        />
                     </div>
                 ) : onUpdate && (!transaction.category && !transaction.category_id) ? (
                     <div className="mx-auto max-w-[120px]">
@@ -229,18 +242,30 @@ export const TransactionRow = memo(({
                                 {getCategoryOptionsForType(transaction.type).map(c => (
                                     <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
                                 ))}
-                                <div className="border-t border-border/50 px-1 py-1 mt-1">
-                                    <AddCategoryDialog
-                                        type={transaction.type as "expense" | "income" | "saving" | "investment"}
-                                        onAdd={addCategory}
-                                        onSuccess={(cat) => {
-                                            setLocalCategories(prev => [...prev, cat]);
-                                            onUpdate!(transaction.id, { category_id: cat.id, category: cat.name });
-                                        }}
-                                    />
-                                </div>
                             </SelectContent>
                         </Select>
+                        {!isCategoryDialogOpen && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-1 h-7 w-full text-[10px]"
+                                onClick={() => setIsCategoryDialogOpen(true)}
+                            >
+                                Nueva categoría
+                            </Button>
+                        )}
+                        <AddCategoryDialog
+                            open={isCategoryDialogOpen}
+                            onOpenChange={setIsCategoryDialogOpen}
+                            trigger={null}
+                            type={transaction.type as "expense" | "income" | "saving" | "investment"}
+                            onAdd={addCategory}
+                            onSuccess={(cat) => {
+                                setLocalCategories(prev => [...prev, cat]);
+                                onUpdate!(transaction.id, { category_id: cat.id, category: cat.name });
+                            }}
+                        />
                     </div>
                 ) : (
                     <div className="flex items-center justify-center max-w-[120px] mx-auto">

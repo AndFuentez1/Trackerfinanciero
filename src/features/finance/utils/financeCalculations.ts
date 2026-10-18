@@ -7,6 +7,7 @@
 
 import type { Transaction, Budget, PaymentMethod, Insight } from '../types/financeTypes';
 import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
+import { getCreditDebt } from '@/features/finance/utils/creditCardUtils';
 
 /**
  * Calculate financial summary from transactions
@@ -153,7 +154,7 @@ export function calculateInsights(
     // Credit card usage
     paymentMethods.forEach(pm => {
         if (pm.type === 'credit' && pm.credit_limit) {
-            const usage = (pm.balance / pm.credit_limit) * 100;
+            const usage = (getCreditDebt(pm.balance) / pm.credit_limit) * 100;
             if (usage > 80) {
                 insights.push({
                     id: `credit-${pm.id}`,

@@ -37,7 +37,8 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  base: mode === 'production' ? '/Trackerfinanciero/' : '/',
+  // GitHub Pages sirve bajo /Trackerfinanciero/; el WebView de Capacitor necesita rutas relativas
+  base: mode === 'production' ? '/Trackerfinanciero/' : mode === 'capacitor' ? './' : '/',
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -51,6 +52,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
+            // Utilidades compartidas (cn()): si no se asignan, Rollup las mete en "charts" (Recharts
+            // también usa clsx) y la carga inicial termina descargando todo Recharts.
+            if (/[\\/]node_modules[\\/](clsx|tailwind-merge|class-variance-authority)[\\/]/.test(id)) { return "ui-utils"; }
             if (id.includes("@supabase/supabase-js")) { return "supabase"; }
             if (id.includes("lucide-react")) { return "icons"; }
             if (id.includes("@radix-ui")) { return "radix"; }

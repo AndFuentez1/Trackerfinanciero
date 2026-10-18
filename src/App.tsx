@@ -10,6 +10,7 @@ import { SkeletonLoader } from '@/shared/components/skeletons/SkeletonLoader';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { DatabaseErrorOverlay } from '@/shared/components/DatabaseErrorOverlay';
 import { NetworkSyncListener } from '@/shared/components/NetworkSyncListener';
+import { OfflineSyncIndicator } from '@/shared/components/OfflineSyncIndicator';
 import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonUtils';
 
 // Auth is imported directly (not lazy) because:
@@ -19,13 +20,17 @@ import Auth from '@/features/auth/pages/Auth';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
-const isSupabasePausedError = (error: any) => {
-  const msg = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
-  return msg.includes('failed to fetch') || 
-         msg.includes('networkerror') || 
+type SkeletonTab = NonNullable<React.ComponentProps<typeof SkeletonLoader>['tab']>;
+const skeletonTabFromPath = () => getSkeletonTypeFromPath(window.location.pathname) as SkeletonTab;
+
+const isSupabasePausedError = (error: unknown) => {
+  const err = error as { message?: unknown; status?: unknown; code?: unknown } | null;
+  const msg = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
+  return msg.includes('failed to fetch') ||
+         msg.includes('networkerror') ||
          msg.includes('503') ||
-         error?.status === 503 || 
-         error?.code === '503';
+         err?.status === 503 ||
+         err?.code === '503';
 };
 
 /** Errores de red o servidor a los que conviene reintentar la query antes de mostrar fallo. */
@@ -86,7 +91,7 @@ function lazyWithRetry<T extends React.ComponentType<unknown>>(importFn: () => P
           console.info('[lazyWithRetry] Missing chunk detected. Forcing page reload to fetch new version...');
           window.location.reload();
           // Return a hanging promise so React Suspense doesn't crash during the reload
-          return new Promise<any>(() => {});
+          return new Promise<{ default: T }>(() => {});
         }
       }
 
@@ -122,7 +127,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    const skeletonType = getSkeletonTypeFromPath(window.location.pathname) as any;
+    const skeletonType = skeletonTabFromPath();
     return <SkeletonLoader tab={skeletonType} fullPage />;
   }
 
@@ -157,7 +162,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    const skeletonType = getSkeletonTypeFromPath(window.location.pathname) as any;
+    const skeletonType = skeletonTabFromPath();
     return <SkeletonLoader tab={skeletonType} fullPage />;
   }
 
@@ -174,9 +179,10 @@ const App = () => {
       <DatabaseErrorOverlay />
       <QueryClientProvider client={queryClient}>
         <NetworkSyncListener />
+        <OfflineSyncIndicator />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
-            <Suspense fallback={<SkeletonLoader tab={getSkeletonTypeFromPath(window.location.pathname) as any} fullPage />}>
+            <Suspense fallback={<SkeletonLoader tab={skeletonTabFromPath()} fullPage />}>
               <Routes>
                 {/* Public auth route */}
                 <Route
