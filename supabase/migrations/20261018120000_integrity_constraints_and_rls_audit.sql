@@ -14,7 +14,7 @@ ALTER TABLE public.payment_methods
   DROP CONSTRAINT IF EXISTS payment_methods_balance_check;
 ALTER TABLE public.payment_methods
   ADD CONSTRAINT payment_methods_balance_check
-  CHECK (type = 'credit' OR balance >= 0);
+  CHECK (type = 'credit' OR balance >= 0) NOT VALID;
 
 -- Préstamos: nombre no vacío y unicidad sin distinguir mayúsculas/espacios.
 ALTER TABLE public.loans
