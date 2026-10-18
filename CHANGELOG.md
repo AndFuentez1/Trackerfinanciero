@@ -21,6 +21,7 @@ Todas las mejoras relevantes por versión/fecha.
 - **Accesibilidad**: nombres accesibles en botones de solo ícono, `aria-pressed` en temas, "Cerrar" en diálogos.
 
 ### Correcciones
+- **OAuth Gmail**: si el intercambio del código con Google fallaba, el `catch` de `handleOAuthCallback` lanzaba `ReferenceError` (`stateOrigin` declarado dentro del `try`) y la ventana de conexión quedaba colgada sin mostrar el error. Nuevo script `npm run typecheck` en el backend.
 - **CORS**: el backend ya no acepta cualquier `*.github.io` (solo los orígenes explícitos).
 - **Filtros de fecha**: `updateFilter` formatea en hora local (`yyyy-MM-dd`) en vez de `toISOString()`.
 - **Tokens**: `GmailConfigSection` y el panel de revisiones sin colores fuera del sistema (`amber`, `zinc`, `white`).
