@@ -47,7 +47,8 @@ const transferSchema = z.object({
     path: ["toId"],
 });
 
-type TransferFormValues = z.infer<typeof transferSchema>;
+type TransferFormValues = z.output<typeof transferSchema>;
+type TransferFormInput = z.input<typeof transferSchema>;
 
 interface AddTransferDialogProps {
     onAdd: (args: { fromId: string; toId: string; amount: number; description: string; date: string }) => Promise<{ error: unknown }>;
@@ -70,7 +71,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
         return decimalPlaces > 0 ? `100000${decimals}` : '100000';
     };
 
-    const form = useForm<TransferFormValues>({
+    const form = useForm<TransferFormInput, unknown, TransferFormValues>({
         resolver: zodResolver(transferSchema),
         defaultValues: {
             fromId: '',
@@ -190,7 +191,7 @@ export function AddTransferDialog({ onAdd }: AddTransferDialogProps) {
                                         <MoneyInput
                                             id="transfer-amount"
                                             placeholder={getPlaceholderAmount()}
-                                            value={field.value}
+                                            value={field.value as number}
                                             onChange={field.onChange}
                                             className="pl-12 h-12 text-base"
                                         />

@@ -32,7 +32,9 @@ export const insertTransactionSchema = z.object({
     installments: z.coerce.number().min(1).default(1),
 });
 
-export type TransactionFormValues = z.infer<typeof insertTransactionSchema>;
+export type TransactionFormValues = z.output<typeof insertTransactionSchema>;
+// Valores tal como los escribe el formulario (z.coerce acepta texto antes de convertir).
+export type TransactionFormInput = z.input<typeof insertTransactionSchema>;
 
 export const budgetSchema = z.object({
     category_id: z.string().min(1, "La categoría es requerida"),
@@ -42,4 +44,5 @@ export const budgetSchema = z.object({
     month: z.string().min(1, "El mes es requerido"),
 });
 
-export type BudgetFormValues = z.infer<typeof budgetSchema>;
+export type BudgetFormValues = z.output<typeof budgetSchema>;
+export type BudgetFormInput = z.input<typeof budgetSchema>;

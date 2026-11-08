@@ -25,7 +25,7 @@ const preferencesSchema = z.object({
   keepSessionAlive: z.boolean().optional(),
   hideIncompleteAlert: z.boolean().optional(),
   savingsViewMode: z.enum(['monthly', 'annual']).optional(),
-  featureFlags: z.record(z.boolean()).optional(),
+  featureFlags: z.record(z.string(), z.boolean()).optional(),
 });
 
 const exportFileSchema = z.object({

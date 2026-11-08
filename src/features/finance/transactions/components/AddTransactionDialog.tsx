@@ -6,7 +6,7 @@ import type { TransactionType, Transaction, CategoryItem, PaymentMethod } from '
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { useFinance } from '@/features/finance/context/FinanceContext';
 import { CURRENCIES } from '@/features/finance/constants/currencyConstants';
-import type { TransactionFormValues } from '@/lib/schemas';
+import type { TransactionFormInput, TransactionFormValues } from '@/lib/schemas';
 import { insertTransactionSchema } from '@/lib/schemas';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -126,7 +126,7 @@ export function AddTransactionDialog({
 
   const paymentMethods = availablePaymentMethods; // Alias for standard mapping
 
-  const form = useForm<TransactionFormValues>({
+  const form = useForm<TransactionFormInput, unknown, TransactionFormValues>({
     resolver: zodResolver(insertTransactionSchema),
     defaultValues: {
       type: 'expense',
@@ -168,7 +168,7 @@ export function AddTransactionDialog({
     }
   }, [transactionToEdit, open, isControlled, form]);
 
-  const { control, handleSubmit, watch, setValue, reset, formState: { isSubmitting } } = form;
+  const { control, handleSubmit, watch, setValue, getValues, reset, formState: { isSubmitting } } = form;
   const currentType = watch('type');
 
   // Filter categories based on selected type
@@ -193,7 +193,7 @@ export function AddTransactionDialog({
   // Set first available category when type changes
   useEffect(() => {
     if (availableCategories.length > 0) {
-      const currentCategoryId = form.getValues('category_id');
+      const currentCategoryId = getValues('category_id');
       if (!availableCategories.find(c => c.value === currentCategoryId)) {
         setValue('category_id', availableCategories[0].value);
         setValue('category', availableCategories[0].label);
@@ -202,7 +202,7 @@ export function AddTransactionDialog({
       setValue('category_id', '');
       setValue('category', '');
     }
-  }, [currentType, availableCategories, setValue]);
+  }, [currentType, availableCategories, setValue, getValues]);
 
   // Validation before opening form
   const validateBeforeOpen = () => {
@@ -726,7 +726,7 @@ export function AddTransactionDialog({
                         id="amount"
                         className="h-11 md:h-9"
                         placeholder={getPlaceholderAmount()}
-                        value={field.value}
+                        value={field.value as number}
                         onChange={field.onChange}
                       />
                     </FormControl>

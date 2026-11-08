@@ -25,7 +25,7 @@ import { AddCategoryDialog } from '@/features/finance/categories/components/AddC
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import type { BudgetFormValues } from '@/lib/schemas';
+import type { BudgetFormInput, BudgetFormValues } from '@/lib/schemas';
 import { budgetSchema } from '@/lib/schemas';
 import { useQueryClient } from '@tanstack/react-query';
 import { useBudgetsData } from '@/features/finance/hooks/useBudgetsData';
@@ -83,7 +83,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     })();
 
-  const form = useForm<BudgetFormValues & { is_recurrent: boolean; month: string }>({
+  const form = useForm<BudgetFormInput, unknown, BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
       category_id: editingBudget?.category_id || '',
@@ -144,7 +144,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
     [categories, editingBudget, activeTab]);
 
-  const onFormSubmit = async (values: BudgetFormValues & { is_recurrent: boolean; month: string }) => {
+  const onFormSubmit = async (values: BudgetFormValues) => {
     const now = new Date();
     const targetMonth = values.month ? `${values.month}-01` : (monthOverride || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
 
@@ -354,7 +354,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                     <MoneyInput
                       className="h-10 text-sm w-full placeholder:text-[90%]"
                       placeholder={getPlaceholderAmount()}
-                      value={field.value}
+                      value={field.value as number}
                       onChange={field.onChange}
                     />
                   </FormControl>
