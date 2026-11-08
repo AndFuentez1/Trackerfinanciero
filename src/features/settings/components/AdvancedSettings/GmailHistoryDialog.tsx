@@ -17,7 +17,8 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/ui/accordion';
-import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight, FileText, DownloadCloud, ArrowRight, XCircle, ChevronDown, Inbox, FilterX, AlertCircle } from 'lucide-react';
+import { Archive, CheckCircle2, CheckSquare, History, Loader2, Search, Trash2, X, ChevronRight, FileText, AlertCircle, Tags } from 'lucide-react';
+import { Input } from '@/shared/ui/input';
 import { cn } from '@/core/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -64,6 +65,8 @@ export type GmailProduct = {
     payment_method_id?: string | null;
     confidence?: number;
     source?: string;
+    /** El usuario cambió la categoría en la revisión (se aprende al aprobar). */
+    manualCategory?: boolean;
 };
 
 export type GmailImportResult = {
@@ -78,7 +81,13 @@ export type GmailImportResult = {
     groups?: GmailApprovalGroup[];
     products?: GmailProduct[];
     error?: string;
+    /** 'transfer' cuando el correo es una transferencia (va a préstamos). */
+    type?: string;
+    amount?: number;
 };
+
+/** Destino del diálogo "Nueva categoría" (fuera del Select: dentro se desmontaba al cerrarse). */
+type NewCategoryTarget = { messageId: string; index: number; hasProducts: boolean };
 
 interface GmailHistoryDialogProps {
     open: boolean;
@@ -123,7 +132,15 @@ interface GmailHistoryDialogProps {
 
     // Review Actions
     updateImportProduct: (messageId: string, index: number, updates: Partial<GmailProduct>) => void;
+    /** Quita un producto de la factura antes de aprobar. */
+    removeImportProduct?: (messageId: string, index: number) => void;
     handleApproveInvoice: (messageId: string) => void;
+    /** Aprueba varias facturas en serie. */
+    handleApproveAll?: (messageIds: string[]) => void | Promise<void>;
+    /** Envía una transferencia a Préstamos. */
+    handleSendToLoans?: (messageId: string) => void | Promise<void>;
+    /** Nº de facturas archivadas en los resultados (para mostrarlas aunque estén ocultas). */
+    archivedCount?: number;
     setImportResults: (updater: (prev: GmailImportResult[]) => GmailImportResult[]) => void;
 
     // Utils
@@ -167,7 +184,11 @@ export function GmailHistoryDialog({
     paymentMethods,
     categories,
     updateImportProduct,
+    removeImportProduct,
     handleApproveInvoice,
+    handleApproveAll,
+    handleSendToLoans,
+    archivedCount = 0,
     setImportResults,
     normalizeStatus,
     safeFormatDate,
@@ -183,6 +204,9 @@ export function GmailHistoryDialog({
         loading
     } = useFinanceData();
     const [localCategories, setLocalCategories] = useState<CategoryItem[]>([]);
+    const [newCategoryTarget, setNewCategoryTarget] = useState<NewCategoryTarget | null>(null);
+    // Borrado de historial con confirmación (es permanente)
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [localPaymentMethods, setLocalPaymentMethods] = useState<PaymentMethod[]>([]);
 
     const availablePaymentMethods = useMemo(() => {
@@ -195,10 +219,32 @@ export function GmailHistoryDialog({
         return combined.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
     }, [paymentMethods, localPaymentMethods]);
 
-    // Solo categorías de tipo gasto para facturas importadas
+    // Solo categorías de tipo gasto para facturas importadas (sin duplicar las recién creadas)
     const expenseCategories = [...(allCategories || []), ...(localCategories || [])]
-        .filter(c => c.type === 'expense')
+        .filter((c, i, arr) => c.type === 'expense' && arr.findIndex(o => o.id === c.id) === i)
         .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+
+    // La IA/reglas sugieren un nombre; si existe una categoría con ese nombre, se preselecciona
+    const resolveCategoryId = (categoryId?: string | null, categoryName?: string | null) => {
+        if (categoryId && expenseCategories.some(c => c.id === categoryId)) { return categoryId; }
+        const name = (categoryName || '').trim().toLowerCase();
+        return expenseCategories.find(c => c.name.trim().toLowerCase() === name)?.id ?? '';
+    };
+
+    const applyCategory = (target: NewCategoryTarget, updates: { category_id: string | null; category: string }) => {
+        if (target.hasProducts) {
+            updateImportProduct(target.messageId, target.index, updates);
+            return;
+        }
+        setImportResults(prev => prev.map(r => {
+            if (r.messageId !== target.messageId) { return r; }
+            const newGroups = [...(r.groups || [])];
+            if (newGroups[target.index]) {
+                newGroups[target.index] = { ...newGroups[target.index], ...updates };
+            }
+            return { ...r, groups: newGroups };
+        }));
+    };
 
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -225,7 +271,7 @@ export function GmailHistoryDialog({
                 </AlertDialogHeader>
 
                 <Tabs value={importStep} onValueChange={(v) => setImportStep(v as 'search' | 'review')} className="flex flex-col flex-1 min-h-0 mt-2">
-                    <TabsList className="grid w-full grid-cols-2 mt-0 mx-4 mb-2">
+                    <TabsList className="grid w-full grid-cols-2 mt-0 mb-2">
                         <TabsTrigger value="search">1. Buscar facturas</TabsTrigger>
                         <TabsTrigger value="review" disabled={reviewItems.length === 0 && importStep !== 'review'}>
                             2. Validar (<span className="text-primary">{reviewItems.length}</span>)
@@ -268,7 +314,7 @@ export function GmailHistoryDialog({
                                             ? item.products?.reduce((sum, product) => sum + parseNumberValue(product.total), 0) ?? 0
                                             : (item.groups && item.groups.length > 0)
                                                 ? item.groups.reduce((sum, g) => sum + parseNumberValue(g.amount), 0)
-                                                : (parseNumberValue(item.total) || parseNumberValue((item as any).amount) || 0);
+                                                : (parseNumberValue(item.total) || parseNumberValue(item.amount) || 0);
 
                                         return (
                                             <AccordionItem value={item.messageId} key={item.messageId} className="rounded-lg border bg-card/50 overflow-hidden">
@@ -331,12 +377,12 @@ export function GmailHistoryDialog({
                                                                 </div>
                                                             )}
                                                             {(() => {
-                                                                const isTransfer = (item as any).type === 'transfer' || item.status === 'loan_queued' || (!hasProducts && !hasGroups && (item.subject?.toLowerCase().includes('transferencia') || item.store?.toLowerCase().includes('bancolombia') || item.store?.toLowerCase().includes('nequi')));
+                                                                const isTransfer = item.type === 'transfer' || item.status === 'loan_queued' || (!hasProducts && !hasGroups && (item.subject?.toLowerCase().includes('transferencia') || item.store?.toLowerCase().includes('bancolombia') || item.store?.toLowerCase().includes('nequi')));
                                                                 
                                                                 if (isTransfer) {
                                                                     return (
                                                                         <div className="space-y-4">
-                                                                            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-orange-50/30 border border-orange-100/50">
+                                                                            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-warning/10 border border-warning/30">
                                                                                 <div className="space-y-1">
                                                                                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Fecha</p>
                                                                                     <p className="text-sm font-medium">{safeFormatDate(item.date || meta?.date)}</p>
@@ -389,7 +435,7 @@ export function GmailHistoryDialog({
                                                                             </div>
                                                                             <div className="flex items-center justify-between p-3 rounded-md bg-muted/20 border border-dashed border-muted-foreground/30">
                                                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                                                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                                                                                    <AlertCircle className="h-4 w-4 text-warning" />
                                                                                     <span>Esta transferencia se enviará a la zona de <strong>Préstamos</strong> para configurar el pago y categoría.</span>
                                                                                 </div>
                                                                                 <div className="flex gap-2">
@@ -402,11 +448,9 @@ export function GmailHistoryDialog({
                                                                                     </Button>
                                                                                     <Button
                                                                                         size="sm"
-                                                                                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                                                                                        onClick={async () => {
-                                                                                            // Marcamos como loan_queued y aprobamos
-                                                                                            setImportResults(prev => prev.map(r => r.messageId === item.messageId ? { ...r, status: 'loan_queued', type: 'transfer' } : r));
-                                                                                            setTimeout(() => handleApproveInvoice(item.messageId), 100);
+                                                                                        onClick={() => {
+                                                                                            // Antes: setTimeout + estado viejo → nunca creaba el préstamo
+                                                                                            if (handleSendToLoans) { void handleSendToLoans(item.messageId); }
                                                                                         }}
                                                                                         disabled={approvingMessageId === item.messageId}
                                                                                     >
@@ -420,7 +464,7 @@ export function GmailHistoryDialog({
                                                                 }
 
                                                                 if (hasProducts || hasGroups) {
-                                                                    const itemsToRender = hasProducts ? item.products! : item.groups!.map(g => ({
+                                                                    const itemsToRender: GmailProduct[] = hasProducts ? item.products! : item.groups!.map(g => ({
                                                                         description: g.description,
                                                                         quantity: 1,
                                                                         price: g.amount,
@@ -430,82 +474,128 @@ export function GmailHistoryDialog({
                                                                         payment_method_id: g.payment_method_id
                                                                     }));
 
+                                                                    // Resumen: cómo quedará agrupada la compra (una transacción por categoría)
+                                                                    const summary = new Map<string, { label: string; total: number; count: number }>();
+                                                                    itemsToRender.forEach(product => {
+                                                                        const id = resolveCategoryId(product.category_id, product.category);
+                                                                        const label = expenseCategories.find(c => c.id === id)?.name || product.category || 'Sin categoría';
+                                                                        const key = label.toLowerCase();
+                                                                        const current = summary.get(key) ?? { label, total: 0, count: 0 };
+                                                                        current.total += parseNumberValue(product.total);
+                                                                        current.count += 1;
+                                                                        summary.set(key, current);
+                                                                    });
+                                                                    const invoiceTotal = parseNumberValue(item.total);
+                                                                    const totalsDiffer = hasProducts && invoiceTotal > 0 && Math.abs(invoiceTotal - productsTotal) >= 1;
+
                                                                     return (
                                                                         <div className="rounded-md border bg-muted/30 overflow-hidden">
+                                                                            <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-muted/20">
+                                                                                <Tags className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                                                                                <span className="text-[11px] font-semibold text-muted-foreground">Se registrará como:</span>
+                                                                                {[...summary.values()].map(group => (
+                                                                                    <Badge key={group.label} variant="outline" className="text-[10px] font-medium">
+                                                                                        {group.label} · ${group.total.toLocaleString('es-CO')}{group.count > 1 ? ` (${group.count})` : ''}
+                                                                                    </Badge>
+                                                                                ))}
+                                                                            </div>
+                                                                            {totalsDiffer && (
+                                                                                <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-warning border-b bg-warning/10">
+                                                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                                                    La suma de productos (${productsTotal.toLocaleString('es-CO')}) no coincide con el total de la factura (${invoiceTotal.toLocaleString('es-CO')}).
+                                                                                </div>
+                                                                            )}
                                                                             <div className={cn("overflow-x-auto", isProcessed && "opacity-60 pointer-events-none grayscale")}>
-                                                                                <Table className="min-w-[520px] w-full">
+                                                                                <Table className="min-w-[720px] w-full">
                                                                                     <TableHeader>
                                                                                         <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[35%]">Descripción</TableHead>
-                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[35%]">Categoría</TableHead>
-                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[120px] min-w-[120px]">Pago</TableHead>
-                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[100px] min-w-[100px] text-right">Total</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold">Producto</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[64px]">Cant.</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[100px]">Precio</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[170px]">Categoría</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[120px]">Pago</TableHead>
+                                                                                            <TableHead className="h-8 text-[10px] font-bold w-[100px] text-right">Total</TableHead>
+                                                                                            <TableHead className="h-8 w-[36px]"><span className="sr-only">Acciones</span></TableHead>
                                                                                         </TableRow>
                                                                                     </TableHeader>
                                                                                     <TableBody>
-                                                                                        {itemsToRender.map((product, pIndex) => (
-                                                                                            <TableRow key={`${item.messageId}-p-${pIndex}`} className="hover:bg-muted/30">
-                                                                                                <TableCell className="text-[10px] py-2 leading-snug font-medium max-w-[160px]">
-                                                                                                    <span className="line-clamp-2 block">{product.description}</span>
+                                                                                        {itemsToRender.map((product, pIndex) => {
+                                                                                            const selectedCategoryId = resolveCategoryId(product.category_id, product.category);
+                                                                                            const suggestedButMissing = !selectedCategoryId && !!product.category && product.category !== 'Otros';
+                                                                                            const target: NewCategoryTarget = { messageId: item.messageId, index: pIndex, hasProducts };
+                                                                                            return (
+                                                                                            <TableRow key={`${item.messageId}-p-${pIndex}`} className="hover:bg-muted/30 align-top">
+                                                                                                <TableCell className="py-1">
+                                                                                                    {hasProducts ? (
+                                                                                                        <Input
+                                                                                                            value={product.description}
+                                                                                                            onChange={(e) => updateImportProduct(item.messageId, pIndex, { description: e.target.value })}
+                                                                                                            className="h-7 text-xs"
+                                                                                                            aria-label="Descripción del producto"
+                                                                                                        />
+                                                                                                    ) : (
+                                                                                                        <span className="text-[10px] font-medium line-clamp-2 block py-1">{product.description}</span>
+                                                                                                    )}
+                                                                                                    {product.code && (
+                                                                                                        <span className="text-[9px] text-muted-foreground">Cód. {product.code}</span>
+                                                                                                    )}
                                                                                                 </TableCell>
                                                                                                 <TableCell className="py-1">
-                                                                                                    <Select
-                                                                                                        value={product.category_id || ""}
-                                                                                                        onValueChange={(val) => {
-                                                                                                            const match = expenseCategories.find(c => c.id === val);
-                                                                                                            if (hasProducts) {
-                                                                                                                updateImportProduct(item.messageId, pIndex, {
-                                                                                                                    category_id: match?.id || null,
-                                                                                                                    category: match?.name || val
-                                                                                                                });
-                                                                                                            } else {
-                                                                                                                // Update group
-                                                                                                                setImportResults(prev => prev.map(r => {
-                                                                                                                    if (r.messageId !== item.messageId) {return r;}
-                                                                                                                    const newGroups = [...(r.groups || [])];
-                                                                                                                    if (newGroups[pIndex]) {
-                                                                                                                        newGroups[pIndex] = {
-                                                                                                                            ...newGroups[pIndex],
-                                                                                                                            category_id: match?.id || null,
-                                                                                                                            category: match?.name || val
-                                                                                                                        };
-                                                                                                                    }
-                                                                                                                    return { ...r, groups: newGroups };
-                                                                                                                }));
-                                                                                                            }
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        <SelectTrigger className="h-7 text-xs">
-                                                                                                            <SelectValue placeholder="Categoría" />
-                                                                                                        </SelectTrigger>
-                                                                                                        <SelectContent>
-                                                                                                            {expenseCategories.map(cat => (
-                                                                                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                                                                                            ))}
-                                                                                                            <div className="border-t border-border/50 px-1 py-1 mt-1">
-                                                                                                                <AddCategoryDialog
-                                                                                                                    type="expense"
-                                                                                                                    onAdd={addCategory}
-                                                                                                                    onSuccess={(cat) => {
-                                                                                                                        setLocalCategories(prev => [...prev, cat]);
-                                                                                                                        const updates = { category_id: cat.id, category: cat.name };
-                                                                                                                        if (hasProducts) {
-                                                                                                                            updateImportProduct(item.messageId, pIndex, updates);
-                                                                                                                        } else {
-                                                                                                                            setImportResults(prev => prev.map(r => {
-                                                                                                                                if (r.messageId !== item.messageId) {return r;}
-                                                                                                                                const newGroups = [...(r.groups || [])];
-                                                                                                                                if (newGroups[pIndex]) {
-                                                                                                                                    newGroups[pIndex] = { ...newGroups[pIndex], ...updates };
-                                                                                                                                }
-                                                                                                                                return { ...r, groups: newGroups };
-                                                                                                                            }));
-                                                                                                                        }
-                                                                                                                    }}
-                                                                                                                />
-                                                                                                            </div>
-                                                                                                        </SelectContent>
-                                                                                                    </Select>
+                                                                                                    {hasProducts ? (
+                                                                                                        <Input
+                                                                                                            type="number"
+                                                                                                            min={0}
+                                                                                                            step="any"
+                                                                                                            value={product.quantity ?? 1}
+                                                                                                            onChange={(e) => updateImportProduct(item.messageId, pIndex, { quantity: Number(e.target.value) })}
+                                                                                                            className="h-7 text-xs px-1.5"
+                                                                                                            aria-label="Cantidad"
+                                                                                                        />
+                                                                                                    ) : <span className="text-[10px]">1</span>}
+                                                                                                </TableCell>
+                                                                                                <TableCell className="py-1">
+                                                                                                    {hasProducts ? (
+                                                                                                        <Input
+                                                                                                            type="number"
+                                                                                                            min={0}
+                                                                                                            step="any"
+                                                                                                            value={product.price ?? 0}
+                                                                                                            onChange={(e) => updateImportProduct(item.messageId, pIndex, { price: Number(e.target.value) })}
+                                                                                                            className="h-7 text-xs px-1.5"
+                                                                                                            aria-label="Precio unitario"
+                                                                                                        />
+                                                                                                    ) : <span className="text-[10px]">${parseNumberValue(product.price).toLocaleString('es-CO')}</span>}
+                                                                                                </TableCell>
+                                                                                                <TableCell className="py-1">
+                                                                                                    <div className="flex items-center gap-1">
+                                                                                                        <Select
+                                                                                                            value={selectedCategoryId}
+                                                                                                            onValueChange={(val) => {
+                                                                                                                const match = expenseCategories.find(c => c.id === val);
+                                                                                                                applyCategory(target, { category_id: match?.id || null, category: match?.name || val });
+                                                                                                            }}
+                                                                                                        >
+                                                                                                            <SelectTrigger className="h-7 text-xs">
+                                                                                                                <SelectValue placeholder={suggestedButMissing ? `Nueva: ${product.category}` : 'Categoría'} />
+                                                                                                            </SelectTrigger>
+                                                                                                            <SelectContent>
+                                                                                                                {expenseCategories.map(cat => (
+                                                                                                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                                                                                                ))}
+                                                                                                            </SelectContent>
+                                                                                                        </Select>
+                                                                                                        <Button
+                                                                                                            type="button"
+                                                                                                            variant="ghost"
+                                                                                                            size="icon"
+                                                                                                            className="h-7 w-7 shrink-0"
+                                                                                                            onClick={() => setNewCategoryTarget(target)}
+                                                                                                            title="Nueva categoría"
+                                                                                                            aria-label="Nueva categoría"
+                                                                                                        >
+                                                                                                            <Plus className="h-3.5 w-3.5" />
+                                                                                                        </Button>
+                                                                                                    </div>
                                                                                                 </TableCell>
                                                                                                 <TableCell className="py-1">
                                                                                                     <Select
@@ -535,23 +625,52 @@ export function GmailHistoryDialog({
                                                                                                         </SelectContent>
                                                                                                     </Select>
                                                                                                 </TableCell>
-                                                                                                <TableCell className="text-[10px] text-right font-medium py-2">
+                                                                                                <TableCell className="text-[11px] text-right font-semibold py-2">
                                                                                                     ${parseNumberValue(product.total).toLocaleString('es-CO')}
                                                                                                 </TableCell>
+                                                                                                <TableCell className="py-1">
+                                                                                                    {hasProducts && removeImportProduct && itemsToRender.length > 1 && (
+                                                                                                        <Button
+                                                                                                            type="button"
+                                                                                                            variant="ghost"
+                                                                                                            size="icon"
+                                                                                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                                                                            onClick={() => removeImportProduct(item.messageId, pIndex)}
+                                                                                                            title="Quitar producto"
+                                                                                                            aria-label={`Quitar ${product.description}`}
+                                                                                                        >
+                                                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                                                        </Button>
+                                                                                                    )}
+                                                                                                </TableCell>
                                                                                             </TableRow>
-                                                                                        ))}
+                                                                                            );
+                                                                                        })}
                                                                                     </TableBody>
                                                                                 </Table>
                                                                             </div>
-                                                                            <div className="flex items-center justify-end px-4 py-3 border-t bg-muted/10">
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="outline"
-                                                                                    onClick={() => setImportResults(prev => prev.filter(r => r.messageId !== item.messageId))}
-                                                                                    disabled={approvingMessageId === item.messageId}
-                                                                                >
-                                                                                    Descartar Extraída
-                                                                                </Button>
+                                                                            <div className="flex items-center justify-between gap-2 px-4 py-3 border-t bg-muted/10">
+                                                                                <span className="text-xs font-semibold">Total: ${productsTotal.toLocaleString('es-CO')}</span>
+                                                                                <div className="flex gap-2">
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        variant="outline"
+                                                                                        onClick={() => setImportResults(prev => prev.filter(r => r.messageId !== item.messageId))}
+                                                                                        disabled={approvingMessageId === item.messageId}
+                                                                                    >
+                                                                                        Descartar
+                                                                                    </Button>
+                                                                                    {!isProcessed && (
+                                                                                        <Button
+                                                                                            size="sm"
+                                                                                            onClick={() => handleApproveInvoice(item.messageId)}
+                                                                                            disabled={!!approvingMessageId}
+                                                                                        >
+                                                                                            {approvingMessageId === item.messageId && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                                                                                            Aprobar esta factura
+                                                                                        </Button>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     );
@@ -604,9 +723,12 @@ export function GmailHistoryDialog({
                                         return;
                                     }
 
-                                    pendingToApprove.forEach(item => {
-                                        handleApproveInvoice(item.messageId);
-                                    });
+                                    const ids = pendingToApprove.map(item => item.messageId);
+                                    if (handleApproveAll) {
+                                        void handleApproveAll(ids);
+                                    } else {
+                                        ids.forEach(id => handleApproveInvoice(id));
+                                    }
                                 }}
                                 disabled={paymentMethods.length === 0 || reviewItems.length === 0 || !!approvingMessageId}
                                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
@@ -666,8 +788,10 @@ export function GmailHistoryDialog({
                             </div>
                         </div>
                         <div className="flex items-center gap-2 mb-4 pb-1 border-b">
-                            <Label className="text-xs text-muted-foreground">Ocultar archivadas</Label>
-                            <Switch checked={hideApproved} onCheckedChange={setHideApproved} />
+                            <Label htmlFor="hide-archived" className="text-xs text-muted-foreground">
+                                Ocultar archivadas{archivedCount > 0 ? ` (${archivedCount})` : ''}
+                            </Label>
+                            <Switch id="hide-archived" checked={hideApproved} onCheckedChange={setHideApproved} />
                         </div>
 
 
@@ -708,7 +832,7 @@ export function GmailHistoryDialog({
                                                 key={res.id}
                                                 className={cn(
                                                     "flex items-start gap-3 p-3 rounded-lg border bg-card/50 hover:bg-card",
-                                                    isArchived && "opacity-60 text-muted-foreground"
+                                                    isArchived && "bg-muted/30 text-muted-foreground"
                                                 )}
                                             >
                                                 <Checkbox
@@ -750,13 +874,14 @@ export function GmailHistoryDialog({
                                                 <div className="flex items-center gap-1">
                                                     {isArchived ? (
                                                         <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 text-xs gap-1"
                                                             onClick={() => unarchiveMessages([res.id])}
-                                                            title="Desarchivar"
+                                                            title="Volver a dejarla disponible para importar"
                                                         >
-                                                            <History className="h-4 w-4" />
+                                                            <History className="h-3.5 w-3.5" />
+                                                            Sacar de archivadas
                                                         </Button>
                                                     ) : (
                                                         <Button
@@ -769,15 +894,28 @@ export function GmailHistoryDialog({
                                                             <Archive className="h-4 w-4" />
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => deleteMessages([res.id])}
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {confirmDeleteId === res.id ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                            onClick={() => { setConfirmDeleteId(null); deleteMessages([res.id]); }}
+                                                            title="Se ocultará de futuras búsquedas"
+                                                        >
+                                                            ¿Eliminar?
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                            onClick={() => setConfirmDeleteId(res.id)}
+                                                            title="Eliminar del historial"
+                                                            aria-label={`Eliminar ${res.subject ?? 'factura'} del historial`}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -788,9 +926,14 @@ export function GmailHistoryDialog({
                                     <Search className="h-10 w-10 mb-2 opacity-20" />
                                     <p className="text-sm">
                                         {hasOnlyArchivedHidden
-                                            ? 'Todas las facturas ya están registradas.'
+                                            ? 'Todas las facturas de esta búsqueda están archivadas.'
                                             : 'Inicia una búsqueda para ver resultados'}
                                     </p>
+                                    {hasOnlyArchivedHidden && (
+                                        <Button variant="link" size="sm" onClick={() => setHideApproved(false)}>
+                                            Ver archivadas
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </ScrollArea>
@@ -820,7 +963,23 @@ export function GmailHistoryDialog({
 
                     </TabsContent>
                 </Tabs>
+                {newCategoryTarget && (
+                <AddCategoryDialog
+                    open={!!newCategoryTarget}
+                    onOpenChange={(next) => { if (!next) { setNewCategoryTarget(null); } }}
+                    trigger={null}
+                    type="expense"
+                    onAdd={addCategory}
+                    onSuccess={(cat) => {
+                        setLocalCategories(prev => [...prev, cat]);
+                        if (newCategoryTarget) {
+                            applyCategory(newCategoryTarget, { category_id: cat.id, category: cat.name });
+                        }
+                        setNewCategoryTarget(null);
+                    }}
+                />
+                )}
             </AlertDialogContent>
-        </AlertDialog >
+        </AlertDialog>
     );
 }

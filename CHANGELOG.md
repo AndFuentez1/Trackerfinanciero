@@ -4,6 +4,55 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-11-08]
+
+### Integridad de saldos (P0)
+- **Saldos atómicos**: nueva RPC `adjust_balances(jsonb)` (migración `20261108120000`) que suma/resta en el servidor, en una sola sentencia y todo-o-nada. Reemplaza el `select balance` + `update balance` del cliente en crear/editar/eliminar transacción, transferencias y movimientos de ahorro (antes dos operaciones seguidas o dos pestañas pisaban el saldo). Si el paso siguiente falla (insertar/editar/borrar), el saldo se revierte o la transacción recién creada se elimina.
+- **Eliminar transacción de salida de transferencia**: `transfer_out` se guarda con monto negativo y al eliminarla/editarla el saldo se movía en la dirección equivocada; ahora todos los caminos usan `balanceDeltaFor` (valor absoluto + tipo).
+- **Movimiento de ahorro cambiado de cuenta**: la cuenta vieja recibía la diferencia (nuevo − viejo) en vez de perder el movimiento; ahora se revierte en la vieja y se aplica en la nueva. Los movimientos de ahorro usan el saldo devuelto por el servidor (no el local) para `balance_after_transaction`.
+- **Saldo insuficiente**: si una cuenta que no es tarjeta quedaría en negativo, la operación falla con un mensaje claro (antes la transacción se guardaba y el saldo quedaba sin actualizar en silencio).
+- **Eliminar cuenta de ahorro / método de pago / fusionar**: nueva RPC `delete_payment_method(id, option, transfer_to)` hace todo en una transacción; con "transferir" valida la cuenta destino **antes** de mover el saldo (antes sumaba el saldo y si un paso posterior fallaba quedaba a medias). Préstamos y facturas pendientes de la cuenta borrada se desasocian (la FK de `pending_invoices` bloqueaba el borrado).
+- **Categorías duplicadas por mayúsculas**: script `supabase/scripts/2026-11-08_merge_duplicate_categories.sql` (auditoría + fusión en transacción, conserva la más antigua) que deja crear `idx_categories_user_lower_name_type`.
+- Test de `deletePaymentMethod` llamaba al wrapper con un objeto (pasaba por casualidad con la opción por defecto).
+
+### Correcciones
+- **Presupuesto de ingresos**: "Configurar presupuesto" ahora lista, crea y edita presupuestos de categorías de **ingreso** (antes solo gasto/ahorro, así que un presupuesto de ingresos no se podía editar ni ver ahí). Borrado con confirmación dentro del diálogo (sin `window.confirm`).
+- **Guardar presupuesto** (`saveBudget`): busca la fila (categoría, mes) y hace `update`/`insert` en vez de `upsert … onConflict`, que dependía de qué índice único existiera en la BD (falla con índices parciales). Se revisan los errores de los borrados previos. Tipos de `budgets` con `is_recurrent`.
+- **Tarjetas de crédito — signo de la deuda**: al **crear** una tarjeta, la "Deuda actual" se guardaba en positivo (se leía como "sin deuda"); ahora se guarda negativa. Al **editar**, el campo muestra la deuda en positivo y la convierte; antes mostraba el balance negativo, que `MoneyInput` no deja editar, y escribir la deuda generaba un ajuste del doble con la tarjeta en positivo. Solo se registra ajuste si el usuario cambió el saldo.
+- **Flujo de caja — ajustes de saldo**: nueva línea "Ajustes de saldo" (ingreso/egreso) en el detalle mensual; ya no se mezclan en "Otros ingresos"/"Gastos" ni pueden "pagar" un compromiso futuro.
+- **Flujo de caja — saldo acumulado**: el mes actual sumaba sus movimientos reales al saldo real de hoy, que ya los incluye (doble conteo: un ajuste de +X en una tarjeta subía la línea 2X). Ahora fin de mes = saldo real + lo pendiente del mes; la tabla usa la misma ancla que el gráfico en todos los meses (`computeBalanceAnchorOffset`).
+- **Flujo de caja**: las transacciones con tipo `savings` (el de la BD) cuentan como ahorro (antes solo `saving`).
+- **Presupuestos**: "Ingresos/Gastos Reales" y el gasto total excluyen ajustes de saldo y transferencias propias.
+- **Fusionar cuentas** (Agregar método de pago): el botón llamaba `mergePaymentMethods.mutateAsync`, que no existe, y fallaba siempre; ahora fusiona y muestra el error si lo hay.
+- Eliminado `src/pages/BudgetsPageWithBudgetList.tsx` (borrador roto, sin uso); import de tipos corregido en `financeConstants.ts`; colores de `IncomeCard` con tokens (`bg-success`/`bg-destructive`).
+
+### Seguridad (backend)
+- `/api/gmail/search`, `import-batch`, `archive`, `delete`, `unarchive`, `/api/invoices/pending` y `/api/classifier/learn` exigen JWT (`requireAuth`); antes cualquiera con el UUID de un usuario podía importar o borrar en su cuenta. `/api/check-gmail` acepta JWT **o** la cabecera `x-cron-secret` = `CHECK_GMAIL_SECRET` (para n8n/cron). `/api/gmail-webhook` sigue público (Pub/Sub; solo confirma recepción).
+- El frontend llama esas rutas con `backendFetch` (JWT) y comprueba `res.ok` al archivar/desarchivar/eliminar (antes mostraba éxito aunque fallara).
+- Archivar/eliminar/desarchivar ya no tragan errores de BD: si no se guardó, responde 500 (antes la factura parecía archivada y reaparecía).
+- Revisión de secretos: árbol e historial de git sin claves privadas; solo la clave pública `anon` del proyecto antiguo en bundles viejos.
+
+### Gmail / facturas
+- **Conectar Gmail**: si la ventana de Google se cerraba o fallaba sin avisar, el botón quedaba en "Conectando..." para siempre. Ahora se vigila la ventana (y un límite de 5 min), hay "Cancelar", y "Reconectar Gmail" cuando la conexión expiró (antes solo se podía desconectar). Los mensajes del popup solo se aceptan del backend o de la app.
+- Nuevo botón **"Importar facturas"** cuando Gmail está conectado.
+- **Revisión de facturas**: productos editables (descripción, cantidad, precio → total), quitar productos, resumen "Se registrará como" por categoría, aviso si la suma no cuadra con el total, aprobar factura por factura; la categoría sugerida se preselecciona si existe. "Nueva categoría" sale del `Select` (se desmontaba). Pestañas sin desborde.
+- **Aprobación**: una transacción por (categoría, método de pago) en vez de una por producto; fecha local `yyyy-MM-dd`; en serie (en paralelo se pisaban los saldos); si falla a mitad, lo ya registrado sale de la factura para no duplicar; categorías nuevas solo de gasto y con color hex válido; facturas con solo grupos ya se pueden aprobar; "Mandar a Préstamos" ahora crea el préstamo (antes un `setTimeout` con estado viejo lo impedía).
+- **Archivadas**: contador en "Ocultar archivadas", botón "Ver archivadas" y "Sacar de archivadas"; eliminar del historial pide confirmación.
+
+### Clasificador de categorías
+- Coincidencia por **palabras completas** con plurales simples (antes "pantalón" → Alimentación por "pan", "aguacate" → bebidas por "agua").
+- La frase más específica gana ("aceite motor" → Moto); empate entre categorías → confianza baja (decide IA/usuario).
+- Reglas aprendidas: una consulta por factura (antes una por producto), gana la más específica, se guardan normalizadas y sin cantidades/unidades ("LECHE ALQUERÍA 1100ML" → "leche alqueria").
+- Corregir una categoría en la revisión de facturas **enseña** al clasificador (palabra y código del producto).
+
+### Pruebas
+- Nuevos tests: ajustes y `netoReal` del snapshot, tipo `savings`, ancla del saldo, `isBalanceAdjustment`, agrupación de facturas, clasificador, `requireAuthOrSecret`. Frontend 159 ✓ (49 omitidos, sin cambios); backend 40 ✓ y `typecheck` limpio.
+
+### Notas de despliegue
+- Desplegar **frontend y backend juntos** (el frontend anterior no envía JWT a las rutas de Gmail).
+- Opcional: definir `CHECK_GMAIL_SECRET` en Render si n8n u otro cron llama `/api/check-gmail`.
+- Tarjetas antiguas con deuda positiva: `supabase/scripts/2026-11-08_audit_fix_credit_cards.sql` (auditar y corregir una por una).
+
 ## [2026-10-18]
 
 ### Mejoras pendientes implementadas (`FUTURE_IMPROVEMENTS.md`)

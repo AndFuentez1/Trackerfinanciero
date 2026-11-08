@@ -1,6 +1,6 @@
 import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
-import { Mail, CheckCircle2, XCircle, Loader2, History } from 'lucide-react';
+import { Mail, CheckCircle2, XCircle, Loader2, History, DownloadCloud, RefreshCw } from 'lucide-react';
 import type { ConfigStatus } from '../hooks/useUserConfigStatus';
 import type { BackendStatus } from '../hooks/useBackendReady';
 
@@ -22,6 +22,8 @@ interface GmailConfigSectionProps {
     isImporting?: boolean;
     backendStatus: BackendStatus;
     onConnect: () => void;
+    /** Cancela una conexión en curso (ventana de Google abierta). */
+    onCancelConnect?: () => void;
     onDisconnect: () => void;
     onRetryBackend: () => void;
     onShowHistory: () => void;
@@ -38,6 +40,7 @@ export function GmailConfigSection({
     isImporting = false,
     backendStatus,
     onConnect,
+    onCancelConnect,
     onDisconnect,
     onRetryBackend,
     onShowHistory,
@@ -52,6 +55,9 @@ export function GmailConfigSection({
             ? 'Buscando en Gmail...'
             : 'Buscar facturas';
     const phaseLabel = syncPhase !== 'idle' ? PHASE_LABELS[syncPhase] : null;
+    const isWaitingForGoogle = syncPhase === 'requesting' || syncPhase === 'authorizing';
+    const needsReauth = !!configStatus?.gmailConnected && !!configStatus?.requiresReauth;
+    const canImport = !!configStatus?.gmailConnected && !needsReauth;
 
     return (
         <div className="space-y-4">
@@ -100,6 +106,11 @@ export function GmailConfigSection({
                     <p className="flex items-center gap-2 text-sm text-primary font-medium">
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                         {phaseLabel}
+                        {isWaitingForGoogle && onCancelConnect && (
+                            <button type="button" onClick={onCancelConnect} className="underline text-muted-foreground ml-1">
+                                Cancelar
+                            </button>
+                        )}
                     </p>
                 )}
             </div>
@@ -113,15 +124,41 @@ export function GmailConfigSection({
                 </div>
                 <div className="flex justify-end">
                     {configStatus?.gmailConnected ? (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={onDisconnect}
-                            disabled={isBusy}
-                            className="w-40 text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                            Desconectar
-                        </Button>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            {canImport && (
+                                <Button
+                                    size="sm"
+                                    onClick={onShowHistory}
+                                    disabled={isBusy}
+                                    className="w-40 text-[15px] gap-2"
+                                >
+                                    {isSearching || isImporting
+                                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                                        : <DownloadCloud className="h-4 w-4" />}
+                                    Importar facturas
+                                </Button>
+                            )}
+                            {needsReauth && (
+                                <Button
+                                    size="sm"
+                                    onClick={onConnect}
+                                    disabled={isBusy || backendStatus !== 'ready'}
+                                    className="w-40 text-[15px] gap-2"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    {isWaitingForGoogle ? 'Conectando...' : 'Reconectar Gmail'}
+                                </Button>
+                            )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onDisconnect}
+                                disabled={isBusy}
+                                className="w-40 text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                                Desconectar
+                            </Button>
+                        </div>
                     ) : (
                         <div className="flex flex-col items-end gap-1.5">
                             <Button size="sm" onClick={onConnect} className="w-40 text-[15px]" disabled={isBusy || backendStatus !== 'ready'}>

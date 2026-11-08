@@ -97,6 +97,8 @@ export async function markMessagesArchived(userId, messageIds) {
         if (error) throw error;
     } catch (error) {
         logger.error('❌ Error marcando mensajes como archivados:', error);
+        // Propagar: si no se guardó, el cliente no debe mostrar la factura como archivada/eliminada
+        throw error;
     }
 }
 
@@ -124,6 +126,8 @@ export async function markMessagesDeleted(userId, messageIds) {
         if (error) throw error;
     } catch (error) {
         logger.error('❌ Error marcando mensajes como eliminados:', error);
+        // Propagar: si no se guardó, el cliente no debe mostrar la factura como archivada/eliminada
+        throw error;
     }
 }
 
@@ -164,5 +168,7 @@ export async function unmarkMessagesArchived(userId, messageIds) {
         if (error) throw error;
     } catch (error) {
         logger.error('❌ Error desarchivando mensajes de Gmail:', error);
+        // Propagar: si no se guardó, el cliente no debe mostrar la factura como archivada/eliminada
+        throw error;
     }
 }

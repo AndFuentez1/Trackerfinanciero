@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { calculateMonthlySnapshot, differenceInCalendarMonths, MonthlySnapshot } from './cashFlowCalculations';
+import { calculateMonthlySnapshot, computeBalanceAnchorOffset, differenceInCalendarMonths, MonthlySnapshot } from './cashFlowCalculations';
 import { addMonths, startOfMonth } from 'date-fns';
 import type { Transaction, PaymentMethod, Budget } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
@@ -16,6 +16,27 @@ describe('cashFlowCalculations', () => {
             const d1 = new Date(2025, 1, 1); // Feb 2025
             const d2 = new Date(2024, 11, 1); // Dec 2024
             expect(differenceInCalendarMonths(d1, d2)).toBe(2);
+        });
+    });
+
+    describe('computeBalanceAnchorOffset', () => {
+        it('does not double count real movements of the current month (e.g. a card adjustment)', () => {
+            // Mes anterior: raw 1000. Mes actual: ajuste real +4500 y un gasto futuro pendiente de -200.
+            const rows = [
+                { balanceAcumulado: 1000, balanceNetoMes: 0, netoReal: 0 },
+                { balanceAcumulado: 5300, balanceNetoMes: 4300, netoReal: 4500 },
+            ];
+            const balanceActual = 10000; // ya incluye el ajuste de +4500
+            const offset = computeBalanceAnchorOffset(rows, 1, balanceActual, 1000);
+
+            // Fin del mes actual = saldo real − lo pendiente (200); mes anterior = saldo real − ajuste del mes
+            expect(rows[1].balanceAcumulado + offset).toBe(9800);
+            expect(rows[0].balanceAcumulado + offset).toBe(5500);
+        });
+
+        it('falls back to the last historical month when the current month is not in the window', () => {
+            expect(computeBalanceAnchorOffset([{ balanceAcumulado: 300, balanceNetoMes: 0, netoReal: 0 }], -1, 1000, 300)).toBe(700);
+            expect(computeBalanceAnchorOffset([], -1, 1000, null)).toBe(0);
         });
     });
 
@@ -63,7 +84,7 @@ describe('cashFlowCalculations', () => {
 
         it('calculates real income from transactions', () => {
             const transactions: Transaction[] = [
-                { id: '1', type: 'income', amount: 1000, date: '2024-06-10', description: 'Salary', category: 'Salario' } as any
+                { id: '1', type: 'income', amount: 1000, date: '2024-06-10', description: 'Salary', category: 'Salario' } as never
             ];
             const result = calculateMonthlySnapshot(
                 baseDate, 0, {}, {}, {},
@@ -75,9 +96,46 @@ describe('cashFlowCalculations', () => {
             expect(result.ingresosSalario).toBe(1000);
         });
 
+        it('reports balance adjustments on their own line and in netoReal', () => {
+            const transactions = [
+                { id: 'a1', type: 'income', amount: 4500, date: '2024-06-10', description: 'Ajuste manual de saldo - Visa', category: 'Ajuste de saldo', payment_method_id: 'card' },
+                { id: 'a2', type: 'expense', amount: 300, date: '2024-06-11', description: 'Ajuste manual de saldo - Débito', category: 'Ajuste de saldo', payment_method_id: 'deb' },
+                { id: 'e1', type: 'expense', amount: 200, date: '2024-06-12', description: 'Food', category: 'Comida' },
+            ] as unknown as Transaction[];
+            const result = calculateMonthlySnapshot(
+                baseDate, 0, {}, {}, {},
+                { ...emptyData, transactions },
+                buildContext(transactions)
+            );
+
+            expect(result.ingresosAjuste).toBe(4500);
+            expect(result.egresosAjuste).toBe(300);
+            expect(result.otrosIngresos).toBe(0);
+            expect(result.egresosReales).toBe(200);
+            expect(result.ingresosTotales).toBe(4500);
+            expect(result.egresosTotales).toBe(500);
+            expect(result.netoReal).toBe(4000);
+            expect(result.balanceNetoMes).toBe(4000);
+        });
+
+        it("counts DB type 'savings' as savings outflow", () => {
+            const transactions = [
+                { id: 's1', type: 'savings', amount: 700, date: '2024-06-10', description: 'CDT', category: 'Inversión CDT' },
+                { id: 's2', type: 'savings', amount: 100, date: '2024-06-11', description: 'Bolsillo', category: 'Bolsillo' },
+            ] as unknown as Transaction[];
+            const result = calculateMonthlySnapshot(
+                baseDate, 0, {}, {}, {},
+                { ...emptyData, transactions },
+                buildContext(transactions)
+            );
+
+            expect(result.egresosAhorro).toBe(800);
+            expect(result.netoReal).toBe(-800);
+        });
+
         it('calculates real expenses from transactions', () => {
             const transactions: Transaction[] = [
-                { id: '1', type: 'expense', amount: 500, date: '2024-06-10', description: 'Food', category: 'Comida' } as any
+                { id: '1', type: 'expense', amount: 500, date: '2024-06-10', description: 'Food', category: 'Comida' } as never
             ];
             const result = calculateMonthlySnapshot(
                 baseDate, 0, {}, {}, {},
@@ -97,7 +155,7 @@ describe('cashFlowCalculations', () => {
             // July is NOT past.
 
             const futureExpenses = [
-                { id: 'f1', payment_date: '2024-07-15', amount: 200, status: 'pending', description: 'Bill', category_id: null } as any
+                { id: 'f1', payment_date: '2024-07-15', amount: 200, status: 'pending', description: 'Bill', category_id: null } as never
             ];
 
             const result = calculateMonthlySnapshot(
@@ -139,7 +197,7 @@ describe('cashFlowCalculations', () => {
             const currentMonthDate = new Date(2024, 5, 15); // June
 
             const futureExpenses = [
-                { id: 'f1', payment_date: '2024-05-10', amount: 200, status: 'pending', description: 'Internet', category_id: 'c1' } as any
+                { id: 'f1', payment_date: '2024-05-10', amount: 200, status: 'pending', description: 'Internet', category_id: 'c1' } as never
             ];
 
             const pastResult = calculateMonthlySnapshot(
@@ -163,11 +221,11 @@ describe('cashFlowCalculations', () => {
             const currentMonthDate = new Date(2024, 5, 15); // June
 
             const futureExpenses = [
-                { id: 'f1', payment_date: '2024-05-10', amount: 200, status: 'pending', description: 'Internet', category_id: 'c1' } as any
+                { id: 'f1', payment_date: '2024-05-10', amount: 200, status: 'pending', description: 'Internet', category_id: 'c1' } as never
             ];
 
             const transactions: Transaction[] = [
-                { id: 't1', type: 'expense', amount: 200, date: '2024-05-10', description: 'Internet', category: 'Servicios', category_id: 'c1' } as any
+                { id: 't1', type: 'expense', amount: 200, date: '2024-05-10', description: 'Internet', category: 'Servicios', category_id: 'c1' } as never
             ];
 
             const currentResult = calculateMonthlySnapshot(
@@ -184,8 +242,8 @@ describe('cashFlowCalculations', () => {
             const currentMonthDate = new Date(2024, 5, 15); // June
 
             const transactions: Transaction[] = [
-                { id: 'i1', type: 'expense', amount: 300, installments: 3, date: '2024-03-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as any,
-                { id: 'p1', type: 'expense', amount: 100, date: '2024-05-05', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as any
+                { id: 'i1', type: 'expense', amount: 300, installments: 3, date: '2024-03-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as never,
+                { id: 'p1', type: 'expense', amount: 100, date: '2024-05-05', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as never
             ];
 
             const result = calculateMonthlySnapshot(
@@ -203,8 +261,8 @@ describe('cashFlowCalculations', () => {
             const nextMonthDate = new Date(2024, 6, 15); // July
 
             const transactions: Transaction[] = [
-                { id: 'i1', type: 'expense', amount: 200, installments: 2, date: '2024-06-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as any,
-                { id: 'p1', type: 'expense', amount: 100, date: '2024-06-10', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as any
+                { id: 'i1', type: 'expense', amount: 200, installments: 2, date: '2024-06-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as never,
+                { id: 'p1', type: 'expense', amount: 100, date: '2024-06-10', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as never
             ];
 
             const currentResult = calculateMonthlySnapshot(

@@ -378,24 +378,24 @@ Instrucciones del proyecto (`CLAUDE.md`, `.claude/skills/`), creación de catego
 Orden sugerido: P0 antes de cualquier release; P1 siguiente sprint; P2 backlog.
 
 #### P0 — Seguridad e integridad de datos
-- [ ] **Proteger `/api/gmail/*`, `/api/classifier/*` y rutas de facturas** con `requireAuth` (hoy toman `userId` del cliente). Antes, inventariar webhooks externos (n8n/Telegram) que dependan de ellas.
-- [ ] **Datos legacy de tarjetas:** auditar `payment_methods.balance` de tipo `credit` guardado con deuda positiva y migrar el signo con script verificado (hoy se leen como "sin deuda").
-- [ ] **Saldos atómicos:** reemplazar `select + update` de balance por un incremento en servidor (RPC `adjust_balance`) en `addTransaction`, `addTransfer`, `deleteTransaction` y ahorros (`useSavingsLogic`). Hoy hay condiciones de carrera.
-- [ ] **Eliminar cuentas de ahorro** (`deleteSavingsAccount`): operación atómica; la opción "transferir" suma saldo antes de validar el resto.
-- [ ] **Categorías duplicadas por mayúsculas:** resolver antes de que la migración `20260701120000` pueda crear el índice (hoy solo emite `WARNING`).
+- [x] **Proteger `/api/gmail/*`, `/api/classifier/*` y rutas de facturas** con `requireAuth` (2026-11-08). `check-gmail` admite `x-cron-secret` (`CHECK_GMAIL_SECRET`) para n8n; `gmail-webhook` sigue público.
+- [ ] **Datos legacy de tarjetas:** auditar `payment_methods.balance` de tipo `credit` guardado con deuda positiva y migrar el signo con script verificado (hoy se leen como "sin deuda"). *Desde 2026-11-08 las tarjetas nuevas ya se guardan con deuda negativa; para las existentes: `supabase/scripts/2026-11-08_audit_fix_credit_cards.sql`.*
+- [x] **Saldos atómicos** (2026-11-08): RPC `adjust_balances` (migración `20261108120000`) en transacciones, transferencias y ahorros. *Requiere aplicar la migración antes de desplegar el frontend.* La importación (Excel/Gmail) sigue sin mover saldos.
+- [x] **Eliminar cuentas de ahorro / métodos de pago / fusionar** (2026-11-08): RPC `delete_payment_method`, una sola transacción; valida el destino antes de mover saldo.
+- [x] **Categorías duplicadas por mayúsculas** (2026-11-08): fusionadas con `supabase/scripts/2026-11-08_merge_duplicate_categories.sql`; índice `idx_categories_user_lower_name_type` creado en producción.
 - [ ] **Despliegue conjunto** frontend + backend; definir `OAUTH_STATE_SECRET` en Render; etiquetar el release (tag git).
 
 #### P1 — Correctitud financiera
-- [ ] **Ajustes de saldo:** hoy cuentan como ingreso/gasto real. Evaluar tipo `adjustment` excluido de ingresos/gastos reales pero visible en flujo de caja e historial.
-- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): compromisos `saving` → `egresosAhorro`; `monthDiff` sin `start_date` cobra todos los meses; usar `payment_day`; `consumePayment` por "monto más cercano" puede consumir un compromiso equivocado; `isFirstIteration` frágil con saldo 0.
+- [x] **Ajustes de saldo** (2026-11-08): línea propia en el flujo de caja y excluidos de ingresos/gastos reales en Presupuestos. Pendiente decidir si se excluyen de los KPIs del Dashboard (la gráfica de evolución sí debe incluirlos).
+- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): compromisos `saving` → `egresosAhorro`; `monthDiff` sin `start_date` cobra todos los meses; usar `payment_day`; `consumePayment` por "monto más cercano" puede consumir un compromiso equivocado. *(2026-11-08: corregido el doble conteo del mes actual en el saldo acumulado y el tipo `savings`; meses pasados siguen omitiendo pagos de préstamos y cuotas de tarjeta.)*
 - [ ] **Flujo de caja:** `formatCOP` ignora la moneda/decimales del usuario; `futureExpenses = 0` fijo en las tarjetas; `incomeMode` y `budgets` pasan sin usarse (implementar "projected" o eliminar).
-- [ ] **Presupuestos:** `totalSpent` suma gastos de categorías sin presupuesto mientras `totalBudgeted` no; `parseISO` vs `parseLocalDate` (desfase horario); mutaciones con `.sort`.
+- [ ] **Presupuestos:** `totalSpent` suma gastos de categorías sin presupuesto mientras `totalBudgeted` no; mutaciones con `.sort`. *(2026-11-08: presupuesto de ingresos creable/editable en "Configurar presupuesto"; `saveBudget` sin `onConflict`.)*
 - [ ] **Importación:** falsos positivos de duplicados (dos compras iguales el mismo día) y filas repetidas dentro del mismo archivo; lotes parciales sin rollback.
 - [ ] **Compromisos:** no hay forma de revertir un pago ni de terminar una suscripción manualmente; `end_date` y `status` sin vista de histórico.
 - [ ] **Ahorros:** `performancePercent` = 0 cuando `netContributions <= 0`; `addSavingsTransaction` usa el balance local como base.
 
 #### P1 — UX / modales
-- [ ] `GmailHistoryDialog`: `AddCategoryDialog` aún está dentro de `SelectContent` (lista anidada por índices).
+- [x] `GmailHistoryDialog`: `AddCategoryDialog` fuera de `SelectContent` (2026-11-08).
 - [ ] `SessionTimeoutWarning`: cerrar con Escape/fuera extiende la sesión; confirmar si es el comportamiento deseado.
 - [ ] `ImportExcelDialog`: bloquear cierre (Escape/X) mientras hay una importación en curso.
 - [ ] Colores hardcodeados restantes (`text-slate-*`, `bg-gray-*`) → tokens del sistema.

@@ -21,6 +21,7 @@ export type Database = {
           category_id?: string // Added manually to reflect migration
           created_at: string
           id: string
+          is_recurrent: boolean | null
           month: string
           period: string
           updated_at: string
@@ -32,6 +33,7 @@ export type Database = {
           category_id?: string
           created_at?: string
           id?: string
+          is_recurrent?: boolean | null
           month: string
           period?: string
           updated_at?: string
@@ -43,6 +45,7 @@ export type Database = {
           category_id?: string
           created_at?: string
           id?: string
+          is_recurrent?: boolean | null
           month?: string
           period?: string
           updated_at?: string
@@ -545,6 +548,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_balances: {
+        Args: {
+          p_changes: Json
+        }
+        Returns: {
+          id: string
+          balance: number
+        }[]
+      }
+      delete_payment_method: {
+        Args: {
+          p_id: string
+          p_option?: string
+          p_transfer_to_id?: string | null
+        }
+        Returns: undefined
+      }
       find_import_duplicates: {
         Args: {
           p_user_id: string

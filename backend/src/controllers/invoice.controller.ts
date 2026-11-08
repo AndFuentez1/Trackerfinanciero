@@ -35,14 +35,26 @@ const AUTH_REASONS = new Set([
     'accessNotConfigured',
 ]);
 
+type GmailApiError = {
+    code?: number | string;
+    message?: string;
+    response?: {
+        status?: number;
+        headers?: Record<string, string | undefined>;
+        data?: { error?: string | { message?: string; errors?: { reason?: string }[] } };
+    };
+};
+
 const extractGmailError = (error: unknown) => {
-    const status = (error as any)?.code || (error as any)?.response?.status;
-    const reason = (error as any)?.response?.data?.error?.errors?.[0]?.reason;
-    const message = (error as Record<string, any>)?.response?.data?.error?.message || (error as Record<string, any>)?.message;
-    const retryAfter = (error as any)?.response?.headers?.['retry-after'];
+    const err = (error ?? {}) as GmailApiError;
+    const dataError = err.response?.data?.error;
+    const status = err.code || err.response?.status;
+    const reason = typeof dataError === 'object' ? dataError?.errors?.[0]?.reason : undefined;
+    const message = (typeof dataError === 'object' ? dataError?.message : undefined) || err.message;
+    const retryAfter = err.response?.headers?.['retry-after'];
 
     // Auth token errors (like 'invalid_grant') come as string in data.error instead of an array of errors
-    const oauthError = typeof (error as Record<string, any>)?.response?.data?.error === 'string' ? (error as Record<string, any>).response.data.error : null;
+    const oauthError = typeof dataError === 'string' ? dataError : null;
 
     return { status, reason: (reason || oauthError) as string, message: message as string, retryAfter: retryAfter as string };
 };
@@ -996,9 +1008,9 @@ export async function archiveGmailMessages(req: Request, res: Response) {
 
         await markMessagesArchived(userId, messageIds);
         res.json({ success: true });
-    } catch (error: any) {
+    } catch (error) {
         logger.error('❌ Error archivando mensajes Gmail:', error);
-        res.status(500).json({ error: 'Error archivando mensajes', details: error.message });
+        res.status(500).json({ error: 'Error archivando mensajes' });
     }
 }
 
@@ -1014,9 +1026,9 @@ export async function deleteGmailMessages(req: Request, res: Response) {
 
         await markMessagesDeleted(userId, messageIds);
         res.json({ success: true });
-    } catch (error: any) {
+    } catch (error) {
         logger.error('❌ Error eliminando mensajes Gmail:', error);
-        res.status(500).json({ error: 'Error eliminando mensajes', details: error.message });
+        res.status(500).json({ error: 'Error eliminando mensajes' });
     }
 }
 /**
@@ -1031,8 +1043,8 @@ export async function unarchiveGmailMessages(req: Request, res: Response) {
 
         await unmarkMessagesArchived(userId, messageIds);
         res.json({ success: true });
-    } catch (error: any) {
+    } catch (error) {
         logger.error('❌ Error desarchivando mensajes Gmail:', error);
-        res.status(500).json({ error: 'Error desarchivando mensajes', details: error.message });
+        res.status(500).json({ error: 'Error desarchivando mensajes' });
     }
 }

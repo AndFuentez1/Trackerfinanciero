@@ -15,6 +15,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/shared/hooks/use-toast';
 import { queryKeys } from '@/core/api/queryKeys';
+import {
+    adjustBalances,
+    balanceDeltaFor,
+    deletePaymentMethodAtomic,
+    withBalanceChanges,
+    type BalanceChange,
+} from '../utils/balanceUtils';
 import type {
     Transaction,
     TransactionType,
@@ -118,23 +125,16 @@ export function useFinanceMutations(userId: string | undefined) {
             if (error) { throw error; }
             if (!data || data.length === 0) { throw new Error('No data returned'); }
 
-            // Auto-update Payment Method Balance (No Trigger fallback)
+            // Saldo de la cuenta: incremento atómico en servidor. Si falla, se deshace la transacción.
             if (dbData.payment_method_id) {
-                const { data: pm } = await supabase
-                    .from('payment_methods')
-                    .select('balance')
-                    .eq('id', dbData.payment_method_id)
-                    .single();
-
-                if (pm) {
-                    const absAmount = Math.abs(Number(dbData.amount));
-                    const isPositive = ['income', 'transfer_in'].includes(dbData.type as string);
-                    const newBalance = isPositive ? pm.balance + absAmount : pm.balance - absAmount;
-
-                    await supabase
-                        .from('payment_methods')
-                        .update({ balance: newBalance })
-                        .eq('id', dbData.payment_method_id);
+                try {
+                    await adjustBalances([{
+                        id: String(dbData.payment_method_id),
+                        delta: balanceDeltaFor(dbData.type as string, dbData.amount as number),
+                    }]);
+                } catch (balanceError) {
+                    await supabase.from('transactions').delete().eq('id', data[0].id);
+                    throw balanceError;
                 }
             }
 
@@ -206,41 +206,37 @@ export function useFinanceMutations(userId: string | undefined) {
 
             const { installments, ...dbUpdates } = updates as Record<string, unknown>;
 
-            // 1. Get old transaction to revert balance
-            const { data: oldTxn } = await supabase
+            // 1. Transacción actual, para revertir su efecto en el saldo
+            const { data: oldTxn, error: fetchError } = await supabase
                 .from('transactions')
                 .select('amount, type, payment_method_id')
                 .eq('id', id)
                 .single();
+            if (fetchError) { throw fetchError; }
 
-            // 2. Update Transaction
-            const { error } = await supabase.from('transactions')
-                .update(dbUpdates)
-                .eq('id', id);
-            if (error) { throw error; }
+            // 2. Cambios de saldo: revertir el efecto viejo y aplicar el nuevo (misma o distinta cuenta).
+            // `payment_method_id: null` en updates significa quitar la cuenta.
+            const newPmId = dbUpdates.payment_method_id !== undefined
+                ? (dbUpdates.payment_method_id as string | null)
+                : oldTxn.payment_method_id;
+            const newAmount = dbUpdates.amount !== undefined ? Number(dbUpdates.amount) : oldTxn.amount;
+            const newType = (dbUpdates.type as string | undefined) ?? oldTxn.type;
 
-            // 3. Handle Balance Updates
-            if (oldTxn && oldTxn.payment_method_id) {
-                const { data: oldPm } = await supabase.from('payment_methods').select('balance').eq('id', oldTxn.payment_method_id).single();
-                if (oldPm) {
-                    const isPositive = ['income', 'transfer_in'].includes(oldTxn.type);
-                    const reverseAmount = isPositive ? -oldTxn.amount : oldTxn.amount;
-                    await supabase.from('payment_methods').update({ balance: oldPm.balance + reverseAmount }).eq('id', oldTxn.payment_method_id);
-                }
+            const changes: BalanceChange[] = [];
+            if (oldTxn.payment_method_id) {
+                changes.push({ id: oldTxn.payment_method_id, delta: -balanceDeltaFor(oldTxn.type, oldTxn.amount) });
             }
-
-            const newPmId = dbUpdates.payment_method_id || (oldTxn ? oldTxn.payment_method_id : null);
-            const newAmount = dbUpdates.amount !== undefined ? Number(dbUpdates.amount) : (oldTxn ? oldTxn.amount : 0);
-            const newType = dbUpdates.type || (oldTxn ? oldTxn.type : 'expense');
-
             if (newPmId) {
-                const { data: newPm } = await supabase.from('payment_methods').select('balance').eq('id', newPmId).single();
-                if (newPm) {
-                    const isPositive = ['income', 'transfer_in'].includes(newType);
-                    const applyAmount = isPositive ? newAmount : -newAmount;
-                    await supabase.from('payment_methods').update({ balance: newPm.balance + applyAmount }).eq('id', newPmId);
-                }
+                changes.push({ id: newPmId, delta: balanceDeltaFor(newType, newAmount) });
             }
+
+            // 3. Ajuste atómico + actualización; si la actualización falla, se revierte el saldo.
+            await withBalanceChanges(changes, async () => {
+                const { error } = await supabase.from('transactions')
+                    .update(dbUpdates)
+                    .eq('id', id);
+                if (error) { throw error; }
+            });
         },
         onMutate: async ({ id, updates }) => {
             // Cancel any outgoing refetches so they don't overwrite our optimistic update
@@ -312,33 +308,22 @@ export function useFinanceMutations(userId: string | undefined) {
         mutationFn: async (id: string) => {
             if (!userId) { throw new Error('Unauthenticated'); }
 
-            // Get transaction details before deleting to revert balance
-            const { data: txn } = await supabase
+            // Transacción a borrar, para revertir su efecto en el saldo
+            const { data: txn, error: fetchError } = await supabase
                 .from('transactions')
                 .select('amount, type, payment_method_id')
                 .eq('id', id)
                 .single();
+            if (fetchError) { throw fetchError; }
 
-            const { error } = await supabase.from('transactions').delete().eq('id', id);
-            if (error) { throw error; }
+            const changes: BalanceChange[] = txn.payment_method_id
+                ? [{ id: txn.payment_method_id, delta: -balanceDeltaFor(txn.type, txn.amount) }]
+                : [];
 
-            // Revert balance impact
-            if (txn && txn.payment_method_id) {
-                const { data: pm } = await supabase
-                    .from('payment_methods')
-                    .select('balance')
-                    .eq('id', txn.payment_method_id)
-                    .single();
-
-                if (pm) {
-                    const isPositive = ['income', 'transfer_in'].includes(txn.type);
-                    const reverseAmount = isPositive ? -txn.amount : txn.amount;
-                    await supabase
-                        .from('payment_methods')
-                        .update({ balance: pm.balance + reverseAmount })
-                        .eq('id', txn.payment_method_id);
-                }
-            }
+            await withBalanceChanges(changes, async () => {
+                const { error } = await supabase.from('transactions').delete().eq('id', id);
+                if (error) { throw error; }
+            });
         },
         onMutate: async (id) => {
             if (transactionQueriesKey) {
@@ -594,86 +579,7 @@ export function useFinanceMutations(userId: string | undefined) {
     const deletePaymentMethod = useMutation({
         mutationFn: async ({ id, option, transferToId }: { id: string; option: 'delete' | 'orphan' | 'transfer'; transferToId?: string }) => {
             if (!userId) { throw new Error('Unauthenticated'); }
-
-            if (option === 'delete') {
-                // Delete associated transactions
-                const { error: txError } = await supabase
-                    .from('transactions')
-                    .delete()
-                    .or(`payment_method_id.eq.${id},to_payment_method_id.eq.${id}`);
-                if (txError) { throw txError; }
-
-                // Delete associated savings transactions
-                const { error: savingsTxError } = await supabase
-                    .from('savings_transactions')
-                    .delete()
-                    .eq('payment_method_id', id);
-                if (savingsTxError) { throw savingsTxError; }
-            } else if (option === 'transfer' && transferToId) {
-                // Get balances
-                const { data: pmToDelete } = await supabase.from('payment_methods').select('balance').eq('id', id).single();
-                const { data: pmToReceive } = await supabase.from('payment_methods').select('balance').eq('id', transferToId).single();
-
-                if (pmToDelete && pmToReceive) {
-                    const newBalance = Number(pmToReceive.balance) + Number(pmToDelete.balance);
-                    await supabase.from('payment_methods').update({ balance: newBalance }).eq('id', transferToId);
-                }
-
-                // Update normal transactions
-                const { error: txError1 } = await supabase
-                    .from('transactions')
-                    .update({ payment_method_id: transferToId })
-                    .eq('payment_method_id', id);
-                if (txError1) { throw txError1; }
-
-                const { error: txError2 } = await supabase
-                    .from('transactions')
-                    .update({ to_payment_method_id: transferToId })
-                    .eq('to_payment_method_id', id);
-                if (txError2) { throw txError2; }
-
-                // Update savings transactions
-                const { error: savingsTxError } = await supabase
-                    .from('savings_transactions')
-                    .update({ payment_method_id: transferToId, savings_account_id: transferToId })
-                    .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
-                if (savingsTxError) { throw savingsTxError; }
-
-                // Update loans
-                const { error: loansError } = await supabase
-                    .from('loans')
-                    .update({ payment_method_id: transferToId })
-                    .eq('payment_method_id', id);
-                if (loansError) { throw loansError; }
-            } else if (option === 'orphan') {
-                const { error: txError1 } = await supabase
-                    .from('transactions')
-                    .update({ payment_method_id: null })
-                    .eq('payment_method_id', id);
-                if (txError1) { throw txError1; }
-
-                const { error: txError2 } = await supabase
-                    .from('transactions')
-                    .update({ to_payment_method_id: null })
-                    .eq('to_payment_method_id', id);
-                if (txError2) { throw txError2; }
-
-                const { error: savingsTxError } = await supabase
-                    .from('savings_transactions')
-                    .update({ payment_method_id: null, savings_account_id: null })
-                    .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
-                if (savingsTxError) { throw savingsTxError; }
-
-                const { error: loansError } = await supabase
-                    .from('loans')
-                    .update({ payment_method_id: null })
-                    .eq('payment_method_id', id);
-                if (loansError) { throw loansError; }
-            }
-
-            // Finally, delete the payment method
-            const { error } = await supabase.from('payment_methods').delete().eq('id', id);
-            if (error) { throw error; }
+            await deletePaymentMethodAtomic(id, option, transferToId);
         },
         onMutate: async ({ id }) => {
             await queryClient.cancelQueries({ queryKey: queryKeys.finance.paymentMethods(userId!) });
@@ -702,56 +608,8 @@ export function useFinanceMutations(userId: string | undefined) {
     const mergePaymentMethods = useMutation({
         mutationFn: async ({ duplicateId, primaryId }: { duplicateId: string; primaryId: string }) => {
             if (!userId) { throw new Error('Unauthenticated'); }
-
-            const { data: duplicatePm } = await supabase.from('payment_methods').select('balance').eq('id', duplicateId).single();
-            const { data: primaryPm } = await supabase.from('payment_methods').select('balance').eq('id', primaryId).single();
-
-            if (!duplicatePm || !primaryPm) {
-                throw new Error('No se encontraron los métodos de pago a fusionar.');
-            }
-
-            const newBalance = Number(primaryPm.balance) + Number(duplicatePm.balance);
-
-            // Reassign normal transactions
-            const { error: txError1 } = await supabase
-                .from('transactions')
-                .update({ payment_method_id: primaryId })
-                .eq('payment_method_id', duplicateId);
-            if (txError1) { throw txError1; }
-
-            const { error: txError2 } = await supabase
-                .from('transactions')
-                .update({ to_payment_method_id: primaryId })
-                .eq('to_payment_method_id', duplicateId);
-            if (txError2) { throw txError2; }
-
-            // Reassign savings transactions
-            const { error: savingsTxError } = await supabase
-                .from('savings_transactions')
-                .update({ payment_method_id: primaryId, savings_account_id: primaryId })
-                .eq('payment_method_id', duplicateId);
-            if (savingsTxError) { throw savingsTxError; }
-
-            // Reassign loans
-            const { error: loansError } = await supabase
-                .from('loans')
-                .update({ payment_method_id: primaryId })
-                .eq('payment_method_id', duplicateId);
-            if (loansError) { throw loansError; }
-
-            // Update destination account balance
-            const { error: balanceError } = await supabase
-                .from('payment_methods')
-                .update({ balance: newBalance })
-                .eq('id', primaryId);
-            if (balanceError) { throw balanceError; }
-
-            // Delete duplicate account
-            const { error: deleteError } = await supabase
-                .from('payment_methods')
-                .delete()
-                .eq('id', duplicateId);
-            if (deleteError) { throw deleteError; }
+            // Fusionar = eliminar la duplicada transfiriendo historial y saldo a la principal.
+            await deletePaymentMethodAtomic(duplicateId, 'transfer', primaryId);
         },
         onSettled: () => {
             invalidatePaymentMethods();
@@ -900,18 +758,21 @@ export function useFinanceMutations(userId: string | undefined) {
                 }
             ];
 
-            const { error } = await supabase.from('transactions').insert(transactions);
+            const { data: inserted, error } = await supabase.from('transactions').insert(transactions).select('id');
             if (error) { throw error; }
 
-            // Manual Balance Update for Transfer
-            const { data: fromPm } = await supabase.from('payment_methods').select('balance').eq('id', fromId).single();
-            if (fromPm) {
-                await supabase.from('payment_methods').update({ balance: fromPm.balance - Math.abs(amount) }).eq('id', fromId);
-            }
-
-            const { data: toPm } = await supabase.from('payment_methods').select('balance').eq('id', toId).single();
-            if (toPm) {
-                await supabase.from('payment_methods').update({ balance: toPm.balance + Math.abs(amount) }).eq('id', toId);
+            // Ambos saldos en una sola operación atómica; si falla, se deshacen las dos transacciones.
+            try {
+                await adjustBalances([
+                    { id: fromId, delta: -Math.abs(amount) },
+                    { id: toId, delta: Math.abs(amount) },
+                ]);
+            } catch (balanceError) {
+                const ids = (inserted ?? []).map(t => t.id);
+                if (ids.length > 0) {
+                    await supabase.from('transactions').delete().in('id', ids);
+                }
+                throw balanceError;
             }
         },
         onSuccess: () => {
@@ -1157,7 +1018,7 @@ export function useFinanceMutations(userId: string | undefined) {
     const confirmStagingImport = useMutation({
         mutationFn: async (stagingIds: string[]) => {
             if (!userId) { throw new Error('Unauthenticated'); }
-            if (stagingIds.length === 0) return { count: 0 };
+            if (stagingIds.length === 0) {return { count: 0 };}
 
             // "Reclamar" las filas: pending -> imported en una sola operación y recibir solo las que
             // realmente cambiaron. Un doble clic o un reintento recibe 0 filas y no duplica transacciones.
@@ -1169,8 +1030,8 @@ export function useFinanceMutations(userId: string | undefined) {
                 .eq('status', 'pending')
                 .select('*');
 
-            if (claimError) throw claimError;
-            if (!stagingRecords || stagingRecords.length === 0) return { count: 0 };
+            if (claimError) {throw claimError;}
+            if (!stagingRecords || stagingRecords.length === 0) {return { count: 0 };}
 
             // Format for transactions table
             const transactionsToInsert = stagingRecords.map(record => ({
@@ -1207,7 +1068,7 @@ export function useFinanceMutations(userId: string | undefined) {
                 .eq('user_id', userId)
                 .eq('status', 'pending');
 
-            if (ignoreError) throw ignoreError;
+            if (ignoreError) {throw ignoreError;}
 
             return { count: inserted?.length || 0 };
         },

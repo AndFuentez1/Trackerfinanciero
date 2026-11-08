@@ -13,6 +13,7 @@ import { formatLocalDate } from '@/core/utils';
 import { resolveCanonicalBudgetForCategory } from '../utils/budgetUtils';
 import { isBudgetMonthInScope } from '../utils/periodFilters';
 import { resolveMonthBudget, getMonthsInScope, sumBudgetForMonths } from '../utils/incomeBudget';
+import { isBalanceAdjustment } from '../utils/cashflowUtils';
 
 export type { Budget } from '../types/financeTypes';
 
@@ -197,7 +198,7 @@ export function useBudgetsData() {
         
         // Calculate totalSpent from allTransactions for the period, ensuring we sum all expenses
         const totalSpent = (allTransactions || [])
-            .filter(t => t.type === 'expense')
+            .filter(t => t.type === 'expense' && !isBalanceAdjustment(t))
             .filter(t => {
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
@@ -237,7 +238,8 @@ export function useBudgetsData() {
         const { amount: estimated, hasBudget } = sumBudgetForMonths(budgets, incomeCategoryIds, periodMonths);
 
         const real = (allTransactions || [])
-            .filter(t => t.type === 'income')
+            // Los ajustes manuales de saldo no son ingresos reales
+            .filter(t => t.type === 'income' && !isBalanceAdjustment(t))
             .filter(t => {
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
@@ -282,6 +284,11 @@ export function useBudgetsData() {
         const isRecurrent = budgetData.is_recurrent || false;
         let activeId = budgetData.id;
 
+        const fail = (error: unknown) => {
+            toast({ title: 'Error', description: 'No se pudo guardar el presupuesto', variant: 'destructive' });
+            return { error };
+        };
+
         // Si se actualiza un presupuesto existente y cambia mes o recurrencia, eliminar el registro anterior
         if (activeId) {
             const { data: existing } = await supabase
@@ -295,29 +302,43 @@ export function useBudgetsData() {
                 const existingMonth = existing.month?.substring(0, 7);
                 const newMonth = targetMonth.substring(0, 7);
                 if (existingMonth !== newMonth || !!existing.is_recurrent !== isRecurrent) {
-                    await supabase.from('budgets').delete().eq('id', activeId);
-                    activeId = undefined; // Se eliminó, por lo que el upsert debe insertar una nueva fila
+                    const { error: delError } = await supabase.from('budgets').delete().eq('id', activeId).eq('user_id', user.id);
+                    if (delError) { return fail(delError); }
+                    activeId = undefined; // Se eliminó: se inserta una fila nueva
                 }
+            } else {
+                activeId = undefined;
             }
         }
 
-        // Eliminar presupuesto recurrente previo para esta categoría para evitar conflictos con el índice único
+        // Solo un recurrente por categoría (índice único parcial)
         if (isRecurrent) {
-            const deleteQuery = supabase
+            let deleteQuery = supabase
                 .from('budgets')
                 .delete()
                 .eq('user_id', user.id)
                 .eq('category_id', budgetData.category_id)
                 .eq('is_recurrent', true);
-            
-            if (activeId) {
-                await deleteQuery.ne('id', activeId);
-            } else {
-                await deleteQuery;
-            }
+            if (activeId) { deleteQuery = deleteQuery.ne('id', activeId); }
+            const { error: delError } = await deleteQuery;
+            if (delError) { return fail(delError); }
         }
 
-        const upsertData: Record<string, any> = {
+        // Fila existente para (categoría, mes): se actualiza en vez de usar upsert/onConflict,
+        // que depende de qué índices únicos existan en la BD (falla con índices parciales).
+        if (!activeId) {
+            const { data: sameMonth, error: findError } = await supabase
+                .from('budgets')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('category_id', budgetData.category_id)
+                .eq('month', targetMonth)
+                .limit(1);
+            if (findError) { return fail(findError); }
+            activeId = sameMonth?.[0]?.id;
+        }
+
+        const row = {
             user_id: user.id,
             category_id: budgetData.category_id,
             category: finalCategoryName,
@@ -327,20 +348,11 @@ export function useBudgetsData() {
             is_recurrent: isRecurrent,
         };
 
-        if (activeId) {
-            upsertData.id = activeId;
-        }
+        const { data, error } = activeId
+            ? await supabase.from('budgets').update(row).eq('id', activeId).eq('user_id', user.id).select().single()
+            : await supabase.from('budgets').insert(row).select().single();
 
-        const { data, error } = await supabase
-            .from('budgets')
-            .upsert(upsertData, { onConflict: 'user_id,category_id,month' })
-            .select()
-            .single();
-
-        if (error) {
-            toast({ title: 'Error', description: 'No se pudo guardar el presupuesto', variant: 'destructive' });
-            return { error };
-        }
+        if (error) { return fail(error); }
 
         // Refresh data and wait for it to complete
         await refreshData();

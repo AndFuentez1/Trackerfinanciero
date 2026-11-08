@@ -232,7 +232,7 @@ export function AddBudgetDialog({ onAdd, onDelete, editingBudget, children, mont
                 e.preventDefault();
                 toast({
                   title: "Configuración requerida",
-                  description: "Primero debes configurar al menos una categoría de gasto.",
+                  description: "Primero debes crear al menos una categoría (gasto, ingreso o ahorro).",
                   variant: "destructive"
                 });
               }

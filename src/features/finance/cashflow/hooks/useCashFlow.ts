@@ -7,13 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { es } from 'date-fns/locale';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { calculateMonthlySnapshot, FutureExpense, MonthlySnapshot } from '@/features/finance/cashflow/utils/cashFlowCalculations';
+import { calculateMonthlySnapshot, computeBalanceAnchorOffset, type MonthlySnapshot } from '@/features/finance/cashflow/utils/cashFlowCalculations';
 import { calculateCurrentRealBalance } from '@/features/finance/utils/financeUtils';
 import type { CashFlowChartPoint } from '@/features/finance/cashflow/types/cashflowTypes';
 import { parseLocalDate } from '@/core/utils';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
 import { sumBudgetForMonths, type YearMonth } from '@/features/finance/utils/incomeBudget';
-import type { Budget } from '@/features/finance/types/financeTypes';
+import type { Budget, FutureExpense } from '@/features/finance/types/financeTypes';
 
 // Helper: Redondeo seguro a 2 decimales para evitar errores de punto flotante
 const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
@@ -188,9 +188,22 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
   const pivotPoint = cashFlowSeries.find(p => p.isSamePivot);
   // Find the last point BEFORE pivot (last month with complete real data)
   const lastHistoricalPoint = cashFlowSeries.slice().reverse().find(p => p.isBeforePivot);
-  // Use last historical point as anchor for projection continuity
-  const projectionOffset = lastHistoricalPoint ? round(balance_actual - lastHistoricalPoint.balanceProyectado_Raw) : 0;
-  const balanceAdjustment = pivotPoint ? round(balance_actual - pivotPoint.balanceReal_Raw) : 0;
+
+  // Ancla del saldo acumulado.
+  // Si el mes actual está en la ventana: fin de mes = saldo real de hoy + lo que falta por ocurrir (proyección).
+  // Las transacciones reales del mes ya están en balance_actual; sumarlas otra vez las contaba doble
+  // (p. ej. un ajuste de saldo de una tarjeta aparecía como un salto del doble en la línea de balance).
+  const currentMonthIdx = monthlyBreakdownRaw.findIndex((_, idx) => isSameMonth(addMonths(start, idx), currentMonthStart));
+  const projectionOffset = computeBalanceAnchorOffset(
+    monthlyBreakdownRaw,
+    currentMonthIdx,
+    balance_actual,
+    lastHistoricalPoint ? lastHistoricalPoint.balanceProyectado_Raw : null
+  );
+  // Diferencia entre el saldo real y el calculado (solo distinta de 0 si el ancla no es el mes actual)
+  const balanceAdjustment = pivotPoint && currentMonthIdx < 0
+    ? round(balance_actual - (pivotPoint.balanceReal_Raw + projectionOffset))
+    : 0;
   const showBalanceAdjustment = useRealBalance && Math.abs(balanceAdjustment) > 0.01;
   const pendingPastExpensesTotal = futureExpenses
     .filter(fe => fe.status === 'pending' && fe.payment_date && isBefore(parseLocalDate(fe.payment_date) ?? new Date(fe.payment_date), currentMonthStart))
@@ -213,17 +226,14 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     };
   });
 
+  // Misma ancla que el gráfico para todas las filas (antes los meses históricos de la tabla quedaban sin anclar)
   const monthlyBreakdown = useMemo(() => {
     if (projectionOffset === 0) { return monthlyBreakdownRaw; }
-    return monthlyBreakdownRaw.map((row, idx) => {
-      const isBeforePivot = cashFlowSeries[idx]?.isBeforePivot ?? true;
-      if (isBeforePivot) { return row; }
-      return {
-        ...row,
-        balanceAcumulado: round(row.balanceAcumulado + projectionOffset),
-      };
-    });
-  }, [monthlyBreakdownRaw, cashFlowSeries, projectionOffset]);
+    return monthlyBreakdownRaw.map(row => ({
+      ...row,
+      balanceAcumulado: round(row.balanceAcumulado + projectionOffset),
+    }));
+  }, [monthlyBreakdownRaw, projectionOffset]);
 
   // Ingresos estimados del periodo visible: presupuesto de ingresos si existe; si no, la proyección del flujo.
   const incomeBudgetWindow = useMemo(() => {

@@ -10,8 +10,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/core/api/queryKeys';
 import { buildFinanceCacheKey, readFinanceCache, writeFinanceCache } from '@/features/finance/utils/localCache';
 import { normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
+import {
+  deletePaymentMethodAtomic,
+  withBalanceChanges,
+  type BalanceChange,
+  type DeletePaymentMethodOption,
+} from '@/features/finance/utils/balanceUtils';
 
+/** Efecto de un movimiento de ahorro en el saldo de la cuenta: los retiros restan. */
+const savingsContribution = (type: SavingsTransaction['type'], amount: number): number =>
+  type === 'withdrawal' ? -Number(amount) : Number(amount);
 
+const errorMessage = (err: unknown, fallback: string): string =>
+  err instanceof Error && err.message ? err.message : fallback;
 
 export function useSavingsDataLogic() {
   const { user } = useAuth();
@@ -237,129 +248,31 @@ export function useSavingsDataLogic() {
     return { error: null, data };
   };
 
-  const deleteSavingsAccount = async (id: string, option: 'delete' | 'orphan' | 'transfer' = 'orphan', transferToId?: string) => {
-    if (!user) return;
+  const deleteSavingsAccount = async (id: string, option: DeletePaymentMethodOption = 'orphan', transferToId?: string) => {
+    if (!user) { return; }
 
-    if (option === 'delete') {
-      // Delete associated transactions
-      const { error: txError } = await supabase
-        .from('transactions')
-        .delete()
-        .or(`payment_method_id.eq.${id},to_payment_method_id.eq.${id}`);
-      if (txError) {
-        toast({ title: 'Error', description: 'No se pudieron eliminar las transacciones asociadas', variant: 'destructive' });
-        return;
-      }
-
-      // Delete associated savings transactions
-      const { error: savingsTxError } = await supabase
-        .from('savings_transactions')
-        .delete()
-        .eq('payment_method_id', id);
-      if (savingsTxError) {
-        toast({ title: 'Error', description: 'No se pudieron eliminar los movimientos de ahorro asociados', variant: 'destructive' });
-        return;
-      }
-    } else if (option === 'transfer' && transferToId) {
-      // Get balances
-      const { data: pmToDelete } = await supabase.from('payment_methods').select('balance').eq('id', id).single();
-      const { data: pmToReceive } = await supabase.from('payment_methods').select('balance').eq('id', transferToId).single();
-
-      if (pmToDelete && pmToReceive) {
-        const newBalance = Number(pmToReceive.balance) + Number(pmToDelete.balance);
-        await supabase.from('payment_methods').update({ balance: newBalance }).eq('id', transferToId);
-      }
-
-      // Update normal transactions
-      const { error: txError1 } = await supabase
-        .from('transactions')
-        .update({ payment_method_id: transferToId })
-        .eq('payment_method_id', id);
-      if (txError1) {
-        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones', variant: 'destructive' });
-        return;
-      }
-
-      const { error: txError2 } = await supabase
-        .from('transactions')
-        .update({ to_payment_method_id: transferToId })
-        .eq('to_payment_method_id', id);
-      if (txError2) {
-        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones', variant: 'destructive' });
-        return;
-      }
-
-      // Update savings transactions
-      const { error: savingsTxError } = await supabase
-        .from('savings_transactions')
-        .update({ payment_method_id: transferToId, savings_account_id: transferToId })
-        .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
-      if (savingsTxError) {
-        toast({ title: 'Error', description: 'No se pudieron transferir las transacciones de ahorro', variant: 'destructive' });
-        return;
-      }
-
-      // Update loans
-      const { error: loansError } = await supabase
-        .from('loans')
-        .update({ payment_method_id: transferToId })
-        .eq('payment_method_id', id);
-      if (loansError) {
-        toast({ title: 'Error', description: 'No se pudieron transferir los préstamos', variant: 'destructive' });
-        return;
-      }
-    } else if (option === 'orphan') {
-      const { error: txError1 } = await supabase
-        .from('transactions')
-        .update({ payment_method_id: null })
-        .eq('payment_method_id', id);
-      if (txError1) {
-        toast({ title: 'Error', description: 'No se pudieron desasociar las transacciones', variant: 'destructive' });
-        return;
-      }
-
-      const { error: txError2 } = await supabase
-        .from('transactions')
-        .update({ to_payment_method_id: null })
-        .eq('to_payment_method_id', id);
-      if (txError2) {
-        toast({ title: 'Error', description: 'No se pudieron desasociar las transacciones de destino', variant: 'destructive' });
-        return;
-      }
-
-      const { error: savingsTxError } = await supabase
-        .from('savings_transactions')
-        .update({ payment_method_id: null, savings_account_id: null })
-        .or(`payment_method_id.eq.${id},savings_account_id.eq.${id}`);
-      if (savingsTxError) {
-        toast({ title: 'Error', description: 'No se pudieron desasociar los movimientos de ahorro', variant: 'destructive' });
-        return;
-      }
-
-      const { error: loansError } = await supabase
-        .from('loans')
-        .update({ payment_method_id: null })
-        .eq('payment_method_id', id);
-      if (loansError) {
-        toast({ title: 'Error', description: 'No se pudieron desasociar los préstamos', variant: 'destructive' });
-        return;
-      }
-    }
-
-    const { error } = await supabase
-      .from('payment_methods')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast({ title: 'Error', description: 'No se pudo eliminar la cuenta', variant: 'destructive' });
+    // Todo en una transacción en el servidor: si un paso falla no queda nada a medias.
+    try {
+      await deletePaymentMethodAtomic(id, option, transferToId);
+    } catch (err) {
+      toast({ title: 'Error', description: errorMessage(err, 'No se pudo eliminar la cuenta'), variant: 'destructive' });
       return;
     }
 
-    setSavingsAccounts(prev => prev.filter(a => a.id !== id));
-    setSavingsTransactions(prev => prev.filter(t => t.payment_method_id !== id));
+    setSavingsAccounts(prev => {
+      const removed = prev.find(a => a.id === id);
+      return prev
+        .filter(a => a.id !== id)
+        .map(a => (option === 'transfer' && removed && a.id === transferToId
+          ? { ...a, balance: a.balance + removed.balance }
+          : a));
+    });
+    setSavingsTransactions(prev => (option === 'transfer' && transferToId
+      ? prev.map(t => (t.payment_method_id === id ? { ...t, payment_method_id: transferToId, savings_account_id: transferToId } : t))
+      : prev.filter(t => t.payment_method_id !== id)));
     toast({ title: 'Eliminado', description: 'Cuenta de ahorro eliminada' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.finance.transactions(user.id) });
     queryClient.invalidateQueries({ queryKey: ['savings_transactions', user.id] });
   };
 
@@ -367,7 +280,7 @@ export function useSavingsDataLogic() {
   const addSavingsTransaction = async (transaction: Omit<SavingsTransaction, 'id'>) => {
     if (!user) { return { error: 'No autenticado' }; }
 
-    // 0. Debit/Balance Validation
+    // 0. Validación rápida con el saldo local (el servidor vuelve a validarlo con el CHECK de saldo)
     const account = savingsAccounts.find(a => a.id === transaction.payment_method_id);
     if (account && transaction.type === 'withdrawal' && Number(account.balance) < Number(transaction.amount)) {
       toast({
@@ -378,61 +291,55 @@ export function useSavingsDataLogic() {
       return { error: 'Saldo insuficiente' };
     }
 
-    // 1. Calculate new balance
-    const balanceChange = (transaction.type === 'withdrawal') ? -Number(transaction.amount) : Number(transaction.amount);
-    const newBalance = (account?.balance || 0) + balanceChange;
+    const changes: BalanceChange[] = account
+      ? [{ id: account.id, delta: savingsContribution(transaction.type, transaction.amount) }]
+      : [];
 
-    // 2. Insert into savings_transactions table (calculated_yield is handled by DB trigger)
-    const { data: insertData, error: insertError } = await supabase
-      .from('savings_transactions')
-      .insert({
-        user_id: user.id,
-        payment_method_id: transaction.payment_method_id,
-        savings_account_id: transaction.payment_method_id, // Redundant but required by schema
-        type: transaction.type,
-        amount: transaction.amount,
-        description: transaction.description || undefined,
-        date: transaction.date,
-        balance_after_transaction: newBalance,
-      } satisfies Database['public']['Tables']['savings_transactions']['Insert'])
-      .select()
-      .single();
+    try {
+      // 1. Saldo atómico en servidor; el saldo resultante es la base real (no el local).
+      const { insertData, newBalance } = await withBalanceChanges(changes, async (balances) => {
+        const balanceAfter = account ? balances.get(account.id) ?? account.balance : undefined;
 
-    if (insertError) {
+        // 2. Movimiento de ahorro (calculated_yield lo calcula un trigger)
+        const { data, error: insertError } = await supabase
+          .from('savings_transactions')
+          .insert({
+            user_id: user.id,
+            payment_method_id: transaction.payment_method_id,
+            savings_account_id: transaction.payment_method_id, // Redundant but required by schema
+            type: transaction.type,
+            amount: transaction.amount,
+            description: transaction.description || undefined,
+            date: transaction.date,
+            balance_after_transaction: balanceAfter,
+          } satisfies Database['public']['Tables']['savings_transactions']['Insert'])
+          .select()
+          .single();
+        if (insertError) { throw insertError; }
+        return { insertData: data, newBalance: balanceAfter };
+      });
 
-      toast({ title: 'Error', description: 'No se pudo agregar la transacción', variant: 'destructive' });
-      return { error: insertError };
-    }
-
-    // 3. Update account balance in payment_methods
-    if (account) {
-      const { error: pmError } = await supabase
-        .from('payment_methods')
-        .update({ balance: newBalance })
-        .eq('id', transaction.payment_method_id);
-
-      if (pmError) {
-        toast({ title: 'Error', description: 'No se pudo actualizar el saldo de la cuenta', variant: 'destructive' });
-        return { error: pmError };
+      if (account && newBalance !== undefined) {
+        setSavingsAccounts(prev => prev.map(a =>
+          a.id === account.id ? { ...a, balance: newBalance } : a
+        ));
       }
 
-      setSavingsAccounts(prev => prev.map(a =>
-        a.id === transaction.payment_method_id ? { ...a, balance: newBalance } : a
-      ));
+      setSavingsTransactions(prev => [{
+        id: insertData.id,
+        payment_method_id: insertData.payment_method_id,
+        savings_account_id: insertData.savings_account_id,
+        type: transaction.type,
+        amount: Number(insertData.amount),
+        date: insertData.date,
+        description: insertData.description || undefined,
+        calculated_yield: insertData.calculated_yield ? Number(insertData.calculated_yield) : 0,
+        balance_after_transaction: newBalance,
+      }, ...prev]);
+    } catch (err) {
+      toast({ title: 'Error', description: errorMessage(err, 'No se pudo agregar la transacción'), variant: 'destructive' });
+      return { error: err };
     }
-
-    // 4. Update local state (calculated_yield comes from DB trigger)
-    setSavingsTransactions(prev => [{
-      id: insertData.id,
-      payment_method_id: insertData.payment_method_id,
-      savings_account_id: insertData.savings_account_id,
-      type: transaction.type,
-      amount: Number(insertData.amount),
-      date: insertData.date,
-      description: insertData.description || undefined,
-      calculated_yield: insertData.calculated_yield ? Number(insertData.calculated_yield) : 0,
-      balance_after_transaction: newBalance,
-    }, ...prev]);
 
     toast({ title: 'Éxito', description: 'Transacción agregada correctamente' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });
@@ -442,54 +349,41 @@ export function useSavingsDataLogic() {
   const updateSavingsTransaction = async (id: string, newAmount: number) => {
     if (!user) { return { error: 'No autenticado' }; }
 
-    // 1. Get current transaction
     const oldTx = savingsTransactions.find(t => t.id === id);
     if (!oldTx) { return { error: 'Transacción no encontrada' }; }
 
     const account = savingsAccounts.find(a => a.id === oldTx.payment_method_id);
     if (!account) { return { error: 'Cuenta no encontrada' }; }
 
-    // 2. Calculate balance difference
-    const oldContribution = (oldTx.type === 'withdrawal') ? -oldTx.amount : oldTx.amount;
-    const newContribution = (oldTx.type === 'withdrawal') ? -newAmount : newAmount;
-    const diff = newContribution - oldContribution;
-    const newAccountBalance = account.balance + diff;
+    const diff = savingsContribution(oldTx.type, newAmount) - savingsContribution(oldTx.type, oldTx.amount);
 
-    // 3. Update savings_transactions table (calculated_yield handled by DB trigger)
-    const { data: updatedData, error: txError } = await supabase
-      .from('savings_transactions')
-      .update({
+    try {
+      const { updatedData, newBalance } = await withBalanceChanges(
+        [{ id: account.id, delta: diff }],
+        async (balances) => {
+          const balanceAfter = balances.get(account.id) ?? account.balance;
+          const { data, error: txError } = await supabase
+            .from('savings_transactions')
+            .update({ amount: newAmount, balance_after_transaction: balanceAfter })
+            .eq('id', id)
+            .select()
+            .single();
+          if (txError) { throw txError; }
+          return { updatedData: data, newBalance: balanceAfter };
+        }
+      );
+
+      setSavingsAccounts(prev => prev.map(a => a.id === account.id ? { ...a, balance: newBalance } : a));
+      setSavingsTransactions(prev => prev.map(t => t.id === id ? {
+        ...t,
         amount: newAmount,
-        balance_after_transaction: newAccountBalance,
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (txError) {
-      toast({ title: 'Error', description: 'No se pudo actualizar la transacción', variant: 'destructive' });
-      return { error: txError };
+        calculated_yield: updatedData?.calculated_yield ? Number(updatedData.calculated_yield) : 0,
+        balance_after_transaction: newBalance,
+      } : t));
+    } catch (err) {
+      toast({ title: 'Error', description: errorMessage(err, 'No se pudo actualizar la transacción'), variant: 'destructive' });
+      return { error: err };
     }
-
-    // 4. Update payment method balance
-    const { error: pmError } = await supabase
-      .from('payment_methods')
-      .update({ balance: newAccountBalance })
-      .eq('id', account.id);
-
-    if (pmError) {
-      toast({ title: 'Error', description: 'No se pudo actualizar el saldo de la cuenta', variant: 'destructive' });
-      return { error: pmError };
-    }
-
-    // 5. Update local state (calculated_yield from DB trigger)
-    setSavingsAccounts(prev => prev.map(a => a.id === account.id ? { ...a, balance: newAccountBalance } : a));
-    setSavingsTransactions(prev => prev.map(t => t.id === id ? {
-      ...t,
-      amount: newAmount,
-      calculated_yield: updatedData?.calculated_yield ? Number(updatedData.calculated_yield) : 0,
-      balance_after_transaction: newAccountBalance,
-    } : t));
 
     toast({ title: 'Actualizado', description: 'Transacción y saldo de cuenta actualizados' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });
@@ -506,97 +400,68 @@ export function useSavingsDataLogic() {
   }) => {
     if (!user) { return { error: 'No autenticado' }; }
 
-    // 1. Get current transaction
     const oldTx = savingsTransactions.find(t => t.id === id);
     if (!oldTx) { return { error: 'Transacción no encontrada' }; }
 
     const oldAccount = savingsAccounts.find(a => a.id === oldTx.payment_method_id);
     if (!oldAccount) { return { error: 'Cuenta no encontrada' }; }
 
-    // Use new values or keep old ones
     const newAmount = updates.amount ?? oldTx.amount;
     const newType = updates.type ?? oldTx.type;
-    const newAccountId = updates.payment_method_id ?? oldTx.payment_method_id;
+    const newAccountId = updates.payment_method_id ?? oldAccount.id;
     const newDate = updates.date ?? oldTx.date;
     const newDescription = updates.description ?? oldTx.description;
 
-    // 2. Calculate balance differences for accounts involved
-    const oldContribution = (oldTx.type === 'withdrawal') ? -oldTx.amount : oldTx.amount;
-    const newContribution = (newType === 'withdrawal') ? -newAmount : newAmount;
-    const oldAccountDiff = newContribution - oldContribution;
+    if (newAccountId !== oldAccount.id && !savingsAccounts.some(a => a.id === newAccountId)) {
+      return { error: 'Nueva cuenta no encontrada' };
+    }
 
-    // 3. Calculate new balance for old account
-    const newOldAccountBalance = oldAccount.balance + oldAccountDiff;
+    // Revertir el efecto en la cuenta vieja y aplicar el nuevo en la cuenta destino
+    // (si es la misma cuenta, mergeBalanceChanges los combina en un solo delta).
+    const changes: BalanceChange[] = [
+      { id: oldAccount.id, delta: -savingsContribution(oldTx.type, oldTx.amount) },
+      { id: newAccountId, delta: savingsContribution(newType, newAmount) },
+    ];
 
-    // 4. Update transaction in savings_transactions table (calculated_yield handled by DB trigger)
-    const { data: updatedData, error: txError } = await supabase
-      .from('savings_transactions')
-      .update({
+    try {
+      const { updatedData, balances } = await withBalanceChanges(changes, async (result) => {
+        const { data, error: txError } = await supabase
+          .from('savings_transactions')
+          .update({
+            amount: newAmount,
+            date: newDate,
+            description: newDescription || undefined,
+            type: newType,
+            payment_method_id: newAccountId,
+            savings_account_id: newAccountId,
+            balance_after_transaction: result.get(newAccountId),
+          })
+          .eq('id', id)
+          .select()
+          .single();
+        if (txError) { throw txError; }
+        return { updatedData: data, balances: result };
+      });
+
+      setSavingsAccounts(prev => prev.map(a => {
+        const balance = balances.get(a.id);
+        return balance === undefined ? a : { ...a, balance };
+      }));
+      setSavingsTransactions(prev => prev.map(t => t.id === id ? {
+        ...t,
         amount: newAmount,
         date: newDate,
-        description: newDescription || undefined,
+        description: newDescription,
         type: newType,
         payment_method_id: newAccountId,
         savings_account_id: newAccountId,
-        balance_after_transaction: newAccountId === oldTx.payment_method_id ? newOldAccountBalance : undefined,
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (txError) {
-      toast({ title: 'Error', description: 'No se pudo actualizar la transacción', variant: 'destructive' });
-      return { error: txError };
+        calculated_yield: updatedData?.calculated_yield ? Number(updatedData.calculated_yield) : 0,
+        balance_after_transaction: balances.get(newAccountId) ?? t.balance_after_transaction,
+      } : t));
+    } catch (err) {
+      toast({ title: 'Error', description: errorMessage(err, 'No se pudo actualizar la transacción'), variant: 'destructive' });
+      return { error: err };
     }
-
-    // 5. Update balances for affected accounts
-    const { error: pmError1 } = await supabase
-      .from('payment_methods')
-      .update({ balance: newOldAccountBalance })
-      .eq('id', oldAccount.id);
-
-    if (pmError1) {
-      toast({ title: 'Error', description: 'No se pudo actualizar el saldo de la cuenta', variant: 'destructive' });
-      return { error: pmError1 };
-    }
-
-    // If account changed, also update new account
-    if (newAccountId !== oldTx.payment_method_id) {
-      const newAccount = savingsAccounts.find(a => a.id === newAccountId);
-      if (!newAccount) { return { error: 'Nueva cuenta no encontrada' }; }
-
-      const newAccountBalance = newAccount.balance + newContribution;
-      const { error: pmError2 } = await supabase
-        .from('payment_methods')
-        .update({ balance: newAccountBalance })
-        .eq('id', newAccountId);
-
-      if (pmError2) {
-        toast({ title: 'Error', description: 'No se pudo actualizar el saldo de la nueva cuenta', variant: 'destructive' });
-        return { error: pmError2 };
-      }
-
-      setSavingsAccounts(prev => prev.map(a => {
-        if (a.id === oldAccount.id) { return { ...a, balance: newOldAccountBalance }; }
-        if (a.id === newAccountId) { return { ...a, balance: newAccountBalance }; }
-        return a;
-      }));
-    } else {
-      setSavingsAccounts(prev => prev.map(a => a.id === oldAccount.id ? { ...a, balance: newOldAccountBalance } : a));
-    }
-
-    // 6. Update local state (calculated_yield from DB trigger)
-    setSavingsTransactions(prev => prev.map(t => t.id === id ? {
-      ...t,
-      amount: newAmount,
-      date: newDate,
-      description: newDescription,
-      type: newType,
-      payment_method_id: newAccountId,
-      savings_account_id: newAccountId,
-      calculated_yield: updatedData?.calculated_yield ? Number(updatedData.calculated_yield) : 0,
-      balance_after_transaction: newOldAccountBalance,
-    } : t));
 
     toast({ title: 'Actualizado', description: 'Transacción actualizada correctamente' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });
@@ -606,7 +471,6 @@ export function useSavingsDataLogic() {
   const deleteSavingsTransaction = async (id: string) => {
     if (!user) { return; }
 
-    // 1. Get current transaction to rollback balance
     const tx = savingsTransactions.find(t => t.id === id);
     if (!tx) {
       toast({ title: 'Error', description: 'Transacción no encontrada', variant: 'destructive' });
@@ -619,37 +483,31 @@ export function useSavingsDataLogic() {
       return;
     }
 
-    // 2. Calculate balance rollback (reverse the transaction)
-    const balanceChange = (tx.type === 'withdrawal') ? tx.amount : -tx.amount;
-    const newBalance = account.balance + balanceChange;
+    try {
+      // Revertir el movimiento en el saldo y borrarlo; si el borrado falla, se revierte el saldo.
+      const balances = await withBalanceChanges(
+        [{ id: account.id, delta: -savingsContribution(tx.type, tx.amount) }],
+        async (result) => {
+          const { error: deleteError } = await supabase
+            .from('savings_transactions')
+            .delete()
+            .eq('id', id);
+          if (deleteError) { throw deleteError; }
+          return result;
+        }
+      );
 
-    // 3. Delete from savings_transactions table
-    const { error: deleteError } = await supabase
-      .from('savings_transactions')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      toast({ title: 'Error', description: 'No se pudo eliminar la transacción', variant: 'destructive' });
+      const newBalance = balances.get(account.id);
+      setSavingsTransactions(prev => prev.filter(t => t.id !== id));
+      if (newBalance !== undefined) {
+        setSavingsAccounts(prev => prev.map(a =>
+          a.id === account.id ? { ...a, balance: newBalance } : a
+        ));
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: errorMessage(err, 'No se pudo eliminar la transacción'), variant: 'destructive' });
       return;
     }
-
-    // 4. Update payment method balance
-    const { error: balanceError } = await supabase
-      .from('payment_methods')
-      .update({ balance: newBalance })
-      .eq('id', tx.payment_method_id);
-
-    if (balanceError) {
-      toast({ title: 'Error', description: 'No se pudo actualizar el saldo', variant: 'destructive' });
-      return;
-    }
-
-    // 5. Update local state
-    setSavingsTransactions(prev => prev.filter(t => t.id !== id));
-    setSavingsAccounts(prev => prev.map(a =>
-      a.id === tx.payment_method_id ? { ...a, balance: newBalance } : a
-    ));
 
     toast({ title: 'Eliminado', description: 'Transacción eliminada correctamente' });
     queryClient.invalidateQueries({ queryKey: queryKeys.finance.paymentMethods(user.id) });

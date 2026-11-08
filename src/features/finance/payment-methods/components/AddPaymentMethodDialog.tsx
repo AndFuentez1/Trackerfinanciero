@@ -110,8 +110,13 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
 
     if (confirm('¿Estás seguro de que deseas fusionar estas cuentas? Esta acción reasignará todas las transacciones, consolidará los saldos y eliminará la cuenta duplicada de forma permanente.')) {
       setIsMerging(true);
-      const result = await mergePaymentMethods.mutateAsync({ duplicateId, primaryId });
+      // mergePaymentMethods es una función ({ error }), no una mutación: .mutateAsync lanzaba TypeError
+      const result = await mergePaymentMethods(duplicateId, primaryId);
       setIsMerging(false);
+      if (result?.error) {
+        toast({ title: 'Error', description: 'No se pudieron fusionar las cuentas.', variant: 'destructive' });
+        return;
+      }
       setDuplicateId('');
       setPrimaryId('');
       setOpen(false);
@@ -130,7 +135,8 @@ export function AddPaymentMethodDialog({ onAdd, open: controlledOpen, onOpenChan
     const result = await onAdd({
       name,
       type,
-      balance: balance,
+      // Tarjetas: el usuario escribe la deuda en positivo; en BD la deuda es balance negativo
+      balance: type === 'credit' ? -Math.abs(balance) : balance,
       credit_limit: type === 'credit' ? creditLimit : null,
       is_savings_account: type === 'savings',
       savings_goal: type === 'savings' && savingsGoal > 0 ? savingsGoal : null,

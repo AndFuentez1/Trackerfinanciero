@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -34,6 +34,7 @@ import { GmailConfigSection, type GmailSyncPhase } from './AdvancedSettings/Gmai
 import { GeminiConfigSection } from './AdvancedSettings/GeminiConfigSection';
 import { TelegramConfigSection } from './AdvancedSettings/TelegramConfigSection';
 import { GmailHistoryDialog, type GmailHistoryItem, type GmailApprovalGroup, type GmailProduct, type GmailImportResult } from './AdvancedSettings/GmailHistoryDialog';
+import { groupInvoiceItems, toTransactionDate, type InvoiceApprovalItem, type InvoiceTransactionGroup } from '@/features/finance/utils/invoiceGrouping';
 
 const BACKEND_URL = getBackendUrl();
 
@@ -128,6 +129,9 @@ export function AdvancedSettings({
 
     // Gmail Connection State
     const [gmailPhase, setGmailPhase] = useState<GmailSyncPhase>('idle');
+    // Ventana de OAuth abierta y su vigilante: si se cierra sin avisar, el botón no puede quedar bloqueado
+    const oauthPopupRef = useRef<Window | null>(null);
+    const oauthWatchRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isConnectingGmail = gmailPhase !== 'idle';
 
     // Fetch config status using React Query (fallback when no prop override)
@@ -216,9 +220,28 @@ export function AdvancedSettings({
         });
     }, [categories]);
 
+    const stopOAuthWatch = useCallback(() => {
+        if (oauthWatchRef.current) {
+            clearInterval(oauthWatchRef.current);
+            oauthWatchRef.current = null;
+        }
+        oauthPopupRef.current = null;
+    }, []);
+
+    // Limpieza al desmontar
+    useEffect(() => stopOAuthWatch, [stopOAuthWatch]);
+
     // Listen for OAuth success message from popup
     useEffect(() => {
+        // Solo se aceptan mensajes del backend (página de callback) o de la propia app
+        const allowedOrigins = new Set<string>([window.location.origin]);
+        try { allowedOrigins.add(new URL(BACKEND_URL || window.location.origin, window.location.href).origin); } catch { /* URL inválida */ }
+
         const handleMessage = (event: MessageEvent) => {
+            if (!allowedOrigins.has(event.origin)) { return; }
+            if (['GMAIL_CONNECTED', 'GMAIL_ERROR', 'GMAIL_CLOSED'].includes(event.data?.type)) {
+                stopOAuthWatch();
+            }
             if (event.data?.type === 'GMAIL_CONNECTED') {
                 // Optimistic UI update; luego se verifica el estado real con el backend
                 setGmailPhase('verifying');
@@ -249,7 +272,7 @@ export function AdvancedSettings({
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, [user?.id, queryClient, toast]);
+    }, [user?.id, queryClient, toast, stopOAuthWatch]);
 
     useEffect(() => {
         if (!showHistoryDialog) {
@@ -308,8 +331,24 @@ export function AdvancedSettings({
             }
             popup.location.href = `${BACKEND_URL}/auth/google?state=${encodeURIComponent(data.state)}`;
             setGmailPhase('authorizing');
+
+            // Si la ventana se cierra sin enviar mensaje (error en Google, cierre con X), liberar el botón
+            // y revalidar el estado real. Límite de 5 minutos por si la ventana queda abandonada.
+            stopOAuthWatch();
+            oauthPopupRef.current = popup;
+            const startedAt = Date.now();
+            oauthWatchRef.current = setInterval(() => {
+                const win = oauthPopupRef.current;
+                const timedOut = Date.now() - startedAt > 5 * 60 * 1000;
+                if (win && !win.closed && !timedOut) { return; }
+                if (win && !win.closed) { win.close(); }
+                stopOAuthWatch();
+                setGmailPhase(phase => (phase === 'authorizing' || phase === 'requesting' ? 'idle' : phase));
+                queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
+            }, 800);
         } catch (error) {
             popup.close();
+            stopOAuthWatch();
             setGmailPhase('idle');
             toast({
                 title: 'Error de Conexión',
@@ -317,6 +356,14 @@ export function AdvancedSettings({
                 variant: 'destructive'
             });
         }
+    };
+
+    // Cancelar una conexión en curso (el usuario nunca queda bloqueado esperando a Google)
+    const cancelConnectGmail = () => {
+        const win = oauthPopupRef.current;
+        if (win && !win.closed) { win.close(); }
+        stopOAuthWatch();
+        setGmailPhase('idle');
     };
 
     const disconnectGmail = async () => {
@@ -548,13 +595,13 @@ export function AdvancedSettings({
             toast({
                 title: 'Telegram verificado',
                 description: 'Mensaje de prueba enviado correctamente.',
-                className: "bg-green-50 border-green-200 text-green-900"
+                className: "bg-success/10 border-success/30 text-foreground"
             });
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user.id) });
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Error',
-                description: error?.message || 'No se pudo enviar el mensaje de prueba',
+                description: (error instanceof Error && error.message) || 'No se pudo enviar el mensaje de prueba',
                 variant: 'destructive'
             });
         } finally {
@@ -588,11 +635,12 @@ export function AdvancedSettings({
     const unarchiveMessages = async (messageIds: string[]) => {
         if (!user?.id || messageIds.length === 0) { return; }
         try {
-            await fetch(`${BACKEND_URL}/api/gmail/unarchive`, {
+            const res = await backendFetch(`${BACKEND_URL}/api/gmail/unarchive`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, messageIds })
+                body: JSON.stringify({ messageIds })
             });
+            if (!res.ok) { throw new Error('No se pudo desarchivar'); }
             updateCacheAndView(prev => prev.map(item => (
                 messageIds.includes(item.id) ? { ...item, status: 'unread' } : item
             )));
@@ -605,11 +653,12 @@ export function AdvancedSettings({
     const archiveMessages = async (messageIds: string[]) => {
         if (!user?.id || messageIds.length === 0) { return; }
         try {
-            await fetch(`${BACKEND_URL}/api/gmail/archive`, {
+            const res = await backendFetch(`${BACKEND_URL}/api/gmail/archive`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, messageIds })
+                body: JSON.stringify({ messageIds })
             });
+            if (!res.ok) { throw new Error('No se pudo archivar'); }
             updateCacheAndView(prev => prev.map(item => (
                 messageIds.includes(item.id) ? { ...item, status: 'archived' } : item
             )));
@@ -621,11 +670,12 @@ export function AdvancedSettings({
     const deleteMessages = async (messageIds: string[]) => {
         if (!user?.id || messageIds.length === 0) { return; }
         try {
-            await fetch(`${BACKEND_URL}/api/gmail/delete`, {
+            const res = await backendFetch(`${BACKEND_URL}/api/gmail/delete`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, messageIds })
+                body: JSON.stringify({ messageIds })
             });
+            if (!res.ok) { throw new Error('No se pudo eliminar'); }
             updateCacheAndView(prev => prev.filter(item => !messageIds.includes(item.id)));
             setSelectedMessages(prev => prev.filter(id => !messageIds.includes(id)));
         } catch {
@@ -691,9 +741,44 @@ export function AdvancedSettings({
     const updateImportProduct = (messageId: string, index: number, updates: Partial<GmailProduct>) => {
         setImportResults(prev => prev.map(result => {
             if (result.messageId !== messageId) { return result; }
-            const products = result.products?.map((p, i) => i === index ? { ...p, ...updates } : p);
+            const products = result.products?.map((p, i) => {
+                if (i !== index) { return p; }
+                const next = { ...p, ...updates };
+                // Cambio manual de categoría → se aprenderá al aprobar
+                if (updates.category_id !== undefined || updates.category !== undefined) {
+                    next.manualCategory = true;
+                }
+                // Cantidad/precio editados → recalcular total
+                if (updates.quantity !== undefined || updates.price !== undefined) {
+                    next.total = Math.round(parseNumberValue(next.quantity) * parseNumberValue(next.price) * 100) / 100;
+                }
+                return next;
+            });
             return { ...result, products };
         }));
+    };
+
+    const removeImportProduct = (messageId: string, index: number) => {
+        setImportResults(prev => prev.map(result => (
+            result.messageId === messageId
+                ? { ...result, products: result.products?.filter((_, i) => i !== index) }
+                : result
+        )));
+    };
+
+    // Enseña al clasificador las categorías corregidas a mano (no bloquea la aprobación)
+    const learnManualCategories = (products: GmailProduct[]) => {
+        products
+            .filter(p => p.manualCategory && p.category && p.description)
+            .forEach(p => {
+                const send = (pattern: string, type: 'keyword' | 'code') => backendFetch(`${BACKEND_URL}/api/classifier/learn`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pattern, category: p.category, type }),
+                }).catch(() => undefined);
+                void send(p.description.split('(')[0].trim(), 'keyword');
+                if (p.code) { void send(String(p.code), 'code'); }
+            });
     };
 
     const handleApproveInvoice = async (messageId: string) => {
@@ -710,9 +795,19 @@ export function AdvancedSettings({
             return;
         }
 
-        const hasProducts = target.products && target.products.length > 0;
-
-        if (!hasProducts) {
+        // Facturas sin productos pero con grupos (p. ej. total sin detalle): los grupos se aprueban como productos
+        const products: GmailProduct[] = target.products && target.products.length > 0
+            ? target.products
+            : (target.groups ?? []).map(g => ({
+                description: g.description,
+                quantity: 1,
+                price: g.amount,
+                total: g.amount,
+                category: g.category,
+                category_id: g.category_id,
+                payment_method_id: g.payment_method_id,
+            }));
+        if (products.length === 0) {
             toast({ title: 'Error', description: 'La factura no tiene productos válidos.', variant: 'destructive' });
             return;
         }
@@ -722,141 +817,155 @@ export function AdvancedSettings({
             return;
         }
 
+        // 1. Validar antes de escribir nada
+        for (const product of products) {
+            const amount = parseNumberValue(product.total);
+            if (!amount || amount <= 0) {
+                toast({ title: 'Aviso', description: `"${product.description}" tiene costo cero. Corrígelo o quítalo antes de importar.`, variant: 'destructive' });
+                return;
+            }
+            if (!product.payment_method_id) {
+                toast({ title: 'Error', description: 'Selecciona un método de pago para todos los productos', variant: 'destructive' });
+                return;
+            }
+            if (!product.category_id && !product.category?.trim()) {
+                toast({ title: 'Error', description: 'Selecciona una categoría para todos los productos', variant: 'destructive' });
+                return;
+            }
+        }
+
         setApprovingMessageId(messageId);
         try {
+            // 2. Resolver categorías (solo de gasto; se crean si no existen)
             const categoryCache = new Map<string, string>();
-
-            const ensureCategoryId = async (name: string) => {
+            const ensureExpenseCategoryId = async (name: string) => {
                 const normalized = name.toLowerCase().trim();
                 if (!normalized) { return null; }
-                if (categoryCache.has(normalized)) { return categoryCache.get(normalized)!; }
+                const cached = categoryCache.get(normalized);
+                if (cached) { return cached; }
 
-                const existing = categories.find(c => c.name.toLowerCase().trim() === normalized);
+                const existing = categories.find(c => c.type === 'expense' && c.name.toLowerCase().trim() === normalized);
                 if (existing) {
                     categoryCache.set(normalized, existing.id);
                     return existing.id;
                 }
 
+                const color = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
                 const { data: newCategory, error } = await supabase
                     .from('categories')
-                    .insert({
-                        name: name.trim(),
-                        type: 'expense',
-                        user_id: user.id,
-                        color: `#${Math.floor(Math.random() * 16777215).toString(16)}`
-                    })
+                    .insert({ name: name.trim(), type: 'expense', user_id: user.id, color })
                     .select()
                     .single();
-
                 if (error) { throw error; }
-                if (newCategory?.id) {
-                    categoryCache.set(normalized, newCategory.id);
-                    return newCategory.id;
-                }
-                return null;
+                categoryCache.set(normalized, newCategory.id);
+                return newCategory.id as string;
             };
 
-            if (target.status === 'loan_queued') {
-                const totalAmount = target.products?.reduce((acc, p) => acc + parseNumberValue(p.total), 0) 
-                    || target.groups?.reduce((acc, g) => acc + parseNumberValue(g.amount), 0) 
-                    || 0;
-                
-                const description = target.subject || target.store || 'Préstamo desde Gmail';
-                const paymentMethodId = target.products?.[0]?.payment_method_id || target.groups?.[0]?.payment_method_id || null;
-
-                const { error: loanError } = await supabase
-                    .from('loans' as any)
-                    .insert({
-                        name: description.substring(0, 100),
-                        total_amount: totalAmount,
-                        paid_amount: 0,
-                        type: 'borrowed', // Default to borrowed, user can change in the Loans form
-                        user_id: user.id,
-                        payment_method_id: paymentMethodId,
-                        is_disbursed: false,
-                        updated_at: new Date().toISOString()
-                    });
-
-                if (loanError) {throw loanError;}
-
-                await archiveMessages([messageId]);
-                toast({ title: 'Enviado a Préstamos', description: 'El registro se ha creado como pendiente en la sección de Préstamos.' });
-                setImportResults(prev => prev.filter(result => result.messageId !== messageId));
-                refreshData();
-                setApprovingMessageId(null);
-                return;
-            }
-
-            const transactionsToAdd = [];
-
-            // If no products but has groups (like in transfers), use groups as pseudo-products for transaction creation
-            const itemsToProcess = (target.products && target.products.length > 0) 
-                ? target.products 
-                : (target.groups || []).map(g => ({
-                    description: g.description,
-                    total: g.amount,
-                    category: g.category,
-                    payment_method_id: g.payment_method_id,
-                    type: 'transfer'
-                }));
-
-            for (const product of itemsToProcess) {
-                const amount = Number(product.total);
-                if (!amount || Number.isNaN(amount) || amount <= 0) {
-                    toast({ title: 'Aviso', description: 'Uno o más items tienen costo cero y deben ser corregidos antes de importar.', variant: 'destructive' });
-                    setApprovingMessageId(null);
-                    return;
-                }
-
-                if (!product.payment_method_id) {
-                    toast({ title: 'Error', description: 'Selecciona un método de pago para todos los items', variant: 'destructive' });
-                    setApprovingMessageId(null);
-                    return;
-                }
-
-                const categoryName = product.category?.trim() || '';
-                const categoryId = (product as any).category_id || (categoryName ? await ensureCategoryId(categoryName) : null);
-
-                if (!categoryName && !categoryId && (product as any).type !== 'transfer') {
-                    toast({ title: 'Error', description: 'Selecciona o ingresa una categoría para todos los productos', variant: 'destructive' });
-                    setApprovingMessageId(null);
-                    return;
-                }
-
-                const transactionType = (product as any).type || (target.status === 'loan_queued' ? 'loan' : 'expense');
-
-                transactionsToAdd.push({
-                    amount,
+            const items: InvoiceApprovalItem[] = [];
+            for (const product of products) {
+                const categoryName = resolveCategoryLabel(product.category, product.category_id);
+                const categoryId = product.category_id || await ensureExpenseCategoryId(categoryName);
+                items.push({
                     description: product.description,
-                    category: categoryName || (transactionType === 'transfer' ? 'Transferencia' : null),
+                    total: parseNumberValue(product.total),
                     category_id: categoryId,
-                    type: transactionType as any,
-                    payment_method_id: product.payment_method_id,
-                    date: target.date || new Date().toISOString()
+                    category: categoryName,
+                    payment_method_id: product.payment_method_id as string,
                 });
             }
 
-            if (transactionsToAdd.length === 0) {
-                toast({ title: 'Error', description: 'No hay items válidos para importar', variant: 'destructive' });
-                return;
-            }
-
-            for (const transactionData of transactionsToAdd) {
-                const result = await addTransaction(transactionData);
-                if (result && result.error) {
-                    throw new Error(typeof result.error === 'string' ? result.error : 'Error al registrar transacción');
+            // 3. Una transacción por (categoría, método de pago), en serie: los saldos se actualizan
+            //    con lectura+escritura y en paralelo se pisaban.
+            const groups = groupInvoiceItems(items, target.store);
+            const date = toTransactionDate(target.date);
+            const done: InvoiceTransactionGroup[] = [];
+            for (const group of groups) {
+                const result = await addTransaction({
+                    amount: group.amount,
+                    description: group.description,
+                    category: group.category,
+                    category_id: group.category_id,
+                    type: 'expense',
+                    payment_method_id: group.payment_method_id,
+                    date,
+                });
+                if (result && 'error' in result && result.error) {
+                    // Quitar de la factura lo ya registrado para que reintentar no duplique
+                    const doneDescriptions = new Set(done.flatMap(g => g.items.map(i => i.description)));
+                    setImportResults(prev => prev.map(r => r.messageId !== messageId ? r : {
+                        ...r,
+                        products: r.products?.filter(p => !doneDescriptions.has(p.description)),
+                    }));
+                    toast({
+                        title: 'Importación incompleta',
+                        description: `Se registraron ${done.length} de ${groups.length} grupos. Revisa y vuelve a aprobar el resto.`,
+                        variant: 'destructive',
+                    });
+                    return;
                 }
+                done.push(group);
             }
 
+            learnManualCategories(products);
             await archiveMessages([messageId]);
 
-            toast({ title: 'Importación Exitosa', description: 'Los gastos han sido registrados en tu balance.' });
+            toast({
+                title: 'Importación exitosa',
+                description: groups.length === 1
+                    ? 'La compra se registró en tu balance.'
+                    : `La compra se registró en ${groups.length} categorías.`,
+            });
             setImportResults(prev => prev.filter(result => result.messageId !== messageId));
-
             refreshData();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('[AdvancedSettings] Approval failed', error);
             toast({ title: 'Error', description: 'No se pudo procesar la factura', variant: 'destructive' });
+        } finally {
+            setApprovingMessageId(null);
+        }
+    };
+
+    // Aprobar todas en serie (en paralelo se pisaban los saldos de un mismo método de pago)
+    const handleApproveAll = async (messageIds: string[]) => {
+        for (const id of messageIds) {
+            await handleApproveInvoice(id);
+        }
+    };
+
+    // Transferencia → préstamo en borrador (antes dependía de un setTimeout y del estado ya actualizado)
+    const handleSendToLoans = async (messageId: string) => {
+        const target = importResults.find(result => result.messageId === messageId);
+        if (!target || !user?.id) { return; }
+        setApprovingMessageId(messageId);
+        try {
+            const totalAmount = target.products?.reduce((acc, p) => acc + parseNumberValue(p.total), 0)
+                || target.groups?.reduce((acc, g) => acc + parseNumberValue(g.amount), 0)
+                || parseNumberValue(target.total)
+                || 0;
+            const description = target.subject || target.store || 'Préstamo desde Gmail';
+            const paymentMethodId = target.products?.[0]?.payment_method_id || target.groups?.[0]?.payment_method_id || null;
+
+            const { error: loanError } = await supabase
+                .from('loans')
+                .insert({
+                    name: description.substring(0, 100),
+                    total_amount: totalAmount,
+                    paid_amount: 0,
+                    type: 'borrowed',
+                    user_id: user.id,
+                    payment_method_id: paymentMethodId,
+                    is_disbursed: false,
+                    updated_at: new Date().toISOString(),
+                });
+            if (loanError) { throw loanError; }
+
+            await archiveMessages([messageId]);
+            toast({ title: 'Enviado a Préstamos', description: 'El registro se creó como pendiente en la sección de Préstamos.' });
+            setImportResults(prev => prev.filter(result => result.messageId !== messageId));
+            refreshData();
+        } catch (error: unknown) {
+            console.error('[AdvancedSettings] Send to loans failed', error);
+            toast({ title: 'Error', description: 'No se pudo enviar a préstamos', variant: 'destructive' });
         } finally {
             setApprovingMessageId(null);
         }
@@ -981,7 +1090,7 @@ export function AdvancedSettings({
             const totalVal = result.total || 0;
             const fallbackTitle = result.subject || result.store;
 
-            const products = isLoanQueued ? [] : normalizeProducts(result.products, meta || (fallbackTitle as any), totalVal);
+            const products = isLoanQueued ? [] : normalizeProducts(result.products, meta || fallbackTitle, totalVal);
             const groups = isLoanQueued
                 ? []
                 : hasGroups
@@ -1053,7 +1162,8 @@ export function AdvancedSettings({
 
         setSearching(true);
         try {
-            const res = await fetch(`${BACKEND_URL}/api/gmail/search?userId=${user?.id}${daysParam}${limitParam}${typeParam}&markRead=1`);
+            // El backend identifica al usuario por el JWT (backendFetch); la búsqueda puede tardar
+            const res = await backendFetch(`${BACKEND_URL}/api/gmail/search?markRead=1${daysParam}${limitParam}${typeParam}`, {}, 120000);
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 const message = data?.error || data?.details || 'No se pudo buscar en el historial';
@@ -1081,8 +1191,8 @@ export function AdvancedSettings({
                 title: 'Búsqueda completada',
                 description: `Se encontraron ${data.count || foundCount} posibles facturas.`
             });
-        } catch (err: any) {
-            const message = err?.message || 'No se pudo buscar en el historial';
+        } catch (err: unknown) {
+            const message = (err instanceof Error && err.message) || 'No se pudo buscar en el historial';
             toast({ title: 'Error', description: message, variant: 'destructive' });
         } finally {
             setSearching(false);
@@ -1094,11 +1204,11 @@ export function AdvancedSettings({
         const selectedSnapshot = [...idsToImport];
         setImporting(true);
         try {
-            const res = await fetch(`${BACKEND_URL}/api/gmail/import-batch`, {
+            const res = await backendFetch(`${BACKEND_URL}/api/gmail/import-batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user?.id, messageIds: idsToImport })
-            });
+                body: JSON.stringify({ messageIds: idsToImport })
+            }, 300000);
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 throw new Error(data?.error || data?.details || 'No se pudo completar la importación');
@@ -1127,8 +1237,8 @@ export function AdvancedSettings({
                 selectedSnapshot.includes(item.id) ? { ...item, status: 'archived' } : item
             )));
             queryClient.invalidateQueries({ queryKey: queryKeys.user.config(user?.id) });
-        } catch (error: any) {
-            const message = error?.message || 'No se pudo completar la importación';
+        } catch (error: unknown) {
+            const message = (error instanceof Error && error.message) || 'No se pudo completar la importación';
             const fallbackResults = normalizeImportResults([], selectedSnapshot, message);
             if (fallbackResults.length > 0) {
                 setImportResults(fallbackResults);
@@ -1153,6 +1263,7 @@ export function AdvancedSettings({
                 isImporting={importing}
                 backendStatus={backendStatus}
                 onConnect={connectGmail}
+                onCancelConnect={cancelConnectGmail}
                 onDisconnect={disconnectGmail}
                 onRetryBackend={retryBackend}
                 onShowHistory={() => setShowHistoryDialog(true)}
@@ -1276,7 +1387,11 @@ export function AdvancedSettings({
                 categories={categories}
 
                 updateImportProduct={updateImportProduct}
+                removeImportProduct={removeImportProduct}
                 handleApproveInvoice={handleApproveInvoice}
+                handleApproveAll={handleApproveAll}
+                handleSendToLoans={handleSendToLoans}
+                archivedCount={searchResults.filter(r => r.status === 'archived').length}
                 setImportResults={setImportResults}
 
                 normalizeStatus={normalizeStatus}

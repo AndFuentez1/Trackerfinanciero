@@ -8,6 +8,7 @@ import { useFinance } from "@/features/finance/context/FinanceContext";
 import { CURRENCIES } from "@/features/finance/constants/currencyConstants";
 import { useDecimalPlaces } from "@/features/finance/hooks/useDecimalPlaces";
 import { isBudgetMonthInScope } from "@/features/finance/utils/periodFilters";
+import { isBalanceAdjustment, isTransferTransaction } from "@/features/finance/utils/cashflowUtils";
 
 interface IncomeCardProps {
     budgetYear: number | 'all';
@@ -64,6 +65,8 @@ export function IncomeCard({ budgetYear, budgetMonth, estimatedIncome = 0, hasIn
     };
 
     const filteredTransactions = (allTransactions || []).filter(t => {
+        // Transferencias propias y ajustes manuales de saldo no son ingresos/gastos reales
+        if (isTransferTransaction(t) || isBalanceAdjustment(t)) { return false; }
         const tDate = parseISO(t.date);
         const tYear = tDate.getFullYear();
         const tMonth = tDate.getMonth() + 1;
@@ -123,7 +126,7 @@ export function IncomeCard({ budgetYear, budgetMonth, estimatedIncome = 0, hasIn
                     <Progress
                         value={Math.max(0, Math.min(savingsRate, 100))}
                         className="h-3"
-                        indicatorClassName={savingsRate >= 0 ? "bg-emerald-500" : "bg-red-500"}
+                        indicatorClassName={savingsRate >= 0 ? "bg-success" : "bg-destructive"}
                     />
                 </div>
 
@@ -140,7 +143,7 @@ export function IncomeCard({ budgetYear, budgetMonth, estimatedIncome = 0, hasIn
                             <Progress
                                 value={Math.max(0, Math.min(incomeCompliance, 100))}
                                 className="h-2"
-                                indicatorClassName="bg-emerald-500"
+                                indicatorClassName="bg-success"
                                 aria-label="Ingresos reales frente a ingresos estimados"
                             />
                             <p className="text-xs text-muted-foreground">

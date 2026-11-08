@@ -2,32 +2,35 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GmailHistoryDialog } from './GmailHistoryDialog';
 import { GmailImportResult } from './GmailHistoryDialog';
+import type { ReactNode } from 'react';
+
+type MockProps = { children?: ReactNode; onClick?: () => void };
 
 // Mock the UI components that might cause issues in a test environment
 vi.mock('@/shared/ui/dialog', () => ({
-    Dialog: ({ children }: any) => <div>{children}</div>,
-    DialogContent: ({ children }: any) => <div>{children}</div>,
-    DialogHeader: ({ children }: any) => <div>{children}</div>,
-    DialogTitle: ({ children }: any) => <div>{children}</div>,
-    DialogDescription: ({ children }: any) => <div>{children}</div>,
+    Dialog: ({ children }: MockProps) => <div>{children}</div>,
+    DialogContent: ({ children }: MockProps) => <div>{children}</div>,
+    DialogHeader: ({ children }: MockProps) => <div>{children}</div>,
+    DialogTitle: ({ children }: MockProps) => <div>{children}</div>,
+    DialogDescription: ({ children }: MockProps) => <div>{children}</div>,
 }));
 
 vi.mock('@/shared/ui/alert-dialog', () => ({
-    AlertDialog: ({ children }: any) => <div>{children}</div>,
-    AlertDialogContent: ({ children }: any) => <div>{children}</div>,
-    AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
-    AlertDialogTitle: ({ children }: any) => <div>{children}</div>,
-    AlertDialogDescription: ({ children }: any) => <div>{children}</div>,
-    AlertDialogFooter: ({ children }: any) => <div>{children}</div>,
-    AlertDialogCancel: ({ children }: any) => <button>{children}</button>,
+    AlertDialog: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogContent: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogHeader: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogTitle: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogDescription: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogFooter: ({ children }: MockProps) => <div>{children}</div>,
+    AlertDialogCancel: ({ children }: MockProps) => <button>{children}</button>,
 }));
 
 vi.mock('@/shared/ui/button', () => ({
-    Button: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
+    Button: ({ children, onClick }: MockProps) => <button onClick={onClick}>{children}</button>,
 }));
 
 vi.mock('@/shared/ui/scroll-area', () => ({
-    ScrollArea: ({ children }: any) => <div>{children}</div>,
+    ScrollArea: ({ children }: MockProps) => <div>{children}</div>,
 }));
 
 vi.mock('@/shared/ui/checkbox', () => ({
@@ -35,30 +38,30 @@ vi.mock('@/shared/ui/checkbox', () => ({
 }));
 
 vi.mock('@/shared/ui/badge', () => ({
-    Badge: ({ children }: any) => <span>{children}</span>,
+    Badge: ({ children }: MockProps) => <span>{children}</span>,
 }));
 
 vi.mock('@/shared/ui/table', () => ({
-    Table: ({ children }: any) => <table>{children}</table>,
-    TableHeader: ({ children }: any) => <thead>{children}</thead>,
-    TableBody: ({ children }: any) => <tbody>{children}</tbody>,
-    TableRow: ({ children }: any) => <tr>{children}</tr>,
-    TableHead: ({ children }: any) => <th>{children}</th>,
-    TableCell: ({ children }: any) => <td>{children}</td>,
+    Table: ({ children }: MockProps) => <table>{children}</table>,
+    TableHeader: ({ children }: MockProps) => <thead>{children}</thead>,
+    TableBody: ({ children }: MockProps) => <tbody>{children}</tbody>,
+    TableRow: ({ children }: MockProps) => <tr>{children}</tr>,
+    TableHead: ({ children }: MockProps) => <th>{children}</th>,
+    TableCell: ({ children }: MockProps) => <td>{children}</td>,
 }));
 
 vi.mock('@/shared/ui/tabs', () => ({
-    Tabs: ({ children }: any) => <div>{children}</div>,
-    TabsContent: ({ children }: any) => <div>{children}</div>,
-    TabsList: ({ children }: any) => <div>{children}</div>,
-    TabsTrigger: ({ children }: any) => <button>{children}</button>,
+    Tabs: ({ children }: MockProps) => <div>{children}</div>,
+    TabsContent: ({ children }: MockProps) => <div>{children}</div>,
+    TabsList: ({ children }: MockProps) => <div>{children}</div>,
+    TabsTrigger: ({ children }: MockProps) => <button>{children}</button>,
 }));
 
 vi.mock('@/shared/ui/accordion', () => ({
-    Accordion: ({ children }: any) => <div>{children}</div>,
-    AccordionItem: ({ children }: any) => <div>{children}</div>,
-    AccordionTrigger: ({ children }: any) => <button>{children}</button>,
-    AccordionContent: ({ children }: any) => <div>{children}</div>,
+    Accordion: ({ children }: MockProps) => <div>{children}</div>,
+    AccordionItem: ({ children }: MockProps) => <div>{children}</div>,
+    AccordionTrigger: ({ children }: MockProps) => <button>{children}</button>,
+    AccordionContent: ({ children }: MockProps) => <div>{children}</div>,
 }));
 
 vi.mock('@/features/finance/hooks/useFinanceData', () => ({
@@ -82,7 +85,7 @@ describe('GmailHistoryDialog', () => {
             }
         ];
 
-        const historyItems: any[] = [
+        const historyItems = [
             {
                 id: 'msg1',
                 threadId: 'th1',
@@ -106,9 +109,11 @@ describe('GmailHistoryDialog', () => {
                 importStep="review"
                 setImportStep={vi.fn()}
                 searchRange="30"
-                setSearchRange={vi.fn() as any}
+                setSearchRange={vi.fn() as never}
                 searchLimit="50"
                 setSearchLimit={vi.fn()}
+                searchType="all"
+                setSearchType={vi.fn()}
                 hideApproved={false}
                 setHideApproved={vi.fn()}
                 searching={false}

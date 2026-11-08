@@ -109,16 +109,56 @@ const CATEGORY_CODES = {
 };
 
 /**
- * Normaliza texto para comparación (quita tildes, espacios, minúsculas)
+ * Normaliza texto para comparación: minúsculas, sin tildes, sin puntuación, espacios simples.
  */
-function normalizeText(text) {
-    return text
+export function normalizeText(text) {
+    return String(text ?? '')
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Quitar tildes
+        .replace(/[̀-ͯ]/g, '') // Quitar tildes
+        .replace(/[^a-z0-9]+/g, ' ')     // Puntuación y símbolos → espacio
         .replace(/\s+/g, ' ')
         .trim();
 }
+
+// Tokens que no aportan al aprender una regla: cantidades, unidades y presentaciones ("1100ml", "x6", "500 g")
+const UNIT_TOKEN = /^(x?\d+([.,]\d+)?(ml|l|lt|lts|g|gr|grs|kg|kgs|cc|oz|und|un|uds|pq|paq|pack|mt|m|cm)?|x\d+|ml|l|lt|g|gr|kg|cc|oz|und|un|uds|pq|paq|pack)$/;
+
+/**
+ * Patrón aprendible a partir de una descripción: normalizado y sin cantidades/unidades.
+ * Devuelve null si queda demasiado corto para ser una regla útil (evita reglas que coinciden con todo).
+ */
+export function normalizePattern(text) {
+    const tokens = normalizeText(text).split(' ').filter(t => t && !UNIT_TOKEN.test(t));
+    const pattern = tokens.join(' ').slice(0, 80).trim();
+    return pattern.length >= 3 ? pattern : null;
+}
+
+const tokenMatches = (token, keywordToken) =>
+    token === keywordToken || token === keywordToken + 's' || token === keywordToken + 'es';
+
+/**
+ * ¿La frase (ya normalizada) aparece como palabras completas en los tokens?
+ * Acepta plurales simples ("gaseosas" ↔ "gaseosa"). "pan" ya no coincide con "pantalon".
+ */
+export function matchesPhrase(tokens, phrase) {
+    const kw = phrase.split(' ').filter(Boolean);
+    if (kw.length === 0 || kw.length > tokens.length) { return false; }
+    for (let i = 0; i + kw.length <= tokens.length; i++) {
+        let ok = true;
+        for (let j = 0; j < kw.length; j++) {
+            if (!tokenMatches(tokens[i + j], kw[j])) { ok = false; break; }
+        }
+        if (ok) { return true; }
+    }
+    return false;
+}
+
+// Keywords estáticas normalizadas una sola vez
+const NORMALIZED_KEYWORDS = Object.entries(CATEGORY_KEYWORDS).map(([category, keywords]) => ({
+    category,
+    keywords: [...new Set(keywords.map(normalizeText).filter(Boolean))],
+}));
 
 function findCategoryByCode(code) {
     if (!code) { return null; }
@@ -132,132 +172,123 @@ function findCategoryByCode(code) {
 }
 
 /**
- * Busca una regla en la base de datos para un usuario específico
+ * Clasificación pura (sin BD), en orden de prioridad:
+ * 1. Código de producto aprendido por el usuario  2. Código estático
+ * 3. Regla de palabra aprendida (gana la más específica: más palabras/caracteres)
+ * 4. Keywords estáticas por puntaje: cada coincidencia pesa por su nº de palabras;
+ *    empate entre categorías → confianza baja para que decida la IA o el usuario.
+ *
+ * @param {{ description?: string, code?: string | number | null }} product
+ * @param {{ codes?: Map<string, string>, keywords?: { pattern: string, category: string }[] }} [rules]
  */
-async function findDbRule(userId, pattern, type) {
-    if (!userId || !pattern) return null;
+export function classifyWithRules(product, rules = {}) {
+    const description = normalizeText(product?.description || '');
+    const tokens = description ? description.split(' ') : [];
+    const productCode = product?.code != null ? String(product.code).trim() : '';
+
+    if (productCode && rules.codes?.has(productCode)) {
+        return { category: rules.codes.get(productCode), confidence: 100, matchedKeywords: ['db_code:' + productCode], source: 'db_code' };
+    }
+
+    const staticCodeCategory = findCategoryByCode(productCode);
+    if (staticCodeCategory) {
+        return { category: staticCodeCategory, confidence: 100, matchedKeywords: ['static_code:' + productCode], source: 'static_code' };
+    }
+
+    // Reglas aprendidas: la más específica gana (no la primera de la lista)
+    let bestRule = null;
+    for (const rule of rules.keywords || []) {
+        const pattern = normalizeText(rule.pattern);
+        if (!pattern || !matchesPhrase(tokens, pattern)) { continue; }
+        const words = pattern.split(' ').length;
+        if (!bestRule || words > bestRule.words || (words === bestRule.words && pattern.length > bestRule.pattern.length)) {
+            bestRule = { pattern, words, category: rule.category };
+        }
+    }
+    if (bestRule) {
+        return { category: bestRule.category, confidence: 95, matchedKeywords: ['db_keyword:' + bestRule.pattern], source: 'db_keyword' };
+    }
+
+    // Keywords estáticas
+    const scored = [];
+    for (const { category, keywords } of NORMALIZED_KEYWORDS) {
+        const matches = keywords.filter(k => matchesPhrase(tokens, k));
+        if (matches.length === 0) { continue; }
+        const score = matches.reduce((sum, k) => sum + k.split(' ').length, 0);
+        const longest = Math.max(...matches.map(k => k.length));
+        scored.push({ category, matches, score, longest });
+    }
+
+    if (scored.length === 0) {
+        return { category: 'Otros', confidence: 0, matchedKeywords: [], source: 'rules' };
+    }
+
+    scored.sort((a, b) => (b.score - a.score) || (b.longest - a.longest));
+    const [best, second] = scored;
+    const tied = second && second.score === best.score && second.longest === best.longest;
+    const confidence = tied ? 50 : Math.min(100, 70 + best.matches.length * 10);
+
+    return { category: best.category, confidence, matchedKeywords: best.matches, source: 'rules' };
+}
+
+/**
+ * Carga una sola vez las reglas aprendidas del usuario (antes: una consulta por producto).
+ */
+export async function loadUserRules(userId) {
+    const rules = { codes: new Map(), keywords: [] };
+    if (!userId) { return rules; }
     try {
         const { data, error } = await supabase
             .from('classifier_rules')
-            .select('category')
-            .eq('user_id', userId)
-            .eq('pattern', pattern)
-            .eq('type', type)
-            .maybeSingle();
-
-        if (error) throw error;
-        return data?.category || null;
+            .select('pattern, category, type')
+            .eq('user_id', userId);
+        if (error) { throw error; }
+        for (const row of data || []) {
+            if (!row?.pattern || !row?.category) { continue; }
+            if (row.type === 'code') {
+                rules.codes.set(String(row.pattern).trim(), row.category);
+            } else {
+                rules.keywords.push({ pattern: row.pattern, category: row.category });
+            }
+        }
     } catch (error) {
-        logger.error(`❌ Error buscando regla DB (${type}):`, error);
-        return null;
+        logger.error('❌ Error cargando reglas del clasificador:', error);
     }
+    return rules;
 }
 
 /**
- * Clasifica un producto basándose en:
- * 1. Códigos hardcodeados (Alta prioridad)
- * 2. Memoria persistente (DB rules para el usuario)
- * 3. Keywords hardcodeadas
+ * Clasifica un producto (API previa). Si se pasan `rules`, no consulta la BD.
  */
-export async function classifyProduct(product, userId = null) {
-    const normalizedDescription = normalizeText(product.description || '');
-    const productCode = product.code?.toString().trim();
-
-    // 1. Prioridad: Códigos hardcodeados
-    const staticCodeCategory = findCategoryByCode(productCode);
-    if (staticCodeCategory) {
-        return {
-            category: staticCodeCategory,
-            confidence: 100,
-            matchedKeywords: [`static_code:${productCode}`],
-            source: 'static_code'
-        };
-    }
-
-    // 2. Prioridad: Reglas de la DB (Nueva Memoria)
-    if (userId) {
-        // Primero intentar por código en DB
-        if (productCode) {
-            const dbCodeCategory = await findDbRule(userId, productCode, 'code');
-            if (dbCodeCategory) {
-                return {
-                    category: dbCodeCategory,
-                    confidence: 100,
-                    matchedKeywords: [`db_code:${productCode}`],
-                    source: 'db_code'
-                };
-            }
-        }
-
-        // Luego intentar por keyword exacta en DB (buscando cada palabra corregida anteriormente)
-        // O simplemente si la descripción coincide con un patrón aprendido
-        const { data: dbKeywords } = await supabase
-            .from('classifier_rules')
-            .select('pattern, category')
-            .eq('user_id', userId)
-            .eq('type', 'keyword');
-
-        if (dbKeywords) {
-            for (const rule of dbKeywords) {
-                if (normalizedDescription.includes(normalizeText(rule.pattern))) {
-                    return {
-                        category: rule.category,
-                        confidence: 95,
-                        matchedKeywords: [`db_keyword:${rule.pattern}`],
-                        source: 'db_keyword'
-                    };
-                }
-            }
-        }
-    }
-
-    // 3. Prioridad: Keywords hardcodeadas (Las del código)
-    let bestMatch = {
-        category: 'Otros',
-        confidence: 0,
-        matchedKeywords: [],
-        source: 'rules'
-    };
-
-    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-        const matches = keywords.filter(keyword =>
-            normalizedDescription.includes(normalizeText(keyword))
-        );
-
-        if (matches.length > 0) {
-            const confidence = Math.min(100, 70 + (matches.length * 10));
-            if (confidence > bestMatch.confidence) {
-                bestMatch = {
-                    category,
-                    confidence,
-                    matchedKeywords: matches,
-                    source: 'rules'
-                };
-            }
-        }
-    }
-
-    return bestMatch;
+export async function classifyProduct(product, userId = null, rules = null) {
+    const effectiveRules = rules ?? (userId ? await loadUserRules(userId) : {});
+    return classifyWithRules(product, effectiveRules);
 }
 
 /**
- * Aprende una nueva regla de clasificación
+ * Aprende una nueva regla de clasificación.
+ * Las palabras se guardan normalizadas y sin cantidades/unidades ("LECHE ALQUERÍA 1100ML" → "leche alqueria"),
+ * así una corrección sirve para otras presentaciones del mismo producto y no se duplican reglas por mayúsculas.
  */
 export async function learnRule(userId, pattern, category, type = 'keyword') {
-    if (!userId || !pattern || !category) return;
+    if (!userId || !pattern || !category) return false;
+    const finalType = type === 'code' ? 'code' : 'keyword';
+    const finalPattern = finalType === 'code' ? String(pattern).trim() : normalizePattern(pattern);
+    const finalCategory = String(category).trim();
+    if (!finalPattern || !finalCategory) return false;
     try {
         const { error } = await supabase
             .from('classifier_rules')
             .upsert({
                 user_id: userId,
-                pattern: pattern,
-                category: category,
-                type: type,
+                pattern: finalPattern,
+                category: finalCategory,
+                type: finalType,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id,pattern,type' });
 
         if (error) throw error;
-        logger.info(`🧠 Regla aprendida: ${pattern} -> ${category} (${type})`);
+        logger.info(`🧠 Regla aprendida: ${finalPattern} -> ${finalCategory} (${finalType})`);
         return true;
     } catch (error) {
         logger.error('❌ Error guardando aprendizaje:', error);
@@ -272,8 +303,9 @@ export async function classifyInvoice(products, userId = null) {
     try {
         // Clasificar cada producto (ahora es async por la DB)
         const classifications = [];
+        const rules = await loadUserRules(userId); // una sola consulta por factura
         for (const product of products) {
-            const classification = await classifyProduct(product, userId);
+            const classification = await classifyProduct(product, userId, rules);
             classifications.push({
                 ...product,
                 ...classification,
@@ -290,7 +322,7 @@ export async function classifyInvoice(products, userId = null) {
                     confidence: 0,
                 };
             }
-            categoryTotals[item.category].total += item.total;
+            categoryTotals[item.category].total += Number(item.total) || 0;
             categoryTotals[item.category].count += 1;
             categoryTotals[item.category].confidence = Math.max(
                 categoryTotals[item.category].confidence,

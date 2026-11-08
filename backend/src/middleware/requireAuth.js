@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 /**
  * Middleware de autenticación por JWT de Supabase.
  *
@@ -52,4 +54,32 @@ export function createRequireAuth(getUser, log = console) {
 
         return next();
     };
+}
+
+/**
+ * Para tareas servidor-a-servidor (p. ej. n8n llamando a /api/check-gmail):
+ * acepta `x-cron-secret` igual a `secret` y entonces confía en el `userId` de la query/body.
+ * Sin cabecera de secreto, exige sesión normal (`requireAuth`).
+ * Si `secret` no está configurado, solo se acepta sesión.
+ *
+ * @param {(req: any, res: any, next: () => void) => unknown} requireAuth
+ * @param {string | undefined} secret
+ */
+export function createRequireAuthOrSecret(requireAuth, secret) {
+    return function requireAuthOrSecret(req, res, next) {
+        const provided = req.headers?.['x-cron-secret'];
+        if (provided === undefined) {
+            return requireAuth(req, res, next);
+        }
+        if (!secret || typeof provided !== 'string' || !safeEqual(provided, secret)) {
+            return res.status(401).json({ error: 'Secreto inválido' });
+        }
+        return next();
+    };
+}
+
+function safeEqual(a, b) {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    return ba.length === bb.length && timingSafeEqual(ba, bb);
 }

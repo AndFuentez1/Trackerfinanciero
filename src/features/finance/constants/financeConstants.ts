@@ -1,4 +1,4 @@
-import type { TransactionType } from './financeTypes';
+import type { TransactionType } from '../types/financeTypes';
 
 // Diverse palette of 30 distinct colors - ONE representative color from each family
 // Selected for maximum visual distinction and accessibility

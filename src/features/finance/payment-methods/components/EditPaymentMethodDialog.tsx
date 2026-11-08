@@ -23,6 +23,14 @@ import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { getTodayLocalDate } from '@/core/utils';
 import type { YieldPeriod } from '@/features/finance/utils/yieldUtils';
 import { normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
+import { getCreditDebt } from '@/features/finance/utils/creditCardUtils';
+import { BALANCE_ADJUSTMENT_CATEGORY } from '@/features/finance/utils/cashflowUtils';
+
+// Tarjetas: el campo muestra la deuda en positivo; en BD la deuda es balance negativo.
+const toBalanceField = (balance: number | null | undefined, type: string) =>
+  type === 'credit' ? getCreditDebt(balance) : Number(balance || 0);
+const fromBalanceField = (value: number, type: string) =>
+  type === 'credit' ? -Math.abs(value) : value;
 
 const PAYMENT_METHOD_TYPES = [
   { value: 'cash', label: 'Efectivo' },
@@ -60,6 +68,8 @@ export function EditPaymentMethodDialog({
   const { toast } = useToast();
   const { addTransaction } = useFinanceData();
   const [isLoading, setIsLoading] = useState(false);
+  // Solo se registra un ajuste si el usuario cambió el saldo/deuda
+  const [balanceTouched, setBalanceTouched] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'debit' as PaymentMethod['type'],
@@ -81,7 +91,7 @@ export function EditPaymentMethodDialog({
       setFormData({
         name: paymentMethod.name,
         type: paymentMethod.is_savings_account ? 'savings' : paymentMethod.type,
-        balance: Number(paymentMethod.balance),
+        balance: toBalanceField(paymentMethod.balance, paymentMethod.is_savings_account ? 'savings' : paymentMethod.type),
         creditLimit: Number(paymentMethod.credit_limit || 0),
         closingDate: paymentMethod.closing_date?.toString() || '',
         paymentDay: paymentMethod.payment_day?.toString() || '',
@@ -92,6 +102,7 @@ export function EditPaymentMethodDialog({
         yieldPeriod: normalizeYieldPeriod(paymentMethod.yield_period),
         initialDate: paymentMethod.initial_date?.substring(0, 7) || new Date().toISOString().substring(0, 7),
       });
+      setBalanceTouched(false);
     }
   }, [paymentMethod]);
 
@@ -161,13 +172,15 @@ export function EditPaymentMethodDialog({
       // Un cambio manual de saldo NO se escribe directo: se registra como transacción de ajuste
       // (ingreso si sube, gasto si baja) para que quede evidencia en historial y flujo de caja.
       // La transacción es la que actualiza el balance del método de pago (sin doble conteo).
-      const newBalance = Number(formData.balance) || 0;
-      const difference = Math.round((newBalance - Number(paymentMethod.balance || 0)) * 100) / 100;
+      const newBalance = fromBalanceField(Number(formData.balance) || 0, formData.type);
+      const difference = balanceTouched
+        ? Math.round((newBalance - Number(paymentMethod.balance || 0)) * 100) / 100
+        : 0;
 
       if (difference !== 0) {
         const result = await addTransaction({
           type: difference > 0 ? 'income' : 'expense',
-          category: 'Ajuste de saldo',
+          category: BALANCE_ADJUSTMENT_CATEGORY,
           category_id: null,
           amount: Math.abs(difference),
           description: `Ajuste manual de saldo - ${formData.name.trim()}`,
@@ -229,7 +242,12 @@ export function EditPaymentMethodDialog({
             <Select
               value={formData.type}
               onValueChange={(value) =>
-                setFormData({ ...formData, type: value as PaymentMethod['type'] })
+                setFormData({
+                  ...formData,
+                  type: value as PaymentMethod['type'],
+                  // Si no se ha editado el saldo, se re-expresa en la convención del nuevo tipo
+                  balance: balanceTouched ? formData.balance : toBalanceField(paymentMethod.balance, value),
+                })
               }
               disabled={lockType}
             >
@@ -255,9 +273,10 @@ export function EditPaymentMethodDialog({
             <MoneyInput
               id="balance"
               value={formData.balance}
-              onChange={(val) =>
-                setFormData({ ...formData, balance: val })
-              }
+              onChange={(val) => {
+                setBalanceTouched(true);
+                setFormData({ ...formData, balance: val });
+              }}
               placeholder="0.00"
             />
           </div>

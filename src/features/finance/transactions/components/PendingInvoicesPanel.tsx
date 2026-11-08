@@ -22,7 +22,7 @@ import { AddTransactionDialog } from './AddTransactionDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getBackendUrl } from '@/core/api/backend';
+import { getBackendUrl, backendFetch } from '@/core/api/backend';
 import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 import { useFeatureFlags } from '@/features/settings/hooks/useFeatureFlags';
 import { cn } from '@/core/utils';
@@ -252,9 +252,9 @@ export function PendingInvoicesPanel() {
 
                 if (finalCategory.toLowerCase() !== originalCategory.toLowerCase()) {
                     try {
-                        await fetch(`${getBackendUrl()}/api/classifier/learn`, {
+                        await backendFetch(`${getBackendUrl()}/api/classifier/learn`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: user!.id, pattern: finalDescription.split('(')[0].trim(), category: finalCategory, type: 'keyword' })
+                            body: JSON.stringify({ pattern: finalDescription.split('(')[0].trim(), category: finalCategory, type: 'keyword' })
                         });
                     } catch (e) { /* silent fail for ML */ }
                 }

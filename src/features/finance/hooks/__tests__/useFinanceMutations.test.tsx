@@ -8,6 +8,7 @@ import React from 'react';
 vi.mock('@/integrations/supabase/client', () => ({
     supabase: {
         from: vi.fn(),
+        rpc: vi.fn(),
     }
 }));
 
@@ -21,6 +22,7 @@ describe('useFinanceMutations', () => {
     beforeEach(() => {
         queryClient = new QueryClient();
         vi.clearAllMocks();
+        vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
     });
 
     const createWrapper = () => ({ children }: { children: React.ReactNode }) => (
@@ -40,7 +42,7 @@ describe('useFinanceMutations', () => {
                 select: vi.fn(() => ({ eq: mockEq })),
                 update: mockUpdate,
                 eq: mockEq
-            } as any;
+            } as never;
         });
 
         // El Override ya no es necesario aquí
@@ -60,7 +62,10 @@ describe('useFinanceMutations', () => {
         expect(res.error).toBeNull();
         expect(res.data?.id).toBe('t1');
         expect(mockInsert).toHaveBeenCalled();
-        expect(mockUpdate).toHaveBeenCalled(); 
+        expect(mockUpdate).not.toHaveBeenCalled();
+        expect(supabase.rpc).toHaveBeenCalledWith('adjust_balances', {
+            p_changes: [{ id: 'pm1', delta: -500 }],
+        });
     });
 
     it('addPaymentMethod works correctly', async () => {
@@ -72,7 +77,7 @@ describe('useFinanceMutations', () => {
             return {
                 insert: mockInsert,
                 select: mockSelect
-            } as any;
+            } as never;
         });
 
         // Ya no es necesario el Override
@@ -92,7 +97,9 @@ describe('useFinanceMutations', () => {
     });
 
     it('addTransfer creates two transactions and updates balances', async () => {
-        const mockInsert = vi.fn().mockResolvedValue({ error: null });
+        const mockInsert = vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue({ data: [{ id: 't1' }, { id: 't2' }], error: null })
+        });
         const mockUpdate = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
         const mockSingle = vi.fn().mockResolvedValue({ data: { balance: 1000 }, error: null });
         const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
@@ -102,7 +109,7 @@ describe('useFinanceMutations', () => {
                 insert: mockInsert,
                 update: mockUpdate,
                 select: vi.fn().mockReturnValue({ eq: mockEq })
-            } as any;
+            } as never;
         });
 
         const { result } = renderHook(() => useFinanceMutations('user1'), { wrapper: createWrapper() });
@@ -116,7 +123,11 @@ describe('useFinanceMutations', () => {
 
         expect(res.error).toBeNull();
         expect(mockInsert).toHaveBeenCalled();
-        expect(mockUpdate).toHaveBeenCalledTimes(2); // updates both pm1 & pm2
+        // Ambos saldos en una sola llamada atómica
+        expect(supabase.rpc).toHaveBeenCalledTimes(1);
+        expect(supabase.rpc).toHaveBeenCalledWith('adjust_balances', {
+            p_changes: [{ id: 'pm1', delta: -500 }, { id: 'pm2', delta: 500 }],
+        });
     });
 
     it('deleteTransaction deletes transaction and reverts balance', async () => {
@@ -138,7 +149,7 @@ describe('useFinanceMutations', () => {
                 delete: mockDelete,
                 update: mockUpdate,
                 select: vi.fn().mockReturnValue({ eq: eqFn })
-            } as any;
+            } as never;
         });
 
         const { result } = renderHook(() => useFinanceMutations('user1'), { wrapper: createWrapper() });
@@ -147,7 +158,31 @@ describe('useFinanceMutations', () => {
 
         expect(res.error).toBeNull();
         expect(mockDelete).toHaveBeenCalled();
-        expect(mockUpdate).toHaveBeenCalled();
+        expect(supabase.rpc).toHaveBeenCalledWith('adjust_balances', {
+            p_changes: [{ id: 'pm1', delta: 100 }],
+        });
+    });
+
+    it('deleteTransaction of a negative transfer_out gives the money back', async () => {
+        vi.mocked(supabase.from).mockImplementation(() => ({
+            delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+            select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                    single: vi.fn().mockResolvedValue({
+                        data: { amount: -300, type: 'transfer_out', payment_method_id: 'pm1' },
+                        error: null,
+                    }),
+                }),
+            }),
+        }) as never);
+
+        const { result } = renderHook(() => useFinanceMutations('user1'), { wrapper: createWrapper() });
+        const res = await result.current.deleteTransaction('t1');
+
+        expect(res.error).toBeNull();
+        expect(supabase.rpc).toHaveBeenCalledWith('adjust_balances', {
+            p_changes: [{ id: 'pm1', delta: 300 }],
+        });
     });
 
     it('deletePaymentMethod works', async () => {
@@ -174,16 +209,17 @@ describe('useFinanceMutations', () => {
                         error: null
                     })
                 })
-            } as any;
+            } as never;
         });
 
         const { result } = renderHook(() => useFinanceMutations('user1'), { wrapper: createWrapper() });
 
-        const res = await result.current.deletePaymentMethod({
-            id: 'pm1',
-            option: 'delete'
-        });
+        const res = await result.current.deletePaymentMethod('pm1', 'delete');
         expect(res.error).toBeNull();
-        expect(mockDelete).toHaveBeenCalled();
+        expect(supabase.rpc).toHaveBeenCalledWith('delete_payment_method', {
+            p_id: 'pm1',
+            p_option: 'delete',
+            p_transfer_to_id: null,
+        });
     });
 });

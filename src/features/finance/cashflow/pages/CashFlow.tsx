@@ -85,8 +85,8 @@ export default function CashFlow() {
 
     if (sortField) {
       filtered.sort((a, b) => {
-        let valA: any = a[sortField];
-        let valB: any = b[sortField];
+        let valA: string | number = a[sortField];
+        let valB: string | number = b[sortField];
 
         if (sortField === 'mes') {
           valA = a.originalIndex;
@@ -95,8 +95,8 @@ export default function CashFlow() {
 
         if (typeof valA === 'string') {
           return sortDirection === 'asc'
-            ? valA.localeCompare(valB, 'es', { sensitivity: 'base' })
-            : valB.localeCompare(valA, 'es', { sensitivity: 'base' });
+            ? valA.localeCompare(String(valB), 'es', { sensitivity: 'base' })
+            : String(valB).localeCompare(valA, 'es', { sensitivity: 'base' });
         } else {
           return sortDirection === 'asc'
             ? (valA as number) - (valB as number)
@@ -292,7 +292,7 @@ export default function CashFlow() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Neto:</span>
-                  <Select value={filterNet} onValueChange={(val: any) => setFilterNet(val)}>
+                  <Select value={filterNet} onValueChange={(val) => setFilterNet(val as typeof filterNet)}>
                     <SelectTrigger className="w-[140px] h-9">
                       <SelectValue placeholder="Filtrar neto" />
                     </SelectTrigger>
@@ -378,6 +378,9 @@ export default function CashFlow() {
                                       <div className="flex justify-between py-0.5"><span>Intereses Ahorro:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Préstamos que me deben:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Otros Ingresos:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
+                                      {row.ingresosAjuste > 0 && (
+                                        <div className="flex justify-between py-0.5"><span>Ajustes de saldo:</span> <span className="font-medium">{formatCOP(row.ingresosAjuste)}</span></div>
+                                      )}
                                     </div>
                                     {/* GASTOS */}
                                     <div>
@@ -393,6 +396,9 @@ export default function CashFlow() {
                                       <div className="flex justify-between py-0.5"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Gastos:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
+                                      {row.egresosAjuste > 0 && (
+                                        <div className="flex justify-between py-0.5"><span>Ajustes de saldo:</span> <span className="font-medium">{formatCOP(row.egresosAjuste)}</span></div>
+                                      )}
                                     </div>
                                   </div>
                                 </td>
@@ -445,6 +451,9 @@ export default function CashFlow() {
                                 <div className="flex justify-between"><span>Intereses:</span> <span className="font-medium">{formatCOP(row.interesesAhorro)}</span></div>
                                 <div className="flex justify-between"><span>Préstamos a favor:</span> <span className="font-medium">{formatCOP(row.ingresosPrestamos)}</span></div>
                                 <div className="flex justify-between"><span>Otros:</span> <span className="font-medium">{formatCOP(row.otrosIngresos)}</span></div>
+                                {row.ingresosAjuste > 0 && (
+                                  <div className="flex justify-between"><span>Ajustes de saldo:</span> <span className="font-medium">{formatCOP(row.ingresosAjuste)}</span></div>
+                                )}
                               </div>
                               <div className="space-y-1">
                                 <div className="font-semibold text-destructive border-b border-destructive/20 pb-1 mb-2">Gastos Detalle</div>
@@ -459,6 +468,9 @@ export default function CashFlow() {
                                 <div className="flex justify-between"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
                                 <div className="flex justify-between"><span>Gastos Reales:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
                                 <div className="flex justify-between"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
+                                {row.egresosAjuste > 0 && (
+                                  <div className="flex justify-between"><span>Ajustes de saldo:</span> <span className="font-medium">{formatCOP(row.egresosAjuste)}</span></div>
+                                )}
                               </div>
                             </div>
                           )}

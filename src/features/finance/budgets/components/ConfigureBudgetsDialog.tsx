@@ -37,7 +37,12 @@ interface CategoryConfig {
   isRecurrent: boolean;
   month: string;
   budgetId?: string;
+  /** Presupuesto de ingresos (monto = ingreso estimado, no límite de gasto). */
+  isIncome?: boolean;
 }
+
+// Tipos de categoría que admiten presupuesto: gastos, ahorro e ingresos (ingreso estimado)
+const BUDGETABLE_TYPES = ['expense', 'saving', 'income'];
 
 export function ConfigureBudgetsDialog() {
   const [open, setOpen] = useState(false);
@@ -49,6 +54,8 @@ export function ConfigureBudgetsDialog() {
   const [configs, setConfigs] = useState<CategoryConfig[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  // Confirmación de borrado dentro del diálogo (sin confirm() nativo)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const prevOpenRef = useRef(false);
 
   // Estados locales para la creación de presupuestos
@@ -66,7 +73,7 @@ export function ConfigureBudgetsDialog() {
 
   const buildConfigFromBudget = useCallback((categoryId: string): CategoryConfig | null => {
     const cat = categories.find(c => c.id === categoryId);
-    if (!cat || (cat.type !== 'expense' && cat.type !== 'saving')) {
+    if (!cat || !BUDGETABLE_TYPES.includes(cat.type)) {
       return null;
     }
 
@@ -82,6 +89,7 @@ export function ConfigureBudgetsDialog() {
         ? dbBudget.month.substring(0, 7)
         : getDefaultMonth(),
       budgetId: dbBudget?.id,
+      isIncome: cat.type === 'income',
     };
   }, [categories, rawBudgets]);
 
@@ -107,6 +115,7 @@ export function ConfigureBudgetsDialog() {
       setCreateIsRecurrent(false);
       setCreateMonth(getDefaultMonth());
       setActiveTab('configured');
+      setConfirmDeleteId(null);
     }
   }, [open, categories, rawBudgets, buildConfigFromBudget]);
 
@@ -117,7 +126,7 @@ export function ConfigureBudgetsDialog() {
 
   const availableCategoriesToAdd = useMemo(() =>
     categories
-      .filter(c => (c.type === 'expense' || c.type === 'saving') && !configs.some(cfg => cfg.categoryId === c.id))
+      .filter(c => BUDGETABLE_TYPES.includes(c.type) && !configs.some(cfg => cfg.categoryId === c.id))
       .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
     [categories, configs]
   );
@@ -180,9 +189,11 @@ export function ConfigureBudgetsDialog() {
   };
 
   const handleDeleteCategory = async (config: CategoryConfig) => {
-    if (!window.confirm(`¿Eliminar el presupuesto de "${config.categoryName}"?`)) {
+    if (confirmDeleteId !== config.categoryId) {
+      setConfirmDeleteId(config.categoryId);
       return;
     }
+    setConfirmDeleteId(null);
 
     if (!config.budgetId) {
       setConfigs(prev => prev.filter(c => c.categoryId !== config.categoryId));
@@ -231,7 +242,7 @@ export function ConfigureBudgetsDialog() {
     }
 
     const cat = categories.find(c => c.id === createCategoryId);
-    if (!cat) return;
+    if (!cat) {return;}
 
     setSaving(createCategoryId);
     try {
@@ -263,6 +274,7 @@ export function ConfigureBudgetsDialog() {
             isRecurrent: createIsRecurrent,
             month: createMonth,
             budgetId: newBudgetId,
+            isIncome: cat.type === 'income',
           }
         ]);
 
@@ -342,13 +354,13 @@ export function ConfigureBudgetsDialog() {
                       />
                       <span className="font-semibold text-sm text-foreground">{config.categoryName}</span>
                       <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                        Configurado
+                        {config.isIncome ? 'Ingreso' : 'Configurado'}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                       <div className="flex flex-col gap-1 w-full min-w-0">
-                        <Label className="text-xs text-muted-foreground">Monto límite</Label>
+                        <Label className="text-xs text-muted-foreground">{config.isIncome ? 'Ingreso estimado' : 'Monto límite'}</Label>
                         <MoneyInput
                           className="h-10 text-sm w-full"
                           placeholder="0"
@@ -398,16 +410,31 @@ export function ConfigureBudgetsDialog() {
                           )}
                         </Button>
 
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDeleteCategory(config)}
-                          disabled={deleting === config.categoryId}
-                          title="Eliminar presupuesto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {confirmDeleteId === config.categoryId ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDeleteCategory(config)}
+                            onBlur={() => setConfirmDeleteId(null)}
+                            disabled={deleting === config.categoryId}
+                            title="Confirmar eliminación"
+                          >
+                            ¿Eliminar?
+                          </Button>
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDeleteCategory(config)}
+                            disabled={deleting === config.categoryId}
+                            title="Eliminar presupuesto"
+                            aria-label={`Eliminar presupuesto de ${config.categoryName}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -436,7 +463,7 @@ export function ConfigureBudgetsDialog() {
                         <SelectContent>
                           {availableCategoriesToAdd.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>
-                              {cat.name}
+                              {cat.name}{cat.type === 'income' ? ' (Ingreso)' : ''}
                             </SelectItem>
                           ))}
                         </SelectContent>

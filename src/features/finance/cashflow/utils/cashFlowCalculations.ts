@@ -3,7 +3,7 @@ import { es } from 'date-fns/locale';
 import type { Transaction, Budget, PaymentMethod, FutureExpense } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
-import { isTransferTransaction } from '@/features/finance/utils/cashflowUtils';
+import { isTransferTransaction, isBalanceAdjustment } from '@/features/finance/utils/cashflowUtils';
 import { parseLocalDate } from '@/core/utils';
 import { calculateMonthlyInterest, normalizeYieldPeriod } from '@/features/finance/utils/yieldUtils';
 
@@ -34,6 +34,12 @@ export interface MonthlySnapshot {
     egresosTarjeta: number;
     egresosReales: number;
     egresosAhorro: number;
+    /** Ajustes manuales de saldo que subieron el saldo (p. ej. bajar la deuda de una tarjeta). */
+    ingresosAjuste: number;
+    /** Ajustes manuales de saldo que bajaron el saldo. */
+    egresosAjuste: number;
+    /** Parte del neto del mes que viene de transacciones reales (ya incluida en los saldos actuales). */
+    netoReal: number;
     balanceNetoMes: number;
     balanceAcumulado: number;
     newSavings: Record<string, number>;
@@ -92,6 +98,7 @@ const buildRealExpensePool = (txs: Transaction[]) => {
     const pool = new Map<string, number[]>();
     txs.forEach(tx => {
         if (isTransferTransaction(tx)) { return; }
+        if (isBalanceAdjustment(tx)) { return; }
         if (tx.type !== 'expense') { return; }
         if (isInstallmentPlanExpense(tx)) { return; }
         const key = getProjectionKey(tx.category_id, tx.category, tx.description);
@@ -160,6 +167,8 @@ export function calculateMonthlySnapshot(
     let egresosTarjeta = 0;
     let egresosReales = 0;
     let egresosAhorro = 0;
+    let ingresosAjuste = 0;
+    let egresosAjuste = 0;
 
     // --- Ahorros e Intereses ---
     const newSavings: Record<string, number> = { ...prevSavings };
@@ -213,8 +222,21 @@ export function calculateMonthlySnapshot(
     let realSalarySum = 0;
     let realIncomeSum = 0;
 
+    let realExpenseSum = 0;
+    let realSavingSum = 0;
+
     monthTransactions.forEach(tx => {
         if (isTransferTransaction(tx)) { return; }
+
+        // Ajuste manual de saldo: línea propia (no es salario, ni gasto, ni compromiso pagado)
+        if (isBalanceAdjustment(tx)) {
+            if (tx.type === 'income') {
+                ingresosAjuste += tx.amount;
+            } else {
+                egresosAjuste += tx.amount;
+            }
+            return;
+        }
 
         if (tx.type === 'income') {
             if (isSalary(tx.category_id || null, tx.category, categories)) {
@@ -227,11 +249,14 @@ export function calculateMonthlySnapshot(
             const isLoanPayment = isLoanCategory(tx.category_id || null, tx.category, categories);
             if (!isMultiCuota && !isLoanPayment) {
                 egresosReales += tx.amount;
+                realExpenseSum += tx.amount;
             }
-        } else if (tx.type === 'saving' || tx.type === 'investment' || isSavingCategory(tx.category_id || null, tx.category, categories)) {
+        } else if (tx.type === 'saving' || tx.type === 'savings' || tx.type === 'investment' || isSavingCategory(tx.category_id || null, tx.category, categories)) {
             egresosAhorro += tx.amount;
+            realSavingSum += tx.amount;
         }
     });
+    const netoReal = realSalarySum + realIncomeSum + ingresosAjuste - realExpenseSum - realSavingSum - egresosAjuste;
 
     // --- Iniciar Ingresos con valores reales ---
     ingresosSalario = realSalarySum;
@@ -432,8 +457,8 @@ export function calculateMonthlySnapshot(
         gastosFuturos += overdueFutureExpenses;
     }
 
-    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos;
-    const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales + egresosAhorro;
+    const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos + ingresosAjuste;
+    const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales + egresosAhorro + egresosAjuste;
     const balanceNetoMes = ingresosTotales - egresosTotales;
     const balanceAcumulado = currentPrevBalance + balanceNetoMes;
 
@@ -452,8 +477,31 @@ export function calculateMonthlySnapshot(
         egresosTarjeta: round(egresosTarjeta),
         egresosReales: round(egresosReales),
         egresosAhorro: round(egresosAhorro),
+        ingresosAjuste: round(ingresosAjuste),
+        egresosAjuste: round(egresosAjuste),
+        netoReal: round(netoReal),
         balanceNetoMes: round(balanceNetoMes),
         balanceAcumulado: round(balanceAcumulado),
         newSavings, newLoans, newCardInstallments,
     };
+}
+
+/**
+ * Desplazamiento que ancla el saldo acumulado al saldo real de hoy.
+ * - Mes actual en la ventana: fin de mes = saldo real + lo que falta por ocurrir (neto − netoReal).
+ *   Las transacciones reales del mes ya están en el saldo real, así que no se suman otra vez.
+ * - Sin mes actual: el último mes histórico queda igual al saldo real (comportamiento previo).
+ */
+export function computeBalanceAnchorOffset(
+    rows: Pick<MonthlySnapshot, 'balanceAcumulado' | 'balanceNetoMes' | 'netoReal'>[],
+    currentMonthIdx: number,
+    balanceActual: number,
+    lastHistoricalRaw: number | null
+): number {
+    if (currentMonthIdx >= 0 && rows[currentMonthIdx]) {
+        const row = rows[currentMonthIdx];
+        const pendingThisMonth = row.balanceNetoMes - row.netoReal;
+        return round(balanceActual + pendingThisMonth - row.balanceAcumulado);
+    }
+    return lastHistoricalRaw !== null ? round(balanceActual - lastHistoricalRaw) : 0;
 }
