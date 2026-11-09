@@ -6,6 +6,11 @@ Todas las mejoras relevantes por versión/fecha.
 
 ## [2026-11-08]
 
+### Conexión con la base de datos
+- **Falso aviso "base de datos inactiva"**: el modal salía con cualquier "Failed to fetch" (corte de wifi, pestaña suspendida, petición cancelada al navegar). Ahora la detección vive en `src/core/api/dbConnectionErrors.ts`, ignora sin red / pestaña oculta / cancelaciones, y el modal hace un ping silencioso antes de mostrarse: si la BD responde, no aparece.
+- **Modal atascado en "Intento 0/5"**: el ping no tenía tiempo límite; ahora tiene 8 s, reintenta con espera creciente (3→20 s), prueba de inmediato al volver la red o la pestaña, y al reconectar refresca los datos sin recargar la página. "Cerrar aviso" siempre visible. Colores con tokens del sistema.
+- **Tiempo límite de 20 s en el cliente Supabase** (`global.fetch`): una petición colgada (BD lenta por memoria/swap en la instancia) falla y TanStack Query la reintenta, en vez de quedarse esperando.
+
 ### Integridad de saldos (P0)
 - **Saldos atómicos**: nueva RPC `adjust_balances(jsonb)` (migración `20261108120000`) que suma/resta en el servidor, en una sola sentencia y todo-o-nada. Reemplaza el `select balance` + `update balance` del cliente en crear/editar/eliminar transacción, transferencias y movimientos de ahorro (antes dos operaciones seguidas o dos pestañas pisaban el saldo). Si el paso siguiente falla (insertar/editar/borrar), el saldo se revierte o la transacción recién creada se elimina.
 - **Eliminar transacción de salida de transferencia**: `transfer_out` se guarda con monto negativo y al eliminarla/editarla el saldo se movía en la dirección equivocada; ahora todos los caminos usan `balanceDeltaFor` (valor absoluto + tipo).

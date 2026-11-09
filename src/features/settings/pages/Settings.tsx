@@ -216,7 +216,7 @@ export default function ConfiguracionPage() {
                             {/* Footer */}
                             <footer className="text-center py-6">
                                 <p className="text-muted-foreground" style={{ fontSize: '15px' }}>
-                                    Hecho con <Heart className="inline h-3 w-3 text-destructive fill-current" aria-label="amor" /> por Joan Fuentes
+                                    Hecho con <Heart className="inline h-3 w-3 text-destructive fill-current" aria-label="amor" /> por AndFz
                                 </p>
                             </footer>
                         </div>

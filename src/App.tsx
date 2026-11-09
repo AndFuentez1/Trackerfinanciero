@@ -12,6 +12,7 @@ import { DatabaseErrorOverlay } from '@/shared/components/DatabaseErrorOverlay';
 import { NetworkSyncListener } from '@/shared/components/NetworkSyncListener';
 import { OfflineSyncIndicator } from '@/shared/components/OfflineSyncIndicator';
 import { getSkeletonTypeFromPath } from '@/shared/components/skeletons/skeletonUtils';
+import { isDatabaseUnreachableError, isTransientQueryFailure } from '@/core/api/dbConnectionErrors';
 
 // Auth is imported directly (not lazy) because:
 // 1. It's the first page unauthenticated users see — no benefit from lazy loading
@@ -23,42 +24,17 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 type SkeletonTab = NonNullable<React.ComponentProps<typeof SkeletonLoader>['tab']>;
 const skeletonTabFromPath = () => getSkeletonTypeFromPath(window.location.pathname) as SkeletonTab;
 
-const isSupabasePausedError = (error: unknown) => {
-  const err = error as { message?: unknown; status?: unknown; code?: unknown } | null;
-  const msg = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
-  return msg.includes('failed to fetch') ||
-         msg.includes('networkerror') ||
-         msg.includes('503') ||
-         err?.status === 503 ||
-         err?.code === '503';
-};
-
-/** Errores de red o servidor a los que conviene reintentar la query antes de mostrar fallo. */
-const isTransientQueryFailure = (error: unknown) => {
-  const msg = typeof (error as Error)?.message === 'string' ? (error as Error).message.toLowerCase() : '';
-  const status = (error as { status?: number })?.status;
-  return (
-    msg.includes('failed to fetch') ||
-    msg.includes('networkerror') ||
-    msg.includes('load failed') ||
-    status === 503 ||
-    status === 502 ||
-    status === 504 ||
-    (typeof status === 'number' && status >= 500)
-  );
-};
-
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
-      if (isSupabasePausedError(error)) {
+      if (isDatabaseUnreachableError(error)) {
         window.dispatchEvent(new CustomEvent('db-connection-error', { detail: error }));
       }
     }
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      if (isSupabasePausedError(error)) {
+      if (isDatabaseUnreachableError(error)) {
         window.dispatchEvent(new CustomEvent('db-connection-error', { detail: error }));
       }
     }
@@ -176,8 +152,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   return (
     <ErrorBoundary>
-      <DatabaseErrorOverlay />
       <QueryClientProvider client={queryClient}>
+        <DatabaseErrorOverlay />
         <NetworkSyncListener />
         <OfflineSyncIndicator />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

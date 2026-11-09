@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { createFetchWithTimeout } from '@/core/api/dbConnectionErrors';
 
 const SUPABASE_URL_RAW = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY_RAW = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -52,7 +53,9 @@ try {
         autoRefreshToken: true,
         detectSessionInUrl: true,  // 🔥 CRITICAL: Enable automatic hash detection
         flowType: 'pkce'  // 🔥 CRITICAL: Use PKCE flow for better security
-      }
+      },
+      // Tiempo límite: una petición colgada falla y TanStack Query la reintenta.
+      global: { fetch: createFetchWithTimeout() },
     });
 
   // Set up error handler for refresh token errors - handle silently

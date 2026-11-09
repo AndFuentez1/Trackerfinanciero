@@ -1,119 +1,172 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Database, AlertCircle, RefreshCw, ServerOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { isTransientQueryFailure } from '@/core/api/dbConnectionErrors';
+
+/** Espera entre reintentos automáticos (ms). Su largo define el número de intentos. */
+const RETRY_DELAYS_MS = [3_000, 5_000, 8_000, 13_000, 20_000];
+const MAX_RETRIES = RETRY_DELAYS_MS.length;
+const PING_TIMEOUT_MS = 8_000;
+
+type OverlayStatus = 'hidden' | 'retrying' | 'paused';
+
+/**
+ * ¿Responde la base de datos? Un error de RLS/auth también cuenta como "responde";
+ * solo red caída, timeout o 5xx cuentan como caída.
+ */
+async function pingDatabase(): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .select('id', { head: true })
+      .limit(1)
+      .abortSignal(controller.signal);
+    if (controller.signal.aborted) {return false;}
+    return !error || !isTransientQueryFailure(error);
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export const DatabaseErrorOverlay: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<OverlayStatus>('hidden');
   const [attemptCount, setAttemptCount] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
-  // Maximum automatic retries before declaring it paused (e.g. 5 attempts = ~25s total)
-  const MAX_RETRIES = 5;
+  // Evita pings simultáneos y eventos repetidos mientras se confirma la caída.
+  const checkingRef = useRef(false);
+  const statusRef = useRef<OverlayStatus>('hidden');
+  statusRef.current = status;
 
-  const checkConnection = useCallback(async () => {
+  const recover = useCallback(() => {
+    setStatus('hidden');
+    setAttemptCount(0);
+    void queryClient.invalidateQueries();
+  }, [queryClient]);
+
+  /** Hace un ping; si responde, cierra el aviso y refresca los datos. */
+  const check = useCallback(async (): Promise<boolean> => {
+    if (checkingRef.current) {return false;}
+    checkingRef.current = true;
     setIsChecking(true);
     try {
-      // Un simple ping a una tabla pública o a profiles para ver si responde
-      const { error } = await supabase.from('profiles').select('id').limit(1);
-      
-      // Si el error no es de red/503 (ej. es un error de RLS de que no hay sesion), significa que la DB responde
-      if (!error || (error.code !== '503' && !error.message.includes('Failed to fetch'))) {
-        // Conexión restablecida - Recargar la app
-        window.location.reload();
-        return true;
-      }
-      return false; // Sigue caída
-    } catch {
-      return false; // Sigue caída
+      const up = await pingDatabase();
+      if (up) {recover();}
+      return up;
     } finally {
+      checkingRef.current = false;
       setIsChecking(false);
     }
-  }, []);
+  }, [recover]);
 
+  // Error reportado por TanStack Query: confirmar en silencio antes de bloquear la pantalla.
   useEffect(() => {
-    const handleDbError = () => {
-      setIsVisible(true);
+    const handleDbError = async () => {
+      if (statusRef.current !== 'hidden' || checkingRef.current) {return;}
+      checkingRef.current = true;
+      const up = await pingDatabase();
+      checkingRef.current = false;
+      if (up || statusRef.current !== 'hidden') {return;}
       setAttemptCount(0);
-      setIsPaused(false);
+      setStatus('retrying');
     };
 
     window.addEventListener('db-connection-error', handleDbError);
     return () => window.removeEventListener('db-connection-error', handleDbError);
   }, []);
 
-  // Bucle de reintentos automáticos
+  // Reintentos automáticos con espera creciente.
   useEffect(() => {
-    if (!isVisible || isPaused) return;
+    if (status !== 'retrying') {return;}
+    if (attemptCount >= MAX_RETRIES) {
+      setStatus('paused');
+      return;
+    }
 
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      const up = await check();
+      if (!cancelled && !up) {setAttemptCount((prev) => prev + 1);}
+    }, RETRY_DELAYS_MS[attemptCount]);
 
-    const retryCycle = async () => {
-      if (attemptCount >= MAX_RETRIES) {
-        setIsPaused(true);
-        return;
-      }
-
-      const isConnected = await checkConnection();
-      if (!isConnected) {
-        setAttemptCount((prev) => prev + 1);
-        timeoutId = setTimeout(retryCycle, 5000); // Reintentar cada 5 segundos
-      }
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
     };
+  }, [status, attemptCount, check]);
 
-    // Comenzar el ciclo después de un breve delay inicial
-    timeoutId = setTimeout(retryCycle, 2000);
+  // Volver la red o la pestaña: probar al instante, también tras agotar reintentos.
+  useEffect(() => {
+    if (status === 'hidden') {return;}
+    const tryNow = () => {
+      if (navigator.onLine && document.visibilityState === 'visible') {void check();}
+    };
+    window.addEventListener('online', tryNow);
+    document.addEventListener('visibilitychange', tryNow);
+    return () => {
+      window.removeEventListener('online', tryNow);
+      document.removeEventListener('visibilitychange', tryNow);
+    };
+  }, [status, check]);
 
-    return () => clearTimeout(timeoutId);
-  }, [isVisible, isPaused, attemptCount, checkConnection]);
+  if (status === 'hidden') {return null;}
 
-  // Si no está visible, no renderizamos nada
-  if (!isVisible) return null;
+  const isPaused = status === 'paused';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/80 p-6 backdrop-blur-md transition-all duration-300">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="db-error-title"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 p-6 backdrop-blur-md transition-all duration-300"
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-card-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         <div className="flex flex-col items-center text-center">
-          
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-700/50 shadow-inner">
+
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted shadow-inner">
             {isPaused ? (
-              <ServerOff className="h-10 w-10 text-rose-500 animate-pulse" />
+              <ServerOff className="h-10 w-10 text-destructive animate-pulse" />
             ) : (
               <div className="relative">
-                <Database className="h-10 w-10 text-amber-500" />
-                <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800">
-                  <RefreshCw className="h-3 w-3 text-amber-400 animate-spin" />
+                <Database className="h-10 w-10 text-warning" />
+                <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-card">
+                  <RefreshCw className="h-3 w-3 text-warning animate-spin" />
                 </div>
               </div>
             )}
           </div>
 
-          <h1 className="mb-2 text-2xl font-bold tracking-tight text-white">
-            Estamos trabajando en mejorar la app
+          <h1 id="db-error-title" className="mb-2 text-2xl font-bold tracking-tight text-foreground">
+            Problemas para conectar con el servidor
           </h1>
 
           <div className="mb-8 min-h-[4rem]">
             {isPaused ? (
-              <p className="text-sm font-medium leading-relaxed text-slate-300">
-                <AlertCircle className="mr-2 inline-block h-4 w-4 text-rose-400" />
-                Lo sentimos, el servicio de base de datos estará inactivo por algunas horas.{' '}
-                Puedes intentar acceder más tarde.
+              <p className="text-sm font-medium leading-relaxed text-muted-foreground">
+                <AlertCircle className="mr-2 inline-block h-4 w-4 text-destructive" />
+                El servidor no está respondiendo. Volveremos a intentar cuando recuperes la conexión,
+                o puedes intentarlo tú en unos minutos.
               </p>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm leading-relaxed text-slate-300">
-                  La base de datos puede estar inactiva en este momento. Por favor espera mientras intentamos reconectarla automáticamente...
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  El servidor está tardando en responder. Estamos reintentando automáticamente…
                 </p>
-                
-                {/* Indicador de progreso */}
+
                 <div className="flex w-full items-center justify-center gap-2">
-                  <div className="h-1.5 w-full max-w-[12rem] overflow-hidden rounded-full bg-slate-700">
-                    <div 
-                      className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
+                  <div className="h-1.5 w-full max-w-[12rem] overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-warning transition-all duration-1000 ease-linear"
                       style={{ width: `${(attemptCount / MAX_RETRIES) * 100}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     Intento {attemptCount}/{MAX_RETRIES}
                   </span>
                 </div>
@@ -121,17 +174,17 @@ export const DatabaseErrorOverlay: React.FC = () => {
             )}
           </div>
 
-          {/* Acciones */}
           <button
-            onClick={() => window.location.reload()}
-            disabled={isChecking && !isPaused}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-              isPaused 
-                ? 'bg-primary hover:bg-primary/90 focus-visible:outline-primary' 
-                : 'bg-slate-700 hover:bg-slate-600 focus-visible:outline-slate-700'
-            } ${isChecking && !isPaused ? 'opacity-70 cursor-not-allowed' : ''}`}
+            type="button"
+            onClick={() => { void check(); }}
+            disabled={isChecking}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+              isPaused
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            } ${isChecking ? 'cursor-not-allowed opacity-70' : ''}`}
           >
-            {isChecking && !isPaused ? (
+            {isChecking ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin" />
                 Verificando...
@@ -141,16 +194,14 @@ export const DatabaseErrorOverlay: React.FC = () => {
             )}
           </button>
 
-          {/* Salida: nunca dejar al usuario atrapado tras agotar reintentos */}
-          {isPaused && (
-            <button
-              type="button"
-              onClick={() => setIsVisible(false)}
-              className="mt-3 text-sm font-medium text-slate-300 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
-            >
-              Cerrar aviso
-            </button>
-          )}
+          {/* Salida: nunca dejar al usuario atrapado */}
+          <button
+            type="button"
+            onClick={() => setStatus('hidden')}
+            className="mt-3 text-sm font-medium text-muted-foreground underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            Cerrar aviso
+          </button>
         </div>
       </div>
     </div>
