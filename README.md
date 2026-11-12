@@ -387,17 +387,17 @@ Orden sugerido: P0 antes de cualquier release; P1 siguiente sprint; P2 backlog.
 
 #### P1 — Correctitud financiera
 - [x] **Ajustes de saldo** (2026-11-08): línea propia en el flujo de caja y excluidos de ingresos/gastos reales en Presupuestos. Pendiente decidir si se excluyen de los KPIs del Dashboard (la gráfica de evolución sí debe incluirlos).
-- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): compromisos `saving` → `egresosAhorro`; `monthDiff` sin `start_date` cobra todos los meses; usar `payment_day`; `consumePayment` por "monto más cercano" puede consumir un compromiso equivocado. *(2026-11-08: corregido el doble conteo del mes actual en el saldo acumulado y el tipo `savings`; meses pasados siguen omitiendo pagos de préstamos y cuotas de tarjeta.)*
+- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): usar `payment_day`. *(2026-11-12: compromisos `saving` → `egresosAhorro`; suscripciones sin `start_date` ancladas al mes actual; `consumePayment` con tolerancia ±10 %.)* *(2026-11-08: corregido el doble conteo del mes actual en el saldo acumulado y el tipo `savings`; meses pasados siguen omitiendo pagos de préstamos y cuotas de tarjeta.)*
 - [ ] **Flujo de caja:** `formatCOP` ignora la moneda/decimales del usuario; `futureExpenses = 0` fijo en las tarjetas; `incomeMode` y `budgets` pasan sin usarse (implementar "projected" o eliminar).
-- [ ] **Presupuestos:** `totalSpent` suma gastos de categorías sin presupuesto mientras `totalBudgeted` no; mutaciones con `.sort`. *(2026-11-08: presupuesto de ingresos creable/editable en "Configurar presupuesto"; `saveBudget` sin `onConflict`.)*
-- [ ] **Importación:** falsos positivos de duplicados (dos compras iguales el mismo día) y filas repetidas dentro del mismo archivo; lotes parciales sin rollback.
+- [x] **Presupuestos** (2026-11-12): `totalBudgeted` solo suma presupuestos de gasto; transferencias/ajustes fuera del gasto por categoría. `totalSpent` incluye a propósito gastos de categorías sin presupuesto. *(2026-11-08: presupuesto de ingresos creable/editable en "Configurar presupuesto"; `saveBudget` sin `onConflict`.)*
+- [ ] **Importación:** lotes parciales sin rollback. *(2026-11-12: duplicados por conteo, migración `20261112120000`.)*
 - [ ] **Compromisos:** no hay forma de revertir un pago ni de terminar una suscripción manualmente; `end_date` y `status` sin vista de histórico.
-- [ ] **Ahorros:** `performancePercent` = 0 cuando `netContributions <= 0`; `addSavingsTransaction` usa el balance local como base.
+- [x] **Ahorros** (2026-11-12): `performancePercent` con fallback por intereses; `addSavingsTransaction` ya usa el saldo del servidor (2026-11-08).
 
 #### P1 — UX / modales
 - [x] `GmailHistoryDialog`: `AddCategoryDialog` fuera de `SelectContent` (2026-11-08).
 - [ ] `SessionTimeoutWarning`: cerrar con Escape/fuera extiende la sesión; confirmar si es el comportamiento deseado.
-- [ ] `ImportExcelDialog`: bloquear cierre (Escape/X) mientras hay una importación en curso.
+- [x] `ImportExcelDialog`: cierre bloqueado (Escape/X) durante la importación (2026-11-12).
 - [ ] Colores hardcodeados restantes (`text-slate-*`, `bg-gray-*`) → tokens del sistema.
 
 #### P2 — Deuda técnica

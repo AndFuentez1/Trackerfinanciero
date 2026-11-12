@@ -4,6 +4,17 @@ Todas las mejoras relevantes por versión/fecha.
 
 ---
 
+## [2026-11-12]
+
+### Correctitud financiera (P1)
+- **Flujo de caja:** compromisos de tipo `saving` se proyectan como `egresosAhorro` (antes iban a gastos futuros). Suscripciones sin `start_date` se anclan al mes actual (antes una anual/trimestral se cobraba todos los meses). `consumePayment` solo da por pagado un compromiso con un gasto real de monto parecido (±10 %); antes un gasto pequeño de la misma categoría "pagaba" un compromiso grande. `end_date` se lee con `parseLocalDate`.
+- **Presupuestos:** el total presupuestado solo suma presupuestos de gasto (sumaba también los de ahorro mientras el total gastado solo cuenta gastos); transferencias y ajustes de saldo no cuentan como gasto de una categoría.
+- **Ahorros:** `performancePercent` ya no es 0 cuando lo retirado supera lo aportado (p. ej. saldo inicial sin depósito); usa intereses sobre el capital sin intereses.
+
+### Importación
+- **Duplicados por conteo** (migración `20261112120000`): `find_import_duplicates` y `mark_staging_duplicates` marcan la k-ésima fila idéntica solo si ya hay ≥ k transacciones iguales. Dos compras idénticas el mismo día ya no se pierden; re-subir el mismo archivo sigue sin agregar nada. Ambas RPC validan que `p_user_id` sea el usuario autenticado. El control local de respaldo usa el mismo criterio.
+- **ImportExcelDialog:** no se puede cerrar con X/Escape mientras hay una importación en curso.
+
 ## [2026-11-08]
 
 ### Conexión con la base de datos

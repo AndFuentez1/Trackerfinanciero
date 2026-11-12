@@ -81,6 +81,9 @@ const isSavingCategory = (catId: string | null, catName: string | undefined, cat
 
 const getMonthKey = (date: Date) => format(date, 'yyyy-MM');
 
+const frequencyInterval = (freq?: FutureExpense['frequency']) =>
+    freq === 'bimonthly' ? 2 : freq === 'quarterly' ? 3 : freq === 'semiannual' ? 6 : freq === 'yearly' ? 12 : 1;
+
 const toLocalDate = (dateStr?: string | null) => {
     if (!dateStr) { return null; }
     return parseLocalDate(dateStr) ?? new Date(dateStr);
@@ -109,20 +112,27 @@ const buildRealExpensePool = (txs: Transaction[]) => {
     return pool;
 };
 
-const consumePayment = (pool: Map<string, number[]>, key: string, amount: number) => {
+/** Diferencia relativa máxima para considerar que un gasto real paga un compromiso (p. ej. cambio de precio). */
+export const PAYMENT_MATCH_TOLERANCE = 0.1;
+
+export const consumePayment = (pool: Map<string, number[]>, key: string, amount: number) => {
     const list = pool.get(key);
     if (!list || list.length === 0) { return false; }
     let idx = list.findIndex(v => Math.abs(v - amount) < 0.01);
     if (idx === -1) {
-        let closestIdx = 0;
-        let closestDiff = Math.abs(list[0] - amount);
-        for (let i = 1; i < list.length; i++) {
+        // Solo el más cercano y dentro de la tolerancia: un gasto pequeño de la misma
+        // categoría no debe marcar como pagado un compromiso grande (ni al revés).
+        const maxDiff = Math.abs(amount) * PAYMENT_MATCH_TOLERANCE;
+        let closestIdx = -1;
+        let closestDiff = Infinity;
+        for (let i = 0; i < list.length; i++) {
             const diff = Math.abs(list[i] - amount);
-            if (diff < closestDiff) {
+            if (diff <= maxDiff && diff < closestDiff) {
                 closestDiff = diff;
                 closestIdx = i;
             }
         }
+        if (closestIdx === -1) { return false; }
         idx = closestIdx;
     }
     list.splice(idx, 1);
@@ -287,10 +297,11 @@ export function calculateMonthlySnapshot(
                 const endD = toLocalDate(fe.end_date);
                 if (startD && isBefore(endOfMonth(date), startOfMonth(startD))) { return; }
                 if (endD && isAfter(startOfMonth(date), endOfMonth(endD))) { return; }
-                const monthDiff = startD ? differenceInCalendarMonths(date, startD) : 0;
-                const freq = fe.frequency || 'monthly';
-                const interval = freq === 'bimonthly' ? 2 : freq === 'quarterly' ? 3 : freq === 'semiannual' ? 6 : freq === 'yearly' ? 12 : 1;
-                matchesMonth = monthDiff % interval === 0;
+                // Sin fecha de inicio se ancla al mes actual (antes monthDiff = 0 cobraba todos los meses
+                // aunque la frecuencia fuera trimestral/anual).
+                const monthDiff = differenceInCalendarMonths(date, startD ?? currentMonthStart);
+                const interval = frequencyInterval(fe.frequency);
+                matchesMonth = monthDiff >= 0 && monthDiff % interval === 0;
                 dueMonthKey = matchesMonth ? monthKey : null;
             } else if (fe.payment_date) {
                 const payDate = toLocalDate(fe.payment_date);
@@ -309,6 +320,8 @@ export function calculateMonthlySnapshot(
                         } else {
                             otrosIngresos += fe.amount;
                         }
+                    } else if (fe.type === 'saving') {
+                        egresosAhorro += fe.amount;
                     } else {
                         gastosFuturos += fe.amount;
                     }
@@ -339,9 +352,9 @@ export function calculateMonthlySnapshot(
             const startDate = toLocalDate(fe.start_date);
             if (!startDate) { return; }
             const startD = startOfMonth(startDate);
-            const endLimit = fe.end_date ? endOfMonth(new Date(fe.end_date)) : endOfMonth(currentMonthStart);
-            const freq = fe.frequency || 'monthly';
-            const interval = freq === 'bimonthly' ? 2 : freq === 'quarterly' ? 3 : freq === 'semiannual' ? 6 : freq === 'yearly' ? 12 : 1;
+            const endD = toLocalDate(fe.end_date);
+            const endLimit = endD ? endOfMonth(endD) : endOfMonth(currentMonthStart);
+            const interval = frequencyInterval(fe.frequency);
             for (let i = 0; ; i += interval) {
                 const dueMonth = addMonths(startD, i);
                 if (!isBefore(dueMonth, currentMonthStart)) { break; }

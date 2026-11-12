@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { calculateMonthlySnapshot, computeBalanceAnchorOffset, differenceInCalendarMonths, MonthlySnapshot } from './cashFlowCalculations';
+import { calculateMonthlySnapshot, computeBalanceAnchorOffset, consumePayment, differenceInCalendarMonths, MonthlySnapshot } from './cashFlowCalculations';
 import { addMonths, startOfMonth } from 'date-fns';
-import type { Transaction, PaymentMethod, Budget } from '@/features/finance/types/financeTypes';
+import type { Transaction, PaymentMethod, Budget, FutureExpense } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
 
@@ -40,6 +40,19 @@ describe('cashFlowCalculations', () => {
         });
     });
 
+    describe('consumePayment', () => {
+        it('does not match a commitment with an unrelated amount of the same category', () => {
+            const pool = new Map([['cat', [20]]]);
+            expect(consumePayment(pool, 'cat', 1000)).toBe(false);
+            expect(pool.get('cat')).toEqual([20]);
+        });
+        it('matches the closest amount within tolerance (price change)', () => {
+            const pool = new Map([['cat', [20, 1050]]]);
+            expect(consumePayment(pool, 'cat', 1000)).toBe(true);
+            expect(pool.get('cat')).toEqual([20]);
+        });
+    });
+
     describe('calculateMonthlySnapshot', () => {
         const baseDate = new Date(2024, 5, 15); // June 15, 2024
         const buildContext = (
@@ -71,6 +84,30 @@ describe('cashFlowCalculations', () => {
             categories: [],
             incomeMode: 'real' as const
         };
+
+        const fe = (over: Partial<FutureExpense>): FutureExpense => ({
+            id: 'fe', payment_date: '', amount: 100, description: 'Compromiso', category_id: null,
+            type: 'expense', status: 'pending', ...over,
+        });
+
+        it('projects saving commitments as savings outflow, not future expenses', () => {
+            const futureExpenses = [fe({ type: 'saving', payment_date: '2024-07-05', amount: 300 })];
+            const result = calculateMonthlySnapshot(
+                new Date(2024, 6, 1), 0, {}, {}, {},
+                { ...emptyData, futureExpenses }, buildContext([])
+            );
+            expect(result.egresosAhorro).toBe(300);
+            expect(result.gastosFuturos).toBe(0);
+        });
+
+        it('does not charge a yearly subscription without start_date every month', () => {
+            const futureExpenses = [fe({ is_subscription: true, frequency: 'yearly', amount: 120 })];
+            const months = [0, 1, 2, 11, 12].map(i => calculateMonthlySnapshot(
+                addMonths(new Date(2024, 5, 1), i), 0, {}, {}, {},
+                { ...emptyData, futureExpenses }, buildContext([])
+            ).gastosFuturos);
+            expect(months).toEqual([120, 0, 0, 0, 120]);
+        });
 
         it('returns zero values for empty input', () => {
             const result = calculateMonthlySnapshot(

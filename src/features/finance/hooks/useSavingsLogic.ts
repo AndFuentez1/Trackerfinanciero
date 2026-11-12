@@ -531,9 +531,14 @@ export function useSavingsDataLogic() {
         .reduce((sum, t) => sum + t.amount, 0);
 
       const netContributions = totalDeposits - totalWithdrawals;
+      // Si se retiró más de lo aportado (p. ej. saldo inicial sin depósito registrado),
+      // el rendimiento se mide como intereses sobre el capital actual sin intereses.
+      const principalWithoutInterest = account.balance - totalInterest;
       const performancePercent = netContributions > 0
         ? ((account.balance - netContributions) / netContributions) * 100
-        : 0;
+        : principalWithoutInterest > 0
+          ? (totalInterest / principalWithoutInterest) * 100
+          : 0;
 
       return {
         ...account,

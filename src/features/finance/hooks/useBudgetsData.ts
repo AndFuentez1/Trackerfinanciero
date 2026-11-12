@@ -13,7 +13,7 @@ import { formatLocalDate } from '@/core/utils';
 import { resolveCanonicalBudgetForCategory } from '../utils/budgetUtils';
 import { isBudgetMonthInScope } from '../utils/periodFilters';
 import { resolveMonthBudget, getMonthsInScope, sumBudgetForMonths } from '../utils/incomeBudget';
-import { isBalanceAdjustment } from '../utils/cashflowUtils';
+import { isBalanceAdjustment, isTransferTransaction } from '../utils/cashflowUtils';
 
 export type { Budget } from '../types/financeTypes';
 
@@ -21,6 +21,8 @@ export interface BudgetState {
     budget: Budget;
     categoryName: string;
     categoryColor?: string;
+    /** Tipo de la categoría (expense/saving); el total del presupuesto solo suma gastos. */
+    categoryType?: string;
     spent: number;
     remaining: number;
     percentage: number;
@@ -143,6 +145,7 @@ export function useBudgetsData() {
             // Filter Transactions
             const budgetTransactions = (allTransactions || []).filter(t => {
                 if (t.category_id !== category.id) { return false; }
+                if (isBalanceAdjustment(t) || isTransferTransaction(t)) { return false; }
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();
                 const tMonth = tDate.getMonth() + 1;
@@ -181,6 +184,7 @@ export function useBudgetsData() {
                     budget: { ...representativeBudget, amount: periodBudgetAmount },
                     categoryName: category.name,
                     categoryColor: category.color || undefined,
+                    categoryType: category.type,
                     spent,
                     remaining,
                     percentage,
@@ -194,11 +198,14 @@ export function useBudgetsData() {
     }, [budgets, allTransactions, categories, budgetYear, budgetMonth, periodMonths]);
 
     const totalBudgetStats = useMemo((): TotalBudgetState => {
-        const totalBudgeted = budgetsStats.reduce((sum, item) => sum + item.budget.amount, 0);
+        // Solo presupuestos de gasto: totalSpent cuenta gastos, no aportes a ahorro.
+        const totalBudgeted = budgetsStats
+            .filter(item => item.categoryType === 'expense')
+            .reduce((sum, item) => sum + item.budget.amount, 0);
         
         // Calculate totalSpent from allTransactions for the period, ensuring we sum all expenses
         const totalSpent = (allTransactions || [])
-            .filter(t => t.type === 'expense' && !isBalanceAdjustment(t))
+            .filter(t => t.type === 'expense' && !isBalanceAdjustment(t) && !isTransferTransaction(t))
             .filter(t => {
                 const tDate = parseISO(t.date);
                 const tYear = tDate.getFullYear();

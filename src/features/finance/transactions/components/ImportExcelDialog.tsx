@@ -208,6 +208,9 @@ const parseDate = (value: string | number): string | null => {
   return null;
 };
 
+/** Campos mínimos de una transacción existente para el control de duplicados local. */
+type ExistingTxLite = { date: string; amount: number; category: string | null; type: string };
+
 export function ImportExcelDialog({
   paymentMethods,
   onImport,
@@ -270,6 +273,19 @@ export function ImportExcelDialog({
     } else {
       setInternalOpen(newOpen);
     }
+  };
+
+  // Cierre iniciado por el usuario (X / ESC): no se permite mientras se importa,
+  // porque cortaría el proceso a medias y dejaría lotes parciales.
+  const handleDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen && isImporting) {
+      toast({
+        title: 'Importación en curso',
+        description: 'Espera a que termine la importación antes de cerrar.',
+      });
+      return;
+    }
+    setOpen(newOpen);
   };
 
   // Función auxiliar para seleccionar la mejor hoja automáticamente
@@ -925,13 +941,13 @@ export function ImportExcelDialog({
           if (dupRpcError) {
             console.warn('[ImportExcel] find_import_duplicates:', dupRpcError);
           }
-          let existingTransactions: any[] =
+          let existingTransactions: ExistingTxLite[] =
             queryClient.getQueryData(queryKeys.finance.allTransactions(user.id)) || [];
 
           if (!existingTransactions || existingTransactions.length === 0) {
             // Supabase limita a 1000 filas por consulta: se pagina para no dejar pasar duplicados.
             const pageSize = 1000;
-            const collected: any[] = [];
+            const collected: ExistingTxLite[] = [];
             for (let from = 0; ; from += pageSize) {
               const { data: page, error: pageError } = await supabase
                 .from('transactions')
@@ -951,13 +967,19 @@ export function ImportExcelDialog({
             existingTransactions = collected;
           }
 
-          const existingHashes = new Set(
-            existingTransactions.map((t: any) => `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`)
-          );
+          // Conteo por hash: la k-ésima fila igual solo es duplicada si ya existen >= k iguales
+          // (dos compras idénticas el mismo día no se pierden).
+          const existingCounts = new Map<string, number>();
+          existingTransactions.forEach((t) => {
+            const hash = `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`;
+            existingCounts.set(hash, (existingCounts.get(hash) ?? 0) + 1);
+          });
 
           normalizedTransactions.forEach((t) => {
             const hash = `${t.date}_${Math.abs(t.amount)}_${t.category}_${t.type}`;
-            if (existingHashes.has(hash)) {
+            const remaining = existingCounts.get(hash) ?? 0;
+            if (remaining > 0) {
+              existingCounts.set(hash, remaining - 1);
               duplicateIndexSet.add(t.row_index);
             }
           });
@@ -1115,7 +1137,7 @@ export function ImportExcelDialog({
   const excessiveCount = parsedRows.filter(r => r.error?.includes('Monto excesivo')).length;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       {showTriggerButton && (
         <DialogTrigger asChild>
           <Button
@@ -1137,9 +1159,8 @@ export function ImportExcelDialog({
           e.preventDefault();
         }}
         onEscapeKeyDown={(e) => {
-          // Permitir cerrar con ESC
-          // Si quieres que ESC tampoco cierre, descomenta la siguiente línea:
-          // e.preventDefault();
+          // ESC cierra, salvo durante una importación en curso
+          if (isImporting) { e.preventDefault(); }
         }}
       >
         <DialogHeader>
