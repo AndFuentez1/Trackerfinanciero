@@ -386,12 +386,12 @@ Orden sugerido: P0 antes de cualquier release; P1 siguiente sprint; P2 backlog.
 - [ ] **Despliegue conjunto** frontend + backend; definir `OAUTH_STATE_SECRET` en Render; etiquetar el release (tag git).
 
 #### P1 — Correctitud financiera
-- [x] **Ajustes de saldo** (2026-11-08): línea propia en el flujo de caja y excluidos de ingresos/gastos reales en Presupuestos. Pendiente decidir si se excluyen de los KPIs del Dashboard (la gráfica de evolución sí debe incluirlos).
-- [ ] **Flujo de caja** (`cashFlowCalculations.ts`): usar `payment_day`. *(2026-11-12: compromisos `saving` → `egresosAhorro`; suscripciones sin `start_date` ancladas al mes actual; `consumePayment` con tolerancia ±10 %.)* *(2026-11-08: corregido el doble conteo del mes actual en el saldo acumulado y el tipo `savings`; meses pasados siguen omitiendo pagos de préstamos y cuotas de tarjeta.)*
-- [ ] **Flujo de caja:** `formatCOP` ignora la moneda/decimales del usuario; `futureExpenses = 0` fijo en las tarjetas; `incomeMode` y `budgets` pasan sin usarse (implementar "projected" o eliminar).
+- [x] **Ajustes de saldo** (2026-11-08): línea propia en el flujo de caja y excluidos de ingresos/gastos reales en Presupuestos. 2026-11-12: excluidos también de los KPIs del Dashboard (la gráfica de evolución los incluye).
+- [x] **Flujo de caja** (2026-11-12): modelo patrimonio (cuotas de tarjeta informativas), pagos reales de préstamos en meses pasados y actual, compromisos por tipo, `saving` → `egresosAhorro`, suscripciones sin `start_date`, `consumePayment` con tolerancia ±10 %. `payment_day` no aplica: la proyección es mensual.
+- [x] **Flujo de caja** (2026-11-12): moneda/decimales del usuario, tarjeta de gastos futuros real, `incomeMode`/`budgets` eliminados.
 - [x] **Presupuestos** (2026-11-12): `totalBudgeted` solo suma presupuestos de gasto; transferencias/ajustes fuera del gasto por categoría. `totalSpent` incluye a propósito gastos de categorías sin presupuesto. *(2026-11-08: presupuesto de ingresos creable/editable en "Configurar presupuesto"; `saveBudget` sin `onConflict`.)*
-- [ ] **Importación:** lotes parciales sin rollback. *(2026-11-12: duplicados por conteo, migración `20261112120000`.)*
-- [ ] **Compromisos:** no hay forma de revertir un pago ni de terminar una suscripción manualmente; `end_date` y `status` sin vista de histórico.
+- [x] **Importación** (2026-11-12): duplicados por conteo (migración `20261112120000`), todo o nada con rollback, "Reemplazar" borra lo anterior solo al final. No mueve saldos (decisión).
+- [x] **Compromisos** (2026-11-12): revertir último pago (migración `20261112130000`), terminar/reactivar suscripción, historial.
 - [x] **Ahorros** (2026-11-12): `performancePercent` con fallback por intereses; `addSavingsTransaction` ya usa el saldo del servidor (2026-11-08).
 
 #### P1 — UX / modales
@@ -405,6 +405,6 @@ Orden sugerido: P0 antes de cualquier release; P1 siguiente sprint; P2 backlog.
 - [ ] **Refactor** `FutureExpensesList.tsx` (870 líneas): hook propio, deduplicar la doble consulta y los formateadores `formatCurrency70/80`.
 - [ ] **Cliente Supabase:** fallar explícitamente sin variables `VITE_*` (hoy usa `placeholder.supabase.co`); revisar el override global de `console.error/warn`.
 - [ ] **Tests:** reactivar los 49 tests omitidos (`BudgetsPage`, `Dashboard`, `History`, `AddBudgetDialog`, `CategoryBudgetList`, `AddTransactionDialog`), corregir los errores de tipos de `tsc` en tests y añadir E2E (Playwright) para crear categoría, re-importar y pagar compromiso.
-- [ ] **Typecheck/lint:** añadir script `typecheck` a CI; resolver los errores `curly` y `no-unused-vars` existentes; `Loan.sync_code` y tipos de `@supabase/supabase-js`.
+- [ ] **Typecheck/lint:** añadir script `typecheck` a CI; resolver los errores `curly` y `no-unused-vars` existentes; tipos de `@supabase/supabase-js`. *(2026-11-12: quitado `Loan.sync_code`.)*
 - [ ] **Documentación:** `ARCHITECTURE.md` menciona hooks inexistentes (`useInactivity`, `useAuthGuard`); `docs/tests-backlog.md` desactualizado; `src/layouts` sin trackear.
 - [ ] **Backend:** `Procfile` apunta a `gunicorn api_backend:app` (legado Python) mientras `render.yaml` usa Node; unificar y retirar scripts Python legados.

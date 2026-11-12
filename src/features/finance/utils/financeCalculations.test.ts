@@ -130,4 +130,15 @@ describe('financeCalculations', () => {
         expect(summary.periodNetFlow).toBe(3000);
         expect(summary.netWorth).toBe(3000); // 3000 - 0 = 3000
     });
+    it('calculateSummary excludes manual balance adjustments from income/expense KPIs', () => {
+        const transactions = [
+            { id: 'a', type: 'income', amount: 4500, date: '2024-06-10', description: 'Ajuste manual de saldo - Visa', category: 'Ajuste de saldo' },
+            { id: 'b', type: 'expense', amount: 300, date: '2024-06-11', description: 'Ajuste manual de saldo - Débito', category: 'Ajuste de saldo' },
+            { id: 'c', type: 'income', amount: 1000, date: '2024-06-12', description: 'Salario', category: 'Salario' },
+            { id: 'd', type: 'expense', amount: 200, date: '2024-06-13', description: 'Comida', category: 'Comida' },
+        ] as unknown as Transaction[];
+        const summary = calculateSummary(transactions, 'COP');
+        expect(summary.totalIncome).toBe(1000);
+        expect(summary.totalExpenses).toBe(200);
+    });
 });

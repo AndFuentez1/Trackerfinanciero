@@ -95,12 +95,17 @@ export interface FutureExpense {
     description: string;
     category_id: string | null;
     type: 'expense' | 'income' | 'saving';
-    status: 'pending' | 'paid';
+    status: 'pending' | 'paid' | 'canceled' | 'cancelled';
     is_subscription?: boolean;
     payment_day?: number;
     start_date?: string;
     end_date?: string;
     frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly';
+    /** Transacción del último pago (NULL si se borró a mano). */
+    last_payment_transaction_id?: string | null;
+    /** payment_date antes del último pago; presente = hay un pago que se puede revertir. */
+    last_payment_previous_date?: string | null;
+    last_paid_at?: string | null;
 }
 
 export type PendingInvoice = Database['public']['Tables']['pending_invoices']['Row'];

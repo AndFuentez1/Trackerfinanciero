@@ -6,7 +6,7 @@
  */
 
 import type { Transaction, Budget, PaymentMethod, Insight } from '../types/financeTypes';
-import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
+import { excludeTransfers, isBalanceAdjustment } from '@/features/finance/utils/cashflowUtils';
 import { getCreditDebt } from '@/features/finance/utils/creditCardUtils';
 
 /**
@@ -21,7 +21,8 @@ export function calculateSummary(
         !((t.category === 'Préstamos' || t.category === 'Loans') && !t.payment_method_id)
     );
 
-    const forFlow = excludeTransfers(validTransactions);
+    // KPIs: sin transferencias internas ni ajustes manuales de saldo (no son ingresos/gastos reales)
+    const forFlow = excludeTransfers(validTransactions).filter(t => !isBalanceAdjustment(t));
 
     const totalIncome = forFlow
         .filter(t => t.type === 'income')

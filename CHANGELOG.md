@@ -6,6 +6,24 @@ Todas las mejoras relevantes por versión/fecha.
 
 ## [2026-11-12]
 
+### Flujo de caja — modelo patrimonio (2ª parte)
+- **Compras a cuotas con tarjeta:** la compra resta completa en el mes en que se hace (la tarjeta queda en negativo por el total, como el patrimonio). Las cuotas se muestran como línea informativa "Cuotas Tarjeta (info)" y ya no vuelven a restar del saldo proyectado (antes se contaba dos veces). Las cuotas ya no consumen gastos reales que pagan compromisos.
+- **Préstamos:** los pagos reales (categoría préstamo/deuda) cuentan en meses pasados (antes no aparecían en ningún lado) y en el mes actual no se vuelve a proyectar una cuota ya pagada (se toma el mayor entre lo proyectado y lo pagado).
+- **Compromisos por tipo:** un ingreso real solo cumple un compromiso de ingreso (antes solo se comparaba contra gastos), y un compromiso de ingreso vencido se arrastra como ingreso, no como gasto.
+- **Tarjeta "Gastos Futuros"** muestra los compromisos pendientes de la ventana (antes 0 fijo). Los montos del flujo de caja usan la moneda y los decimales del usuario. Se eliminaron `incomeMode` y `budgets` sin uso. El flujo de caja solo proyecta compromisos `pending` (antes incluía los cancelados).
+
+### Importación
+- **Todo o nada:** si falla un lote se revierte lo insertado en ese intento. En "Reemplazar" las transacciones anteriores se borran solo después de insertar todo con éxito (antes se borraban primero y un fallo dejaba al usuario sin historial).
+- El diálogo avisa que la importación no cambia los saldos de las cuentas (decisión: la importación es histórico).
+
+### Compromisos y suscripciones
+- **Revertir último pago** (migración `20261112130000`): el compromiso guarda la transacción del pago y la fecha anterior; revertir borra la transacción (devolviendo el saldo) y deja el compromiso pendiente en su fecha previa. Es idempotente si la transacción ya se borró a mano.
+- **Terminar suscripción** (estado `canceled` con fecha de fin) y **Reactivar** desde el nuevo **historial** de compromisos pagados/terminados.
+
+### Dashboard
+- Los KPIs de ingresos y gastos (y las gráficas por categoría/Sankey) excluyen los ajustes manuales de saldo; la gráfica de evolución los sigue incluyendo.
+- Fechas `yyyy-MM-dd` leídas con `parseLocalDate` (con `new Date(str)` una transacción del día 1 caía en el mes anterior en UTC−5). Se quitó la comparación con `Loan.sync_code`, que no existe en la BD.
+
 ### Correctitud financiera (P1)
 - **Flujo de caja:** compromisos de tipo `saving` se proyectan como `egresosAhorro` (antes iban a gastos futuros). Suscripciones sin `start_date` se anclan al mes actual (antes una anual/trimestral se cobraba todos los meses). `consumePayment` solo da por pagado un compromiso con un gasto real de monto parecido (±10 %); antes un gasto pequeño de la misma categoría "pagaba" un compromiso grande. `end_date` se lee con `parseLocalDate`.
 - **Presupuestos:** el total presupuestado solo suma presupuestos de gasto (sumaba también los de ahorro mientras el total gastado solo cuenta gastos); transferencias y ajustes de saldo no cuentan como gasto de una categoría.

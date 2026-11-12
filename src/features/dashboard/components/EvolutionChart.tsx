@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { cn, formatCurrencyCompact } from '@/core/utils';
+import { cn, formatCurrencyCompact, parseLocalDate } from '@/core/utils';
 import { useFormatCurrency } from '@/features/finance/hooks/useFormatCurrency';
 import { FinanceChartTooltip } from '@/shared/components/charts/FinanceChartTooltip';
 import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
@@ -70,7 +70,7 @@ export function EvolutionChart({
       const amt = Number(tx.amount);
       if (tx.type === 'income' || tx.type === 'transfer_in') { delta = amt; }
       else if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'loan') { delta = -amt; }
-      return { ...tx, delta, dateObj: new Date(tx.date) };
+      return { ...tx, delta, dateObj: parseLocalDate(tx.date) ?? new Date(tx.date) };
     });
 
     const points: EvolutionChartPoint[] = [];
@@ -162,9 +162,9 @@ export function EvolutionChart({
 
     const allValues: number[] = [];
     chartData.forEach(d => {
-      if (d.income != null) { allValues.push(d.income); }
-      if (d.expense != null) { allValues.push(d.expense); }
-      if (d.balance != null) { allValues.push(d.balance); }
+      if (d.income !== null && d.income !== undefined) { allValues.push(d.income); }
+      if (d.expense !== null && d.expense !== undefined) { allValues.push(d.expense); }
+      if (d.balance !== null && d.balance !== undefined) { allValues.push(d.balance); }
     });
 
     if (allValues.length === 0) { return [0, 1000000]; }

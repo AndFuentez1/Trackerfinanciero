@@ -20,7 +20,7 @@ const round = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 type CardInstallmentsMap = Record<string, { restantes: number; valorCuota: number; interes: number; capital: number }>;
 
-export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año', incomeMode: 'real' | 'projected' = 'real', useRealBalance: boolean = false) {
+export function useCashFlow(year: number, month: number | 'all', range: 'mes' | '6m' | 'año', useRealBalance: boolean = false) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { transactions, allTransactions, paymentMethods, categories } = useFinance();
@@ -62,7 +62,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
         .from('future_expenses')
         .select('*')
         .eq('user_id', user.id)
-        .neq('status', 'paid');
+        .eq('status', 'pending');
       if (error) { throw error; }
       return data as FutureExpense[];
     },
@@ -146,10 +146,8 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       paymentMethods,
       savingsAccounts,
       loans,
-      budgets: rawBudgets,
       futureExpenses,
       categories: categories.map(c => ({ id: c.id, name: c.name, type: c.type })),
-      incomeMode
     };
 
     for (let m = 0; m < monthsCount; m++) {
@@ -161,7 +159,7 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
       pc = snap.newCardInstallments;
     }
     return arr;
-  }, [savingsAccounts, loans, paymentMethods, transactionsSource, start, futureExpenses, categories, incomeMode, lastTxDate, rawBudgets, monthsCount, currentMonthStart, transactionsByMonth]);
+  }, [savingsAccounts, loans, paymentMethods, transactionsSource, start, futureExpenses, categories, lastTxDate, monthsCount, currentMonthStart, transactionsByMonth]);
 
   const pivotDate = transactionsSource.length > 0 ? lastTxDate : new Date();
 
@@ -254,6 +252,8 @@ export function useCashFlow(year: number, month: number | 'all', range: 'mes' | 
     monthlyBreakdown,
     proyeccion_ingresos: round(estimatedIncome),
     ingresos_estimados_fuente: (incomeBudgetWindow.hasBudget ? 'presupuesto' : 'proyeccion') as 'presupuesto' | 'proyeccion',
+    // Compromisos (gastos futuros) pendientes en la ventana visible
+    gastos_futuros: round(monthlyBreakdownRaw.reduce((sum, row) => sum + row.gastosFuturos, 0)),
     compromisos_deuda: finalSeries.length > 0 ? (finalSeries[0].breakdown.egresosPrestamos + finalSeries[0].breakdown.egresosTarjeta) : 0,
     isProjectionWarning: pendingPastExpensesTotal > 0,
   };

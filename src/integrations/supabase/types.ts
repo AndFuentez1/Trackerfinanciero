@@ -98,6 +98,9 @@ export type Database = {
           payment_day: number | null
           start_date: string | null
           end_date: string | null
+          last_payment_transaction_id: string | null
+          last_payment_previous_date: string | null
+          last_paid_at: string | null
         }
         Insert: {
           id?: string
@@ -113,6 +116,9 @@ export type Database = {
           payment_day?: number | null
           start_date?: string | null
           end_date?: string | null
+          last_payment_transaction_id?: string | null
+          last_payment_previous_date?: string | null
+          last_paid_at?: string | null
         }
         Update: {
           id?: string
@@ -128,6 +134,9 @@ export type Database = {
           payment_day?: number | null
           start_date?: string | null
           end_date?: string | null
+          last_payment_transaction_id?: string | null
+          last_payment_previous_date?: string | null
+          last_paid_at?: string | null
         }
         Relationships: []
       }

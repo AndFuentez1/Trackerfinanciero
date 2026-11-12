@@ -10,7 +10,7 @@ import { EditPaymentMethodDialog } from '@/features/finance/payment-methods/comp
 import { AddPaymentMethodDialog } from '@/features/finance/payment-methods/components/AddPaymentMethodDialog';
 import { useFinanceData } from '@/features/finance/hooks/useFinanceData';
 import { calculateExpensesByCategory } from '@/features/finance/utils/financeUtils';
-import { excludeTransfers } from '@/features/finance/utils/cashflowUtils';
+import { excludeTransfers, isBalanceAdjustment } from '@/features/finance/utils/cashflowUtils';
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, BarChart3, Calendar as CalendarIcon, AlertCircle, ArrowRight, FilterX, ChevronDown } from 'lucide-react';
 import type { Transaction, Budget, PaymentMethod, Insight, CategoryItem } from '@/features/finance/hooks/useFinanceData';
 import { DeleteAccountConfirmDialog } from '@/features/finance/payment-methods/components/DeleteAccountConfirmDialog';
@@ -32,7 +32,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { useUserConfig } from '@/features/finance/hooks/useUserConfig';
 import { Calendar } from '@/shared/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { cn } from '@/core/utils';
+import { cn, parseLocalDate } from '@/core/utils';
 
 
 import { PulseBlock, CardSkeleton, AccountsListSkeleton } from '@/shared/components/skeletons/SkeletonLoader';
@@ -92,7 +92,7 @@ export function SummaryTab({
   const availableYears = useMemo(() => {
     const years = new Set<string>();
     if (allTransactions && allTransactions.length > 0) {
-      allTransactions.forEach(t => years.add(new Date(t.date).getFullYear().toString()));
+      allTransactions.forEach(t => years.add((parseLocalDate(t.date) ?? new Date(t.date)).getFullYear().toString()));
     }
     // Always include current year
     years.add(currentYear.toString());
@@ -172,7 +172,7 @@ export function SummaryTab({
   const filteredChartTransactions = useMemo(() => {
     if (!allTransactions || allTransactions.length === 0) { return []; }
     const byDate = allTransactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDate(t.date) ?? new Date(t.date);
       const yearStr = d.getFullYear().toString();
       if (!selectedYears.includes(yearStr)) { return false; }
       if (selectedMonth !== 'all') {
@@ -181,7 +181,7 @@ export function SummaryTab({
       }
       return true;
     });
-    const noTransfers = excludeTransfers(byDate);
+    const noTransfers = excludeTransfers(byDate).filter(t => !isBalanceAdjustment(t));
     return noTransfers.filter(t => !(t.type === 'expense' && (t.installments || 1) > 1));
   }, [allTransactions, selectedYears, selectedMonth]);
 
@@ -195,7 +195,7 @@ export function SummaryTab({
         }
         expenseMap.set(tx.category_id, (expenseMap.get(tx.category_id) || 0) + tx.amount);
       });
-      let items = Array.from(expenseMap.entries());
+      const items = Array.from(expenseMap.entries());
       items.sort((a, b) => b[1] - a[1]);
 
       const startIndex = sankeyDrillDown.page * 9;
@@ -250,18 +250,18 @@ export function SummaryTab({
     const currentYear_idx = now.getFullYear();
 
     const currentMonthTransactions = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDate(t.date) ?? new Date(t.date);
       return d.getMonth() === currentMonth_idx && d.getFullYear() === currentYear_idx;
     });
 
-    const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const monthlyPaidExpenses = currentMonthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income' && !isBalanceAdjustment(t)).reduce((sum, t) => sum + t.amount, 0);
+    const monthlyPaidExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && !isBalanceAdjustment(t)).reduce((sum, t) => sum + t.amount, 0);
 
     // GASTOS PENDIENTES: Suma de todas las facturas pendientes y deudas por préstamos.
     // Lógica: Si el préstamo tiene cuotas definidas, se suma el valor prorrateado. Si no, se suma el total restante.
     const pendingLoansSum = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => {
       const remaining = l.total_amount - l.paid_amount;
-      if (remaining <= 0) return sum;
+      if (remaining <= 0) {return sum;}
       
       // Si tiene cuotas mensuales definidas (>1), sumamos la proporción mensual
       if (l.installments && l.installments > 1) {
@@ -290,22 +290,22 @@ export function SummaryTab({
         desc.includes('interés') || desc.includes('interes') || desc.includes('crédito') || desc.includes('credito') ||
         desc.includes('pago de deuda');
       
-      if (isLoanRelated) return false;
+      if (isLoanRelated) {return false;}
 
       // 2. Filtrado por monto y sync_code: 
       // Si tenemos un sync_code, la deduplicación es exacta.
       const invSyncCode = (inv.sync_code as string) || (inv.message_id as string);
       const isDuplicateOfLoan = loans.some(l => {
-        if (l.type !== 'borrowed') return false;
+        if (l.type !== 'borrowed') {return false;}
         
         // Prioridad: Coincidencia por sync_code (o message_id como fallback de Gmail)
-        if (invSyncCode && (l.sync_code === invSyncCode || l.id === invSyncCode)) return true;
+        if (invSyncCode && l.id === invSyncCode) {return true;}
 
         // Heurística de monto:
-        if (Math.abs(l.total_amount - amount) < 1) return true;
+        if (Math.abs(l.total_amount - amount) < 1) {return true;}
         if (l.installments && l.installments > 1) {
           const installment = l.total_amount / l.installments;
-          if (Math.abs(installment - amount) < 1) return true;
+          if (Math.abs(installment - amount) < 1) {return true;}
         }
         return false;
       });
@@ -645,7 +645,7 @@ export function SummaryTab({
                                     const newYears = selectedYears.includes(year)
                                       ? selectedYears.filter(y => y !== year)
                                       : [...selectedYears, year];
-                                    if (newYears.length > 0) setSelectedYears(newYears);
+                                    if (newYears.length > 0) {setSelectedYears(newYears);}
                                   }}
                                   className="text-xs rounded-lg mx-1 focus:bg-primary/5"
                                 >

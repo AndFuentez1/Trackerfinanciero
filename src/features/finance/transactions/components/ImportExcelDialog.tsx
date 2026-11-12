@@ -917,6 +917,20 @@ export function ImportExcelDialog({
       });
 
       let transactionsForInsert = normalizedTransactions;
+      const idsToReplace: string[] = [];
+      const insertedIds: string[] = [];
+      // Borra por lotes de ids (la URL de PostgREST no admite listas enormes).
+      const deleteIds = async (ids: string[]) => {
+        for (let i = 0; i < ids.length; i += 100) {
+          const { error: delError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('user_id', user.id)
+            .in('id', ids.slice(i, i + 100));
+          if (delError) { return delError; }
+        }
+        return null;
+      };
 
       if (mode === 'append') {
         const duplicateIndexSet = new Set<number>();
@@ -994,24 +1008,32 @@ export function ImportExcelDialog({
           });
         }
       } else {
-        const { error: deleteError } = await supabase
-          .from('transactions')
-          .delete()
-          .eq('user_id', user.id);
-
-        if (deleteError) {
-          toast({
-            title: 'No se pudo recargar la base de datos',
-            description: 'Ocurrió un error al eliminar las transacciones existentes. La importación se canceló.',
-            variant: 'destructive',
-          });
-          setIsImporting(false);
-          localStorage.removeItem(importKey);
-          return { count: 0 };
+        // Reemplazar: se guardan los ids actuales y se borran SOLO después de insertar todo con éxito.
+        // Antes se borraba todo primero: si fallaba un lote, el usuario perdía su historial.
+        for (let from = 0; ; from += 1000) {
+          const { data: page, error: pageError } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('user_id', user.id)
+            .order('id', { ascending: true })
+            .range(from, from + 999);
+          if (pageError) {
+            toast({
+              title: 'No se pudo recargar la base de datos',
+              description: 'No se pudieron leer las transacciones existentes. La importación se canceló y no se modificó nada.',
+              variant: 'destructive',
+            });
+            setIsImporting(false);
+            localStorage.removeItem(importKey);
+            return { count: 0 };
+          }
+          if (!page || page.length === 0) { break; }
+          idsToReplace.push(...page.map(p => p.id));
+          if (page.length < 1000) { break; }
         }
       }
 
-      if (transactionsForInsert.length === 0) {
+      if (transactionsForInsert.length === 0 && idsToReplace.length === 0) {
         setIsImporting(false);
         localStorage.removeItem(importKey);
         return { count: 0 };
@@ -1040,7 +1062,7 @@ export function ImportExcelDialog({
           const { error: insError, data } = await supabase
             .from('transactions')
             .insert(batchTransactions.map(({ _originalIndex, ...rest }) => rest))
-            .select();
+            .select('id');
 
           if (insError) {
             let errorMsg = insError.message || 'Error desconocido';
@@ -1057,6 +1079,7 @@ export function ImportExcelDialog({
             failCount += batchTransactions.length;
           } else {
             successCount += (data?.length || 0);
+            (data ?? []).forEach(row => insertedIds.push(row.id));
           }
         } catch (e) {
           const errorMsg = e instanceof Error ? e.message : 'Error desconocido';
@@ -1068,6 +1091,9 @@ export function ImportExcelDialog({
           });
           failCount += batchTransactions.length;
         }
+
+        // Todo o nada: al primer lote fallido se deja de insertar y se revierte lo insertado.
+        if (failCount > 0) { break; }
 
         const processed = Math.min(batch + batchSize, transactionsForInsert.length);
         setProgress(Math.round((processed / transactionsForInsert.length) * 100));
@@ -1089,6 +1115,8 @@ export function ImportExcelDialog({
       });
 
       if (failCount > 0) {
+        // Rollback: se borra lo insertado en este intento; en "reemplazar" no se tocó lo anterior.
+        const rollbackError = await deleteIds(insertedIds);
         const errorSummary = failedRows
           .slice(0, 5)
           .map(f => `• Fila ${f.row}: ${f.error}`)
@@ -1097,17 +1125,48 @@ export function ImportExcelDialog({
         const moreErrors = failedRows.length > 5 ? `\n• ...y ${failedRows.length - 5} filas más con errores` : '';
 
         toast({
-          title: `Importacion con errores`,
-          description: `Se importaron ${successCount} de ${successCount + failCount} transacciones.\n\nErrores encontrados:\n${errorSummary}${moreErrors}\n\nRevisa el archivo Excel y vuelve a intentar.`,
+          title: 'Importación cancelada',
+          description: rollbackError
+            ? `Falló un lote y no se pudieron revertir ${insertedIds.length} transacciones ya insertadas; vuelve a subir el archivo (los duplicados se omiten).
+
+${errorSummary}${moreErrors}`
+            : `No se importó nada: la importación es todo o nada.
+
+Errores encontrados:
+${errorSummary}${moreErrors}
+
+Revisa el archivo Excel y vuelve a intentar.`,
           variant: 'destructive',
-          duration: 8000,
+          duration: 10000,
         });
-      } else {
-        toast({
-          title: 'Importacion exitosa',
-          description: `Se importaron ${successCount} transacciones correctamente.`
-        });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+        localStorage.removeItem(importKey);
+        return { count: 0, error: failedRows[0]?.error };
       }
+
+      if (idsToReplace.length > 0) {
+        const replaceError = await deleteIds(idsToReplace);
+        if (replaceError) {
+          // No dejar historial duplicado (viejo + nuevo): se revierte lo nuevo.
+          const rollbackError = await deleteIds(insertedIds);
+          toast({
+            title: 'No se pudo reemplazar la base de datos',
+            description: rollbackError
+              ? 'Se insertaron los datos nuevos pero no se pudieron borrar los anteriores ni revertir. Revisa el historial.'
+              : 'No se pudieron borrar las transacciones anteriores. Se revirtió la importación; no cambió nada.',
+            variant: 'destructive',
+            duration: 10000,
+          });
+          await queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+          localStorage.removeItem(importKey);
+          return { count: 0, error: replaceError };
+        }
+      }
+
+      toast({
+        title: 'Importacion exitosa',
+        description: `Se importaron ${successCount} transacciones correctamente.`
+      });
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
 
@@ -1167,6 +1226,9 @@ export function ImportExcelDialog({
           <DialogTitle>Importar desde Excel</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-justify sm:text-left break-words overflow-hidden leading-relaxed">
             Carga un archivo Excel con tus transacciones. Las columnas esperadas son: Fecha | Descripción | Categoría | Valor | Método de pago (opcional)
+            <span className="mt-1 block text-xs">
+              La importación es histórico: no cambia el saldo de tus cuentas. Si el saldo no coincide, ajústalo desde la cuenta.
+            </span>
           </DialogDescription>
         </DialogHeader>
 

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToast } from '@/shared/hooks/use-toast';
-import { CalendarIcon, Plus, DollarSign, Wallet, Trash2, Pencil } from 'lucide-react';
+import { CalendarIcon, Plus, DollarSign, Wallet, Trash2, Pencil, Undo2, Ban, RotateCcw, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -58,7 +58,7 @@ export function FutureExpensesList() {
     const { user } = useAuth();
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const { categories, paymentMethods, addTransaction, addCategory, loading: dataLoading } = useFinanceData();
+    const { categories, paymentMethods, addTransaction, deleteTransaction, addCategory, loading: dataLoading } = useFinanceData();
     const { currency } = useFormatCurrency();
     const { currency: ctxCurrency } = useFinance();
     const decimalPlaces = useDecimalPlaces();
@@ -111,7 +111,23 @@ export function FutureExpensesList() {
     const placeholderAmount = decimalPlaces === 0 ? '0' : `0,${'0'.repeat(decimalPlaces)}`;
     const dynamicPadding = currSymbol.length > 1 ? 'pl-10' : 'pl-8';
 
-    const [expenses, setExpenses] = useState<FutureExpense[]>([]);
+    // Todos los compromisos del usuario: pendientes arriba, pagados/terminados en el historial
+    const [allExpenses, setAllExpenses] = useState<FutureExpense[]>([]);
+    const expenses = useMemo(() => allExpenses.filter(e => e.status === 'pending'), [allExpenses]);
+    const history = useMemo(
+        () => allExpenses
+            .filter(e => e.status !== 'pending')
+            .sort((a, b) => (b.last_paid_at || b.payment_date).localeCompare(a.last_paid_at || a.payment_date)),
+        [allExpenses]
+    );
+    const [showHistory, setShowHistory] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<{
+        title: string;
+        description: string;
+        confirmLabel: string;
+        run: () => Promise<void>;
+    } | null>(null);
+    const [isConfirming, setIsConfirming] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -147,7 +163,8 @@ export function FutureExpensesList() {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
     const [paymentDate, setPaymentDate] = useState<string>(format(new Date(), 'yyyy-MM-dd')); // New state
     const [isPaying, setIsPaying] = useState(false);
-    const recordedPaymentsRef = useRef<Set<string>>(new Set());
+    // compromiso -> id de la transacción ya registrada (reintento sin duplicar el pago)
+    const recordedPaymentsRef = useRef<Map<string, string | null>>(new Map());
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState<FutureExpense | null>(null);
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -158,10 +175,9 @@ export function FutureExpensesList() {
             .from('future_expenses')
             .select('*')
             .eq('user_id', user.id)
-            .eq('status', 'pending')
             .order('payment_date', { ascending: true });
 
-        if (data) {setExpenses(data as unknown as FutureExpense[]);}
+        if (data) {setAllExpenses(data as unknown as FutureExpense[]);}
         setLoading(false);
         // El flujo de caja usa su propia consulta de compromisos: se invalida para mantener ambos en sync
         queryClient.invalidateQueries({ queryKey: ['finance', 'futureExpenses', user.id] });
@@ -177,10 +193,9 @@ export function FutureExpensesList() {
                 .from('future_expenses')
                 .select('*')
                 .eq('user_id', user.id)
-                .eq('status', 'pending')
                 .order('payment_date', { ascending: true });
             if (cancelled) {return;}
-            if (data) {setExpenses(data as unknown as FutureExpense[]);}
+            if (data) {setAllExpenses(data as unknown as FutureExpense[]);}
             setLoading(false);
         };
 
@@ -362,8 +377,16 @@ export function FutureExpensesList() {
                 if (result && 'error' in result && result.error) {
                     throw result.error;
                 }
-                recordedPaymentsRef.current.add(selectedExpense.id);
+                const created = result && 'data' in result ? (result.data as { id?: string } | null | undefined) : null;
+                recordedPaymentsRef.current.set(selectedExpense.id, created?.id ?? null);
             }
+
+            // Datos para poder revertir este pago después
+            const paymentTrace = {
+                last_payment_transaction_id: recordedPaymentsRef.current.get(selectedExpense.id) ?? null,
+                last_payment_previous_date: selectedExpense.payment_date,
+                last_paid_at: new Date().toISOString(),
+            };
 
             // Compromiso único → 'paid'. Suscripción → avanza la fecha según su periodicidad;
             // si el siguiente cobro supera la fecha de fin, se marca 'paid' (suscripción terminada).
@@ -380,7 +403,9 @@ export function FutureExpensesList() {
 
                 const { error } = await supabase
                     .from('future_expenses' as never)
-                    .update(hasEnded ? { status: 'paid' } : { payment_date: format(nextDate, 'yyyy-MM-dd') })
+                    .update(hasEnded
+                        ? { status: 'paid', ...paymentTrace }
+                        : { payment_date: format(nextDate, 'yyyy-MM-dd'), ...paymentTrace })
                     .eq('id', selectedExpense.id);
                 if (error) { throw error; }
 
@@ -393,7 +418,7 @@ export function FutureExpensesList() {
             } else {
                 const { error } = await supabase
                     .from('future_expenses' as never)
-                    .update({ status: 'paid' })
+                    .update({ status: 'paid', ...paymentTrace })
                     .eq('id', selectedExpense.id);
                 if (error) { throw error; }
                 toast({ title: 'Pagado', description: 'El pago ha sido registrado correctamente.' });
@@ -412,6 +437,94 @@ export function FutureExpensesList() {
             setIsPaying(false);
         }
     };
+
+    /**
+     * Revierte el último pago: borra su transacción (deleteTransaction devuelve el saldo de forma atómica)
+     * y deja el compromiso como estaba (pendiente, con su fecha de cobro anterior).
+     * Idempotente: si la transacción ya no existe (borrada a mano o en un intento previo), solo restaura.
+     */
+    const revertLastPayment = async (expense: FutureExpense) => {
+        if (!expense.last_payment_previous_date) { return; }
+        if (expense.last_payment_transaction_id) {
+            const result = await deleteTransaction(expense.last_payment_transaction_id);
+            if (result && 'error' in result && result.error) {
+                toast({ title: 'Error', description: 'No se pudo eliminar la transacción del pago. No se cambió nada.', variant: 'destructive' });
+                return;
+            }
+        }
+        const { error } = await supabase
+            .from('future_expenses' as never)
+            .update({
+                status: 'pending',
+                payment_date: expense.last_payment_previous_date,
+                last_payment_transaction_id: null,
+                last_payment_previous_date: null,
+                last_paid_at: null,
+            } as never)
+            .eq('id', expense.id);
+        if (error) {
+            toast({ title: 'Error', description: 'Se eliminó la transacción pero no se pudo restaurar el compromiso. Reintenta "Revertir pago".', variant: 'destructive' });
+            await fetchExpenses();
+            return;
+        }
+        toast({ title: 'Pago revertido', description: 'Se eliminó la transacción y el compromiso vuelve a estar pendiente.' });
+        await fetchExpenses();
+    };
+
+    /** Termina una suscripción hoy: deja de proyectarse en el flujo de caja y pasa al historial. */
+    const endSubscription = async (expense: FutureExpense) => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const endDate = expense.start_date && expense.start_date > today ? expense.start_date : today;
+        const { error } = await supabase
+            .from('future_expenses' as never)
+            .update({ status: 'canceled', end_date: endDate } as never)
+            .eq('id', expense.id);
+        if (error) {
+            toast({ title: 'Error', description: 'No se pudo terminar la suscripción.', variant: 'destructive' });
+            return;
+        }
+        toast({ title: 'Suscripción terminada', description: 'Ya no se proyectará en el flujo de caja.' });
+        await fetchExpenses();
+    };
+
+    /** Reactiva una suscripción terminada (sin fecha de fin). */
+    const reactivateSubscription = async (expense: FutureExpense) => {
+        const { error } = await supabase
+            .from('future_expenses' as never)
+            .update({ status: 'pending', end_date: null } as never)
+            .eq('id', expense.id);
+        if (error) {
+            toast({ title: 'Error', description: 'No se pudo reactivar la suscripción.', variant: 'destructive' });
+            return;
+        }
+        toast({ title: 'Suscripción reactivada' });
+        await fetchExpenses();
+    };
+
+    const runConfirmAction = async () => {
+        if (!confirmAction || isConfirming) { return; }
+        setIsConfirming(true);
+        try {
+            await confirmAction.run();
+        } finally {
+            setIsConfirming(false);
+            setConfirmAction(null);
+        }
+    };
+
+    const askRevert = (expense: FutureExpense) => setConfirmAction({
+        title: 'Revertir último pago',
+        description: `Se eliminará la transacción del último pago de "${expense.description}" (el saldo de la cuenta vuelve a como estaba) y el compromiso quedará pendiente para el ${format(toLocalDate(expense.last_payment_previous_date || expense.payment_date), "d 'de' MMMM yyyy", { locale: es })}.`,
+        confirmLabel: 'Revertir pago',
+        run: () => revertLastPayment(expense),
+    });
+
+    const askEnd = (expense: FutureExpense) => setConfirmAction({
+        title: 'Terminar suscripción',
+        description: `"${expense.description}" dejará de cobrarse y de proyectarse en el flujo de caja. Podrás reactivarla desde el historial.`,
+        confirmLabel: 'Terminar',
+        run: () => endSubscription(expense),
+    });
 
     const handleDelete = async () => {
         if (!expenseToDelete) { return; }
@@ -803,11 +916,36 @@ export function FutureExpensesList() {
                                         {category?.name || 'Sin categoría'}
                                     </div>
                                     <div className="flex gap-2">
+                                        {expense.last_payment_previous_date && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 w-8 p-0 border-primary text-foreground hover:bg-primary/50 hover:text-foreground transition-colors"
+                                                onClick={() => askRevert(expense)}
+                                                aria-label="Revertir último pago"
+                                                title="Revertir último pago"
+                                            >
+                                                <Undo2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        )}
+                                        {expense.is_subscription && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 w-8 p-0 border-primary text-foreground hover:bg-primary/50 hover:text-foreground transition-colors"
+                                                onClick={() => askEnd(expense)}
+                                                aria-label="Terminar suscripción"
+                                                title="Terminar suscripción"
+                                            >
+                                                <Ban className="w-3.5 h-3.5" />
+                                            </Button>
+                                        )}
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             className="h-8 w-8 p-0 border-primary text-foreground hover:bg-primary/50 hover:text-foreground transition-colors"
                                             onClick={() => handleEdit(expense)}
+                                            aria-label="Editar"
                                         >
                                             <Pencil className="w-3.5 h-3.5" />
                                         </Button>
@@ -835,6 +973,70 @@ export function FutureExpensesList() {
                     );
                 })}
             </div>
+
+            {/* Historial: compromisos pagados y suscripciones terminadas */}
+            {history.length > 0 && (
+                <div className="space-y-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-muted-foreground"
+                        onClick={() => setShowHistory(v => !v)}
+                        aria-expanded={showHistory}
+                    >
+                        <History className="w-4 h-4" />
+                        {showHistory ? 'Ocultar historial' : `Ver historial (${history.length})`}
+                    </Button>
+                    {showHistory && (
+                        <div className="divide-y divide-border rounded-xl border border-border">
+                            {history.map(expense => {
+                                const isCanceled = expense.status === 'canceled' || expense.status === 'cancelled';
+                                return (
+                                    <div key={expense.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-medium text-foreground">{expense.description}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {isCanceled ? 'Terminada' : 'Pagado'}
+                                                {expense.last_paid_at && ` · último pago ${format(new Date(expense.last_paid_at), "d 'de' MMM yyyy", { locale: es })}`}
+                                                {isCanceled && expense.end_date && ` · fin ${format(toLocalDate(expense.end_date), "d 'de' MMM yyyy", { locale: es })}`}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-muted-foreground">{formatCurrency80(expense.amount)}</span>
+                                            {!isCanceled && expense.last_payment_previous_date && (
+                                                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => askRevert(expense)}>
+                                                    <Undo2 className="w-3.5 h-3.5" /> Revertir pago
+                                                </Button>
+                                            )}
+                                            {isCanceled && (
+                                                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => reactivateSubscription(expense)}>
+                                                    <RotateCcw className="w-3.5 h-3.5" /> Reactivar
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Confirmación de revertir pago / terminar suscripción */}
+            <Dialog open={confirmAction !== null} onOpenChange={(o) => { if (!o && !isConfirming) { setConfirmAction(null); } }}>
+                <DialogContent className="sm:max-w-[420px] max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{confirmAction?.title}</DialogTitle>
+                        <DialogDescription>{confirmAction?.description}</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="outline" disabled={isConfirming} onClick={() => setConfirmAction(null)}>Cancelar</Button>
+                        <Button variant="destructive" disabled={isConfirming} onClick={runConfirmAction}>
+                            {isConfirming ? 'Procesando…' : confirmAction?.confirmLabel}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Delete Confirmation Alert */}
             <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

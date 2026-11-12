@@ -1,6 +1,6 @@
 import { startOfMonth, endOfMonth, isBefore, isAfter, format, addMonths, isSameMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Transaction, Budget, PaymentMethod, FutureExpense } from '@/features/finance/types/financeTypes';
+import type { Transaction, PaymentMethod, FutureExpense } from '@/features/finance/types/financeTypes';
 import type { Loan } from '@/features/finance/hooks/useLoansLogic';
 import type { SavingsAccount } from '@/features/finance/hooks/useSavingsData';
 import { isTransferTransaction, isBalanceAdjustment } from '@/features/finance/utils/cashflowUtils';
@@ -31,6 +31,10 @@ export interface MonthlySnapshot {
     egresosPrestamos: number;
     egresosPrestamosInteres: number;
     egresosPrestamosCapital: number;
+    /**
+     * Cuotas de compras a cuotas con tarjeta que vencen en el mes. INFORMATIVO: no suma en egresosTotales,
+     * porque la compra ya restó completa del patrimonio el mes en que se hizo (saldo de la tarjeta en negativo).
+     */
     egresosTarjeta: number;
     egresosReales: number;
     egresosAhorro: number;
@@ -89,8 +93,18 @@ const toLocalDate = (dateStr?: string | null) => {
     return parseLocalDate(dateStr) ?? new Date(dateStr);
 };
 
-const getProjectionKey = (categoryId?: string | null, categoryName?: string | null, description?: string | null) => {
-    return categoryId || categoryName || description || 'uncategorized';
+type FlowKind = 'income' | 'expense' | 'saving';
+
+const flowKindOf = (type: string): FlowKind | null => {
+    if (type === 'income') { return 'income'; }
+    if (type === 'expense') { return 'expense'; }
+    if (type === 'saving' || type === 'savings' || type === 'investment') { return 'saving'; }
+    return null;
+};
+
+// La clave incluye el tipo: un ingreso real solo "cumple" un compromiso de ingreso, no uno de gasto.
+const getProjectionKey = (kind: FlowKind, categoryId?: string | null, categoryName?: string | null, description?: string | null) => {
+    return `${kind}|${categoryId || categoryName || description || 'uncategorized'}`;
 };
 
 const isInstallmentPlanExpense = (tx: Transaction) => {
@@ -102,9 +116,10 @@ const buildRealExpensePool = (txs: Transaction[]) => {
     txs.forEach(tx => {
         if (isTransferTransaction(tx)) { return; }
         if (isBalanceAdjustment(tx)) { return; }
-        if (tx.type !== 'expense') { return; }
+        const kind = flowKindOf(tx.type);
+        if (!kind) { return; }
         if (isInstallmentPlanExpense(tx)) { return; }
-        const key = getProjectionKey(tx.category_id, tx.category, tx.description);
+        const key = getProjectionKey(kind, tx.category_id, tx.category, tx.description);
         const list = pool.get(key) ?? [];
         list.push(tx.amount);
         pool.set(key, list);
@@ -151,15 +166,13 @@ export function calculateMonthlySnapshot(
         paymentMethods: PaymentMethod[];
         savingsAccounts: SavingsAccount[];
         loans: Loan[];
-        budgets: Budget[];
         futureExpenses: FutureExpense[];
         categories: Category[];
-        incomeMode: 'real' | 'projected';
     },
     context: CalculationContext
 ): MonthlySnapshot {
     const { currentMonthStart, lastTxDate } = context;
-    const { transactions, paymentMethods, savingsAccounts, loans, budgets, futureExpenses, categories, incomeMode } = data;
+    const { transactions, paymentMethods, savingsAccounts, loans, futureExpenses, categories } = data;
 
     const isPastMonth = isBefore(endOfMonth(date), currentMonthStart);
     const isCurrentMonth = isSameMonth(startOfMonth(date), currentMonthStart);
@@ -234,6 +247,9 @@ export function calculateMonthlySnapshot(
 
     let realExpenseSum = 0;
     let realSavingSum = 0;
+    // Pagos reales de préstamos del mes (salidas: cuotas que pago; entradas: cuotas que me pagan)
+    let realLoanOut = 0;
+    let realLoanIn = 0;
 
     monthTransactions.forEach(tx => {
         if (isTransferTransaction(tx)) { return; }
@@ -249,15 +265,19 @@ export function calculateMonthlySnapshot(
         }
 
         if (tx.type === 'income') {
-            if (isSalary(tx.category_id || null, tx.category, categories)) {
+            if (isLoanCategory(tx.category_id || null, tx.category, categories)) {
+                realLoanIn += tx.amount;
+            } else if (isSalary(tx.category_id || null, tx.category, categories)) {
                 realSalarySum += tx.amount;
             } else {
                 realIncomeSum += tx.amount;
             }
         } else if (tx.type === 'expense') {
-            const isMultiCuota = (tx.installments || 1) > 1;
-            const isLoanPayment = isLoanCategory(tx.category_id || null, tx.category, categories);
-            if (!isMultiCuota && !isLoanPayment) {
+            // Modelo patrimonio: una compra a cuotas resta completa en el mes en que se hace
+            // (la tarjeta queda en negativo por el total); las cuotas son solo informativas.
+            if (isLoanCategory(tx.category_id || null, tx.category, categories)) {
+                realLoanOut += tx.amount;
+            } else {
                 egresosReales += tx.amount;
                 realExpenseSum += tx.amount;
             }
@@ -266,7 +286,8 @@ export function calculateMonthlySnapshot(
             realSavingSum += tx.amount;
         }
     });
-    const netoReal = realSalarySum + realIncomeSum + ingresosAjuste - realExpenseSum - realSavingSum - egresosAjuste;
+    const netoReal = realSalarySum + realIncomeSum + realLoanIn + ingresosAjuste
+        - realExpenseSum - realSavingSum - realLoanOut - egresosAjuste;
 
     // --- Iniciar Ingresos con valores reales ---
     ingresosSalario = realSalarySum;
@@ -287,7 +308,22 @@ export function calculateMonthlySnapshot(
         return consumePayment(pool, key, amount);
     };
 
-    let overdueFutureExpenses = 0;
+    // Suma un compromiso pendiente en la línea que le corresponde según su tipo.
+    const addCommitment = (fe: FutureExpense) => {
+        if (fe.type === 'income') {
+            if (isSalary(fe.category_id, null, categories)) {
+                ingresosSalario += fe.amount;
+            } else {
+                otrosIngresos += fe.amount;
+            }
+        } else if (fe.type === 'saving') {
+            egresosAhorro += fe.amount;
+        } else {
+            gastosFuturos += fe.amount;
+        }
+    };
+    // Vencidos sin pagar: se arrastran al mes actual (antes un ingreso vencido se sumaba como gasto).
+    const overdueCommitments: FutureExpense[] = [];
     if (!isPastMonth) {
         futureExpenses.forEach(fe => {
             let matchesMonth = false;
@@ -311,20 +347,9 @@ export function calculateMonthlySnapshot(
             }
 
             if (matchesMonth && dueMonthKey) {
-                const key = getProjectionKey(fe.category_id, null, fe.description);
+                const key = getProjectionKey(flowKindOf(fe.type) ?? 'expense', fe.category_id, null, fe.description);
                 if (!tryConsumePayment(dueMonthKey, key, fe.amount)) {
-                    if (fe.type === 'income') {
-                        // Clasificar ingreso por categoría (Salario vs Otros)
-                        if (isSalary(fe.category_id, null, categories)) {
-                            ingresosSalario += fe.amount;
-                        } else {
-                            otrosIngresos += fe.amount;
-                        }
-                    } else if (fe.type === 'saving') {
-                        egresosAhorro += fe.amount;
-                    } else {
-                        gastosFuturos += fe.amount;
-                    }
+                    addCommitment(fe);
                 }
             }
         });
@@ -337,12 +362,12 @@ export function calculateMonthlySnapshot(
                 if (!payDate) { return; }
                 if (!isBefore(payDate, currentMonthStart)) { return; }
                 const dueMonthKey = format(payDate, 'yyyy-MM');
-                const key = getProjectionKey(fe.category_id, null, fe.description);
+                const key = getProjectionKey(flowKindOf(fe.type) ?? 'expense', fe.category_id, null, fe.description);
                 const paidInPast = tryConsumePayment(dueMonthKey, key, fe.amount);
                 if (paidInPast) { return; }
                 const paidNow = tryConsumePayment(monthKey, key, fe.amount);
                 if (!paidNow) {
-                    overdueFutureExpenses += fe.amount;
+                    overdueCommitments.push(fe);
                 }
             }
         });
@@ -360,18 +385,22 @@ export function calculateMonthlySnapshot(
                 if (!isBefore(dueMonth, currentMonthStart)) { break; }
                 if (isAfter(startOfMonth(dueMonth), endLimit)) { break; }
                 const dueKey = format(dueMonth, 'yyyy-MM');
-                const key = getProjectionKey(fe.category_id, null, fe.description);
+                const key = getProjectionKey(flowKindOf(fe.type) ?? 'expense', fe.category_id, null, fe.description);
                 const paidInPast = tryConsumePayment(dueKey, key, fe.amount);
                 if (paidInPast) { continue; }
                 const paidNow = tryConsumePayment(monthKey, key, fe.amount);
                 if (!paidNow) {
-                    overdueFutureExpenses += fe.amount;
+                    overdueCommitments.push(fe);
                 }
             }
         });
     }
 
     // --- Préstamos (Amortización y Pagos Únicos) ---
+    // Se proyecta la cuota de cada préstamo y luego se combina con los pagos reales del mes.
+    let projLoanOut = 0;
+    let projLoanOutInterest = 0;
+    let projLoanIn = 0;
     const newLoans: Record<string, { saldo: number, cuotasRestantes: number }> = { ...prevLoans };
     loans.forEach(loan => {
         const isAmortized = (loan.installments || 0) > 1;
@@ -410,13 +439,12 @@ export function calculateMonthlySnapshot(
                 newLoans[loan.id] = { saldo: prev.saldo - (cuota - interes), cuotasRestantes: cuotasRestantes - 1 };
             }
 
-            if (cuota > 0 && !isPastMonth) {
+            if (cuota > 0) {
                 if (loan.type === 'lent') {
-                    ingresosPrestamos += cuota;
+                    projLoanIn += cuota;
                 } else {
-                    egresosPrestamos += cuota;
-                    egresosPrestamosInteres += interes;
-                    egresosPrestamosCapital += cuota - interes;
+                    projLoanOut += cuota;
+                    projLoanOutInterest += interes;
                 }
             }
         } else {
@@ -424,54 +452,47 @@ export function calculateMonthlySnapshot(
         }
     });
 
-    // --- Tarjetas (Multi-cuota) ---
+    // Meses pasados: solo lo que realmente se pagó. Mes actual y futuros: lo proyectado, pero si ya se
+    // pagó más (o igual) cuenta el pago real, sin volver a sumar la cuota (antes se contaba doble en el
+    // mes actual porque el pago ya está en el saldo real, y en meses pasados el pago no aparecía).
+    egresosPrestamos = isPastMonth ? realLoanOut : Math.max(projLoanOut, realLoanOut);
+    ingresosPrestamos = isPastMonth ? realLoanIn : Math.max(projLoanIn, realLoanIn);
+    egresosPrestamosInteres = projLoanOut > 0
+        ? projLoanOutInterest * Math.min(1, egresosPrestamos / projLoanOut)
+        : 0;
+    egresosPrestamosCapital = egresosPrestamos - egresosPrestamosInteres;
+
+    // --- Tarjetas (Multi-cuota, informativo) ---
+    // Cuotas que vencen este mes. No consumen pagos reales (el pago de la tarjeta es una transferencia)
+    // ni restan del saldo: la compra ya restó completa cuando se hizo.
     const newCardInstallments: Record<string, { restantes: number, valorCuota: number, interes: number, capital: number }> = { ...prevCardInstallments };
-    let overdueInstallments = 0;
-    transactions.filter(tx => tx.type === 'expense' && (tx.installments || 1) > 1).forEach(tx => {
-        const totalInstallments = tx.installments || 1;
-        const installmentAmount = tx.amount / totalInstallments;
-        const startDate = toLocalDate(tx.date);
-        if (!startDate) { return; }
-        const startMonth = startOfMonth(startDate);
-        const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
-        if (pm?.type && pm.type !== 'credit') { return; }
-
-        for (let i = 0; i < totalInstallments; i++) {
-            const dueMonth = addMonths(startMonth, i);
-            const dueKey = format(dueMonth, 'yyyy-MM');
-            const isPastDue = isBefore(dueMonth, currentMonthStart);
-            const isSameAsCurrent = isSameMonth(dueMonth, currentMonthStart);
-
-            const key = getProjectionKey(tx.category_id, tx.category, tx.description);
-
-            if (isPastDue) {
-                if (isCurrentMonth) {
-                    const paidInPast = tryConsumePayment(dueKey, key, installmentAmount);
-                    if (paidInPast) { continue; }
-                    const paidNow = tryConsumePayment(monthKey, key, installmentAmount);
-                    if (!paidNow) {
-                        overdueInstallments += installmentAmount;
-                    }
-                }
-                continue;
-            }
-
-            if (!isPastMonth && (isSameAsCurrent ? isCurrentMonth : true) && dueKey === monthKey) {
-                const paid = tryConsumePayment(dueKey, key, installmentAmount);
-                if (!paid) {
-                    egresosTarjeta += installmentAmount;
-                }
-            }
-        }
-    });
+    if (!isPastMonth) {
+        transactions.filter(isInstallmentPlanExpense).forEach(tx => {
+            const totalInstallments = tx.installments || 1;
+            const startDate = toLocalDate(tx.date);
+            if (!startDate) { return; }
+            const pm = paymentMethods.find(p => p.id === tx.payment_method_id);
+            if (pm?.type && pm.type !== 'credit') { return; }
+            const idx = differenceInCalendarMonths(date, startOfMonth(startDate));
+            if (idx < 0 || idx >= totalInstallments) { return; }
+            const valorCuota = tx.amount / totalInstallments;
+            egresosTarjeta += valorCuota;
+            newCardInstallments[tx.id] = {
+                restantes: totalInstallments - idx - 1,
+                valorCuota,
+                interes: 0,
+                capital: valorCuota,
+            };
+        });
+    }
 
     if (isCurrentMonth) {
-        egresosTarjeta += overdueInstallments;
-        gastosFuturos += overdueFutureExpenses;
+        overdueCommitments.forEach(addCommitment);
     }
 
     const ingresosTotales = ingresosSalario + interesesAhorro + otrosIngresos + ingresosPrestamos + ingresosAjuste;
-    const egresosTotales = gastosFuturos + egresosPrestamos + egresosTarjeta + egresosReales + egresosAhorro + egresosAjuste;
+    // egresosTarjeta no suma: es informativo (ver MonthlySnapshot.egresosTarjeta).
+    const egresosTotales = gastosFuturos + egresosPrestamos + egresosReales + egresosAhorro + egresosAjuste;
     const balanceNetoMes = ingresosTotales - egresosTotales;
     const balanceAcumulado = currentPrevBalance + balanceNetoMes;
 

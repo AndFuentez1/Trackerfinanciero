@@ -32,7 +32,7 @@ export default function CashFlow() {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: configStatus } = useUserConfigStatus(user?.id);
-  const { bootLoading: financeBootLoading, allTransactions } = useFinanceData();
+  const { bootLoading: financeBootLoading, allTransactions, currency, decimalPlaces } = useFinanceData();
   const { bootLoading: loansBootLoading } = useLoans();
   const { bootLoading: savingsBootLoading } = useSavingsData();
 
@@ -56,7 +56,7 @@ export default function CashFlow() {
   });
 
   // Datos reales del hook — debe ir ANTES de cualquier useMemo que use sus valores
-  const { cashFlowSeries, proyeccion_ingresos, compromisos_deuda, monthlyBreakdown, isProjectionWarning, balance_actual } = useCashFlow(year, month, range, 'real', useRealBalance);
+  const { cashFlowSeries, proyeccion_ingresos, gastos_futuros, compromisos_deuda, monthlyBreakdown, isProjectionWarning, balance_actual } = useCashFlow(year, month, range, useRealBalance);
   const loading = authLoading || financeBootLoading || loansBootLoading || savingsBootLoading || !cashFlowSeries;
   usePageBootLoading(loading);
 
@@ -140,15 +140,20 @@ export default function CashFlow() {
 
   // Datos para tarjetas
   const estimatedIncome = proyeccion_ingresos;
-  const futureExpenses = 0; // Implementar si hay gastos fijos
+  const futureExpenses = gastos_futuros;
   const debtCommitments = compromisos_deuda;
   const projectedBalance = (cashFlowSeries && cashFlowSeries.length > 0) ? cashFlowSeries[cashFlowSeries.length - 1].balanceProyectado : 0;
 
   // Formateador global de moneda
   const formatCOP = (v: number | null | undefined) => {
-    if (typeof v !== 'number' || isNaN(v)) { return <span className="text-muted-foreground">$ 0,00</span>; }
-
-    const formatted = v.toLocaleString(DEFAULT_LOCALE, { style: 'currency', currency: DEFAULT_CURRENCY_CODE, minimumFractionDigits: 2 });
+    // Moneda y decimales del usuario (antes siempre la moneda por defecto con 2 decimales)
+    const safe = typeof v === 'number' && !isNaN(v) ? v : 0;
+    const formatted = safe.toLocaleString(DEFAULT_LOCALE, {
+      style: 'currency',
+      currency: currency || DEFAULT_CURRENCY_CODE,
+      minimumFractionDigits: decimalPlaces ?? 2,
+      maximumFractionDigits: decimalPlaces ?? 2,
+    });
     const parts = formatted.split(',');
 
     if (parts.length === 1) { return <span>{formatted}</span>; }
@@ -393,7 +398,7 @@ export default function CashFlow() {
                                           <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
                                         </div>
                                       </div>
-                                      <div className="flex justify-between py-0.5"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
+                                      <div className="flex justify-between py-0.5"><span>Cuotas Tarjeta (info):</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Gastos:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
                                       <div className="flex justify-between py-0.5"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
                                       {row.egresosAjuste > 0 && (
@@ -465,7 +470,7 @@ export default function CashFlow() {
                                     <span>Int: {formatCOP(row.egresosPrestamosInteres)}</span>
                                   </div>
                                 </div>
-                                <div className="flex justify-between"><span>Cuotas Tarjeta:</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
+                                <div className="flex justify-between"><span>Cuotas Tarjeta (info):</span> <span className="font-medium">{formatCOP(row.egresosTarjeta)}</span></div>
                                 <div className="flex justify-between"><span>Gastos Reales:</span> <span className="font-medium">{formatCOP(row.egresosReales)}</span></div>
                                 <div className="flex justify-between"><span>Ahorros e Inv.:</span> <span className="font-medium">{formatCOP(row.egresosAhorro)}</span></div>
                                 {row.egresosAjuste > 0 && (

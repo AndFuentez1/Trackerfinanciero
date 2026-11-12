@@ -23,7 +23,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, loading }) => {
   const { currency } = useFinance();
   const Icon = iconMap[title] || ArrowUpRight;
   return (
-    <Card className="flex-1 min-w-[180px] flex flex-col p-6 bg-gray-50/50 dark:bg-muted/20 border-border shadow-md relative">
+    <Card className="flex-1 min-w-[180px] flex flex-col p-6 bg-muted/30 dark:bg-muted/20 border-border shadow-md relative">
       <span className="absolute top-3 right-3 text-muted-foreground/60"><Icon className="w-5 h-5" /></span>
       <span className="text-base text-muted-foreground font-medium mb-1">{title}</span>
       {loading ? (

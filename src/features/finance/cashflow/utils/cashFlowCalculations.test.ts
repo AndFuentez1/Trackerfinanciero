@@ -274,49 +274,86 @@ describe('cashFlowCalculations', () => {
             expect(currentResult.gastosFuturos).toBe(0);
         });
 
-        it('accumulates overdue installments into current month excluding paid installments', () => {
+        it('patrimony model: installment purchase counts in full in its month; installments are informative', () => {
             const currentMonthStart = new Date(2024, 5, 1); // June
-            const currentMonthDate = new Date(2024, 5, 15); // June
-
             const transactions: Transaction[] = [
-                { id: 'i1', type: 'expense', amount: 300, installments: 3, date: '2024-03-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as never,
-                { id: 'p1', type: 'expense', amount: 100, date: '2024-05-05', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as never
+                { id: 'i1', type: 'expense', amount: 300, installments: 3, date: '2024-06-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as never,
             ];
+            const data = { ...emptyData, transactions, categories: [{ id: 'cFood', name: 'Comida', type: 'expense' }] };
 
-            const result = calculateMonthlySnapshot(
-                currentMonthDate, 0, {}, {}, {},
-                { ...emptyData, transactions, categories: [{ id: 'cFood', name: 'Comida', type: 'expense' }] },
-                buildContext(transactions, currentMonthStart)
-            );
+            const june = calculateMonthlySnapshot(new Date(2024, 5, 15), 0, {}, {}, {}, data, buildContext(transactions, currentMonthStart));
+            const july = calculateMonthlySnapshot(new Date(2024, 6, 15), 0, {}, {}, {}, data, buildContext(transactions, currentMonthStart));
+            const sept = calculateMonthlySnapshot(new Date(2024, 8, 15), 0, {}, {}, {}, data, buildContext(transactions, currentMonthStart));
 
-            expect(result.egresosTarjeta).toBe(200);
+            expect(june.egresosReales).toBe(300);
+            expect(june.netoReal).toBe(-300);
+            expect(june.egresosTarjeta).toBe(100);
+            expect(june.egresosTotales).toBe(300);
+            expect(july.egresosTarjeta).toBe(100);
+            expect(july.egresosTotales).toBe(0);
+            expect(sept.egresosTarjeta).toBe(0);
         });
 
-        it('does not project current installment if paid in current month', () => {
-            const currentMonthStart = new Date(2024, 5, 1); // June
-            const currentMonthDate = new Date(2024, 5, 15); // June
-            const nextMonthDate = new Date(2024, 6, 15); // July
-
+        it('installments do not consume a real expense that pays a commitment', () => {
+            const currentMonthStart = new Date(2024, 5, 1);
             const transactions: Transaction[] = [
-                { id: 'i1', type: 'expense', amount: 200, installments: 2, date: '2024-06-01', description: 'Compra CC', category: 'Comida', category_id: 'cFood' } as never,
-                { id: 'p1', type: 'expense', amount: 100, date: '2024-06-10', description: 'Pago cuota', category: 'Comida', category_id: 'cFood' } as never
+                { id: 'i1', type: 'expense', amount: 200, installments: 2, date: '2024-06-01', description: 'Compra CC', category_id: 'c1' } as never,
+                { id: 'p1', type: 'expense', amount: 100, date: '2024-06-10', description: 'Internet', category_id: 'c1' } as never,
+            ];
+            const futureExpenses = [
+                { id: 'f1', payment_date: '2024-06-10', amount: 100, status: 'pending', description: 'Internet', category_id: 'c1', type: 'expense' } as never,
+            ];
+            const result = calculateMonthlySnapshot(
+                new Date(2024, 5, 15), 0, {}, {}, {},
+                { ...emptyData, transactions, futureExpenses }, buildContext(transactions, currentMonthStart)
+            );
+            expect(result.gastosFuturos).toBe(0);
+        });
+
+        it('overdue income commitments are carried as income, not expense', () => {
+            const currentMonthStart = new Date(2024, 5, 1);
+            const futureExpenses = [
+                { id: 'f1', payment_date: '2024-05-10', amount: 500, status: 'pending', description: 'Arriendo cobrado', category_id: null, type: 'income' } as never,
+            ];
+            const result = calculateMonthlySnapshot(
+                new Date(2024, 5, 15), 0, {}, {}, {},
+                { ...emptyData, futureExpenses }, buildContext([], currentMonthStart)
+            );
+            expect(result.gastosFuturos).toBe(0);
+            expect(result.otrosIngresos).toBe(500);
+        });
+
+        describe('real loan payments', () => {
+            const loan: Loan = {
+                id: 'l1', name: 'Crédito', total_amount: 1200, paid_amount: 0, interest_rate: 0,
+                user_id: 'u1', type: 'borrowed', created_at: '', due_date: null, payment_method_id: null,
+                installments: 12
+            } as Loan;
+            const categories = [{ id: 'cLoan', name: 'Préstamo', type: 'expense' }];
+            const paid: Transaction[] = [
+                { id: 'lp', type: 'expense', amount: 100, date: '2024-06-05', description: 'Cuota', category_id: 'cLoan' } as never,
             ];
 
-            const currentResult = calculateMonthlySnapshot(
-                currentMonthDate, 0, {}, {}, {},
-                { ...emptyData, transactions, categories: [{ id: 'cFood', name: 'Comida', type: 'expense' }] },
-                buildContext(transactions, currentMonthStart)
-            );
+            it('counts real payments in past months (were omitted)', () => {
+                const result = calculateMonthlySnapshot(
+                    new Date(2024, 5, 15), 0, {}, {}, {},
+                    { ...emptyData, loans: [loan], transactions: paid, categories },
+                    buildContext(paid, new Date(2024, 7, 1))
+                );
+                expect(result.egresosPrestamos).toBe(100);
+                expect(result.netoReal).toBe(-100);
+            });
 
-            const nextResult = calculateMonthlySnapshot(
-                nextMonthDate, 0, {}, {}, {},
-                { ...emptyData, transactions, categories: [{ id: 'cFood', name: 'Comida', type: 'expense' }] },
-                buildContext(transactions, currentMonthStart)
-            );
-
-            expect(currentResult.egresosTarjeta).toBe(0);
-            expect(currentResult.egresosReales).toBe(100);
-            expect(nextResult.egresosTarjeta).toBe(100);
+            it('does not project the installment again when already paid this month', () => {
+                const result = calculateMonthlySnapshot(
+                    new Date(2024, 5, 15), 0, {}, {}, {},
+                    { ...emptyData, loans: [loan], transactions: paid, categories },
+                    buildContext(paid, new Date(2024, 5, 1))
+                );
+                expect(result.egresosPrestamos).toBe(100);
+                // Lo pendiente del mes (neto − netoReal) es 0: la cuota ya está en el saldo real
+                expect(result.balanceNetoMes - result.netoReal).toBe(0);
+            });
         });
     });
 });
